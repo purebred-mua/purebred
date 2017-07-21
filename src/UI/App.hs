@@ -1,16 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Main where
-
-import Options.Applicative hiding (str)
-
-import Notmuch
-import Notmuch.Search
+module UI.App where
 
 import Lens.Micro ((^.))
-import Control.Monad (void)
 
-import Data.Monoid
-import Data.Foldable (toList)
+import Data.Monoid ((<>))
 import qualified Graphics.Vty as V
 
 import qualified Brick.Main as M
@@ -75,31 +68,3 @@ theApp =
           , M.appStartEvent = return
           , M.appAttrMap = const theMap
           }
-
-data AppConfig = AppConfig { databaseFilepath :: String }
-
-appconfig :: Parser AppConfig
-appconfig = AppConfig <$> strOption ( long "database" <> metavar "DATABASE" <> help "Filepath to notmuch database" )
-
-main :: IO ()
-main = do
-    msgs <- getMessages =<< execParser opts
-    void $ M.defaultMain theApp (initialState msgs)
-        where
-            opts = info (appconfig <**> helper)
-                ( fullDesc
-                <> progDesc "purebred"
-                <> header "a search based, terminal mail user agent")
-
--- Notmuch
-getMessages :: AppConfig -> IO (Vec.Vector String)
-getMessages config = do
-  db' <- databaseOpen (databaseFilepath config)
-  case db' of
-    Left status -> do
-        error $ show status
-    Right db -> do
-        q <- query db (FreeForm "tag:inbox")
-        msgs <- messages q
-        hdrs <- (mapM (messageHeader "Subject")) msgs
-        return $ Vec.fromList $ toList hdrs

@@ -8,20 +8,30 @@ license-file:        LICENSE
 author:              Author name here
 maintainer:          example@example.com
 copyright:           2017 Author name here
-category:            Web
+category:            Graphics
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
 
-executable purebred
+library
   hs-source-dirs:      src
   ghc-options:         -Wall -threaded
-  main-is:             Main.hs
   default-language:    Haskell2010
+  exposed-modules:     UI.App
+                     , Storage.Notmuch
   build-depends:       base >= 4.7 && < 5
                      , brick
                      , microlens
                      , vty
                      , vector
                      , notmuch
+
+executable purebred
+  hs-source-dirs:      app
+  ghc-options:         -Wall -threaded
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  build-depends:       base >= 4.7 && < 5
+                     , purebred
                      , optparse-applicative
+                     , brick
