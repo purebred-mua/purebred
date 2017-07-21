@@ -19,6 +19,7 @@ library
   default-language:    Haskell2010
   exposed-modules:     UI.App
                      , Storage.Notmuch
+                     , Storage.Mail
   build-depends:       base >= 4.7 && < 5
                      , brick
                      , microlens
