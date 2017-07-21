@@ -22,4 +22,4 @@ matrix:
   # variable, such as using --stack-yaml to point to a different file.
   - env: STACK_YAML="stack.yaml" GHCVER=8.0.2
     compiler: ": #stack default"
-    addons: {apt: {packages: [ghc-8.0.2], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [ghc-8.0.2, libnotmuch-dev, libtalloc-dev], sources: [hvr-ghc]}}
