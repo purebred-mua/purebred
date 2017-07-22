@@ -7,6 +7,7 @@ import Notmuch.Search
 
 import Data.Foldable (toList)
 import qualified Data.Vector as Vec
+import Data.Maybe (fromMaybe)
 
 
 getMessages :: String -> IO (Vec.Vector Mail)
@@ -21,5 +22,11 @@ getMessages dbfp = do
         hdrs <- mapM messageToMail msgs
         return $ Vec.fromList $ toList hdrs
 
+-- | TODO: use lenses to construct the mail
+--
 messageToMail :: Message -> IO Mail
-messageToMail m = Mail <$> messageHeader "Subject" m <*> pure "Test" <*> pure "From"
+messageToMail m = do
+  s <- messageHeader "Subject" m
+  t <- messageHeader "To" m
+  f <- messageHeader "From" m
+  pure $ Mail (fromMaybe "" s) (fromMaybe "" t) (fromMaybe "" f)

@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/frasertweedale/hs-notmuch.git
-    commit: 46932ac59cabfb1d25a1bf34bd03f5043cdad281
+    commit: fcec008f37085da7c3b43b8a1228cd625bf8609e
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
