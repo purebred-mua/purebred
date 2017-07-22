@@ -18,11 +18,17 @@ library
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
   exposed-modules:     UI.App
+                     , UI.Types
+                     , UI.Draw.Main
+                     , UI.Draw.Mail
+                     , UI.Event.Main
+                     , UI.Event.Mail
                      , Storage.Notmuch
                      , Storage.Mail
   build-depends:       base >= 4.7 && < 5
                      , brick
                      , microlens
+                     , microlens-platform
                      , vty
                      , vector
                      , notmuch
