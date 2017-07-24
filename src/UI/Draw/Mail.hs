@@ -1,7 +1,7 @@
 module UI.Draw.Mail where
 
 import           Brick.Types        (Widget)
-import           Brick.Widgets.Core (str, (<=>), (<+>), vLimit)
+import           Brick.Widgets.Core (str, (<=>), (<+>))
 import qualified Brick.Widgets.List as L
 import           Data.Maybe         (fromMaybe)
 import qualified Data.Vector        as Vec
@@ -15,14 +15,14 @@ import           UI.Types
 --
 -- Implementation detail: Currently we're creating the sub list of mails we show
 -- for each key press. This might have to change in the future.
-drawMail :: AppState -> [Widget ()]
+drawMail :: AppState -> [Widget Name]
 drawMail s =
-    case L.listSelectedElement (s^.mailIndex) of
+    case L.listSelectedElement (s^.mailIndex^.listOfMails) of
         Just (_, m) -> [indexView s <=> mailView m]
         Nothing -> [str "Eeek"]
 
 -- | TODO: See #19
-mailView :: Mail -> Widget ()
+mailView :: Mail -> Widget Name
 mailView m =
     let widgets =
             zipWith
@@ -31,9 +31,9 @@ mailView m =
                 [str (m ^. from), str (m ^. to), str (m ^. subject)]
     in foldr (<=>) (str "") widgets
 
-indexView :: AppState -> Widget ()
+indexView :: AppState -> Widget Name
 indexView s = L.renderList listDrawElement True sliced
-  where sliced = slicedIndex $ s^.mailIndex
+  where sliced = slicedIndex $ s^.mailIndex^.listOfMails
 
 -- | The size limit of the index list
 indexViewRows :: Int
@@ -45,7 +45,7 @@ indexViewRows = 10
 -- Workaround: Currently new list widgets position the selection at the first
 -- item. So either we hack brick to allow setting the selected element (probably
 -- best) or reduce the amount of elements we slice. The latter is implemented.
-determineIndexBounds :: L.List () Mail -> (Int, Int)
+determineIndexBounds :: L.List Name Mail -> (Int, Int)
 determineIndexBounds l =
     let cur = fromMaybe 0 $ l^.L.listSelectedL
         total = Vec.length $ l^.L.listElementsL
@@ -53,9 +53,9 @@ determineIndexBounds l =
         slice_start = cur
     in (slice_start, slice_length)
 
-slicedIndex :: L.List () Mail -> L.List () Mail
+slicedIndex :: L.List Name Mail -> L.List Name Mail
 slicedIndex l =
     let items = l ^. L.listElementsL
         (left, len) = determineIndexBounds l
         newlist = Vec.slice left len items
-    in L.list () newlist indexViewRows
+    in L.list ListOfMails newlist indexViewRows

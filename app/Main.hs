@@ -1,7 +1,6 @@
 module Main where
 
 import UI.App (theApp, initialState)
-import Storage.Notmuch (getMessages)
 
 import Data.Monoid ((<>))
 import qualified Brick.Main as M
@@ -15,8 +14,9 @@ appconfig = AppConfig <$> strOption ( long "database" <> metavar "DATABASE" <> h
 
 main :: IO ()
 main = do
-    msgs <- getMessages . databaseFilepath =<< execParser opts
-    void $ M.defaultMain theApp (initialState msgs)
+    cfg <- execParser opts
+    s <- initialState (databaseFilepath cfg)
+    void $ M.defaultMain theApp s
         where
             opts = info (appconfig <**> helper)
                 ( fullDesc

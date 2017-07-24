@@ -10,14 +10,14 @@ import qualified Data.Vector as Vec
 import Data.Maybe (fromMaybe)
 
 
-getMessages :: String -> IO (Vec.Vector Mail)
-getMessages dbfp = do
+getMessages :: String -> String -> IO (Vec.Vector Mail)
+getMessages dbfp searchterms = do
   db' <- databaseOpen dbfp
   case db' of
     Left status -> do
         error $ show status
     Right db -> do
-        q <- query db (FreeForm "tag:inbox")
+        q <- query db (FreeForm searchterms)
         msgs <- messages q
         hdrs <- mapM messageToMail msgs
         return $ Vec.fromList $ toList hdrs

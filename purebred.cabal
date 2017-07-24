@@ -28,10 +28,13 @@ library
   build-depends:       base >= 4.7 && < 5
                      , brick
                      , microlens
-                     , microlens-platform
+                     , microlens-mtl
+                     , microlens-platform >= 0.3
+                     , text-zipper
                      , vty
                      , vector
                      , notmuch
+                     , text
 
 executable purebred
   hs-source-dirs:      app
