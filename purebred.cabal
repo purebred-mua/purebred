@@ -27,9 +27,7 @@ library
                      , Storage.Mail
   build-depends:       base >= 4.8 && < 5
                      , brick
-                     , microlens
-                     , microlens-mtl
-                     , microlens-platform >= 0.3
+                     , lens
                      , text-zipper
                      , vty
                      , vector

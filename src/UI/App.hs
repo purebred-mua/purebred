@@ -2,22 +2,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.App where
 
-import           Storage.Notmuch    (getMessages)
-import           UI.Draw.Mail       (drawMail)
-import           UI.Draw.Main       (drawMain, editorDrawContent, theMap)
-import           UI.Event.Mail      (mailEvent)
-import           UI.Event.Main      (mainEvent)
+import           Storage.Notmuch     (getMessages)
+import           UI.Draw.Mail        (drawMail)
+import           UI.Draw.Main        (drawMain, editorDrawContent, theMap)
+import           UI.Event.Mail       (mailEvent)
+import           UI.Event.Main       (mainEvent)
 import           UI.Types
 
-import           Lens.Micro         ((^.))
+import           Control.Lens.Getter ((^.))
 
 
-import qualified Brick.Main         as M
-import           Brick.Types        (Widget)
-import qualified Brick.Types        as T
-import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
-import qualified Data.Text          as T
+import qualified Brick.Main          as M
+import           Brick.Types         (Widget)
+import qualified Brick.Types         as T
+import qualified Brick.Widgets.Edit  as E
+import qualified Brick.Widgets.List  as L
+import qualified Data.Text           as T
 
 drawUI :: AppState -> [Widget Name]
 drawUI s =

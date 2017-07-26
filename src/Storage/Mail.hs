@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Storage.Mail where
 
-import           Lens.Micro.Platform (makeLenses)
+import           Control.Lens.TH (makeLenses)
 
 -- A single mail represented in the UI
 -- TODO: should use Text instead of String

@@ -1,13 +1,13 @@
 module UI.Draw.Mail where
 
-import           Brick.Types        (Widget)
-import           Brick.Widgets.Core (str, (<=>), (<+>))
-import qualified Brick.Widgets.List as L
-import           Data.Maybe         (fromMaybe)
-import qualified Data.Vector        as Vec
-import           Lens.Micro         ((^.))
+import           Brick.Types         (Widget)
+import           Brick.Widgets.Core  (str, (<+>), (<=>))
+import qualified Brick.Widgets.List  as L
+import           Control.Lens.Getter ((^.))
+import           Data.Maybe          (fromMaybe)
+import qualified Data.Vector         as Vec
 import           Storage.Mail
-import           UI.Draw.Main       (listDrawElement)
+import           UI.Draw.Main        (listDrawElement)
 import           UI.Types
 
 -- | Instead of using the entire rendering area to show the email, we still show

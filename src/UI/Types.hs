@@ -2,11 +2,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 module UI.Types where
 
-import qualified Brick.Widgets.Edit  as E
-import qualified Brick.Widgets.List  as L
-import qualified Data.Text           as T
-import           Lens.Micro.Platform (makeLenses)
-import           Storage.Mail        (Mail)
+import qualified Brick.Widgets.Edit as E
+import qualified Brick.Widgets.List as L
+import           Control.Lens.TH    (makeLenses)
+import qualified Data.Text          as T
+import           Storage.Mail       (Mail)
 
 -- | The global application mode
 data Mode
@@ -33,7 +33,7 @@ search and composes e-mails from here.
 data MailIndex = MailIndex
     { _listOfMails  :: L.List Name Mail  -- ^ widget displaying a list of e-mails
     , _searchEditor :: E.Editor T.Text Name  -- ^ the input widget to manipulate the notmuch search
-    , _miMode :: MainMode  -- ^ mode to distinguish which widget should receive user input
+    , _miMode       :: MainMode  -- ^ mode to distinguish which widget should receive user input
     }
 makeLenses ''MailIndex
 

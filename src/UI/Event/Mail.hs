@@ -1,23 +1,24 @@
 -- | event handling for viewing a single mail
 module UI.Event.Mail where
 
-import qualified Brick.Main         as M
-import qualified Brick.Types        as T
-import qualified Brick.Widgets.List as L
-import qualified Graphics.Vty       as V
-import           Lens.Micro         ((^.))
+import qualified Brick.Main          as M
+import qualified Brick.Types         as T
+import qualified Brick.Widgets.List  as L
+import           Control.Lens.Getter ((^.))
+import           Control.Lens.Lens   ((&))
+import           Control.Lens.Setter ((.~))
+import qualified Graphics.Vty        as V
 import           UI.Types
 
 -- | The mail view shows a shortened list of mails. Forward all key strokes to
 -- the list of mails by default.
--- TODO: Yikes!! Use lenses for setting the state ...
 mailEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
-mailEvent (AppState s db mi ViewMail) (T.VtyEvent e) =
+mailEvent s (T.VtyEvent e) =
     case e of
-        V.EvKey V.KEsc [] -> M.continue $ AppState s db mi Main
+        V.EvKey V.KEsc [] -> M.continue $ appMode .~ Main $ s
         ev ->
-            L.handleListEvent ev (mi ^. listOfMails) >>=
-            \mi' ->
-                 M.continue $
-                 AppState s db (MailIndex mi' (mi ^. searchEditor) (mi^.miMode)) ViewMail
+            L.handleListEvent ev (s ^. mailIndex ^. listOfMails) >>=
+            \l ->
+                 M.continue $ s & mailIndex . listOfMails .~ l & appMode .~
+                 ViewMail
 mailEvent mi _ = M.continue mi

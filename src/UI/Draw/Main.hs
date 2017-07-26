@@ -2,19 +2,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Draw.Main where
 
-import qualified Brick.AttrMap      as A
-import           Brick.Types        (Padding (..), Widget)
-import           Brick.Util         (fg, on)
-import           Brick.Widgets.Core (hLimit, padLeft, str, txt, vBox, vLimit,
-                                     withAttr, (<+>))
-import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
-import           Data.Maybe         (fromMaybe)
-import           Data.Monoid        ((<>))
-import qualified Data.Text          as T
-import qualified Data.Vector        as Vec
-import qualified Graphics.Vty       as V
-import           Lens.Micro         ((^.))
+import qualified Brick.AttrMap       as A
+import           Brick.Types         (Padding (..), Widget)
+import           Brick.Util          (fg, on)
+import           Brick.Widgets.Core  (hLimit, padLeft, str, txt, vBox, vLimit,
+                                      withAttr, (<+>))
+import qualified Brick.Widgets.Edit  as E
+import qualified Brick.Widgets.List  as L
+import           Control.Lens.Getter ((^.))
+import           Data.Maybe          (fromMaybe)
+import           Data.Monoid         ((<>))
+import qualified Data.Text           as T
+import qualified Data.Vector         as Vec
+import qualified Graphics.Vty        as V
 import           Storage.Mail
 import           UI.Types
 

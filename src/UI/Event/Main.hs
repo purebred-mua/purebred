@@ -5,11 +5,13 @@ import qualified Brick.Main             as M
 import qualified Brick.Types            as T
 import qualified Brick.Widgets.Edit     as E
 import qualified Brick.Widgets.List     as L
+import           Control.Lens.Getter    ((^.))
+import           Control.Lens.Lens      ((&))
+import           Control.Lens.Setter    ((.~))
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.Text              as T
 import           Data.Text.Zipper       (currentLine)
 import qualified Graphics.Vty           as V
-import           Lens.Micro             ((^.))
 import           Storage.Notmuch        (getMessages)
 import           UI.Types
 
@@ -27,26 +29,16 @@ mainEvent s e =
 -- get's us out of the application and one is to signal that we want the focus
 -- on the input field to change the notmuch search.
 handleListEvents :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
-handleListEvents a@(AppState s db mi Main) (T.VtyEvent e) =
+handleListEvents s (T.VtyEvent e) =
     case e of
-        V.EvKey V.KEsc [] -> M.halt a
-        V.EvKey (V.KChar ':') [] ->
-            M.continue $
-            (AppState
-                 s
-                 db
-                 (MailIndex (mi ^. listOfMails) (mi ^. searchEditor) SearchMail)
-                 Main)
-        V.EvKey V.KEnter [] -> M.continue $ AppState s db mi ViewMail
+        V.EvKey V.KEsc [] -> M.halt s
+        V.EvKey (V.KChar ':') [] -> M.continue $ mailIndex . miMode .~ SearchMail $ s
+        V.EvKey V.KEnter [] -> M.continue $ appMode .~ ViewMail $ s
         ev ->
-            L.handleListEvent ev (mi ^. listOfMails) >>=
+            L.handleListEvent ev (s ^. mailIndex ^. listOfMails) >>=
             \mi' ->
-                 M.continue $
-                 AppState
-                     s
-                     db
-                     (MailIndex mi' (mi ^. searchEditor) (mi ^. miMode))
-                     Main
+                 M.continue $ s & mailIndex . listOfMails .~ mi' & appMode .~
+                 Main
 handleListEvents s _ = M.continue s
 
 -- | Search search input is mostly straight forward, since every keystroke is
@@ -55,28 +47,20 @@ handleListEvents s _ = M.continue s
 handleSearchInputEvents :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 handleSearchInputEvents s (T.VtyEvent e) =
     case e of
-        V.EvKey V.KEsc [] ->
-            M.continue $
-            AppState
-                (s ^. notmuchRawsearch)
-                (s ^. notmuchDatabaseFp)
-                (MailIndex
-                     (s ^. mailIndex ^. listOfMails)
-                     (s ^. mailIndex ^. searchEditor)
-                     BrowseMail)
-                Main
+        V.EvKey V.KEsc [] -> M.continue $ mailIndex . miMode .~ BrowseMail $ s
         V.EvKey V.KEnter [] -> do
-          let searchterms = currentLine $ s^.mailIndex^.searchEditor^.E.editContentsL
-          vec <- liftIO $ getMessages (s^.notmuchDatabaseFp) (T.unpack searchterms)
-          let mi = MailIndex (L.list ListOfMails vec 1) (s^.mailIndex^.searchEditor) BrowseMail
-          M.continue $ AppState (s^.notmuchRawsearch) (s^.notmuchDatabaseFp) mi Main
+            let searchterms =
+                    currentLine $ s ^. mailIndex ^. searchEditor ^.
+                    E.editContentsL
+            vec <-
+                liftIO $
+                getMessages (s ^. notmuchDatabaseFp) (T.unpack searchterms)
+            let listWidget = (L.list ListOfMails vec 1)
+            M.continue $ s & mailIndex . listOfMails .~ listWidget & appMode .~
+                Main
         ev ->
             E.handleEditorEvent ev (s ^. mailIndex ^. searchEditor) >>=
             \ed ->
-                 M.continue $
-                 AppState
-                     (s ^. notmuchRawsearch)
-                     (s ^. notmuchDatabaseFp)
-                     (MailIndex (s ^. mailIndex ^. listOfMails) ed SearchMail)
-                     Main
+                 M.continue $ s & mailIndex . searchEditor .~ ed & appMode .~
+                 Main
 handleSearchInputEvents s _ = M.continue s
