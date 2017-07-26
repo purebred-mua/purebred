@@ -1,3 +1,4 @@
+-- | module for integrating notmuch within purebred
 module Storage.Notmuch where
 
 import Storage.Mail
@@ -22,8 +23,6 @@ getMessages dbfp searchterms = do
         hdrs <- mapM messageToMail msgs
         return $ Vec.fromList $ toList hdrs
 
--- | TODO: use lenses to construct the mail
---
 messageToMail :: Message -> IO Mail
 messageToMail m = do
   s <- messageHeader "Subject" m

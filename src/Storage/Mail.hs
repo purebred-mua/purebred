@@ -1,3 +1,4 @@
+-- | storage related data types
 {-# LANGUAGE TemplateHaskell #-}
 module Storage.Mail where
 

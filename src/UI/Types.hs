@@ -1,3 +1,4 @@
+-- | Basic types for the UI used by this library
 {-# LANGUAGE TemplateHaskell #-}
 module UI.Types where
 
@@ -7,10 +8,10 @@ import qualified Data.Text           as T
 import           Lens.Micro.Platform (makeLenses)
 import           Storage.Mail        (Mail)
 
--- | The mode in which the application is in
+-- | The global application mode
 data Mode
-    = Main
-    | ViewMail
+    = Main  -- ^ focus is on the main screen
+    | ViewMail  -- ^ focus is on the screen showing the entire mail
 
 -- | Used to identify widgets in brick
 data Name =
@@ -18,17 +19,21 @@ data Name =
     | ListOfMails
     deriving (Eq,Show,Ord)
 
--- | Modes for the main window
+-- | Modes for the main window to distinguish focus
 data MainMode
     = BrowseMail  -- ^ input focus goes to navigating the list of mails
     | SearchMail  -- ^ input focus goes to manipulating the notmuch search
 
--- | main application interface showing list of e-mails and an editor to
--- manipulate the notmuch search
+{- | main application interface
+
+The main UI shows a list of e-mails, allows the user to manipulate the notmuch
+search and composes e-mails from here.
+
+-}
 data MailIndex = MailIndex
-    { _listOfMails  :: L.List Name Mail
-    , _searchEditor :: E.Editor T.Text Name
-    , _miMode :: MainMode
+    { _listOfMails  :: L.List Name Mail  -- ^ widget displaying a list of e-mails
+    , _searchEditor :: E.Editor T.Text Name  -- ^ the input widget to manipulate the notmuch search
+    , _miMode :: MainMode  -- ^ mode to distinguish which widget should receive user input
     }
 makeLenses ''MailIndex
 

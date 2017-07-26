@@ -1,3 +1,4 @@
+-- | event handling for viewing a single mail
 module UI.Event.Mail where
 
 import qualified Brick.Main         as M

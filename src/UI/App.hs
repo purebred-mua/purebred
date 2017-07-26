@@ -1,3 +1,4 @@
+-- | The main application module
 {-# LANGUAGE OverloadedStrings #-}
 module UI.App where
 

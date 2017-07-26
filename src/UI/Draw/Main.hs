@@ -1,3 +1,4 @@
+-- | module for drawing main window widgets
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Draw.Main where
 
