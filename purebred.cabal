@@ -25,7 +25,7 @@ library
                      , UI.Event.Mail
                      , Storage.Notmuch
                      , Storage.Mail
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       base >= 4.8 && < 5
                      , brick
                      , microlens
                      , microlens-mtl
@@ -41,7 +41,7 @@ executable purebred
   ghc-options:         -Wall -threaded
   main-is:             Main.hs
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       base >= 4.8 && < 5
                      , purebred
                      , optparse-applicative
                      , brick
