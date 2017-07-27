@@ -1,0 +1,8 @@
+hacking guidelines for purebred
+
+- do not use hs-notmuch message methods that open file descriptors
+
+- optics are your friend
+
+- no perf optimisations without measurements (preferably in the commit
+  message)
