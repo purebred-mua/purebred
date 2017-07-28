@@ -10,6 +10,7 @@ data Mail = Mail
     { _subject :: String
     , _to      :: String
     , _from    :: String
+    , _filepath :: String
     } deriving (Show)
 
 makeLenses ''Mail

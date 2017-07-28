@@ -21,17 +21,22 @@ import           UI.Types
 drawMain :: AppState -> [Widget Name]
 drawMain s = [ui]
   where
-    label =
-        str "Purebred: " <+>
-        str "Item " <+> currentIndexW l <+> str " of " <+> total
     editorFocus = case (s^.asMailIndex^.miMode) of
       BrowseMail -> False
       SearchMail -> True
-    inputBox = E.renderEditor editorFocus (s ^. asMailIndex ^. miSearchEditor)
-    l = s ^. asMailIndex ^. miListOfMails
-    total = str $ show $ Vec.length $ l ^. (L.listElementsL)
-    box = L.renderList listDrawElement False l
-    ui = vBox [box, label, vLimit 1 inputBox]
+    inputBox = E.renderEditor editorDrawContent editorFocus (s ^. asMailIndex ^. miSearchEditor)
+    box = L.renderList listDrawElement False (s ^. asMailIndex ^. miListOfMails)
+    ui = vBox [box, statusbar s, vLimit 1 inputBox]
+
+statusbar :: AppState -> Widget Name
+statusbar s =
+    case s ^. asError of
+        Just e -> withAttr "error" $ str e
+        Nothing ->
+            let l = s ^. asMailIndex ^. miListOfMails
+                total = str $ show $ Vec.length $ l ^. (L.listElementsL)
+            in str "Purebred: " <+>
+               str "Item " <+> currentIndexW l <+> str " of " <+> total
 
 editorDrawContent :: [T.Text] -> Widget Name
 editorDrawContent st = txt $ T.unlines st
@@ -56,6 +61,7 @@ theMap = A.attrMap V.defAttr
     , (E.editFocusedAttr,     V.white `on` V.black)
     , (E.editAttr,            V.black `on` V.white)
     , (customAttr,            fg V.cyan)
+    , (A.attrName "error",    fg V.red)
     ]
 
 currentIndexW :: L.List Name Mail -> Widget Name

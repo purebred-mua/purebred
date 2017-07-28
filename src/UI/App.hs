@@ -2,22 +2,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.App where
 
-import           Storage.Notmuch     (getMessages)
-import           UI.Draw.Mail        (drawMail)
-import           UI.Draw.Main        (drawMain, editorDrawContent, theMap)
-import           UI.Event.Mail       (mailEvent)
-import           UI.Event.Main       (mainEvent)
-import           UI.Types
-
-import           Control.Lens.Getter ((^.))
-
-
 import qualified Brick.Main          as M
 import           Brick.Types         (Widget)
 import qualified Brick.Types         as T
 import qualified Brick.Widgets.Edit  as E
 import qualified Brick.Widgets.List  as L
+import           Control.Lens.Getter ((^.))
 import qualified Data.Text           as T
+import           Storage.Notmuch     (getMessages)
+import           UI.Draw.Mail        (drawMail)
+import           UI.Draw.Main        (drawMain, theMap)
+import           UI.Event.Mail       (mailEvent)
+import           UI.Event.Main       (mainEvent)
+import           UI.Types
 
 drawUI :: AppState -> [Widget Name]
 drawUI s =
@@ -40,11 +37,11 @@ initialState dbfp = do
                 (L.list ListOfMails vec 1)
                 (E.editor
                      EditorInput
-                     editorDrawContent
                      Nothing
                      (T.pack searchterms))
                 BrowseMail
-    return $ AppState searchterms dbfp mi Main
+    let mv = MailView Nothing
+    return $ AppState searchterms dbfp mi mv Main Nothing
 
 theApp :: M.App AppState e Name
 theApp =

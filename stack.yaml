@@ -39,12 +39,16 @@ packages:
 - '.'
 - location:
     git: https://github.com/frasertweedale/hs-notmuch.git
-    commit: fcec008f37085da7c3b43b8a1228cd625bf8609e
+    commit: 6859bbb613b01a14105dd11d6b79fecfe6a59339
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps:
+- mime-0.4.0.2
+- brick-0.20.1
+- data-clist-0.1.2.0
+- word-wrap-0.1
 
 # Override default flag values for local packages and extra-deps
 flags: {}

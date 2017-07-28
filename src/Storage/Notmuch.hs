@@ -20,12 +20,13 @@ getMessages dbfp searchterms = do
     Right db -> do
         q <- query db (FreeForm searchterms)
         msgs <- messages q
-        hdrs <- mapM messageToMail msgs
-        return $ Vec.fromList $ toList hdrs
+        mails <- mapM messageToMail msgs
+        return $ Vec.fromList $ toList mails
 
 messageToMail :: Message -> IO Mail
 messageToMail m = do
   s <- messageHeader "Subject" m
   t <- messageHeader "To" m
   f <- messageHeader "From" m
-  pure $ Mail (fromMaybe "" s) (fromMaybe "" t) (fromMaybe "" f)
+  fn <- messageFilename m
+  pure $ Mail (fromMaybe "" s) (fromMaybe "" t) (fromMaybe "" f) fn

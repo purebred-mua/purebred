@@ -7,12 +7,13 @@ import qualified Brick.Widgets.Edit     as E
 import qualified Brick.Widgets.List     as L
 import           Control.Lens.Getter    ((^.))
 import           Control.Lens.Lens      ((&))
-import           Control.Lens.Setter    ((.~))
+import           Control.Lens.Setter    ((.~), (?~))
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.Text              as T
 import           Data.Text.Zipper       (currentLine)
 import qualified Graphics.Vty           as V
 import           Storage.Notmuch        (getMessages)
+import           Storage.ParsedMail     (parseMail)
 import           UI.Types
 
 -- | We currently have two modes on the main view we need to distinguish
@@ -28,17 +29,22 @@ mainEvent s e =
 -- Most keystrokes are delegated to the list of mails, while one particular
 -- get's us out of the application and one is to signal that we want the focus
 -- on the input field to change the notmuch search.
+-- Note: moving around in the list clears any errors set during other events.
+-- Maybe that will remove anything important for the user to see. Do we need
+-- something like an error log?
 handleListEvents :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 handleListEvents s (T.VtyEvent e) =
     case e of
         V.EvKey V.KEsc [] -> M.halt s
         V.EvKey (V.KChar ':') [] -> M.continue $ asMailIndex . miMode .~ SearchMail $ s
-        V.EvKey V.KEnter [] -> M.continue $ asAppMode .~ ViewMail $ s
+        V.EvKey V.KEnter [] -> do
+            s' <- liftIO $ updateStateWithParsedMail s
+            M.continue $ s'
         ev ->
             L.handleListEvent ev (s ^. asMailIndex ^. miListOfMails) >>=
             \mi' ->
                  M.continue $ s & asMailIndex . miListOfMails .~ mi' & asAppMode .~
-                 Main
+                 Main & asError .~ Nothing
 handleListEvents s _ = M.continue s
 
 -- | Search search input is mostly straight forward, since every keystroke is
@@ -64,3 +70,16 @@ handleSearchInputEvents s (T.VtyEvent e) =
                  M.continue $ s & asMailIndex . miSearchEditor .~ ed & asAppMode .~
                  Main
 handleSearchInputEvents s _ = M.continue s
+
+updateStateWithParsedMail :: AppState -> IO AppState
+updateStateWithParsedMail s =
+    case L.listSelectedElement (s ^. asMailIndex ^. miListOfMails) of
+        Just (_,m) -> do
+            parsed <- parseMail m
+            case parsed of
+                Left e -> pure $ s & asError ?~ e & asAppMode .~ Main
+                Right pmail ->
+                    pure $
+                    s & asMailView .~ MailView (Just pmail) & asAppMode .~
+                    ViewMail
+        Nothing -> pure s

@@ -1,12 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
 module UI.Draw.Mail where
 
-import           Brick.Types         (Widget)
-import           Brick.Widgets.Core  (str, (<+>), (<=>))
+import           Brick.Types         (Padding (..), ViewportType (..), Widget)
+import           Brick.Widgets.Core  (padLeft, padTop, txt, txtWrap, vLimit,
+                                      viewport, (<+>), (<=>))
 import qualified Brick.Widgets.List  as L
+import           Codec.MIME.Type     (MIMEContent (..), MIMEParam (..),
+                                      MIMEValue (..), Type (..), showMIMEType)
 import           Control.Lens.Getter ((^.))
-import           Data.Maybe          (fromMaybe)
-import qualified Data.Vector         as Vec
-import           Storage.Mail
+import qualified Data.Text           as T
 import           UI.Draw.Main        (listDrawElement)
 import           UI.Types
 
@@ -16,46 +18,49 @@ import           UI.Types
 -- Implementation detail: Currently we're creating the sub list of mails we show
 -- for each key press. This might have to change in the future.
 drawMail :: AppState -> [Widget Name]
-drawMail s =
-    case L.listSelectedElement (s^.asMailIndex^.miListOfMails) of
-        Just (_, m) -> [indexView s <=> mailView m]
-        Nothing -> [str "Eeek"]
+drawMail s = [indexView s <=> (viewport ScrollingMailView Vertical $ (mailView (s^.asMailView^.mvMail)))]
 
 -- | TODO: See #19
-mailView :: Mail -> Widget Name
-mailView m =
-    let widgets =
-            zipWith
-                (<+>)
-                [str "From: ", str "To: ", str "Subject: "]
-                [str (m ^. from), str (m ^. to), str (m ^. subject)]
-    in foldr (<=>) (str "") widgets
+mailView :: Maybe ParsedMail -> Widget Name
+mailView (Just (MIMEMail m)) =
+    let filtered_headers =
+            filter
+                (\x ->
+                      paramName x `elem` showHeaders) $
+            mime_val_headers m
+        widgets =
+            (\h ->
+                  txt (paramName h) <+> padLeft (Pad 1) (txtWrap (paramValue h))) <$>
+            filtered_headers
+        body = padTop (Pad 1) $ mimeContentToView m
+    in foldr (<=>) (padTop (Pad 1) body) widgets
+mailView (Just (RFC2822 _ _)) = txt "Not supported yet"
+mailView Nothing = txt "Eeek: this is not supposed to happen"
+
+mimeContentToView :: MIMEValue -> Widget Name
+mimeContentToView (MIMEValue _ _ (Single m) _ _) = txtWrap m
+mimeContentToView (MIMEValue _ _ (Multi xs) _ _) =
+    let mval =
+            filter
+                (\x ->
+                      showMIMEType (mimeType $ mime_val_type x) ==
+                      preferContentType)
+                xs
+        picked =
+            if length mval == 0
+                then head xs
+                else head mval
+    in mimeContentToView picked
 
 indexView :: AppState -> Widget Name
-indexView s = L.renderList listDrawElement True sliced
-  where sliced = slicedIndex $ s^.asMailIndex^.miListOfMails
+indexView s = vLimit indexViewRows $ L.renderList listDrawElement True (s^.asMailIndex^.miListOfMails)
 
 -- | The size limit of the index list
 indexViewRows :: Int
 indexViewRows = 10
 
--- | In order to show part of the index, determine the lower and upper
---   boundaries for the index so that it always stays in view while keep the
---   current selected element selected
--- Workaround: Currently new list widgets position the selection at the first
--- item. So either we hack brick to allow setting the selected element (probably
--- best) or reduce the amount of elements we slice. The latter is implemented.
-determineIndexBounds :: L.List Name Mail -> (Int, Int)
-determineIndexBounds l =
-    let cur = fromMaybe 0 $ l^.L.listSelectedL
-        total = Vec.length $ l^.L.listElementsL
-        slice_length = if indexViewRows + cur > total then total - cur else indexViewRows
-        slice_start = cur
-    in (slice_start, slice_length)
+preferContentType :: T.Text
+preferContentType = "text/plain"
 
-slicedIndex :: L.List Name Mail -> L.List Name Mail
-slicedIndex l =
-    let items = l ^. L.listElementsL
-        (left, len) = determineIndexBounds l
-        newlist = Vec.slice left len items
-    in L.list ListOfMails newlist indexViewRows
+showHeaders :: [T.Text]
+showHeaders = ["subject", "to", "from"]

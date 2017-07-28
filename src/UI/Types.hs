@@ -4,6 +4,7 @@ module UI.Types where
 
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import           Codec.MIME.Type    (MIMEValue)
 import           Control.Lens.TH    (makeLenses)
 import qualified Data.Text          as T
 import           Storage.Mail       (Mail)
@@ -17,6 +18,7 @@ data Mode
 data Name =
     EditorInput
     | ListOfMails
+    | ScrollingMailView
     deriving (Eq,Show,Ord)
 
 -- | Modes for the main window to distinguish focus
@@ -31,18 +33,40 @@ search and composes e-mails from here.
 
 -}
 data MailIndex = MailIndex
-    { _miListOfMails  :: L.List Name Mail  -- ^ widget displaying a list of e-mails
-    , _miSearchEditor :: E.Editor T.Text Name  -- ^ the input widget to manipulate the notmuch search
-    , _miMode :: MainMode  -- ^ mode to distinguish which widget should receive user input
+    { _miListOfMails  :: L.List Name Mail
+    , _miSearchEditor :: E.Editor T.Text Name
+    , _miMode         :: MainMode
     }
 makeLenses ''MailIndex
+
+
+type Body = T.Text
+type Header = T.Text
+
+-- | a parsed email representing either a MIME or RFC2822 e-mail. Note: RFC2822
+-- is currently not implemented, but we're using the same type for the case we
+-- add support for it
+data ParsedMail
+    = MIMEMail MIMEValue
+    | RFC2822 [Header]
+              Body
+    deriving (Show,Eq)
+
+
+data MailView = MailView
+    { _mvMail :: Maybe ParsedMail
+    }
+
+makeLenses ''MailView
 
 -- | Overall application state
 data AppState = AppState
     { _asNotmuchRawsearch  :: String  -- ^ the raw database search entered by the user
     , _asNotmuchDatabaseFp :: String  -- ^ file path to the notmuch database
     , _asMailIndex         :: MailIndex
+    , _asMailView          :: MailView
     , _asAppMode           :: Mode
+    , _asError             :: Maybe String -- ^ in case of errors, show this error message
     }
 
 makeLenses ''AppState
