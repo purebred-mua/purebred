@@ -17,7 +17,7 @@ import           UI.Types
 -- for each key press. This might have to change in the future.
 drawMail :: AppState -> [Widget Name]
 drawMail s =
-    case L.listSelectedElement (s^.mailIndex^.listOfMails) of
+    case L.listSelectedElement (s^.asMailIndex^.miListOfMails) of
         Just (_, m) -> [indexView s <=> mailView m]
         Nothing -> [str "Eeek"]
 
@@ -33,7 +33,7 @@ mailView m =
 
 indexView :: AppState -> Widget Name
 indexView s = L.renderList listDrawElement True sliced
-  where sliced = slicedIndex $ s^.mailIndex^.listOfMails
+  where sliced = slicedIndex $ s^.asMailIndex^.miListOfMails
 
 -- | The size limit of the index list
 indexViewRows :: Int

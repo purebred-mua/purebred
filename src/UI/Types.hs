@@ -31,18 +31,18 @@ search and composes e-mails from here.
 
 -}
 data MailIndex = MailIndex
-    { _listOfMails  :: L.List Name Mail  -- ^ widget displaying a list of e-mails
-    , _searchEditor :: E.Editor T.Text Name  -- ^ the input widget to manipulate the notmuch search
-    , _miMode       :: MainMode  -- ^ mode to distinguish which widget should receive user input
+    { _miListOfMails  :: L.List Name Mail  -- ^ widget displaying a list of e-mails
+    , _miSearchEditor :: E.Editor T.Text Name  -- ^ the input widget to manipulate the notmuch search
+    , _miMode :: MainMode  -- ^ mode to distinguish which widget should receive user input
     }
 makeLenses ''MailIndex
 
 -- | Overall application state
 data AppState = AppState
-    { _notmuchRawsearch  :: String  -- ^ the raw database search entered by the user
-    , _notmuchDatabaseFp :: String  -- ^ file path to the notmuch database
-    , _mailIndex         :: MailIndex
-    , _appMode           :: Mode
+    { _asNotmuchRawsearch  :: String  -- ^ the raw database search entered by the user
+    , _asNotmuchDatabaseFp :: String  -- ^ file path to the notmuch database
+    , _asMailIndex         :: MailIndex
+    , _asAppMode           :: Mode
     }
 
 makeLenses ''AppState

@@ -24,11 +24,11 @@ drawMain s = [ui]
     label =
         str "Purebred: " <+>
         str "Item " <+> currentIndexW l <+> str " of " <+> total
-    editorFocus = case (s^.mailIndex^.miMode) of
+    editorFocus = case (s^.asMailIndex^.miMode) of
       BrowseMail -> False
       SearchMail -> True
-    inputBox = E.renderEditor editorFocus (s ^. mailIndex ^. searchEditor)
-    l = s ^. mailIndex ^. listOfMails
+    inputBox = E.renderEditor editorFocus (s ^. asMailIndex ^. miSearchEditor)
+    l = s ^. asMailIndex ^. miListOfMails
     total = str $ show $ Vec.length $ l ^. (L.listElementsL)
     box = L.renderList listDrawElement False l
     ui = vBox [box, label, vLimit 1 inputBox]

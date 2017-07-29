@@ -21,13 +21,13 @@ import qualified Data.Text           as T
 
 drawUI :: AppState -> [Widget Name]
 drawUI s =
-    case s ^. appMode of
+    case s ^. asAppMode of
         Main -> drawMain s
         ViewMail -> drawMail s
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 appEvent s e =
-    case s ^. appMode of
+    case s ^. asAppMode of
         Main -> mainEvent s e
         ViewMail -> mailEvent s e
 

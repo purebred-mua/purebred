@@ -20,7 +20,7 @@ import           UI.Types
 -- list, the other is to allow the user to easily change the list.
 mainEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 mainEvent s e =
-    case (s^.mailIndex^.miMode) of
+    case (s^.asMailIndex^.miMode) of
       BrowseMail -> handleListEvents s e
       SearchMail -> handleSearchInputEvents s e
 
@@ -32,12 +32,12 @@ handleListEvents :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next App
 handleListEvents s (T.VtyEvent e) =
     case e of
         V.EvKey V.KEsc [] -> M.halt s
-        V.EvKey (V.KChar ':') [] -> M.continue $ mailIndex . miMode .~ SearchMail $ s
-        V.EvKey V.KEnter [] -> M.continue $ appMode .~ ViewMail $ s
+        V.EvKey (V.KChar ':') [] -> M.continue $ asMailIndex . miMode .~ SearchMail $ s
+        V.EvKey V.KEnter [] -> M.continue $ asAppMode .~ ViewMail $ s
         ev ->
-            L.handleListEvent ev (s ^. mailIndex ^. listOfMails) >>=
+            L.handleListEvent ev (s ^. asMailIndex ^. miListOfMails) >>=
             \mi' ->
-                 M.continue $ s & mailIndex . listOfMails .~ mi' & appMode .~
+                 M.continue $ s & asMailIndex . miListOfMails .~ mi' & asAppMode .~
                  Main
 handleListEvents s _ = M.continue s
 
@@ -47,20 +47,20 @@ handleListEvents s _ = M.continue s
 handleSearchInputEvents :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 handleSearchInputEvents s (T.VtyEvent e) =
     case e of
-        V.EvKey V.KEsc [] -> M.continue $ mailIndex . miMode .~ BrowseMail $ s
+        V.EvKey V.KEsc [] -> M.continue $ asMailIndex . miMode .~ BrowseMail $ s
         V.EvKey V.KEnter [] -> do
             let searchterms =
-                    currentLine $ s ^. mailIndex ^. searchEditor ^.
+                    currentLine $ s ^. asMailIndex ^. miSearchEditor ^.
                     E.editContentsL
             vec <-
                 liftIO $
-                getMessages (s ^. notmuchDatabaseFp) (T.unpack searchterms)
+                getMessages (s ^. asNotmuchDatabaseFp) (T.unpack searchterms)
             let listWidget = (L.list ListOfMails vec 1)
-            M.continue $ s & mailIndex . listOfMails .~ listWidget & appMode .~
+            M.continue $ s & asMailIndex . miListOfMails .~ listWidget & asAppMode .~
                 Main
         ev ->
-            E.handleEditorEvent ev (s ^. mailIndex ^. searchEditor) >>=
+            E.handleEditorEvent ev (s ^. asMailIndex ^. miSearchEditor) >>=
             \ed ->
-                 M.continue $ s & mailIndex . searchEditor .~ ed & appMode .~
+                 M.continue $ s & asMailIndex . miSearchEditor .~ ed & asAppMode .~
                  Main
 handleSearchInputEvents s _ = M.continue s

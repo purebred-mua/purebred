@@ -15,10 +15,10 @@ import           UI.Types
 mailEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 mailEvent s (T.VtyEvent e) =
     case e of
-        V.EvKey V.KEsc [] -> M.continue $ appMode .~ Main $ s
+        V.EvKey V.KEsc [] -> M.continue $ asAppMode .~ Main $ s
         ev ->
-            L.handleListEvent ev (s ^. mailIndex ^. listOfMails) >>=
+            L.handleListEvent ev (s ^. asMailIndex ^. miListOfMails) >>=
             \l ->
-                 M.continue $ s & mailIndex . listOfMails .~ l & appMode .~
+                 M.continue $ s & asMailIndex . miListOfMails .~ l & asAppMode .~
                  ViewMail
 mailEvent mi _ = M.continue mi
