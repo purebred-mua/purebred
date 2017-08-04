@@ -2,12 +2,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 module UI.Types where
 
-import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
-import           Codec.MIME.Type    (MIMEValue)
-import           Control.Lens.TH    (makeLenses)
-import qualified Data.Text          as T
-import           Storage.Mail       (Mail)
+import           Brick.Types               (BrickEvent, EventM, Next)
+import qualified Brick.Widgets.Edit        as E
+import qualified Brick.Widgets.List        as L
+import           Codec.MIME.Type           (MIMEValue)
+import           Control.Lens.TH           (makeLenses)
+import qualified Data.Text                 as T
+import qualified Graphics.Vty.Input.Events as Vty
+import           Storage.Mail              (Mail)
+
 
 -- | The global application mode
 data Mode
@@ -70,3 +73,10 @@ data AppState = AppState
     }
 
 makeLenses ''AppState
+
+data Keybinding = Keybinding
+    { _kbDescription :: String
+    , _kbEvent       :: Vty.Event
+    , _kbAction      :: AppState -> EventM Name (Next AppState)
+    }
+makeLenses ''Keybinding

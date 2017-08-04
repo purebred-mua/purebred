@@ -19,6 +19,7 @@ library
   default-language:    Haskell2010
   exposed-modules:     UI.App
                      , UI.Types
+                     , UI.Keybindings
                      , UI.Draw.Main
                      , UI.Draw.Mail
                      , UI.Event.Main
