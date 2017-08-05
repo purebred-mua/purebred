@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module UI.Types where
 
-import           Brick.Types               (BrickEvent, EventM, Next)
+import           Brick.Types               (EventM, Next)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Codec.MIME.Type           (MIMEValue)
@@ -16,12 +16,17 @@ import           Storage.Mail              (Mail)
 data Mode
     = Main  -- ^ focus is on the main screen
     | ViewMail  -- ^ focus is on the screen showing the entire mail
+    | GatherHeaders  -- ^ focus is on the command line to gather input for composing an e-mail
+    | ComposeEditor  -- ^ edit the final e-mail
 
 -- | Used to identify widgets in brick
 data Name =
     EditorInput
     | ListOfMails
     | ScrollingMailView
+    | GatherHeadersFrom
+    | GatherHeadersTo
+    | GatherHeadersSubject
     deriving (Eq,Show,Ord)
 
 -- | Modes for the main window to distinguish focus
@@ -62,12 +67,28 @@ data MailView = MailView
 
 makeLenses ''MailView
 
+data ComposeState
+    = AskFrom
+    | AskTo
+    | AskSubject
+    deriving (Eq)
+
+data Compose = Compose
+    { _cTmpFile :: Maybe String
+    , _cFocus   :: ComposeState
+    , _cFrom    :: E.Editor T.Text Name
+    , _cTo      :: E.Editor T.Text Name
+    , _cSubject :: E.Editor T.Text Name
+    }
+makeLenses ''Compose
+
 -- | Overall application state
 data AppState = AppState
     { _asNotmuchRawsearch  :: String  -- ^ the raw database search entered by the user
     , _asNotmuchDatabaseFp :: String  -- ^ file path to the notmuch database
     , _asMailIndex         :: MailIndex
     , _asMailView          :: MailView
+    , _asCompose           :: Compose  -- ^ state to keep when user creates a new mail
     , _asAppMode           :: Mode
     , _asError             :: Maybe String -- ^ in case of errors, show this error message
     }

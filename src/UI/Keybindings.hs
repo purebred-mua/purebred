@@ -1,18 +1,25 @@
+{-# LANGUAGE OverloadedStrings #-}
 module UI.Keybindings where
 
 import qualified Brick.Main                as M
 import qualified Brick.Types               as T
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
+import           Control.Lens.Fold         ((^?!))
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Lens         ((&))
+import           Control.Lens.Prism        (_Just)
 import           Control.Lens.Setter       ((.~), (?~))
 import           Control.Monad.IO.Class    (liftIO)
 import           Data.List                 (find)
-import           Data.Text                 (unpack)
+import           Data.Text                 (unlines, unpack)
+import           Data.Text.Lazy.IO         (readFile)
 import           Data.Text.Zipper          (currentLine)
 import qualified Graphics.Vty              as V
 import           Graphics.Vty.Input.Events (Event)
+import           Network.Mail.Mime         (Address (..), renderSendMail,
+                                            simpleMail')
+import           Prelude                   hiding (readFile, unlines)
 import           Storage.Mail              (Mail)
 import           Storage.Notmuch           (getMessages)
 import           Storage.ParsedMail        (parseMail)
@@ -44,7 +51,9 @@ indexKeybindings =
           focusSearch
     , Keybinding "display an e-mail" (V.EvKey V.KEnter []) displayMail
     , Keybinding "mail index down" (V.EvKey V.KDown []) mailIndexDown
-    , Keybinding "mail index up" (V.EvKey V.KUp []) mailIndexUp]
+    , Keybinding "mail index up" (V.EvKey V.KUp []) mailIndexUp
+    , Keybinding "Switch between editor and main" (V.EvKey (V.KChar '\t') []) toggleComposeEditorAndMain
+    , Keybinding "compose new mail" (V.EvKey (V.KChar 'm') []) composeMail]
 
 indexsearchKeybindings :: [Keybinding]
 indexsearchKeybindings =
@@ -58,6 +67,29 @@ displayMailKeybindings =
   , Keybinding "Scroll e-mail up" (V.EvKey V.KBS []) (\s -> scrollMailViewPage s T.Up)
   , Keybinding "Scroll e-mail down" (V.EvKey (V.KChar ' ') []) (\s -> scrollMailViewPage s T.Down)
   ]
+
+interactiveGatherHeadersKeybindings :: [Keybinding]
+interactiveGatherHeadersKeybindings =
+    [Keybinding "Return to list of mails" (V.EvKey V.KEsc []) cancelToMain]
+
+composeEditorKeybindings :: [Keybinding]
+composeEditorKeybindings =
+    [ Keybinding "Toggle index view" (V.EvKey (V.KChar '\t') []) cancelToMain
+    , Keybinding "Send e-mail" (V.EvKey (V.KChar 'y') []) sendMail
+    , Keybinding
+          "Cancel compose"
+          (V.EvKey V.KEsc [])
+          (\s ->
+                M.continue $ resetCompose s)]
+
+toggleComposeEditorAndMain :: AppState -> T.EventM Name (T.Next AppState)
+toggleComposeEditorAndMain s =
+    case s ^. asCompose ^. cTmpFile of
+        Just _ -> M.continue $ s & asAppMode .~ ComposeEditor
+        Nothing -> M.continue s
+
+cancelToMain :: AppState -> T.EventM Name (T.Next AppState)
+cancelToMain s = M.continue $ asAppMode .~ Main $ s
 
 mailIndexEvent :: AppState -> (L.List Name Mail -> L.List Name Mail) -> T.EventM n (T.Next AppState)
 mailIndexEvent s fx =
@@ -77,6 +109,9 @@ displayMail :: AppState -> T.EventM Name (T.Next AppState)
 displayMail s = do
     s' <- liftIO $ updateStateWithParsedMail s
     M.continue $ s'
+
+composeMail :: AppState -> T.EventM Name (T.Next AppState)
+composeMail s = M.continue $ asAppMode .~ GatherHeaders $ s
 
 cancelSearch  :: AppState -> T.EventM Name (T.Next AppState)
 cancelSearch s = M.continue $ asMailIndex . miMode .~ BrowseMail $ s
@@ -108,3 +143,35 @@ scrollMailViewPage s d = do
   let vp = M.viewportScroll ScrollingMailView
   M.vScrollPage vp d
   M.continue s
+
+sendMail :: AppState -> T.EventM Name (T.Next AppState)
+sendMail s = do
+    body <- liftIO $ readFile (s ^. asCompose ^. cTmpFile ^?! _Just)  -- XXX if something has removed the tmpfile for whatever reason we go b00m :(
+    let to =
+            Address
+                Nothing
+                (unlines $ E.getEditContents $ s ^. asCompose ^. cTo)
+    let from =
+            Address
+                Nothing
+                (unlines $ E.getEditContents $ s ^. asCompose ^. cFrom)
+    let m =
+            simpleMail'
+                to
+                from
+                (unlines $ E.getEditContents $ s ^. asCompose ^. cSubject)
+                body
+    liftIO $ renderSendMail m
+    M.continue $ s & asCompose .~ initialCompose & asAppMode .~ Main
+
+resetCompose :: AppState -> AppState
+resetCompose s = s & asCompose .~ initialCompose & asAppMode .~ Main
+
+initialCompose :: Compose
+initialCompose =
+    Compose
+        Nothing
+        AskFrom
+        (E.editor GatherHeadersFrom Nothing "")
+        (E.editor GatherHeadersTo Nothing "")
+        (E.editor GatherHeadersSubject Nothing "")

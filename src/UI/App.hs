@@ -2,21 +2,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.App where
 
-import qualified Brick.Main          as M
 import qualified Brick.AttrMap       as A
-import qualified Graphics.Vty        as V
-import           Brick.Util          (fg, on)
+import qualified Brick.Main          as M
 import           Brick.Types         (Widget)
 import qualified Brick.Types         as T
+import           Brick.Util          (fg, on)
 import qualified Brick.Widgets.Edit  as E
 import qualified Brick.Widgets.List  as L
 import           Control.Lens.Getter ((^.))
 import qualified Data.Text           as T
+import qualified Graphics.Vty        as V
 import           Storage.Notmuch     (getMessages)
+import           UI.Draw.Compose     (drawComposeEditor, drawInteractiveHeaders)
 import           UI.Draw.Mail        (drawMail)
 import           UI.Draw.Main        (drawMain)
+import           UI.Event.Compose    (composeEditor, interactiveGatherHeaders)
 import           UI.Event.Mail       (mailEvent)
 import           UI.Event.Main       (mainEvent)
+import           UI.Keybindings      (initialCompose)
 import           UI.Types
 
 drawUI :: AppState -> [Widget Name]
@@ -24,12 +27,16 @@ drawUI s =
     case s ^. asAppMode of
         Main -> drawMain s
         ViewMail -> drawMail s
+        GatherHeaders -> drawInteractiveHeaders s
+        ComposeEditor -> drawComposeEditor s
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 appEvent s e =
     case s ^. asAppMode of
         Main -> mainEvent s e
         ViewMail -> mailEvent s e
+        GatherHeaders -> interactiveGatherHeaders s e
+        ComposeEditor -> composeEditor s e
 
 initialState :: String -> IO AppState
 initialState dbfp = do
@@ -44,7 +51,7 @@ initialState dbfp = do
                      (T.pack searchterms))
                 BrowseMail
     let mv = MailView Nothing
-    return $ AppState searchterms dbfp mi mv Main Nothing
+    return $ AppState searchterms dbfp mi mv initialCompose Main Nothing
 
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr

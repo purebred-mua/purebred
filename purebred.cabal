@@ -22,8 +22,10 @@ library
                      , UI.Keybindings
                      , UI.Draw.Main
                      , UI.Draw.Mail
+                     , UI.Draw.Compose
                      , UI.Event.Main
                      , UI.Event.Mail
+                     , UI.Event.Compose
                      , Storage.Notmuch
                      , Storage.Mail
                      , Storage.ParsedMail
@@ -36,6 +38,9 @@ library
                      , notmuch
                      , text
                      , mime
+                     , temporary
+                     , process
+                     , mime-mail
 
 executable purebred
   hs-source-dirs:      app
