@@ -3,6 +3,9 @@
 module UI.App where
 
 import qualified Brick.Main          as M
+import qualified Brick.AttrMap       as A
+import qualified Graphics.Vty        as V
+import           Brick.Util          (fg, on)
 import           Brick.Types         (Widget)
 import qualified Brick.Types         as T
 import qualified Brick.Widgets.Edit  as E
@@ -11,7 +14,7 @@ import           Control.Lens.Getter ((^.))
 import qualified Data.Text           as T
 import           Storage.Notmuch     (getMessages)
 import           UI.Draw.Mail        (drawMail)
-import           UI.Draw.Main        (drawMain, theMap)
+import           UI.Draw.Main        (drawMain)
 import           UI.Event.Mail       (mailEvent)
 import           UI.Event.Main       (mainEvent)
 import           UI.Types
@@ -42,6 +45,16 @@ initialState dbfp = do
                 BrowseMail
     let mv = MailView Nothing
     return $ AppState searchterms dbfp mi mv Main Nothing
+
+theMap :: A.AttrMap
+theMap = A.attrMap V.defAttr
+    [ (L.listAttr,            V.brightBlue `on` V.black)
+    , (L.listSelectedAttr,    V.white `on` V.yellow)
+    , (E.editFocusedAttr,     V.white `on` V.black)
+    , (E.editAttr,            V.brightBlue `on` V.black)
+    , (A.attrName "error",    fg V.red)
+    , (A.attrName "statusbar", V.black `on` V.brightWhite)
+    ]
 
 theApp :: M.App AppState e Name
 theApp =
