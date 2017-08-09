@@ -1,14 +1,15 @@
 -- | module for integrating notmuch within purebred
 module Storage.Notmuch where
 
-import Storage.Mail
+import           Storage.Mail
 
-import Notmuch
-import Notmuch.Search
+import           Notmuch
+import           Notmuch.Search
 
-import Data.Foldable (toList)
-import qualified Data.Vector as Vec
-import Data.Maybe (fromMaybe)
+import           Data.Foldable  (toList)
+import           Data.Maybe     (fromMaybe)
+import qualified Data.Vector    as Vec
+import           System.Process (readProcess)
 
 
 getMessages :: String -> String -> IO (Vec.Vector Mail)
@@ -30,3 +31,11 @@ messageToMail m = do
   f <- messageHeader "From" m
   fn <- messageFilename m
   pure $ Mail (fromMaybe "" s) (fromMaybe "" t) (fromMaybe "" f) fn
+
+getDatabasePath :: IO (FilePath)
+getDatabasePath = do
+  let cmd = "notmuch"
+  let args = ["config", "get", "database.path"]
+  stdout <- readProcess cmd args []
+  pure $ filter (/= '\n') stdout
+
