@@ -2,16 +2,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.App where
 
-import qualified Brick.AttrMap       as A
 import qualified Brick.Main          as M
 import           Brick.Types         (Widget)
 import qualified Brick.Types         as T
-import           Brick.Util          (fg, on)
 import qualified Brick.Widgets.Edit  as E
 import qualified Brick.Widgets.List  as L
+import           Config.Types        (Configuration, confColorMap,
+                                      confNotmuchDatabase, confNotmuchsearch)
 import           Control.Lens.Getter ((^.))
 import qualified Data.Text           as T
-import qualified Graphics.Vty        as V
 import           Storage.Notmuch     (getMessages)
 import           UI.Draw.Compose     (drawComposeEditor, drawInteractiveHeaders)
 import           UI.Draw.Mail        (drawMail)
@@ -38,36 +37,27 @@ appEvent s e =
         GatherHeaders -> interactiveGatherHeaders s e
         ComposeEditor -> composeEditor s e
 
-initialState :: String -> IO AppState
-initialState dbfp = do
-    let searchterms = "tag:inbox"
-    vec <- getMessages dbfp searchterms
+initialState :: Configuration -> IO AppState
+initialState conf = do
+    let searchterms = conf ^. confNotmuchsearch
+    vec <- getMessages (conf ^. confNotmuchDatabase) (T.unpack searchterms)
     let mi =
             MailIndex
                 (L.list ListOfMails vec 1)
                 (E.editor
                      EditorInput
                      Nothing
-                     (T.pack searchterms))
+                     searchterms)
                 BrowseMail
     let mv = MailView Nothing
-    return $ AppState searchterms dbfp mi mv initialCompose Main Nothing
+    return $ AppState conf mi mv initialCompose Main Nothing
 
-theMap :: A.AttrMap
-theMap = A.attrMap V.defAttr
-    [ (L.listAttr,            V.brightBlue `on` V.black)
-    , (L.listSelectedAttr,    V.white `on` V.yellow)
-    , (E.editFocusedAttr,     V.white `on` V.black)
-    , (E.editAttr,            V.brightBlue `on` V.black)
-    , (A.attrName "error",    fg V.red)
-    , (A.attrName "statusbar", V.black `on` V.brightWhite)
-    ]
-
-theApp :: M.App AppState e Name
-theApp =
-    M.App { M.appDraw = drawUI
-          , M.appChooseCursor = M.showFirstCursor
-          , M.appHandleEvent = appEvent
-          , M.appStartEvent = return
-          , M.appAttrMap = const theMap
-          }
+theApp :: AppState -> M.App AppState e Name
+theApp s =
+    M.App
+    { M.appDraw = drawUI
+    , M.appChooseCursor = M.showFirstCursor
+    , M.appHandleEvent = appEvent
+    , M.appStartEvent = return
+    , M.appAttrMap = const (s ^. asConfig ^. confColorMap)
+    }

@@ -26,6 +26,8 @@ library
                      , UI.Event.Main
                      , UI.Event.Mail
                      , UI.Event.Compose
+                     , Config.Main
+                     , Config.Types
                      , Storage.Notmuch
                      , Storage.Mail
                      , Storage.ParsedMail

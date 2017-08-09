@@ -5,9 +5,9 @@ import UI.App (theApp, initialState)
 import qualified Brick.Main as M
 import Control.Monad (void)
 import Storage.Notmuch (getDatabasePath)
+import Config.Main (defaultConfig)
 
 main :: IO ()
 main = do
-    databaseFilepath <- getDatabasePath
-    s <- initialState databaseFilepath
-    void $ M.defaultMain theApp s
+  s <- initialState =<< defaultConfig =<< getDatabasePath
+  void $ M.defaultMain (theApp s) s

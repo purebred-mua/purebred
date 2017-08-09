@@ -5,6 +5,7 @@ import qualified Brick.Main                as M
 import qualified Brick.Types               as T
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
+import           Config.Types              (confNotmuchDatabase)
 import           Control.Lens.Fold         ((^?!))
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Lens         ((&))
@@ -120,7 +121,11 @@ applySearchTerms :: AppState -> T.EventM Name (T.Next AppState)
 applySearchTerms s = do
     let searchterms =
             currentLine $ s ^. asMailIndex ^. miSearchEditor ^. E.editContentsL
-    vec <- liftIO $ getMessages (s ^. asNotmuchDatabaseFp) (unpack searchterms)
+    vec <-
+        liftIO $
+        getMessages
+            (s ^. asConfig ^. confNotmuchDatabase)
+            (unpack searchterms)
     let listWidget = (L.list ListOfMails vec 1)
     M.continue $ s & asMailIndex . miListOfMails .~ listWidget & asAppMode .~
         Main

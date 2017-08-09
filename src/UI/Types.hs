@@ -6,6 +6,7 @@ import           Brick.Types               (EventM, Next)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Codec.MIME.Type           (MIMEValue)
+import           Config.Types              (Configuration)
 import           Control.Lens.TH           (makeLenses)
 import qualified Data.Text                 as T
 import qualified Graphics.Vty.Input.Events as Vty
@@ -84,13 +85,12 @@ makeLenses ''Compose
 
 -- | Overall application state
 data AppState = AppState
-    { _asNotmuchRawsearch  :: String  -- ^ the raw database search entered by the user
-    , _asNotmuchDatabaseFp :: String  -- ^ file path to the notmuch database
-    , _asMailIndex         :: MailIndex
-    , _asMailView          :: MailView
-    , _asCompose           :: Compose  -- ^ state to keep when user creates a new mail
-    , _asAppMode           :: Mode
-    , _asError             :: Maybe String -- ^ in case of errors, show this error message
+    { _asConfig    :: Configuration
+    , _asMailIndex :: MailIndex
+    , _asMailView  :: MailView
+    , _asCompose   :: Compose  -- ^ state to keep when user creates a new mail
+    , _asAppMode   :: Mode
+    , _asError     :: Maybe String -- ^ in case of errors, show this error message
     }
 
 makeLenses ''AppState
