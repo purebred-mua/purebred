@@ -21,11 +21,11 @@ library
                      , UI.Types
                      , UI.Keybindings
                      , UI.Draw.Main
-                     , UI.Draw.Mail
-                     , UI.Draw.Compose
-                     , UI.Event.Main
-                     , UI.Event.Mail
-                     , UI.Event.Compose
+                     , UI.Index.Main
+                     , UI.Status.Main
+                     , UI.ComposeEditor.Main
+                     , UI.GatherHeaders.Main
+                     , UI.Mail.Main
                      , Config.Main
                      , Config.Types
                      , Storage.Notmuch

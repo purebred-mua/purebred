@@ -2,23 +2,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.App where
 
-import qualified Brick.Main          as M
-import           Brick.Types         (Widget)
-import qualified Brick.Types         as T
-import qualified Brick.Widgets.Edit  as E
-import qualified Brick.Widgets.List  as L
-import           Config.Types        (Configuration, confColorMap,
-                                      confNotmuchDatabase, confNotmuchsearch)
-import           Control.Lens.Getter ((^.))
-import qualified Data.Text           as T
-import           Storage.Notmuch     (getMessages)
-import           UI.Draw.Compose     (drawComposeEditor, drawInteractiveHeaders)
-import           UI.Draw.Mail        (drawMail)
-import           UI.Draw.Main        (drawMain)
-import           UI.Event.Compose    (composeEditor, interactiveGatherHeaders)
-import           UI.Event.Mail       (mailEvent)
-import           UI.Event.Main       (mainEvent)
-import           UI.Keybindings      (initialCompose)
+import qualified Brick.Main            as M
+import           Brick.Types           (Widget)
+import qualified Brick.Types           as T
+import qualified Brick.Widgets.Edit    as E
+import qualified Brick.Widgets.List    as L
+import           Config.Types          (Configuration, confColorMap,
+                                        confNotmuchDatabase, confNotmuchsearch)
+import           Control.Lens.Getter   ((^.))
+import qualified Data.Text             as T
+import           Storage.Notmuch       (getMessages)
+import           UI.ComposeEditor.Main (composeEditor, drawComposeEditor)
+import           UI.GatherHeaders.Main (drawInteractiveHeaders,
+                                        interactiveGatherHeaders)
+import           UI.Index.Main         (drawMain, mainEvent)
+import           UI.Keybindings        (initialCompose)
+import           UI.Mail.Main          (drawMail, mailEvent)
 import           UI.Types
 
 drawUI :: AppState -> [Widget Name]
