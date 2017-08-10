@@ -13,6 +13,11 @@ communication is the key here rather than hacking away.
 
 - optics are your friend
 
+- use `view`, `review`, `set`, `over` and so on instead of the
+  infix optic functions from lens
+
+- use explicit import list or qualified imports
+
 - no perf optimisations without measurements (preferably in the commit
   message)
 
