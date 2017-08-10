@@ -16,13 +16,12 @@ import           Control.Lens.Setter       ((.~))
 import           Control.Monad.IO.Class    (liftIO)
 import qualified Data.Text                 as T
 import           Graphics.Vty.Input.Events (Event)
-import           UI.Index.Main             (renderMailList)
-import           UI.Keybindings            (displayMailKeybindings, handleEvent)
+import           Storage.ParsedMail        (ParsedMail (..))
 import           UI.Index.Keybindings      (updateStateWithParsedMail)
+import           UI.Index.Main             (renderMailList)
+import           UI.Keybindings            (handleEvent)
 import           UI.Status.Main            (statusbar)
 import           UI.Types
-
-import Storage.ParsedMail (ParsedMail(..))
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.
@@ -84,7 +83,12 @@ showHeaders s = s ^. asConfig ^. confMailView ^. mvHeadersToShow
 -- | The mail view shows a shortened list of mails. Forward all key strokes to
 -- the list of mails by default.
 mailEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
-mailEvent s ev = handleEvent displayMailKeybindings displayMailDefault s ev
+mailEvent s ev =
+    handleEvent
+        (s ^. asConfig ^. confMailView ^. mvKeybindings)
+        displayMailDefault
+        s
+        ev
 
 displayMailDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
 displayMailDefault s ev = do

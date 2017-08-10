@@ -1,14 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Config.Main where
 
-import qualified Brick.AttrMap        as A
-import           Brick.Util           (fg, on)
-import qualified Brick.Widgets.Edit   as E
-import qualified Brick.Widgets.List   as L
-import qualified Graphics.Vty         as V
-import           UI.Index.Keybindings (indexKeybindings)
-import           UI.Types             (Configuration (..), IndexView (..),
-                                       MailViewSettings(..))
+import qualified Brick.AttrMap                as A
+import           Brick.Util                   (fg, on)
+import qualified Brick.Widgets.Edit           as E
+import qualified Brick.Widgets.List           as L
+import qualified Graphics.Vty                 as V
+import           UI.ComposeEditor.Keybindings (composeEditorKeybindings)
+import           UI.Index.Keybindings         (indexKeybindings,
+                                               indexsearchKeybindings)
+import           UI.Mail.Keybindings          (displayMailKeybindings)
+import           UI.Types                     (ComposeViewSettings (..),
+                                               Configuration (..),
+                                               IndexViewSettings (..),
+                                               MailViewSettings (..))
 
 defaultColorMap :: A.AttrMap
 defaultColorMap = A.attrMap V.defAttr
@@ -32,8 +37,14 @@ defaultConfig dbfp =
           { _mvIndexRows = 10
           , _mvPreferedContentType = "text/plain"
           , _mvHeadersToShow = ["subject", "to", "from"]
+          , _mvKeybindings = displayMailKeybindings
           }
-        , _confIndexView = IndexView
+        , _confIndexView = IndexViewSettings
           { _ivKeybindings = indexKeybindings
+          , _ivSearchKeybindings = indexsearchKeybindings
           }
+        , _confComposeView = ComposeViewSettings
+        {
+          _cvKeybindings = composeEditorKeybindings
+        }
         }

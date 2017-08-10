@@ -16,7 +16,6 @@ import           Graphics.Vty.Input.Events (Event)
 import           Storage.Mail
 import           UI.Draw.Main              (editorDrawContent, fillLine)
 import           UI.Keybindings            (handleEvent)
-import           UI.Index.Keybindings (indexsearchKeybindings)
 import           UI.Status.Main            (statusbar)
 import           UI.Types
 
@@ -48,9 +47,19 @@ listDrawElement sel a =
 -- list, the other is to allow the user to easily change the list.
 mainEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 mainEvent s e =
-    case (s^.asMailIndex^.miMode) of
-      BrowseMail -> handleEvent (s^.asConfig^.confIndexView^.ivKeybindings) listEventDefault s e
-      SearchMail -> handleEvent indexsearchKeybindings searchInputEventDefault s e
+    case (s ^. asMailIndex ^. miMode) of
+        BrowseMail ->
+            handleEvent
+                (s ^. asConfig ^. confIndexView ^. ivKeybindings)
+                listEventDefault
+                s
+                e
+        SearchMail ->
+            handleEvent
+                (s ^. asConfig ^. confIndexView ^. ivSearchKeybindings)
+                searchInputEventDefault
+                s
+                e
 
 -- | Handle key strokes on the list of mails.
 -- Most keystrokes are delegated to the list of mails, while one particular

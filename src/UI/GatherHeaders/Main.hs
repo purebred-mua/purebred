@@ -2,31 +2,30 @@
 {-# LANGUAGE RankNTypes        #-}
 module UI.GatherHeaders.Main where
 
-import qualified Brick.Main             as M
-import           Brick.Types            (Padding (..), Widget)
-import qualified Brick.Types            as T
-import           Brick.Widgets.Core     (padRight, txt, vBox, vLimit, (<+>))
-
-
-import qualified Brick.Widgets.Edit     as E
-import           Control.Lens.Getter    ((^.))
-import           Control.Lens.Lens      (Lens', (&))
-import           Control.Lens.Setter    ((.~), (?~))
-import           Control.Monad.IO.Class (liftIO)
-import           Data.Maybe             (fromMaybe)
-import           Data.Monoid            ((<>))
-import           Data.Text              (Text)
-import qualified Data.Text              as T
-import           Graphics.Vty           (Event (..), Key (..))
-import           System.Environment     (lookupEnv)
-import           System.Exit            (ExitCode (..))
-import           System.IO.Temp         (emptySystemTempFile)
-import           System.Process         (system)
-import           UI.Draw.Main           (editorDrawContent)
-import           UI.Index.Main          (renderMailList)
-import           UI.Keybindings         (handleEvent,
-                                         interactiveGatherHeadersKeybindings)
-import           UI.Status.Main         (statusbar)
+import qualified Brick.Main                   as M
+import           Brick.Types                  (Padding (..), Widget)
+import qualified Brick.Types                  as T
+import           Brick.Widgets.Core           (padRight, txt, vBox, vLimit,
+                                               (<+>))
+import qualified Brick.Widgets.Edit           as E
+import           Control.Lens.Getter          ((^.))
+import           Control.Lens.Lens            (Lens', (&))
+import           Control.Lens.Setter          ((.~), (?~))
+import           Control.Monad.IO.Class       (liftIO)
+import           Data.Maybe                   (fromMaybe)
+import           Data.Monoid                  ((<>))
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import           Graphics.Vty                 (Event (..), Key (..))
+import           System.Environment           (lookupEnv)
+import           System.Exit                  (ExitCode (..))
+import           System.IO.Temp               (emptySystemTempFile)
+import           System.Process               (system)
+import           UI.Draw.Main                 (editorDrawContent)
+import           UI.GatherHeaders.Keybindings (interactiveGatherHeadersKeybindings)
+import           UI.Index.Main                (renderMailList)
+import           UI.Keybindings               (handleEvent)
+import           UI.Status.Main               (statusbar)
 import           UI.Types
 
 drawInteractiveHeaders :: AppState -> [Widget Name]

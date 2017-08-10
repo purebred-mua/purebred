@@ -2,20 +2,21 @@
 {-# LANGUAGE RankNTypes        #-}
 module UI.ComposeEditor.Main where
 
-import           Brick.Main          (continue)
-import           Brick.Types         (BrickEvent, EventM, Next, Padding (..),
-                                      Widget)
-import           Brick.Widgets.Core  (fill, hLimit, padRight, padTop, str, txt,
-                                      vLimit, withAttr, (<+>), (<=>))
-import qualified Brick.Widgets.Edit  as E
-import qualified Brick.Widgets.List  as L
-import           Control.Lens.Fold   ((^?))
-import           Control.Lens.Getter ((^.))
-import           Control.Lens.Lens   (Lens')
-import qualified Data.Text           as T
-import           Data.Vector         (fromList)
-import           UI.Draw.Main        (editorDrawContent)
-import           UI.Keybindings      (composeEditorKeybindings, handleEvent)
+import           Brick.Main                   (continue)
+import           Brick.Types                  (BrickEvent, EventM, Next,
+                                               Padding (..), Widget)
+import           Brick.Widgets.Core           (fill, hLimit, padRight, padTop,
+                                               str, txt, vLimit, withAttr,
+                                               (<+>), (<=>))
+import qualified Brick.Widgets.Edit           as E
+import qualified Brick.Widgets.List           as L
+import           Control.Lens.Fold            ((^?))
+import           Control.Lens.Getter          ((^.))
+import           Control.Lens.Lens            (Lens')
+import qualified Data.Text                    as T
+import           Data.Vector                  (fromList)
+import           UI.Draw.Main                 (editorDrawContent)
+import           UI.Keybindings               (handleEvent)
 import           UI.Types
 
 drawComposeEditor :: AppState -> [Widget Name]
@@ -69,4 +70,4 @@ getLabelForComposeState AskSubject = txt "Subject:"
 composeEditor :: AppState
               -> BrickEvent Name e
               -> EventM Name (Next AppState)
-composeEditor s e = handleEvent composeEditorKeybindings (\s' _ -> continue s') s e
+composeEditor s e = handleEvent (s^.asConfig^.confComposeView^.cvKeybindings) (\s' _ -> continue s') s e

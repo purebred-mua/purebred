@@ -1,11 +1,11 @@
 -- | Basic types for the UI used by this library
 module UI.Types where
 
-import qualified Brick.AttrMap as Brick
+import qualified Brick.AttrMap             as Brick
 import           Brick.Types               (EventM, Next)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
-import Control.Lens
+import           Control.Lens
 import qualified Data.Text                 as T
 import qualified Graphics.Vty.Input.Events as Vty
 import           Storage.Mail              (Mail)
@@ -99,45 +99,64 @@ data Configuration = Configuration
     , _confNotmuchDatabase :: String
     , _confEditor          :: T.Text
     , _confMailView        :: MailViewSettings
-    , _confIndexView       :: IndexView
+    , _confIndexView       :: IndexViewSettings
+    , _confComposeView     :: ComposeViewSettings
     }
 
 confColorMap :: Getter Configuration Brick.AttrMap
-confColorMap = to (\(Configuration a _ _ _ _ _) -> a)
+confColorMap = to (\(Configuration a _ _ _ _ _ _) -> a)
 
 confNotmuchsearch :: Getter Configuration T.Text
-confNotmuchsearch = to (\(Configuration _ b _ _ _ _) -> b)
+confNotmuchsearch = to (\(Configuration _ b _ _ _ _ _) -> b)
 
 confNotmuchDatabase :: Getter Configuration String
-confNotmuchDatabase = to (\(Configuration _ _ c _ _ _) -> c)
+confNotmuchDatabase = to (\(Configuration _ _ c _ _ _ _) -> c)
 
 confMailView :: Getter Configuration MailViewSettings
-confMailView = to (\(Configuration _ _ _ _ e _) -> e)
+confMailView = to (\(Configuration _ _ _ _ e _ _) -> e)
 
-confIndexView :: Getter Configuration IndexView
-confIndexView = to (\(Configuration _ _ _ _ _ g) -> g)
+confIndexView :: Getter Configuration IndexViewSettings
+confIndexView = to (\(Configuration _ _ _ _ _ g _) -> g)
 
-newtype IndexView = IndexView
-    { _ivKeybindings :: [Keybinding]
+confComposeView :: Getter Configuration ComposeViewSettings
+confComposeView = to (\(Configuration _ _ _ _ _ _ h) -> h)
+
+data ComposeViewSettings = ComposeViewSettings
+    { _cvKeybindings :: [Keybinding]
     }
 
-ivKeybindings :: Lens' IndexView [Keybinding]
-ivKeybindings f (IndexView a) = fmap (\a' -> IndexView a') (f a)
+cvKeybindings :: Lens' ComposeViewSettings [Keybinding]
+cvKeybindings f (ComposeViewSettings a) = fmap (\a' -> ComposeViewSettings a') (f a)
+
+data IndexViewSettings = IndexViewSettings
+    { _ivKeybindings       :: [Keybinding]
+    , _ivSearchKeybindings :: [Keybinding]
+    }
+
+ivKeybindings :: Lens' IndexViewSettings [Keybinding]
+ivKeybindings f (IndexViewSettings a b) = fmap (\a' -> IndexViewSettings a' b) (f a)
+
+ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding]
+ivSearchKeybindings f (IndexViewSettings a b) = fmap (\b' -> IndexViewSettings a b') (f b)
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
     , _mvPreferedContentType :: T.Text
     , _mvHeadersToShow       :: [T.Text]
+    , _mvKeybindings         :: [Keybinding]
     }
 
 mvIndexRows :: Lens' MailViewSettings Int
-mvIndexRows f (MailViewSettings a b c) = fmap (\a' -> MailViewSettings a' b c) (f a)
+mvIndexRows f (MailViewSettings a b c d) = fmap (\a' -> MailViewSettings a' b c d) (f a)
 
 mvPreferredContentType :: Lens' MailViewSettings T.Text
-mvPreferredContentType f (MailViewSettings a b c) = fmap (\b' -> MailViewSettings a b' c) (f b)
+mvPreferredContentType f (MailViewSettings a b c d) = fmap (\b' -> MailViewSettings a b' c d) (f b)
 
 mvHeadersToShow :: Lens' MailViewSettings [T.Text]
-mvHeadersToShow f (MailViewSettings a b c) = fmap (\c' -> MailViewSettings a b c') (f c)
+mvHeadersToShow f (MailViewSettings a b c d) = fmap (\c' -> MailViewSettings a b c' d) (f c)
+
+mvKeybindings :: Lens' MailViewSettings [Keybinding]
+mvKeybindings f (MailViewSettings a b c d) = fmap (\d' -> MailViewSettings a b c d') (f d)
 
 -- | Overall application state
 data AppState = AppState
