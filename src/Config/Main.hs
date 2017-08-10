@@ -1,12 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Config.Main where
 
-import qualified Brick.AttrMap      as A
-import           Brick.Util         (fg, on)
-import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
-import           Config.Types       (Configuration (..), MailView (..))
-import qualified Graphics.Vty       as V
+import qualified Brick.AttrMap        as A
+import           Brick.Util           (fg, on)
+import qualified Brick.Widgets.Edit   as E
+import qualified Brick.Widgets.List   as L
+import qualified Graphics.Vty         as V
+import           UI.Index.Keybindings (indexKeybindings)
+import           UI.Types             (Configuration (..), IndexView (..),
+                                       MailView (..))
 
 defaultColorMap :: A.AttrMap
 defaultColorMap = A.attrMap V.defAttr
@@ -30,5 +32,8 @@ defaultConfig dbfp =
           { _mvIndexRows = 10
           , _mvPreferedContentType = "text/plain"
           , _mvHeadersToShow = ["subject", "to", "from"]
+          }
+        , _confIndexView = IndexView
+          { _ivKeybindings = indexKeybindings
           }
         }

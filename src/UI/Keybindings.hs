@@ -5,7 +5,6 @@ import qualified Brick.Main                as M
 import qualified Brick.Types               as T
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
-import           Config.Types              (confNotmuchDatabase)
 import           Control.Lens.Fold         ((^?!))
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Lens         ((&))
@@ -42,26 +41,6 @@ handleEvent _ _ s _ = M.continue s
 lookupKeybinding :: Event -> [Keybinding] -> Maybe Keybinding
 lookupKeybinding e = find (\x -> x^.kbEvent == e)
 
--- | Default Keybindings
-indexKeybindings :: [Keybinding]
-indexKeybindings =
-    [ Keybinding "Quits the application" (V.EvKey V.KEsc []) M.halt
-    , Keybinding
-          "Manipulate the notmuch database query"
-          (V.EvKey (V.KChar ':') [])
-          focusSearch
-    , Keybinding "display an e-mail" (V.EvKey V.KEnter []) displayMail
-    , Keybinding "mail index down" (V.EvKey V.KDown []) mailIndexDown
-    , Keybinding "mail index up" (V.EvKey V.KUp []) mailIndexUp
-    , Keybinding "Switch between editor and main" (V.EvKey (V.KChar '\t') []) toggleComposeEditorAndMain
-    , Keybinding "compose new mail" (V.EvKey (V.KChar 'm') []) composeMail]
-
-indexsearchKeybindings :: [Keybinding]
-indexsearchKeybindings =
-    [ Keybinding "Cancel search" (V.EvKey V.KEsc []) cancelSearch
-    , Keybinding "Apply search" (V.EvKey V.KEnter []) applySearchTerms
-    ]
-
 displayMailKeybindings :: [Keybinding]
 displayMailKeybindings =
   [ Keybinding "Return to list of mails" (V.EvKey V.KEsc []) (\s -> M.continue $ asAppMode .~ Main $ s)
@@ -83,12 +62,6 @@ composeEditorKeybindings =
           (\s ->
                 M.continue $ resetCompose s)]
 
-toggleComposeEditorAndMain :: AppState -> T.EventM Name (T.Next AppState)
-toggleComposeEditorAndMain s =
-    case s ^. asCompose ^. cTmpFile of
-        Just _ -> M.continue $ s & asAppMode .~ ComposeEditor
-        Nothing -> M.continue s
-
 cancelToMain :: AppState -> T.EventM Name (T.Next AppState)
 cancelToMain s = M.continue $ asAppMode .~ Main $ s
 
@@ -103,19 +76,6 @@ mailIndexUp s = mailIndexEvent s L.listMoveUp
 mailIndexDown :: AppState -> T.EventM Name (T.Next AppState)
 mailIndexDown s = mailIndexEvent s L.listMoveDown
 
-focusSearch :: AppState -> T.EventM Name (T.Next AppState)
-focusSearch s = M.continue $ asMailIndex . miMode .~ SearchMail $ s
-
-displayMail :: AppState -> T.EventM Name (T.Next AppState)
-displayMail s = do
-    s' <- liftIO $ updateStateWithParsedMail s
-    M.continue $ s'
-
-composeMail :: AppState -> T.EventM Name (T.Next AppState)
-composeMail s = M.continue $ asAppMode .~ GatherHeaders $ s
-
-cancelSearch  :: AppState -> T.EventM Name (T.Next AppState)
-cancelSearch s = M.continue $ asMailIndex . miMode .~ BrowseMail $ s
 
 applySearchTerms :: AppState -> T.EventM Name (T.Next AppState)
 applySearchTerms s = do
@@ -129,19 +89,6 @@ applySearchTerms s = do
     let listWidget = (L.list ListOfMails vec 1)
     M.continue $ s & asMailIndex . miListOfMails .~ listWidget & asAppMode .~
         Main
-
-updateStateWithParsedMail :: AppState -> IO AppState
-updateStateWithParsedMail s =
-    case L.listSelectedElement (s ^. asMailIndex ^. miListOfMails) of
-        Just (_,m) -> do
-            parsed <- parseMail m
-            case parsed of
-                Left e -> pure $ s & asError ?~ e & asAppMode .~ Main
-                Right pmail ->
-                    pure $
-                    s & asMailView .~ MailView (Just pmail) & asAppMode .~
-                    ViewMail
-        Nothing -> pure s
 
 scrollMailViewPage :: AppState -> T.Direction -> T.EventM Name (T.Next AppState)
 scrollMailViewPage s d = do

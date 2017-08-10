@@ -9,14 +9,14 @@ import           Brick.Widgets.Core        (hLimit, padLeft, str, vBox, vLimit,
 
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
+import           Config.Types              (confIndexView, ivKeybindings)
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Lens         ((&))
 import           Control.Lens.Setter       ((.~))
 import           Graphics.Vty.Input.Events (Event)
 import           Storage.Mail
 import           UI.Draw.Main              (editorDrawContent, fillLine)
-import           UI.Keybindings            (handleEvent, indexKeybindings,
-                                            indexsearchKeybindings)
+import           UI.Keybindings            (handleEvent, indexsearchKeybindings)
 import           UI.Status.Main            (statusbar)
 import           UI.Types
 
@@ -49,7 +49,7 @@ listDrawElement sel a =
 mainEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 mainEvent s e =
     case (s^.asMailIndex^.miMode) of
-      BrowseMail -> handleEvent indexKeybindings listEventDefault s e
+      BrowseMail -> handleEvent (s^.asConfig^.confIndexView^.ivKeybindings) listEventDefault s e
       SearchMail -> handleEvent indexsearchKeybindings searchInputEventDefault s e
 
 -- | Handle key strokes on the list of mails.
