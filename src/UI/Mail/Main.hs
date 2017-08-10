@@ -11,6 +11,8 @@ import qualified Brick.Widgets.List        as L
 import           Codec.MIME.Type           (MIMEContent (..), MIMEParam (..),
                                             MIMEValue (..), Type (..),
                                             showMIMEType)
+import           Config.Types              (confMailView, mvHeadersToShow,
+                                            mvIndexRows, mvPreferedContentType)
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Setter       ((.~))
 import           Control.Monad.IO.Class    (liftIO)
@@ -29,52 +31,52 @@ import           UI.Types
 -- for each key press. This might have to change in the future.
 drawMail :: AppState -> [Widget Name]
 drawMail s =
-    [ (vLimit indexViewRows (renderMailList s)) <=>
+    [ (vLimit (indexViewRows s) (renderMailList s)) <=>
       statusbar s <=>
       (viewport ScrollingMailView Vertical $
-       (mailView (s ^. asMailView ^. mvMail)))]
+       (mailView s (s ^. asMailView ^. mvMail)))]
 
 -- | TODO: See #19
-mailView :: Maybe ParsedMail -> Widget Name
-mailView (Just (MIMEMail m)) =
+mailView :: AppState -> Maybe ParsedMail -> Widget Name
+mailView s (Just (MIMEMail m)) =
     let filtered_headers =
             filter
                 (\x ->
-                      paramName x `elem` showHeaders) $
+                      paramName x `elem` showHeaders s) $
             mime_val_headers m
         widgets =
             (\h ->
                   txt (paramName h) <+> padLeft (Pad 1) (txtWrap (paramValue h))) <$>
             filtered_headers
-        body = padTop (Pad 1) $ mimeContentToView m
+        body = padTop (Pad 1) $ mimeContentToView s m
     in foldr (<=>) (padTop (Pad 1) body) widgets
-mailView (Just (RFC2822 _ _)) = txt "Not supported yet"
-mailView Nothing = txt "Eeek: this is not supposed to happen"
+mailView _ (Just (RFC2822 _ _)) = txt "Not supported yet"
+mailView _ Nothing = txt "Eeek: this is not supposed to happen"
 
-mimeContentToView :: MIMEValue -> Widget Name
-mimeContentToView (MIMEValue _ _ (Single m) _ _) = txtWrap m
-mimeContentToView (MIMEValue _ _ (Multi xs) _ _) =
+mimeContentToView :: AppState -> MIMEValue -> Widget Name
+mimeContentToView _ (MIMEValue _ _ (Single m) _ _) = txtWrap m
+mimeContentToView s (MIMEValue _ _ (Multi xs) _ _) =
     let mval =
             filter
                 (\x ->
                       showMIMEType (mimeType $ mime_val_type x) ==
-                      preferContentType)
+                      preferContentType s)
                 xs
         picked =
             if length mval == 0
                 then head xs
                 else head mval
-    in mimeContentToView picked
+    in mimeContentToView s picked
 
 -- | The size limit of the index list
-indexViewRows :: Int
-indexViewRows = 10
+indexViewRows :: AppState -> Int
+indexViewRows s = s ^. asConfig ^. confMailView ^. mvIndexRows
 
-preferContentType :: T.Text
-preferContentType = "text/plain"
+preferContentType :: AppState -> T.Text
+preferContentType s = s ^. asConfig ^. confMailView ^. mvPreferedContentType
 
-showHeaders :: [T.Text]
-showHeaders = ["subject", "to", "from"]
+showHeaders :: AppState -> [T.Text]
+showHeaders s = s ^. asConfig ^. confMailView ^. mvHeadersToShow
 
 
 -- | event handling for viewing a single mail

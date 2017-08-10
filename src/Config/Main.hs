@@ -5,7 +5,7 @@ import qualified Brick.AttrMap      as A
 import           Brick.Util         (fg, on)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import           Config.Types       (Configuration(..))
+import           Config.Types       (Configuration (..), MailView (..))
 import qualified Graphics.Vty       as V
 
 defaultColorMap :: A.AttrMap
@@ -26,4 +26,9 @@ defaultConfig dbfp =
         , _confNotmuchsearch = "tag:inbox"
         , _confNotmuchDatabase = dbfp
         , _confEditor = "vi"
+        , _confMailView = MailView
+          { _mvIndexRows = 10
+          , _mvPreferedContentType = "text/plain"
+          , _mvHeadersToShow = ["subject", "to", "from"]
+          }
         }
