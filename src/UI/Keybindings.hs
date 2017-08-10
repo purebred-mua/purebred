@@ -9,7 +9,7 @@ import           Control.Lens.Fold         ((^?!))
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Lens         ((&))
 import           Control.Lens.Prism        (_Just)
-import           Control.Lens.Setter       ((.~), (?~))
+import           Control.Lens.Setter       ((.~))
 import           Control.Monad.IO.Class    (liftIO)
 import           Data.List                 (find)
 import           Data.Text                 (unlines, unpack)
@@ -22,7 +22,6 @@ import           Network.Mail.Mime         (Address (..), renderSendMail,
 import           Prelude                   hiding (readFile, unlines)
 import           Storage.Mail              (Mail)
 import           Storage.Notmuch           (getMessages)
-import           Storage.ParsedMail        (parseMail)
 import           UI.Types
 
 

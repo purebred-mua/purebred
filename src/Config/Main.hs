@@ -8,7 +8,7 @@ import qualified Brick.Widgets.List   as L
 import qualified Graphics.Vty         as V
 import           UI.Index.Keybindings (indexKeybindings)
 import           UI.Types             (Configuration (..), IndexView (..),
-                                       MailView (..))
+                                       MailViewSettings(..))
 
 defaultColorMap :: A.AttrMap
 defaultColorMap = A.attrMap V.defAttr
@@ -28,7 +28,7 @@ defaultConfig dbfp =
         , _confNotmuchsearch = "tag:inbox"
         , _confNotmuchDatabase = dbfp
         , _confEditor = "vi"
-        , _confMailView = MailView
+        , _confMailView = MailViewSettings
           { _mvIndexRows = 10
           , _mvPreferedContentType = "text/plain"
           , _mvHeadersToShow = ["subject", "to", "from"]

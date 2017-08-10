@@ -11,18 +11,18 @@ import qualified Brick.Widgets.List        as L
 import           Codec.MIME.Type           (MIMEContent (..), MIMEParam (..),
                                             MIMEValue (..), Type (..),
                                             showMIMEType)
-import           Config.Types              (confMailView, mvHeadersToShow,
-                                            mvIndexRows, mvPreferedContentType)
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Setter       ((.~))
 import           Control.Monad.IO.Class    (liftIO)
 import qualified Data.Text                 as T
 import           Graphics.Vty.Input.Events (Event)
 import           UI.Index.Main             (renderMailList)
-import           UI.Keybindings            (displayMailKeybindings, handleEvent,
-                                            updateStateWithParsedMail)
+import           UI.Keybindings            (displayMailKeybindings, handleEvent)
+import           UI.Index.Keybindings      (updateStateWithParsedMail)
 import           UI.Status.Main            (statusbar)
 import           UI.Types
+
+import Storage.ParsedMail (ParsedMail(..))
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.
@@ -73,7 +73,7 @@ indexViewRows :: AppState -> Int
 indexViewRows s = s ^. asConfig ^. confMailView ^. mvIndexRows
 
 preferContentType :: AppState -> T.Text
-preferContentType s = s ^. asConfig ^. confMailView ^. mvPreferedContentType
+preferContentType s = s ^. asConfig ^. confMailView ^. mvPreferredContentType
 
 showHeaders :: AppState -> [T.Text]
 showHeaders s = s ^. asConfig ^. confMailView ^. mvHeadersToShow

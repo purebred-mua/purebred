@@ -21,6 +21,7 @@ library
                      , UI.Types
                      , UI.Keybindings
                      , UI.Draw.Main
+                     , UI.Index.Keybindings
                      , UI.Index.Main
                      , UI.Status.Main
                      , UI.ComposeEditor.Main

@@ -9,14 +9,14 @@ import           Brick.Widgets.Core        (hLimit, padLeft, str, vBox, vLimit,
 
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
-import           Config.Types              (confIndexView, ivKeybindings)
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Lens         ((&))
 import           Control.Lens.Setter       ((.~))
 import           Graphics.Vty.Input.Events (Event)
 import           Storage.Mail
 import           UI.Draw.Main              (editorDrawContent, fillLine)
-import           UI.Keybindings            (handleEvent, indexsearchKeybindings)
+import           UI.Keybindings            (handleEvent)
+import           UI.Index.Keybindings (indexsearchKeybindings)
 import           UI.Status.Main            (statusbar)
 import           UI.Types
 

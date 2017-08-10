@@ -4,7 +4,6 @@ import           Brick.Main             (continue, halt)
 import qualified Brick.Types            as T
 import qualified Brick.Widgets.Edit     as E
 import qualified Brick.Widgets.List     as L
-import           Config.Types           (confNotmuchDatabase)
 import           Control.Lens.Getter    ((^.))
 import           Control.Lens.Lens      ((&))
 import           Control.Lens.Setter    ((.~), (?~))

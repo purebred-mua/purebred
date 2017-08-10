@@ -7,8 +7,6 @@ import           Brick.Types           (Widget)
 import qualified Brick.Types           as T
 import qualified Brick.Widgets.Edit    as E
 import qualified Brick.Widgets.List    as L
-import           Config.Types          (Configuration, confColorMap,
-                                        confNotmuchDatabase, confNotmuchsearch)
 import           Control.Lens.Getter   ((^.))
 import qualified Data.Text             as T
 import           Storage.Notmuch       (getMessages)
