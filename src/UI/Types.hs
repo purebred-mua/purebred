@@ -106,20 +106,24 @@ data Configuration = Configuration
 confColorMap :: Getter Configuration Brick.AttrMap
 confColorMap = to (\(Configuration a _ _ _ _ _ _) -> a)
 
+confEditor :: Lens' Configuration T.Text
+confEditor f (Configuration a b c d e g h) = fmap (\d' -> Configuration a b c d' e g h) (f d)
+
 confNotmuchsearch :: Getter Configuration T.Text
 confNotmuchsearch = to (\(Configuration _ b _ _ _ _ _) -> b)
 
 confNotmuchDatabase :: Getter Configuration String
 confNotmuchDatabase = to (\(Configuration _ _ c _ _ _ _) -> c)
 
-confMailView :: Getter Configuration MailViewSettings
-confMailView = to (\(Configuration _ _ _ _ e _ _) -> e)
+confMailView :: Lens' Configuration MailViewSettings
+confMailView f (Configuration a b c d e g h) = fmap (\e' -> Configuration a b c d e' g h) (f e)
 
-confIndexView :: Getter Configuration IndexViewSettings
-confIndexView = to (\(Configuration _ _ _ _ _ g _) -> g)
+confIndexView :: Lens' Configuration IndexViewSettings
+confIndexView f (Configuration a b c d e g h) = fmap (\g' -> Configuration a b c d e g' h) (f g)
 
 confComposeView :: Getter Configuration ComposeViewSettings
 confComposeView = to (\(Configuration _ _ _ _ _ _ h) -> h)
+
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvKeybindings :: [Keybinding]
@@ -198,3 +202,6 @@ kbEvent = to (\(Keybinding _ b _) -> b)
 
 kbAction :: Getter Keybinding KBAction
 kbAction = to (\(Keybinding _ _ c) -> c)
+
+kbDescription :: Getter Keybinding String
+kbDescription = to (\(Keybinding a _ _) -> a)
