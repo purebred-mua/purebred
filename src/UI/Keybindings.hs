@@ -8,14 +8,10 @@ import qualified Brick.Widgets.List        as L
 import           Control.Lens.Getter       ((^.))
 import           Control.Lens.Lens         ((&))
 import           Control.Lens.Setter       ((.~))
-import           Control.Monad.IO.Class    (liftIO)
 import           Data.List                 (find)
-import           Data.Text                 (unpack)
-import           Data.Text.Zipper          (currentLine)
 import           Graphics.Vty.Input.Events (Event)
 import           Prelude                   hiding (readFile, unlines)
 import           Storage.Mail              (Mail)
-import           Storage.Notmuch           (getMessages)
 import           UI.Types
 
 
@@ -47,20 +43,6 @@ mailIndexUp s = mailIndexEvent s L.listMoveUp
 
 mailIndexDown :: AppState -> T.EventM Name (T.Next AppState)
 mailIndexDown s = mailIndexEvent s L.listMoveDown
-
-
-applySearchTerms :: AppState -> T.EventM Name (T.Next AppState)
-applySearchTerms s = do
-    let searchterms =
-            currentLine $ s ^. asMailIndex ^. miSearchEditor ^. E.editContentsL
-    vec <-
-        liftIO $
-        getMessages
-            (s ^. asConfig ^. confNotmuchDatabase)
-            (unpack searchterms)
-    let listWidget = (L.list ListOfMails vec 1)
-    M.continue $ s & asMailIndex . miListOfMails .~ listWidget & asAppMode .~
-        Main
 
 initialCompose :: Compose
 initialCompose =

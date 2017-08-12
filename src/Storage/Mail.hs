@@ -2,15 +2,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Storage.Mail where
 
-import           Control.Lens.TH (makeLenses)
+import Control.Lens.TH (makeLenses)
+import Data.Text (Text)
 
 -- A single mail represented in the UI
 -- TODO: should use Text instead of String
 data Mail = Mail
     { _subject :: String
-    , _to      :: String
-    , _from    :: String
+    , _to :: String
+    , _from :: String
     , _filepath :: String
+    , _mailTags :: [Text]
+    , _mailIsNew :: Bool
     } deriving (Show)
 
 makeLenses ''Mail

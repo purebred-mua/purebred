@@ -31,8 +31,9 @@ data Name =
 
 -- | Modes for the main window to distinguish focus
 data MainMode
-    = BrowseMail  -- ^ input focus goes to navigating the list of mails
-    | SearchMail  -- ^ input focus goes to manipulating the notmuch search
+    = BrowseMail   -- ^ input focus goes to navigating the list of mails
+    | SearchMail   -- ^ input focus goes to manipulating the notmuch search
+    deriving (Eq)
 
 {- | main application interface
 
@@ -93,36 +94,47 @@ cSubject :: Lens' Compose (E.Editor T.Text Name)
 cSubject f (Compose a b c d e) = fmap (\e' -> Compose a b c d e') (f e)
 
 
+data NotmuchSettings = NotmuchSettings
+    { _nmSearch :: T.Text
+    , _nmDatabase :: String
+    , _nmNewTag :: T.Text
+    }
+
+nmSearch :: Lens' NotmuchSettings T.Text
+nmSearch f (NotmuchSettings a b c) = fmap (\a' -> NotmuchSettings a' b c) (f a)
+
+nmDatabase :: Getter NotmuchSettings String
+nmDatabase = to (\(NotmuchSettings _ b _ ) -> b)
+
+nmNewTag :: Getter NotmuchSettings T.Text
+nmNewTag = to (\(NotmuchSettings _ _ c) -> c)
+
 data Configuration = Configuration
-    { _confColorMap        :: Brick.AttrMap
-    , _confNotmuchsearch   :: T.Text
-    , _confNotmuchDatabase :: String
-    , _confEditor          :: T.Text
-    , _confMailView        :: MailViewSettings
-    , _confIndexView       :: IndexViewSettings
-    , _confComposeView     :: ComposeViewSettings
+    { _confColorMap :: Brick.AttrMap
+    , _confNotmuch :: NotmuchSettings
+    , _confEditor :: T.Text
+    , _confMailView :: MailViewSettings
+    , _confIndexView :: IndexViewSettings
+    , _confComposeView :: ComposeViewSettings
     }
 
 confColorMap :: Getter Configuration Brick.AttrMap
-confColorMap = to (\(Configuration a _ _ _ _ _ _) -> a)
+confColorMap = to (\(Configuration a _ _ _ _ _) -> a)
 
 confEditor :: Lens' Configuration T.Text
-confEditor f (Configuration a b c d e g h) = fmap (\d' -> Configuration a b c d' e g h) (f d)
+confEditor f (Configuration a b c d e g) = fmap (\c' -> Configuration a b c' d e g) (f c)
 
-confNotmuchsearch :: Getter Configuration T.Text
-confNotmuchsearch = to (\(Configuration _ b _ _ _ _ _) -> b)
-
-confNotmuchDatabase :: Getter Configuration String
-confNotmuchDatabase = to (\(Configuration _ _ c _ _ _ _) -> c)
+confNotmuch :: Lens' Configuration NotmuchSettings
+confNotmuch f (Configuration a b c d e g) = fmap (\b' -> Configuration a b' c d e g) (f b)
 
 confMailView :: Lens' Configuration MailViewSettings
-confMailView f (Configuration a b c d e g h) = fmap (\e' -> Configuration a b c d e' g h) (f e)
+confMailView f (Configuration a b c d e g) = fmap (\d' -> Configuration a b c d' e g) (f d)
 
 confIndexView :: Lens' Configuration IndexViewSettings
-confIndexView f (Configuration a b c d e g h) = fmap (\g' -> Configuration a b c d e g' h) (f g)
+confIndexView f (Configuration a b c d e g) = fmap (\e' -> Configuration a b c d e' g) (f e)
 
 confComposeView :: Getter Configuration ComposeViewSettings
-confComposeView = to (\(Configuration _ _ _ _ _ _ h) -> h)
+confComposeView = to (\(Configuration _ _ _ _ _ h) -> h)
 
 
 data ComposeViewSettings = ComposeViewSettings

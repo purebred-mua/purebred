@@ -1,24 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Config.Main where
 
-import qualified Brick.AttrMap                as A
-import           Brick.Util                   (fg, on)
-import qualified Brick.Widgets.Edit           as E
-import qualified Brick.Widgets.List           as L
-import qualified Graphics.Vty                 as V
-import           UI.ComposeEditor.Keybindings (composeEditorKeybindings)
-import           UI.Index.Keybindings         (indexKeybindings,
-                                               indexsearchKeybindings)
-import           UI.Mail.Keybindings          (displayMailKeybindings)
-import           UI.Types                     (ComposeViewSettings (..),
-                                               Configuration (..),
-                                               IndexViewSettings (..),
-                                               MailViewSettings (..))
+import qualified Brick.AttrMap as A
+import Brick.Util (fg, on)
+import qualified Brick.Widgets.Edit as E
+import qualified Brick.Widgets.List as L
+import qualified Graphics.Vty as V
+import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
+import UI.Index.Main (listNewMailAttr)
+import UI.Index.Keybindings
+       (indexKeybindings, indexsearchKeybindings)
+import UI.Mail.Keybindings (displayMailKeybindings)
+import UI.Types
+       (ComposeViewSettings(..), Configuration(..), IndexViewSettings(..),
+        MailViewSettings(..), NotmuchSettings(..))
 
 defaultColorMap :: A.AttrMap
 defaultColorMap = A.attrMap V.defAttr
     [ (L.listAttr,            V.brightBlue `on` V.black)
     , (L.listSelectedAttr,    V.white `on` V.yellow)
+    , (listNewMailAttr,       fg V.white `V.withStyle` V.bold)
     , (E.editFocusedAttr,     V.white `on` V.black)
     , (E.editAttr,            V.brightBlue `on` V.black)
     , (A.attrName "error",    fg V.red)
@@ -30,8 +31,11 @@ defaultConfig dbfp =
     pure
         Configuration
         { _confColorMap = defaultColorMap
-        , _confNotmuchsearch = "tag:inbox"
-        , _confNotmuchDatabase = dbfp
+        , _confNotmuch = NotmuchSettings
+          { _nmSearch = "tag:inbox"
+          , _nmDatabase = dbfp
+          , _nmNewTag = "unread"
+          }
         , _confEditor = "vi"
         , _confMailView = MailViewSettings
           { _mvIndexRows = 10

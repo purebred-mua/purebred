@@ -1,15 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Index.Main where
 
+import Brick.AttrMap (AttrName)
+import Data.Monoid ((<>))
 import qualified Brick.Main                as M
 import           Brick.Types               (Padding (..), Widget)
 import qualified Brick.Types               as T
 import           Brick.Widgets.Core        (hLimit, padLeft, str, vBox, vLimit,
                                             withAttr, (<+>))
-
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
-import           Control.Lens.Getter       ((^.))
+import           Control.Lens.Getter       ((^.), view)
 import           Control.Lens.Lens         ((&))
 import           Control.Lens.Setter       ((.~))
 import           Graphics.Vty.Input.Events (Event)
@@ -22,14 +23,13 @@ import           UI.Types
 drawMain :: AppState -> [Widget Name]
 drawMain s = [ui]
   where
-    editorFocus = case (s^.asMailIndex^.miMode) of
-      BrowseMail -> False
-      SearchMail -> True
-    inputBox = E.renderEditor editorDrawContent editorFocus (s ^. asMailIndex ^. miSearchEditor)
+    editorFocus = (view (asMailIndex . miMode) s == SearchMail)
+    inputBox = E.renderEditor editorDrawContent editorFocus (view (asMailIndex . miSearchEditor) s)
     ui = vBox [renderMailList s, statusbar s, vLimit 1 inputBox]
 
 renderMailList :: AppState -> Widget Name
-renderMailList s = L.renderList listDrawElement False (s ^. asMailIndex ^. miListOfMails)
+renderMailList s = let listFocus = view (asMailIndex . miMode) s == BrowseMail
+                   in L.renderList listDrawElement listFocus (view (asMailIndex . miListOfMails) s)
 
 listDrawElement :: Bool -> Mail -> Widget Name
 listDrawElement sel a =
@@ -37,10 +37,14 @@ listDrawElement sel a =
             if sel
                 then withAttr L.listSelectedAttr w <+> fillLine
                 else w
-    in (selStr $
+        newM m w = if (view mailIsNew m) then withAttr listNewMailAttr w else w
+    in newM a $ (selStr $
         padLeft (Pad 1) $
         hLimit 15 (str $ a ^. from) <+> padLeft (Pad 2) (str (a ^. subject)))
 
+
+listNewMailAttr :: AttrName
+listNewMailAttr = L.listAttr <> "newmail"
 
 -- | We currently have two modes on the main view we need to distinguish
 -- keystrokes for. One is to obviously browse the mails which are shown as a

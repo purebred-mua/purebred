@@ -8,7 +8,6 @@ import qualified Brick.Types           as T
 import qualified Brick.Widgets.Edit    as E
 import qualified Brick.Widgets.List    as L
 import           Control.Lens.Getter   ((^.))
-import qualified Data.Text             as T
 import           Storage.Notmuch       (getMessages)
 import           UI.ComposeEditor.Main (composeEditor, drawComposeEditor)
 import           UI.GatherHeaders.Main (drawInteractiveHeaders,
@@ -36,8 +35,8 @@ appEvent s e =
 
 initialState :: Configuration -> IO AppState
 initialState conf = do
-    let searchterms = conf ^. confNotmuchsearch
-    vec <- getMessages (conf ^. confNotmuchDatabase) (T.unpack searchterms)
+    let searchterms = conf ^. confNotmuch ^. nmSearch
+    vec <- getMessages searchterms (conf ^. confNotmuch)
     let mi =
             MailIndex
                 (L.list ListOfMails vec 1)

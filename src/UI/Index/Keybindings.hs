@@ -4,11 +4,10 @@ import           Brick.Main             (continue, halt)
 import qualified Brick.Types            as T
 import qualified Brick.Widgets.Edit     as E
 import qualified Brick.Widgets.List     as L
-import           Control.Lens.Getter    ((^.))
+import           Control.Lens.Getter    ((^.), view)
 import           Control.Lens.Lens      ((&))
-import           Control.Lens.Setter    ((.~), (?~))
+import           Control.Lens.Setter    ((.~), (?~), set)
 import           Control.Monad.IO.Class (liftIO)
-import           Data.Text              (unpack)
 import           Data.Text.Zipper       (currentLine)
 import qualified Graphics.Vty           as V
 import           Storage.Mail           (Mail)
@@ -82,13 +81,7 @@ cancelSearch s = continue $ asMailIndex . miMode .~ BrowseMail $ s
 
 applySearchTerms :: AppState -> T.EventM Name (T.Next AppState)
 applySearchTerms s = do
-    let searchterms =
-            currentLine $ s ^. asMailIndex ^. miSearchEditor ^. E.editContentsL
-    vec <-
-        liftIO $
-        getMessages
-            (s ^. asConfig ^. confNotmuchDatabase)
-            (unpack searchterms)
+    let searchterms = currentLine $ view (asMailIndex . miSearchEditor . E.editContentsL) s
+    vec <- liftIO $ getMessages searchterms (view (asConfig . confNotmuch) s)
     let listWidget = (L.list ListOfMails vec 1)
-    continue $ s & asMailIndex . miListOfMails .~ listWidget & asAppMode .~
-        Main
+    continue $ set (asMailIndex . miListOfMails) listWidget s & set asAppMode Main
