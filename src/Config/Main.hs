@@ -7,7 +7,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty as V
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
-import UI.Index.Main (listNewMailAttr)
+import UI.Index.Main (listNewMailAttr, mailTagsAttr)
 import UI.Index.Keybindings
        (indexKeybindings, indexsearchKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings)
@@ -20,6 +20,7 @@ defaultColorMap = A.attrMap V.defAttr
     [ (L.listAttr,            V.brightBlue `on` V.black)
     , (L.listSelectedAttr,    V.white `on` V.yellow)
     , (listNewMailAttr,       fg V.white `V.withStyle` V.bold)
+    , (mailTagsAttr,              fg V.cyan)
     , (E.editFocusedAttr,     V.white `on` V.black)
     , (E.editAttr,            V.brightBlue `on` V.black)
     , (A.attrName "error",    fg V.red)

@@ -17,6 +17,9 @@ import Control.Lens.Getter (view)
 import Control.Lens.Setter (set)
 
 
+-- | creates a vector of parsed mails from a not much search
+-- Note, that at this point in time only free form searches are supported. Also,
+-- we filter out the tag which we use to mark mails as new mails
 getMessages :: T.Text -> NotmuchSettings -> IO (Vec.Vector Mail)
 getMessages s settings = do
   db' <- databaseOpen (view nmDatabase settings)
@@ -26,26 +29,27 @@ getMessages s settings = do
     Right db -> do
         q <- query db (FreeForm $ T.unpack s)
         msgs <- messages q
-        mails <- mapM messageToMail msgs
-        return $ Vec.fromList $ isNewMail (view nmNewTag settings) <$> mails
+        mails <- mapM (messageToMail $ view nmNewTag settings) msgs
+        return $ Vec.fromList mails
 
 messageToMail
     :: HasTags Message
-    => Message
+    => T.Text
+    -> Message
     -> IO Mail
-messageToMail m =
+messageToMail ignoredTag m =
     Mail <$>
     (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
     (decodeUtf8 . fromMaybe "" <$> messageHeader "To" m) <*>
     (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
     messageFilename m <*>
-    tagsToText m <*>
-    pure False
+    (tagsToText m ignoredTag) <*>
+    isNewMail m ignoredTag
 
-tagsToText :: HasTags a => a -> IO [T.Text]
-tagsToText m = do
+tagsToText :: HasTags a => a -> T.Text -> IO [T.Text]
+tagsToText m ignored = do
   t <- tags m
-  pure $ decodeUtf8 <$> t
+  pure $ filter (/= ignored) $ decodeUtf8 <$> t
 
 getDatabasePath :: IO (FilePath)
 getDatabasePath = getFromNotmuchConfig "database.path"
@@ -57,6 +61,7 @@ getFromNotmuchConfig key = do
   stdout <- readProcess cmd args []
   pure $ filter (/= '\n') stdout
 
-isNewMail :: T.Text -> Mail -> Mail
-isNewMail t m = let nm = t `elem` (view mailTags m)
-                in set mailIsNew nm m
+isNewMail :: HasTags Message => Message -> T.Text -> IO Bool
+isNewMail m newTag = do
+  t <- tags m
+  pure $ newTag `elem` (decodeUtf8 <$> t)

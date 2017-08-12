@@ -8,14 +8,16 @@ import           Brick.Types               (Padding (..), Widget)
 import qualified Brick.Types               as T
 import Brick.Widgets.Core
        (hLimit, padLeft, txt, vBox, vLimit, withAttr, (<+>))
+import Data.Text (unwords)
+import Prelude hiding (unwords)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Control.Lens.Getter       ((^.), view)
 import           Control.Lens.Lens         ((&))
 import           Control.Lens.Setter       ((.~))
 import           Graphics.Vty.Input.Events (Event)
-import           Storage.Mail
-import           UI.Draw.Main              (editorDrawContent, fillLine)
+import Storage.Mail (from, subject, mailTags, Mail, mailIsNew)
+import           UI.Draw.Main              (editorDrawContent)
 import           UI.Keybindings            (handleEvent)
 import           UI.Status.Main            (statusbar)
 import Types
@@ -35,12 +37,25 @@ listDrawElement :: Bool -> Mail -> Widget Name
 listDrawElement sel a =
     let selected w = if sel then withAttr L.listSelectedAttr w else w
         newMail m w = if (view mailIsNew m) then withAttr listNewMailAttr w else w
-        widget = padLeft (Pad 1) $ hLimit 15 (txt $ view from a) <+> padLeft (Pad 2) (txt (view subject a))
-    in (newMail a $ selected widget) <+> fillLine
+        widget = padLeft (Pad 1) $ (hLimit 15 (txt $ view from a)) <+>
+                 padLeft (Pad 2) (txt (view subject a)) <+>
+                 (padLeft Max $ renderMailTagsWidget a)
+    in (newMail a $ selected widget)
 
 
 listNewMailAttr :: AttrName
 listNewMailAttr = L.listAttr <> "newmail"
+
+mailAttr :: AttrName
+mailAttr = "mail"
+
+mailTagsAttr :: AttrName
+mailTagsAttr = mailAttr <> "tags"
+
+renderMailTagsWidget :: Mail -> Widget Name
+renderMailTagsWidget m =
+    let ts = view mailTags m
+    in withAttr mailTagsAttr $ vLimit 1 $ txt $ unwords ts
 
 -- | We currently have two modes on the main view we need to distinguish
 -- keystrokes for. One is to obviously browse the mails which are shown as a
