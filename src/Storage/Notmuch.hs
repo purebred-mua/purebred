@@ -11,6 +11,7 @@ import           Data.Maybe     (fromMaybe)
 import qualified Data.Vector    as Vec
 import           System.Process (readProcess)
 import qualified Data.Text as T
+import Data.Text.Encoding (decodeUtf8)
 import UI.Types (NotmuchSettings, nmDatabase, nmNewTag)
 import Control.Lens.Getter (view)
 import Control.Lens.Setter (set)
@@ -34,9 +35,9 @@ messageToMail
     -> IO Mail
 messageToMail m =
     Mail <$>
-    (fromMaybe "" <$> messageHeader "Subject" m) <*>
-    (fromMaybe "" <$> messageHeader "To" m) <*>
-    (fromMaybe "" <$> messageHeader "From" m) <*>
+    (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
+    (decodeUtf8 . fromMaybe "" <$> messageHeader "To" m) <*>
+    (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
     messageFilename m <*>
     tagsToText m <*>
     pure False
@@ -44,7 +45,7 @@ messageToMail m =
 tagsToText :: HasTags a => a -> IO [T.Text]
 tagsToText m = do
   t <- tags m
-  pure $ T.pack <$> t
+  pure $ decodeUtf8 <$> t
 
 getDatabasePath :: IO (FilePath)
 getDatabasePath = getFromNotmuchConfig "database.path"

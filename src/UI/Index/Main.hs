@@ -6,8 +6,8 @@ import Data.Monoid ((<>))
 import qualified Brick.Main                as M
 import           Brick.Types               (Padding (..), Widget)
 import qualified Brick.Types               as T
-import           Brick.Widgets.Core        (hLimit, padLeft, str, vBox, vLimit,
-                                            withAttr, (<+>))
+import Brick.Widgets.Core
+       (hLimit, padLeft, txt, vBox, vLimit, withAttr, (<+>))
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Control.Lens.Getter       ((^.), view)
@@ -33,14 +33,10 @@ renderMailList s = let listFocus = view (asMailIndex . miMode) s == BrowseMail
 
 listDrawElement :: Bool -> Mail -> Widget Name
 listDrawElement sel a =
-    let selStr w =
-            if sel
-                then withAttr L.listSelectedAttr w <+> fillLine
-                else w
-        newM m w = if (view mailIsNew m) then withAttr listNewMailAttr w else w
-    in newM a $ (selStr $
-        padLeft (Pad 1) $
-        hLimit 15 (str $ a ^. from) <+> padLeft (Pad 2) (str (a ^. subject)))
+    let selected w = if sel then withAttr L.listSelectedAttr w else w
+        newMail m w = if (view mailIsNew m) then withAttr listNewMailAttr w else w
+        widget = padLeft (Pad 1) $ hLimit 15 (txt $ view from a) <+> padLeft (Pad 2) (txt (view subject a))
+    in (newMail a $ selected widget) <+> fillLine
 
 
 listNewMailAttr :: AttrName

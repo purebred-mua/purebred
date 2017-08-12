@@ -8,9 +8,9 @@ import Data.Text (Text)
 -- A single mail represented in the UI
 -- TODO: should use Text instead of String
 data Mail = Mail
-    { _subject :: String
-    , _to :: String
-    , _from :: String
+    { _subject :: Text
+    , _to :: Text
+    , _from :: Text
     , _filepath :: String
     , _mailTags :: [Text]
     , _mailIsNew :: Bool
