@@ -13,7 +13,7 @@ import qualified Graphics.Vty           as V
 import           Storage.Mail           (Mail)
 import           Storage.Notmuch        (getMessages)
 import           Storage.ParsedMail     (parseMail)
-import           UI.Types
+import Types
 
 -- | Default Keybindings
 indexKeybindings :: [Keybinding]

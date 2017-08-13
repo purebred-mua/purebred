@@ -11,7 +11,7 @@ import UI.Index.Main (listNewMailAttr)
 import UI.Index.Keybindings
        (indexKeybindings, indexsearchKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings)
-import UI.Types
+import Types
        (ComposeViewSettings(..), Configuration(..), IndexViewSettings(..),
         MailViewSettings(..), NotmuchSettings(..))
 

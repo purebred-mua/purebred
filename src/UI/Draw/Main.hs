@@ -5,7 +5,7 @@ import           Brick.Types        (Widget)
 import           Brick.Widgets.Core (fill, txt, vLimit)
 
 import qualified Data.Text          as T
-import           UI.Types           (Name)
+import Types (Name)
 
 fillLine :: Widget Name
 fillLine = vLimit 1 (fill ' ')

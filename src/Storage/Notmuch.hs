@@ -12,7 +12,7 @@ import qualified Data.Vector    as Vec
 import           System.Process (readProcess)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
-import UI.Types (NotmuchSettings, nmDatabase, nmNewTag)
+import Types (NotmuchSettings, nmDatabase, nmNewTag)
 import Control.Lens.Getter (view)
 import Control.Lens.Setter (set)
 

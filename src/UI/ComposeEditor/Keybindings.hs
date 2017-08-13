@@ -17,9 +17,9 @@ import           Network.Mail.Mime      (Address (..), renderSendMail,
                                          simpleMail')
 import           Prelude                hiding (readFile, unlines)
 import           UI.Keybindings         (cancelToMain, initialCompose)
-import           UI.Types               (AppState, Keybinding (..), Mode (..),
-                                         Name (..), asAppMode, asCompose, cFrom,
-                                         cSubject, cTmpFile, cTo)
+import Types
+       (AppState, Keybinding(..), Mode(..), Name(..), asAppMode,
+        asCompose, cFrom, cSubject, cTmpFile, cTo)
 
 
 

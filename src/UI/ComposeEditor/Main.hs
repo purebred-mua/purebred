@@ -17,7 +17,7 @@ import qualified Data.Text                    as T
 import           Data.Vector                  (fromList)
 import           UI.Draw.Main                 (editorDrawContent)
 import           UI.Keybindings               (handleEvent)
-import           UI.Types
+import Types
 
 drawComposeEditor :: AppState -> [Widget Name]
 drawComposeEditor s = [ui <=> attachmentsEditor s]

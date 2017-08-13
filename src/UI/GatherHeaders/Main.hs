@@ -26,7 +26,7 @@ import           UI.GatherHeaders.Keybindings (interactiveGatherHeadersKeybindin
 import           UI.Index.Main                (renderMailList)
 import           UI.Keybindings               (handleEvent)
 import           UI.Status.Main               (statusbar)
-import           UI.Types
+import Types
 
 drawInteractiveHeaders :: AppState -> [Widget Name]
 drawInteractiveHeaders s = [ui]

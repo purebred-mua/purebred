@@ -18,7 +18,7 @@ import           Storage.Mail
 import           UI.Draw.Main              (editorDrawContent, fillLine)
 import           UI.Keybindings            (handleEvent)
 import           UI.Status.Main            (statusbar)
-import           UI.Types
+import Types
 
 drawMain :: AppState -> [Widget Name]
 drawMain s = [ui]

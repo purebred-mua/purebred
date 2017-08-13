@@ -15,7 +15,7 @@ import           UI.GatherHeaders.Main (drawInteractiveHeaders,
 import           UI.Index.Main         (drawMain, mainEvent)
 import           UI.Keybindings        (initialCompose)
 import           UI.Mail.Main          (drawMail, mailEvent)
-import           UI.Types
+import Types
 
 drawUI :: AppState -> [Widget Name]
 drawUI s =

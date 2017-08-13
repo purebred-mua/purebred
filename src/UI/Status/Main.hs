@@ -10,8 +10,8 @@ import           Data.Vector         (length)
 import           Prelude             hiding (length)
 import           Storage.Mail        (Mail)
 import           UI.Draw.Main        (fillLine)
-import           UI.Types            (AppState, Name, asError, asMailIndex,
-                                      miListOfMails)
+import Types
+       (AppState, Name, asError, asMailIndex, miListOfMails)
 
 statusbar :: AppState -> Widget Name
 statusbar s =

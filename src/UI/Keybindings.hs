@@ -12,7 +12,7 @@ import           Data.List                 (find)
 import           Graphics.Vty.Input.Events (Event)
 import           Prelude                   hiding (readFile, unlines)
 import           Storage.Mail              (Mail)
-import           UI.Types
+import Types
 
 
 -- | A generic event handler using Keybindings by default if available

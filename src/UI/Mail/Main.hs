@@ -21,7 +21,7 @@ import           UI.Index.Keybindings      (updateStateWithParsedMail)
 import           UI.Index.Main             (renderMailList)
 import           UI.Keybindings            (handleEvent)
 import           UI.Status.Main            (statusbar)
-import           UI.Types
+import Types
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.

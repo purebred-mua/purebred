@@ -1,5 +1,5 @@
 -- | Basic types for the UI used by this library
-module UI.Types where
+module Types where
 
 import qualified Brick.AttrMap             as Brick
 import           Brick.Types               (EventM, Next)

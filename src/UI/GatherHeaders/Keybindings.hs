@@ -2,7 +2,7 @@ module UI.GatherHeaders.Keybindings where
 
 import qualified Graphics.Vty   as V
 import           UI.Keybindings (cancelToMain)
-import           UI.Types       (Keybinding (..))
+import Types (Keybinding(..))
 
 interactiveGatherHeadersKeybindings :: [Keybinding]
 interactiveGatherHeadersKeybindings =

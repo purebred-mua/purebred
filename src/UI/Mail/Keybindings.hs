@@ -4,7 +4,8 @@ import qualified Brick.Main          as M
 import qualified Brick.Types         as T
 import           Control.Lens.Setter (set)
 import qualified Graphics.Vty        as V
-import           UI.Types
+import Types
+       (Keybinding(..), AppState, Name(..), asAppMode, Mode(..))
 
 displayMailKeybindings :: [Keybinding]
 displayMailKeybindings =

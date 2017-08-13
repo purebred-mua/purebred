@@ -11,7 +11,7 @@ import           Control.Monad        (void)
 import qualified Graphics.Vty         as V
 import           Storage.Notmuch      (getDatabasePath)
 import           UI.Index.Keybindings
-import           UI.Types
+import Types
 
 myIndexKeybindings :: [Keybinding]
 myIndexKeybindings =
