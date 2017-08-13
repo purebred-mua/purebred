@@ -1,6 +1,7 @@
 -- | Basic types for the UI used by this library
 module Types where
 
+import Codec.MIME.Type (MIMEValue)
 import qualified Brick.AttrMap             as Brick
 import           Brick.Types               (EventM, Next)
 import qualified Brick.Widgets.Edit        as E
@@ -9,7 +10,6 @@ import           Control.Lens
 import qualified Data.Text                 as T
 import qualified Graphics.Vty.Input.Events as Vty
 import           Storage.Mail              (Mail)
-import           Storage.ParsedMail        (ParsedMail)
 
 
 -- | The global application mode
@@ -217,3 +217,15 @@ kbAction = to (\(Keybinding _ _ c) -> c)
 
 kbDescription :: Getter Keybinding String
 kbDescription = to (\(Keybinding a _ _) -> a)
+
+type Body = T.Text
+type Header = T.Text
+
+-- | a parsed email representing either a MIME or RFC2822 e-mail. Note: RFC2822
+-- is currently not implemented, but we're using the same type for the case we
+-- add support for it
+data ParsedMail
+    = MIMEMail MIMEValue
+    | RFC2822 [Header]
+              Body
+    deriving (Show,Eq)

@@ -25,7 +25,7 @@ drawComposeEditor s = [ui <=> attachmentsEditor s]
     ui =
         foldr
             (drawTableRows s)
-            (txt "")
+            (txt T.empty)
             [AskSubject, AskFrom, AskTo]
 
 -- | align labels to the right and values to the left, e.g.
@@ -36,9 +36,8 @@ drawComposeEditor s = [ui <=> attachmentsEditor s]
 drawTableRows :: AppState -> ComposeState -> Widget Name -> Widget Name
 drawTableRows s cs w =
     w <=>
-    (hLimit 15 $ padRight Max (getLabelForComposeState cs) <+>
-     editorDrawContent
-         (E.getEditContents $ (s ^. asCompose . (focusedLens cs))))
+    ((hLimit 15 $ padRight Max (getLabelForComposeState cs)) <+>
+     E.renderEditor editorDrawContent False (s ^. asCompose . (focusedLens cs)))
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =

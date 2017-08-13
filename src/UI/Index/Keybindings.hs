@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module UI.Index.Keybindings where
 
 import           Brick.Main             (continue, halt)
@@ -12,8 +13,9 @@ import           Data.Text.Zipper       (currentLine)
 import qualified Graphics.Vty           as V
 import           Storage.Mail           (Mail)
 import           Storage.Notmuch        (getMessages)
-import           Storage.ParsedMail     (parseMail)
+import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
+import Data.Monoid ((<>))
 
 -- | Default Keybindings
 indexKeybindings :: [Keybinding]
@@ -27,7 +29,8 @@ indexKeybindings =
     , Keybinding "mail index down" (V.EvKey V.KDown []) mailIndexDown
     , Keybinding "mail index up" (V.EvKey V.KUp []) mailIndexUp
     , Keybinding "Switch between editor and main" (V.EvKey (V.KChar '\t') []) toggleComposeEditorAndMain
-    , Keybinding "compose new mail" (V.EvKey (V.KChar 'm') []) composeMail]
+    , Keybinding "compose new mail" (V.EvKey (V.KChar 'm') []) composeMail
+    , Keybinding "reply to mail" (V.EvKey (V.KChar 'r') []) replyMail]
 
 indexsearchKeybindings :: [Keybinding]
 indexsearchKeybindings =
@@ -69,6 +72,21 @@ mailIndexDown s = mailIndexEvent s L.listMoveDown
 
 composeMail :: AppState -> T.EventM Name (T.Next AppState)
 composeMail s = continue $ asAppMode .~ GatherHeaders $ s
+
+replyMail :: AppState -> T.EventM Name (T.Next AppState)
+replyMail s = case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
+  Just (_, m) -> do
+    parsed <- liftIO $ parseMail m
+    case parsed of
+      Left e -> continue $ s & asError ?~ e & asAppMode .~ Main
+      Right pmail -> do
+        let s' = set (asCompose . cTo) (E.editor GatherHeadersTo Nothing $ getFrom pmail) s &
+                 set (asCompose . cFrom) (E.editor GatherHeadersFrom Nothing $ getTo pmail) &
+                 set (asCompose . cSubject) (E.editor GatherHeadersSubject Nothing $ ("Re: " <> getSubject pmail)) &
+                 set (asCompose . cFocus) AskFrom &
+                 set asAppMode GatherHeaders
+        continue s'
+  Nothing -> continue s
 
 toggleComposeEditorAndMain :: AppState -> T.EventM Name (T.Next AppState)
 toggleComposeEditorAndMain s =

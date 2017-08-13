@@ -8,7 +8,7 @@ import           Control.Lens.Fold      ((^?!))
 import           Control.Lens.Getter    ((^.))
 import           Control.Lens.Lens      ((&))
 import           Control.Lens.Prism     (_Just)
-import           Control.Lens.Setter    ((.~))
+import           Control.Lens.Setter    ((.~), set)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Text              (unlines)
 import           Data.Text.Lazy.IO      (readFile)
@@ -18,22 +18,15 @@ import           Network.Mail.Mime      (Address (..), renderSendMail,
 import           Prelude                hiding (readFile, unlines)
 import           UI.Keybindings         (cancelToMain, initialCompose)
 import Types
-       (AppState, Keybinding(..), Mode(..), Name(..), asAppMode,
-        asCompose, cFrom, cSubject, cTmpFile, cTo)
-
-
-
+       (ComposeState(..), AppState, Keybinding(..), Mode(..), Name(..),
+        asAppMode, asCompose, cFrom, cSubject, cTmpFile, cTo, cFocus)
 
 
 composeEditorKeybindings :: [Keybinding]
 composeEditorKeybindings =
     [ Keybinding "Toggle index view" (V.EvKey (V.KChar '\t') []) cancelToMain
     , Keybinding "Send e-mail" (V.EvKey (V.KChar 'y') []) sendMail
-    , Keybinding
-          "Cancel compose"
-          (V.EvKey V.KEsc [])
-          (\s ->
-                M.continue $ resetCompose s)]
+    , Keybinding "Cancel compose" (V.EvKey V.KEsc []) (\s -> M.continue $ resetCompose s)]
 
 sendMail :: AppState -> T.EventM Name (T.Next AppState)
 sendMail s = do

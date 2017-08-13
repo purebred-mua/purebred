@@ -16,7 +16,6 @@ import           Control.Lens.Setter       ((.~))
 import           Control.Monad.IO.Class    (liftIO)
 import qualified Data.Text                 as T
 import           Graphics.Vty.Input.Events (Event)
-import           Storage.ParsedMail        (ParsedMail (..))
 import           UI.Index.Keybindings      (updateStateWithParsedMail)
 import           UI.Index.Main             (renderMailList)
 import           UI.Keybindings            (handleEvent)

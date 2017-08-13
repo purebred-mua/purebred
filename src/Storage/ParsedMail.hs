@@ -1,28 +1,17 @@
 -- | module to integrate with a mail parser. This is needed to actually view the
 -- entire mail and it's attachments.
+{-# LANGUAGE OverloadedStrings #-}
 module Storage.ParsedMail where
 
 import           Codec.MIME.Parse    (parseMIMEMessage)
-import           Codec.MIME.Type     (MIMEValue)
+import           Codec.MIME.Type     (MIMEParam(..), MIMEValue(..), mime_val_headers)
 import           Control.Exception   (try)
 import           Control.Lens.Getter ((^.))
 import qualified Data.Text           as T
 import           Data.Text.IO        (readFile)
 import           Prelude             hiding (readFile)
 import           Storage.Mail        (Mail, filepath)
-
-
-type Body = T.Text
-type Header = T.Text
-
--- | a parsed email representing either a MIME or RFC2822 e-mail. Note: RFC2822
--- is currently not implemented, but we're using the same type for the case we
--- add support for it
-data ParsedMail
-    = MIMEMail MIMEValue
-    | RFC2822 [Header]
-              Body
-    deriving (Show,Eq)
+import Types (ParsedMail(..))
 
 parseMail :: Mail -> IO (Either String ParsedMail)
 parseMail m = do
@@ -30,3 +19,21 @@ parseMail m = do
   case msg of
     Left e -> pure $ Left $ show e
     Right contents -> pure $ Right $ MIMEMail (parseMIMEMessage contents)
+
+getFrom :: ParsedMail -> T.Text
+getFrom (MIMEMail v) = findHeader v "from"
+getFrom _ = throwNotImplemented
+
+getSubject :: ParsedMail -> T.Text
+getSubject (MIMEMail v) = findHeader v "subject"
+getSubject _ = throwNotImplemented
+
+getTo :: ParsedMail -> T.Text
+getTo (MIMEMail v) = findHeader v "to"
+getTo _ = throwNotImplemented
+
+throwNotImplemented :: a
+throwNotImplemented = error "Not implemented. ParsedMail.hs needs a proper mail parser"
+
+findHeader :: MIMEValue -> T.Text -> T.Text
+findHeader m name = T.strip . paramValue . head $ filter (\x -> paramName x == name) $ mime_val_headers m
