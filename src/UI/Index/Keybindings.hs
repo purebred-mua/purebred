@@ -1,6 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Index.Keybindings where
 
+import Network.Socket hiding (send)
+import Network.Socket
+       (bind, socket, Family(..), SocketType(..), defaultProtocol, SockAddr(..))
+import Network.Socket.ByteString (send)
+
 import           Brick.Main             (continue, halt)
 import qualified Brick.Types            as T
 import qualified Brick.Widgets.Edit     as E
@@ -30,7 +35,8 @@ indexKeybindings =
     , Keybinding "mail index up" (V.EvKey V.KUp []) mailIndexUp
     , Keybinding "Switch between editor and main" (V.EvKey (V.KChar '\t') []) toggleComposeEditorAndMain
     , Keybinding "compose new mail" (V.EvKey (V.KChar 'm') []) composeMail
-    , Keybinding "reply to mail" (V.EvKey (V.KChar 'r') []) replyMail]
+    , Keybinding "reply to mail" (V.EvKey (V.KChar 'r') []) replyMail
+    , Keybinding "signal testing ready" (V.EvKey (V.KChar 't') [V.MCtrl]) (\s -> (liftIO $ signalReady) >> continue s)]
 
 indexsearchKeybindings :: [Keybinding]
 indexsearchKeybindings =
@@ -103,3 +109,11 @@ applySearchTerms s = do
     vec <- liftIO $ getMessages searchterms (view (asConfig . confNotmuch) s)
     let listWidget = (L.list ListOfMails vec 1)
     continue $ set (asMailIndex . miListOfMails) listWidget s & set asAppMode Main
+
+
+signalReady :: IO ()
+signalReady = do
+  soc <- socket AF_UNIX Datagram defaultProtocol
+  connect soc (SockAddrUnix "/tmp/purebred.socket")
+  _ <- send soc "READY=1"
+  close soc

@@ -1,12 +1,12 @@
 module Main where
 
-import           TestMail   (mailTests)
-
-import           Test.Tasty (TestTree, defaultMain, testGroup)
+import TestMail (mailTests)
+import TestUserAcceptance (systemTests)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 
 tests ::
   TestTree
-tests = testGroup "tests" [unittests]
+tests = testGroup "tests" [unittests, systemTests]
 
 -- unit tests
 --
