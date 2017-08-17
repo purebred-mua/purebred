@@ -58,6 +58,7 @@ executable purebred
   build-depends:       base >= 4.8 && < 5
                      , purebred
                      , brick
+                     , optparse-applicative >= 0.13
 
 test-suite unittests
   type:                exitcode-stdio-1.0
@@ -78,3 +79,6 @@ test-suite unittests
                      , unbounded-delays
                      , bytestring
                      , network
+                     , ini
+                     , temporary
+                     , text
