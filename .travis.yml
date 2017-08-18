@@ -10,10 +10,11 @@ cache:
 before_install:
   - unset CC
   - mkdir -p ~/.local/bin
-  - export PATH=/opt/ghc/$GHCVER/bin:$PATH
+  - export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 
 script:
+  - stack --system-ghc --no-terminal --skip-ghc-check install
   - stack --system-ghc --no-terminal --skip-ghc-check test
 
 matrix:
@@ -22,4 +23,4 @@ matrix:
   # variable, such as using --stack-yaml to point to a different file.
   - env: STACK_YAML="stack.yaml" GHCVER=8.0.2
     compiler: ": #stack default"
-    addons: {apt: {packages: [ghc-8.0.2, libnotmuch-dev, libtalloc-dev], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [ghc-8.0.2, notmuch, libnotmuch-dev, libtalloc-dev, tmux], sources: [hvr-ghc]}}
