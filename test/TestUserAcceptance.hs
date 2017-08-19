@@ -10,9 +10,12 @@ import GHC.MVar (MVar)
 import Control.Concurrent
        (newEmptyMVar, forkIO, putMVar, takeMVar)
 import System.Timeout (timeout)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Resource
+       (register, resourceForkIO, runResourceT, ResourceT)
 
 import System.Process (callProcess, readProcess)
-import System.Directory (getCurrentDirectory, removeFile)
+import System.Directory (getCurrentDirectory, removeFile, getTemporaryDirectory)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsFile)
 
@@ -36,7 +39,7 @@ smokeTest = do
     testmdir <- prepareMaildir fp
     cfg <- prepareNotmuchCfg fp testmdir
     _ <- prepareNotmuch cfg
-    callProcess "tmux" (tmuxSessionArgs testmdir)
+    callProcess "tmux" tmuxSessionArgs
     callProcess "tmux" (communicateSessionArgs ++ ["-l", "purebred --database " <> testmdir])
     callProcess "tmux" (communicateSessionArgs ++ ["Enter"])
     _ <- setUp
@@ -45,14 +48,23 @@ smokeTest = do
     readProcess "tmux" (savebufferArgs "/tmp/testoutput") [] >>= print
     teardown
 
-waitReady :: MVar (String) -> IO ()
-waitReady baton = do
-    soc <- socket AF_UNIX Datagram defaultProtocol
-    bind soc (SockAddrUnix "/tmp/purebred.socket")
-    d <- recv soc 4096
-    if d /= applicationReadySignal
-        then error "application did not start up in time"
-        else close soc >> removeFile "/tmp/purebred.socket" >> putMVar baton "ready"
+purebredSocketAddr :: ResourceT IO SockAddr
+purebredSocketAddr = do
+  tmp <- liftIO $ getTemporaryDirectory
+  let socketfile = (tmp <> "/purebred.socket")
+  _ <- register (removeFile socketfile)
+  pure $ SockAddrUnix socketfile
+
+waitReady :: ResourceT IO ()
+waitReady = do
+    addr <- purebredSocketAddr
+    liftIO $
+        do soc <- socket AF_UNIX Datagram defaultProtocol
+           bind soc addr
+           d <- recv soc 4096
+           if d /= applicationReadySignal
+               then error "application did not start up in time"
+               else close soc
 
 applicationReadySignal :: ByteString
 applicationReadySignal = pack "READY=1"
@@ -66,15 +78,18 @@ applicationReadySignal = pack "READY=1"
 --
 -- Reason: it takes a microseconds until purebred has started and shows the UI
 --
-setUp :: IO (Maybe String)
-setUp = do
-    baton <- newEmptyMVar
-    _ <- forkIO $ waitReady baton
-    callProcess "tmux" (communicateSessionArgs ++ ["C-t"])
-    timeout (10 ^ 6 * 6) $ takeMVar baton
+applicationStartupTimeout :: Int
+applicationStartupTimeout = 10 ^ 6 * 6
 
-tmuxSessionArgs :: FilePath -> [String]
-tmuxSessionArgs cfg =
+setUp :: IO (Maybe String)
+setUp = runResourceT $ do
+    baton <- liftIO $ newEmptyMVar
+    _ <- resourceForkIO $ waitReady >> do liftIO $ putMVar baton "ready"
+    liftIO $ do callProcess "tmux" (communicateSessionArgs ++ ["C-t"])
+                timeout applicationStartupTimeout $ takeMVar baton
+
+tmuxSessionArgs :: [String]
+tmuxSessionArgs =
     [ "new-session"
     , "-x"
     , "80"
