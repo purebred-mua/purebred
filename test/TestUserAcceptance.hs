@@ -21,13 +21,14 @@ import System.Directory
        (getCurrentDirectory, removeFile, getTemporaryDirectory,
         removeDirectoryRecursive)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Golden (goldenVsFile)
+import Test.Tasty.Golden (goldenVsString)
 
 import Network.Socket hiding (recv)
 import Network.Socket
        (bind, socket, Family(..), SocketType(..), defaultProtocol, SockAddr(..))
 import Network.Socket.ByteString (recv)
 import Data.ByteString.Char8 (pack, ByteString)
+import qualified Data.ByteString.Lazy as LBS
 
 systemTests ::
   TestTree
@@ -35,12 +36,13 @@ systemTests = testGroup "result in the right state" [testMakesHardcopy]
 
 testMakesHardcopy ::
   TestTree
-testMakesHardcopy = goldenVsFile "does not crash" "test/data/test.golden" "/tmp/testoutput" (runResourceT $ tmuxSession steps "purebredtest")
+testMakesHardcopy = goldenVsString "does not crash" "test/data/viewMail.golden" (runResourceT $ tmuxSession steps "purebredtest")
   where steps = [ApplicationStep ["Enter"]]
+
 
 data ApplicationStep = ApplicationStep [String]
 
-tmuxSession :: [ApplicationStep] -> String -> ResourceT IO ()
+tmuxSession :: [ApplicationStep] -> String -> ResourceT IO (LBS.ByteString)
 tmuxSession xs sessionname = do
     systmp <- liftIO $ getCanonicalTemporaryDirectory
     testdir <- liftIO $ createTempDirectory systmp "purebredtest"
@@ -50,21 +52,25 @@ tmuxSession xs sessionname = do
            prepareNotmuchCfg testdir mdir >>= prepareNotmuch >> pure mdir
     tmuxRkey <- createTmuxSession sessionname
     startApplication mdir
-    liftIO $
+    outputfile <-
+        liftIO $
         do runSteps xs
-           snapshotState sessionname
+           snapshotState sessionname testdir
     release tmuxRkey
     -- only remove the tempdir if the whole session run was without problems,
     -- otherwise it'll help to debug issues
+    tout <- liftIO $ LBS.readFile outputfile
     liftIO $ removeDirectoryRecursive testdir
+    pure tout
 
 runSteps :: [ApplicationStep] -> IO ()
 runSteps steps = mapM_ (\(ApplicationStep xs) -> callProcess "tmux" (communicateSessionArgs ++ xs)) steps
 
-snapshotState :: String -> IO ()
-snapshotState sessionname = do
-    systmp <- getCanonicalTemporaryDirectory
-    readProcess "tmux" hardcopyArgs [] >>= writeFile (systmp <> "/testoutput")
+snapshotState :: String -> FilePath -> IO (FilePath)
+snapshotState sessionname testdir = do
+    let fp = testdir <> "/" <> sessionname <> "paneoutput.log"
+    readProcess "tmux" hardcopyArgs [] >>= writeFile fp
+    pure fp
     where
       hardcopyArgs = ["capture-pane", "-p", "-t", sessionname]
 
