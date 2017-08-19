@@ -16,7 +16,7 @@ import Control.Exception (catch, IOException)
 import System.IO (hPutStr, stderr)
 import Control.Monad (void)
 
-import System.Process (callProcess)
+import System.Process (callProcess, readProcess)
 import System.Directory
        (getCurrentDirectory, removeFile, getTemporaryDirectory,
         removeDirectoryRecursive)
@@ -44,7 +44,6 @@ tmuxSession :: [ApplicationStep] -> String -> ResourceT IO ()
 tmuxSession xs sessionname = do
     systmp <- liftIO $ getCanonicalTemporaryDirectory
     testdir <- liftIO $ createTempDirectory systmp "purebredtest"
-    rkey <- register (removeDirectoryRecursive testdir)
     mdir <-
         liftIO $
         do mdir <- prepareMaildir testdir
@@ -55,18 +54,19 @@ tmuxSession xs sessionname = do
         do runSteps xs
            snapshotState sessionname
     release tmuxRkey
-    release rkey
+    -- only remove the tempdir if the whole session run was without problems,
+    -- otherwise it'll help to debug issues
+    liftIO $ removeDirectoryRecursive testdir
 
 runSteps :: [ApplicationStep] -> IO ()
 runSteps steps = mapM_ (\(ApplicationStep xs) -> callProcess "tmux" (communicateSessionArgs ++ xs)) steps
 
 snapshotState :: String -> IO ()
 snapshotState sessionname = do
-    callProcess "tmux" hardcopyArgs
-    callProcess "tmux" (savebufferArgs ++ ["/tmp/testoutput"])
+    systmp <- getCanonicalTemporaryDirectory
+    readProcess "tmux" hardcopyArgs [] >>= writeFile (systmp <> "/testoutput")
     where
-      hardcopyArgs = ["capture-pane", "-b","purebredcapture","-t", sessionname]
-      savebufferArgs = ["save-buffer", "-b", "purebredcapture"]
+      hardcopyArgs = ["capture-pane", "-p", "-t", sessionname]
 
 startApplication :: String -> ResourceT IO ()
 startApplication testmdir = do
