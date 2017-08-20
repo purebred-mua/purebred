@@ -36,11 +36,19 @@ systemTests = testGroup "result in the right state" [testMakesHardcopy]
 
 testMakesHardcopy ::
   TestTree
-testMakesHardcopy = goldenVsString "does not crash" "test/data/viewMail.golden" (runResourceT $ tmuxSession steps "purebredtest")
-  where steps = [ApplicationStep ["Enter"]]
+testMakesHardcopy =
+    goldenVsString
+        "does not crash"
+        "test/data/viewMail.golden"
+        (runResourceT $ tmuxSession steps "purebredtest")
+  where
+    steps = [ApplicationStep "Enter" False]
 
 
-data ApplicationStep = ApplicationStep [String]
+data ApplicationStep = ApplicationStep
+    { asCommand :: String  -- ^ the actual commands to send
+    , asAsLiteralKey :: Bool  -- ^ disables key name lookup and sends literal input
+    }
 
 tmuxSession :: [ApplicationStep] -> String -> ResourceT IO (LBS.ByteString)
 tmuxSession xs sessionname = do
@@ -64,7 +72,7 @@ tmuxSession xs sessionname = do
     pure tout
 
 runSteps :: [ApplicationStep] -> IO ()
-runSteps steps = mapM_ (\(ApplicationStep xs) -> callProcess "tmux" (communicateSessionArgs ++ xs)) steps
+runSteps steps = mapM_ (\(ApplicationStep xs asLiteral) -> callProcess "tmux" $ communicateSessionArgs xs asLiteral) steps
 
 snapshotState :: String -> FilePath -> IO (FilePath)
 snapshotState sessionname testdir = do
@@ -76,8 +84,7 @@ snapshotState sessionname testdir = do
 
 startApplication :: String -> ResourceT IO ()
 startApplication testmdir = do
-    liftIO $ do callProcess "tmux" (communicateSessionArgs ++ ["-l", "purebred --database " <> testmdir])
-                callProcess "tmux" (communicateSessionArgs ++ ["Enter"])
+    liftIO $ do runSteps [ApplicationStep ("purebred --database " <> testmdir) True, ApplicationStep "Enter" False]
     -- prepare thread waiting for purebred to signal readiness
     baton <- liftIO $ newEmptyMVar
     sockAddr@(SockAddrUnix sfile) <- purebredSocketAddr
@@ -85,7 +92,7 @@ startApplication testmdir = do
     _ <- resourceForkIO $ waitReady sockAddr >> do liftIO $ putMVar baton "ready"
     -- purebred should be running by now, send the "special" key for purebred to
     -- connect to the socket and send ready
-    liftIO $ do callProcess "tmux" (communicateSessionArgs ++ ["C-t"])
+    liftIO $ do runSteps [ApplicationStep "C-t" False]
                 void $ timeout applicationStartupTimeout $ takeMVar baton
     -- clean up socket file
     release rkey
@@ -138,11 +145,19 @@ applicationReadySignal = pack "READY=1"
 applicationStartupTimeout :: Int
 applicationStartupTimeout = 10 ^ 6 * 6
 
-communicateSessionArgs :: [String]
-communicateSessionArgs = words "send-keys -t purebredtest"
+communicateSessionArgs :: String -> Bool -> [String]
+communicateSessionArgs keys asLiteral =
+    let base = words "send-keys -t purebredtest"
+        postfix =
+            if asLiteral
+                then ["-l"]
+                else []
+    in base ++ postfix ++ [keys]
 
+-- run notmuch to create the notmuch database
+-- Note: discard stdout which otherwise clobbers the test output
 prepareNotmuch :: FilePath -> IO ()
-prepareNotmuch notmuchcfg = callProcess "notmuch" ["--config=" <> notmuchcfg, "new"]
+prepareNotmuch notmuchcfg = void $ readProcess "notmuch" ["--config=" <> notmuchcfg, "new"] []
 
 prepareNotmuchCfg :: FilePath -> FilePath -> IO (FilePath)
 prepareNotmuchCfg testdir testmdir = do
