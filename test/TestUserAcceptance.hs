@@ -32,7 +32,10 @@ import qualified Data.ByteString.Lazy as LBS
 
 systemTests ::
   TestTree
-systemTests = testGroup "result in the right state" [testUserViewsMailSuccessfully]
+systemTests =
+    testGroup
+        "result in the right state"
+        [testUserViewsMailSuccessfully, testUserCanSwitchBackToIndex]
 
 testUserViewsMailSuccessfully ::
   TestTree
@@ -43,6 +46,23 @@ testUserViewsMailSuccessfully =
         (runResourceT $ tmuxSession steps "purebredtest")
   where
     steps = [ApplicationStep "Enter" False]
+
+testUserCanSwitchBackToIndex ::
+  TestTree
+testUserCanSwitchBackToIndex =
+    goldenVsString
+        "user can manipulate search query"
+        "test/data/manipulateNotmuchQuery.golden"
+        (runResourceT $ tmuxSession steps "purebredtest")
+  where
+    steps =
+        [ ApplicationStep ":" False
+        , ApplicationStep "Down" False
+        , ApplicationStep "C-u" False
+        , ApplicationStep "tag:foo" True
+        , ApplicationStep "Enter" False
+        , ApplicationStep "Escape" False
+        ]
 
 
 data ApplicationStep = ApplicationStep
