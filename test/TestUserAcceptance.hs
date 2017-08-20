@@ -34,7 +34,7 @@ systemTests ::
   TestTree
 systemTests =
     testGroup
-        "result in the right state"
+        "user acceptance tests"
         [testUserViewsMailSuccessfully, testUserCanSwitchBackToIndex]
 
 testUserViewsMailSuccessfully ::
@@ -51,7 +51,7 @@ testUserCanSwitchBackToIndex ::
   TestTree
 testUserCanSwitchBackToIndex =
     goldenVsString
-        "user can manipulate search query"
+        "manipulating notmuch search query results in empty index"
         "test/data/manipulateNotmuchQuery.golden"
         (runResourceT $ tmuxSession steps "purebredtest")
   where
