@@ -7,18 +7,27 @@ import qualified Brick.Main as M
 import Control.Monad (void)
 import Storage.Notmuch (getDatabasePath)
 import Config.Main (defaultConfig)
+import Data.Maybe (fromMaybe)
 import Options.Applicative hiding (str)
+import qualified Options.Applicative.Builder as Builder
 import Data.Semigroup ((<>))
 
-data AppConfig = AppConfig { databaseFilepath :: String }
+data AppConfig = AppConfig { databaseFilepath :: Maybe String }
 
 appconfig :: Parser AppConfig
-appconfig = AppConfig <$> strOption ( long "database" <> metavar "DATABASE" <> help "Filepath to notmuch database" )
+appconfig =
+    AppConfig <$>
+    (optional $
+     Builder.option
+         Builder.str
+         (long "database" <> metavar "DATABASE" <>
+          help "Filepath to notmuch database"))
 
 main :: IO ()
 main = do
     cfg <- execParser opts
-    s <- initialState =<< defaultConfig =<< pure (databaseFilepath cfg)
+    dbpath <- getDatabasePath
+    s <- initialState =<< defaultConfig =<< pure (fromMaybe dbpath (databaseFilepath cfg))
     void $ M.defaultMain (theApp s) s
         where
             opts = info (appconfig <**> helper)
