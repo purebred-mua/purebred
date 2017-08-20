@@ -21,6 +21,8 @@ import           Storage.Notmuch        (getMessages)
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Data.Monoid ((<>))
+import System.Directory (getTemporaryDirectory)
+import Data.ByteString.Char8 (pack, ByteString)
 
 -- | Default Keybindings
 indexKeybindings :: [Keybinding]
@@ -114,6 +116,16 @@ applySearchTerms s = do
 signalReady :: IO ()
 signalReady = do
   soc <- socket AF_UNIX Datagram defaultProtocol
-  connect soc (SockAddrUnix "/tmp/purebred.socket")
-  _ <- send soc "READY=1"
+  socaddr <- purebredSocketAddr
+  connect soc socaddr
+  _ <- send soc applicationReadySignal
   close soc
+
+purebredSocketAddr :: IO SockAddr
+purebredSocketAddr = do
+  tmp <- getTemporaryDirectory
+  let socketfile = (tmp <> "/purebred.socket")
+  pure $ SockAddrUnix socketfile
+
+applicationReadySignal :: ByteString
+applicationReadySignal = pack "READY=1"

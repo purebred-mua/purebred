@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module TestUserAcceptance where
 
+import UI.Index.Keybindings (applicationReadySignal, purebredSocketAddr)
 import qualified Data.Text as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Data.Ini (parseIni, writeIniFileWith, KeySeparator(..), WriteIniSettings(..))
@@ -111,7 +112,7 @@ startApplication testmdir = do
     liftIO $ do runSteps [ApplicationStep ("purebred --database " <> testmdir) True, ApplicationStep "Enter" False]
     -- prepare thread waiting for purebred to signal readiness
     baton <- liftIO $ newEmptyMVar
-    sockAddr@(SockAddrUnix sfile) <- purebredSocketAddr
+    sockAddr@(SockAddrUnix sfile) <- liftIO $ purebredSocketAddr
     rkey <- register (removeFile sfile)
     _ <- resourceForkIO $ waitReady sockAddr >> do liftIO $ putMVar baton "ready"
     -- purebred should be running by now, send the "special" key for purebred to
@@ -147,12 +148,6 @@ cleanUpTmuxSession sessionname = do
                  hPutStr stderr ("Exception when killing session: " ++ err)
                  pure ())
 
-purebredSocketAddr :: ResourceT IO SockAddr
-purebredSocketAddr = do
-  tmp <- liftIO $ getTemporaryDirectory
-  let socketfile = (tmp <> "/purebred.socket")
-  pure $ SockAddrUnix socketfile
-
 waitReady :: SockAddr -> ResourceT IO ()
 waitReady addr = do
     liftIO $
@@ -162,9 +157,6 @@ waitReady addr = do
            if d /= applicationReadySignal
                then error "application did not start up in time"
                else close soc
-
-applicationReadySignal :: ByteString
-applicationReadySignal = pack "READY=1"
 
 applicationStartupTimeout :: Int
 applicationStartupTimeout = 10 ^ 6 * 6

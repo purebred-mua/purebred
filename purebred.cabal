@@ -49,6 +49,7 @@ library
                      , mime-mail
                      , network
                      , directory
+                     , bytestring
 
 executable purebred
   hs-source-dirs:      app
