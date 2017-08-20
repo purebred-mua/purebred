@@ -12,6 +12,24 @@ simple test which starts the application and takes a screen dump. The dump is
 written to a file which is compared to a golden file using
 [tasty-golden](https://hackage.haskell.org/package/tasty-golden).
 
+## Writing new user acceptance tests
+
+A user acceptance test performs a set of actions resulting in a screen dump and
+asserts it against a previously recorded screen dump, the golden file.
+
+* create a new test case in `test/TestUserAcceptance.hs`
+* define the steps using the `ApplicationStep` data type. Be mindful when you
+  send literal input and what "special" key you need to press to apply it in the
+  application (e.g. user input needs an additional `Enter`)
+* run the tests and
+  [tasty-golden](https://hackage.haskell.org/package/tasty-golden) will
+  automatically create the golden file with the last snapshot of the application
+  state in tmux. However also be mindful, that this might not be the application
+  state you want to assert against. Which brings us to...
+* test your steps before by creating a tmux test session and execute the
+  `send-keys` steps as to confirm the desired end state of the application you
+  are asserting your screen shot against
+
 ### The way it works as a TL;DR:
 I'm invoking tmux commands as separate processes on the test suite side for
 setup, communication and teardown.
