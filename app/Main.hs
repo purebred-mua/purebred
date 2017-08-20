@@ -7,7 +7,6 @@ import qualified Brick.Main as M
 import Control.Monad (void)
 import Storage.Notmuch (getDatabasePath)
 import Config.Main (defaultConfig)
-import Data.Maybe (fromMaybe)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import Data.Semigroup ((<>))
@@ -26,8 +25,10 @@ appconfig =
 main :: IO ()
 main = do
     cfg <- execParser opts
-    dbpath <- getDatabasePath
-    s <- initialState =<< defaultConfig =<< pure (fromMaybe dbpath (databaseFilepath cfg))
+    dbfp <- case databaseFilepath cfg of
+          Nothing -> getDatabasePath
+          Just fp -> pure fp
+    s <- initialState =<< defaultConfig dbfp
     void $ M.defaultMain (theApp s) s
         where
             opts = info (appconfig <**> helper)
