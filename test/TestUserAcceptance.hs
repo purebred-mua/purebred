@@ -32,13 +32,13 @@ import qualified Data.ByteString.Lazy as LBS
 
 systemTests ::
   TestTree
-systemTests = testGroup "result in the right state" [testMakesHardcopy]
+systemTests = testGroup "result in the right state" [testUserViewsMailSuccessfully]
 
-testMakesHardcopy ::
+testUserViewsMailSuccessfully ::
   TestTree
-testMakesHardcopy =
+testUserViewsMailSuccessfully =
     goldenVsString
-        "does not crash"
+        "user can view mail"
         "test/data/viewMail.golden"
         (runResourceT $ tmuxSession steps "purebredtest")
   where
@@ -72,7 +72,11 @@ tmuxSession xs sessionname = do
     pure tout
 
 runSteps :: [ApplicationStep] -> IO ()
-runSteps steps = mapM_ (\(ApplicationStep xs asLiteral) -> callProcess "tmux" $ communicateSessionArgs xs asLiteral) steps
+runSteps steps =
+    mapM_
+        (\(ApplicationStep xs asLiteral) ->
+              callProcess "tmux" $ communicateSessionArgs xs asLiteral)
+        steps
 
 snapshotState :: String -> FilePath -> IO (FilePath)
 snapshotState sessionname testdir = do
