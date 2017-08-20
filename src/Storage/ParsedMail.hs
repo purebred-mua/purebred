@@ -3,22 +3,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Storage.ParsedMail where
 
-import           Codec.MIME.Parse    (parseMIMEMessage)
-import           Codec.MIME.Type     (MIMEParam(..), MIMEValue(..), mime_val_headers)
-import           Control.Exception   (try)
-import           Control.Lens.Getter ((^.))
+import Codec.MIME.Parse (parseMIMEMessage)
+import Codec.MIME.Type
+       (MIMEParam(..), MIMEValue(..), mime_val_headers)
+import Control.Exception (try)
+import Control.Lens.Getter (view)
 import qualified Data.Text           as T
-import           Data.Text.IO        (readFile)
-import           Prelude             hiding (readFile)
-import           Storage.Mail        (Mail, filepath)
+import Data.Text.IO (readFile)
+import Prelude hiding (readFile)
+import Storage.Mail (Mail, filepath)
 import Types (ParsedMail(..))
 
 parseMail :: Mail -> IO (Either String ParsedMail)
 parseMail m = do
-  msg <- try (readFile $ m^.filepath) :: IO (Either IOError T.Text)
-  case msg of
-    Left e -> pure $ Left $ show e
-    Right contents -> pure $ Right $ MIMEMail (parseMIMEMessage contents)
+    msg <- try (readFile $ view filepath m) :: IO (Either IOError T.Text)
+    case msg of
+        Left e -> pure $ Left $ show e
+        Right contents -> pure $ Right $ MIMEMail (parseMIMEMessage contents)
 
 getFrom :: ParsedMail -> T.Text
 getFrom (MIMEMail v) = findHeader v "from"

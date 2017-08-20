@@ -2,24 +2,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.App where
 
-import qualified Brick.Main            as M
-import           Brick.Types           (Widget)
-import qualified Brick.Types           as T
-import qualified Brick.Widgets.Edit    as E
-import qualified Brick.Widgets.List    as L
-import           Control.Lens.Getter   ((^.))
-import           Storage.Notmuch       (getMessages)
-import           UI.ComposeEditor.Main (composeEditor, drawComposeEditor)
-import           UI.GatherHeaders.Main (drawInteractiveHeaders,
-                                        interactiveGatherHeaders)
-import           UI.Index.Main         (drawMain, mainEvent)
-import           UI.Keybindings        (initialCompose)
-import           UI.Mail.Main          (drawMail, mailEvent)
+import qualified Brick.Main as M
+import Brick.Types (Widget)
+import qualified Brick.Types as T
+import qualified Brick.Widgets.Edit as E
+import qualified Brick.Widgets.List as L
+import Control.Lens.Getter (view)
+import Storage.Notmuch (getMessages)
+import UI.ComposeEditor.Main (composeEditor, drawComposeEditor)
+import UI.GatherHeaders.Main
+       (drawInteractiveHeaders, interactiveGatherHeaders)
+import UI.Index.Main (drawMain, mainEvent)
+import UI.Keybindings (initialCompose)
+import UI.Mail.Main (drawMail, mailEvent)
 import Types
 
 drawUI :: AppState -> [Widget Name]
 drawUI s =
-    case s ^. asAppMode of
+    case view asAppMode s of
         Main -> drawMain s
         ViewMail -> drawMail s
         GatherHeaders -> drawInteractiveHeaders s
@@ -27,7 +27,7 @@ drawUI s =
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 appEvent s e =
-    case s ^. asAppMode of
+    case view asAppMode s of
         Main -> mainEvent s e
         ViewMail -> mailEvent s e
         GatherHeaders -> interactiveGatherHeaders s e
@@ -35,8 +35,8 @@ appEvent s e =
 
 initialState :: Configuration -> IO AppState
 initialState conf = do
-    let searchterms = conf ^. confNotmuch ^. nmSearch
-    vec <- getMessages searchterms (conf ^. confNotmuch)
+    let searchterms = view (confNotmuch . nmSearch) conf
+    vec <- getMessages searchterms (view confNotmuch conf)
     let mi =
             MailIndex
                 (L.list ListOfMails vec 1)
@@ -55,5 +55,5 @@ theApp s =
     , M.appChooseCursor = M.showFirstCursor
     , M.appHandleEvent = appEvent
     , M.appStartEvent = return
-    , M.appAttrMap = const (s ^. asConfig ^. confColorMap)
+    , M.appAttrMap = const (view (asConfig . confColorMap) s)
     }

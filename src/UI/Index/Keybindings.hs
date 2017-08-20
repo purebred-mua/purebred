@@ -3,21 +3,21 @@ module UI.Index.Keybindings where
 
 import Network.Socket hiding (send)
 import Network.Socket
-       (bind, socket, Family(..), SocketType(..), defaultProtocol, SockAddr(..))
+       (socket, Family(..), SocketType(..), defaultProtocol, SockAddr(..))
 import Network.Socket.ByteString (send)
 
-import           Brick.Main             (continue, halt)
-import qualified Brick.Types            as T
-import qualified Brick.Widgets.Edit     as E
-import qualified Brick.Widgets.List     as L
-import           Control.Lens.Getter    ((^.), view)
-import           Control.Lens.Lens      ((&))
-import           Control.Lens.Setter    ((.~), (?~), set)
-import           Control.Monad.IO.Class (liftIO)
-import           Data.Text.Zipper       (currentLine)
-import qualified Graphics.Vty           as V
-import           Storage.Mail           (Mail)
-import           Storage.Notmuch        (getMessages)
+import Brick.Main (continue, halt)
+import qualified Brick.Types as T
+import qualified Brick.Widgets.Edit as E
+import qualified Brick.Widgets.List as L
+import Control.Lens.Getter (view)
+import Control.Lens.Lens ((&))
+import Control.Lens.Setter ((?~), set)
+import Control.Monad.IO.Class (liftIO)
+import Data.Text.Zipper (currentLine)
+import qualified Graphics.Vty as V
+import Storage.Mail (Mail)
+import Storage.Notmuch (getMessages)
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Data.Monoid ((<>))
@@ -47,7 +47,7 @@ indexsearchKeybindings =
     ]
 
 focusSearch :: AppState -> T.EventM Name (T.Next AppState)
-focusSearch s = continue $ asMailIndex . miMode .~ SearchMail $ s
+focusSearch s = continue $ set (asMailIndex . miMode) SearchMail s
 
 displayMail :: AppState -> T.EventM Name (T.Next AppState)
 displayMail s = do
@@ -56,21 +56,24 @@ displayMail s = do
 
 updateStateWithParsedMail :: AppState -> IO AppState
 updateStateWithParsedMail s =
-    case L.listSelectedElement (s ^. asMailIndex ^. miListOfMails) of
+    case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
         Just (_,m) -> do
             parsed <- parseMail m
             case parsed of
-                Left e -> pure $ s & asError ?~ e & asAppMode .~ Main
+                Left e -> pure $ s & asError ?~ e & set asAppMode Main
                 Right pmail ->
                     pure $
-                    s & asMailView .~ MailView (Just pmail) & asAppMode .~
-                    ViewMail
+                    set asMailView (MailView (Just pmail)) s &
+                    set asAppMode ViewMail
         Nothing -> pure s
 
 mailIndexEvent :: AppState -> (L.List Name Mail -> L.List Name Mail) -> T.EventM n (T.Next AppState)
 mailIndexEvent s fx =
-    continue $ s & asMailIndex . miListOfMails .~
-    (fx $ s ^. asMailIndex ^. miListOfMails)
+    continue $
+    set
+        (asMailIndex . miListOfMails)
+        (fx $ view (asMailIndex . miListOfMails) s)
+        s
 
 mailIndexUp :: AppState -> T.EventM Name (T.Next AppState)
 mailIndexUp s = mailIndexEvent s L.listMoveUp
@@ -79,14 +82,14 @@ mailIndexDown :: AppState -> T.EventM Name (T.Next AppState)
 mailIndexDown s = mailIndexEvent s L.listMoveDown
 
 composeMail :: AppState -> T.EventM Name (T.Next AppState)
-composeMail s = continue $ asAppMode .~ GatherHeaders $ s
+composeMail s = continue $ set asAppMode GatherHeaders s
 
 replyMail :: AppState -> T.EventM Name (T.Next AppState)
 replyMail s = case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
   Just (_, m) -> do
     parsed <- liftIO $ parseMail m
     case parsed of
-      Left e -> continue $ s & asError ?~ e & asAppMode .~ Main
+      Left e -> continue $ s & asError ?~ e & set asAppMode Main
       Right pmail -> do
         let s' = set (asCompose . cTo) (E.editor GatherHeadersTo Nothing $ getFrom pmail) s &
                  set (asCompose . cFrom) (E.editor GatherHeadersFrom Nothing $ getTo pmail) &
@@ -98,12 +101,12 @@ replyMail s = case L.listSelectedElement (view (asMailIndex . miListOfMails) s) 
 
 toggleComposeEditorAndMain :: AppState -> T.EventM Name (T.Next AppState)
 toggleComposeEditorAndMain s =
-    case s ^. asCompose ^. cTmpFile of
-        Just _ -> continue $ s & asAppMode .~ ComposeEditor
+    case view (asCompose . cTmpFile) s of
+        Just _ -> continue $ set asAppMode ComposeEditor s
         Nothing -> continue s
 
 cancelSearch  :: AppState -> T.EventM Name (T.Next AppState)
-cancelSearch s = continue $ asMailIndex . miMode .~ BrowseMail $ s
+cancelSearch s = continue $ set (asMailIndex . miMode) BrowseMail s
 
 applySearchTerms :: AppState -> T.EventM Name (T.Next AppState)
 applySearchTerms s = do

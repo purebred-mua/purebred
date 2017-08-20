@@ -3,23 +3,23 @@ module UI.Index.Main where
 
 import Brick.AttrMap (AttrName)
 import Data.Monoid ((<>))
-import qualified Brick.Main                as M
-import           Brick.Types               (Padding (..), Widget)
-import qualified Brick.Types               as T
+import qualified Brick.Main as M
+import Brick.Types (Padding(..), Widget)
+import qualified Brick.Types as T
 import Brick.Widgets.Core
        (hLimit, padLeft, txt, vBox, vLimit, withAttr, (<+>))
 import Data.Text (unwords)
 import Prelude hiding (unwords)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
-import           Control.Lens.Getter       ((^.), view)
-import           Control.Lens.Lens         ((&))
-import           Control.Lens.Setter       ((.~))
-import           Graphics.Vty.Input.Events (Event)
+import Control.Lens.Getter (view)
+import Control.Lens.Lens ((&))
+import Control.Lens.Setter (set)
+import Graphics.Vty.Input.Events (Event)
 import Storage.Mail (from, subject, mailTags, Mail, mailIsNew)
-import           UI.Draw.Main              (editorDrawContent)
-import           UI.Keybindings            (handleEvent)
-import           UI.Status.Main            (statusbar)
+import UI.Draw.Main (editorDrawContent)
+import UI.Keybindings (handleEvent)
+import UI.Status.Main (statusbar)
 import Types
 
 drawMain :: AppState -> [Widget Name]
@@ -62,16 +62,16 @@ renderMailTagsWidget m =
 -- list, the other is to allow the user to easily change the list.
 mainEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 mainEvent s e =
-    case (s ^. asMailIndex ^. miMode) of
+    case (view (asMailIndex . miMode) s) of
         BrowseMail ->
             handleEvent
-                (s ^. asConfig ^. confIndexView ^. ivKeybindings)
+                (view (asConfig . confIndexView . ivKeybindings) s)
                 listEventDefault
                 s
                 e
         SearchMail ->
             handleEvent
-                (s ^. asConfig ^. confIndexView ^. ivSearchKeybindings)
+                (view (asConfig . confIndexView . ivSearchKeybindings) s)
                 searchInputEventDefault
                 s
                 e
@@ -85,12 +85,11 @@ mainEvent s e =
 -- something like an error log?
 listEventDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
 listEventDefault s e =
-    L.handleListEvent e (s ^. asMailIndex ^. miListOfMails) >>=
+    L.handleListEvent e (view (asMailIndex . miListOfMails) s) >>=
     \mi' ->
-         M.continue $ s & asMailIndex . miListOfMails .~ mi' & asAppMode .~
-         Main &
-         asError .~
-         Nothing
+         M.continue $
+         set (asMailIndex . miListOfMails) mi' s & set asAppMode Main &
+         set asError Nothing
 
 
 -- | Search search input is mostly straight forward, since every keystroke is
@@ -98,7 +97,7 @@ listEventDefault s e =
 -- move the focus back to the list of mails.
 searchInputEventDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
 searchInputEventDefault s ev =
-    E.handleEditorEvent ev (s ^. asMailIndex ^. miSearchEditor) >>=
+    E.handleEditorEvent ev (view (asMailIndex . miSearchEditor) s) >>=
     \ed ->
-         M.continue $ s & asMailIndex . miSearchEditor .~ ed & asAppMode .~
-         Main
+         M.continue $
+         set (asMailIndex . miSearchEditor) ed s & set asAppMode Main

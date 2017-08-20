@@ -19,8 +19,7 @@ import Control.Monad (void)
 
 import System.Process (callProcess, readProcess)
 import System.Directory
-       (getCurrentDirectory, removeFile, getTemporaryDirectory,
-        removeDirectoryRecursive)
+       (getCurrentDirectory, removeFile, removeDirectoryRecursive)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 
@@ -28,7 +27,6 @@ import Network.Socket hiding (recv)
 import Network.Socket
        (bind, socket, Family(..), SocketType(..), defaultProtocol, SockAddr(..))
 import Network.Socket.ByteString (recv)
-import Data.ByteString.Char8 (pack, ByteString)
 import qualified Data.ByteString.Lazy as LBS
 
 systemTests ::

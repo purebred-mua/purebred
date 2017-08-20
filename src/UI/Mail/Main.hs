@@ -11,8 +11,8 @@ import qualified Brick.Widgets.List        as L
 import           Codec.MIME.Type           (MIMEContent (..), MIMEParam (..),
                                             MIMEValue (..), Type (..),
                                             showMIMEType)
-import           Control.Lens.Getter       ((^.))
-import           Control.Lens.Setter       ((.~))
+import Control.Lens.Getter (view)
+import Control.Lens.Setter (set)
 import           Control.Monad.IO.Class    (liftIO)
 import qualified Data.Text                 as T
 import           Graphics.Vty.Input.Events (Event)
@@ -32,7 +32,7 @@ drawMail s =
     [ (vLimit (indexViewRows s) (renderMailList s)) <=>
       statusbar s <=>
       (viewport ScrollingMailView Vertical $
-       (mailView s (s ^. asMailView ^. mvMail)))]
+       (mailView s (view (asMailView . mvMail) s)))]
 
 -- | TODO: See #19
 mailView :: AppState -> Maybe ParsedMail -> Widget Name
@@ -68,13 +68,13 @@ mimeContentToView s (MIMEValue _ _ (Multi xs) _ _) =
 
 -- | The size limit of the index list
 indexViewRows :: AppState -> Int
-indexViewRows s = s ^. asConfig ^. confMailView ^. mvIndexRows
+indexViewRows s = view (asConfig . confMailView . mvIndexRows) s
 
 preferContentType :: AppState -> T.Text
-preferContentType s = s ^. asConfig ^. confMailView ^. mvPreferredContentType
+preferContentType s = view (asConfig . confMailView . mvPreferredContentType) s
 
 showHeaders :: AppState -> [T.Text]
-showHeaders s = s ^. asConfig ^. confMailView ^. mvHeadersToShow
+showHeaders s = view (asConfig . confMailView . mvHeadersToShow) s
 
 
 -- | event handling for viewing a single mail
@@ -84,13 +84,13 @@ showHeaders s = s ^. asConfig ^. confMailView ^. mvHeadersToShow
 mailEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 mailEvent s ev =
     handleEvent
-        (s ^. asConfig ^. confMailView ^. mvKeybindings)
+        (view (asConfig . confMailView . mvKeybindings) s)
         displayMailDefault
         s
         ev
 
 displayMailDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
 displayMailDefault s ev = do
-            l' <- L.handleListEvent ev (s ^. asMailIndex ^. miListOfMails)
-            s' <- liftIO $ updateStateWithParsedMail (asMailIndex . miListOfMails .~ l' $ s)
+            l' <- L.handleListEvent ev (view (asMailIndex . miListOfMails) s)
+            s' <- liftIO $ updateStateWithParsedMail (set (asMailIndex . miListOfMails) l' s)
             M.continue s'

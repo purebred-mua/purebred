@@ -8,9 +8,9 @@ import qualified Brick.Types                  as T
 import           Brick.Widgets.Core           (padRight, txt, vBox, vLimit,
                                                (<+>))
 import qualified Brick.Widgets.Edit           as E
-import           Control.Lens.Getter          ((^.))
+import           Control.Lens.Getter          (view)
 import           Control.Lens.Lens            (Lens', (&))
-import           Control.Lens.Setter          ((.~), (?~))
+import           Control.Lens.Setter          (set, (?~))
 import           Control.Monad.IO.Class       (liftIO)
 import           Data.Maybe                   (fromMaybe)
 import           Data.Monoid                  ((<>))
@@ -32,15 +32,15 @@ drawInteractiveHeaders :: AppState -> [Widget Name]
 drawInteractiveHeaders s = [ui]
   where
     inputBox = E.renderEditor editorDrawContent True (focusedEditor s)
-    inputPrefix = padRight (Pad 1) $ getLabelForComposeState (s ^. asCompose ^. cFocus)
+    inputPrefix = padRight (Pad 1) $ getLabelForComposeState (view (asCompose . cFocus) s)
     ui = vBox [renderMailList s, statusbar s, inputPrefix <+> vLimit 1 inputBox]
 
 focusedEditor :: AppState -> E.Editor T.Text Name
 focusedEditor s =
-    case s ^. asCompose ^. cFocus of
-        AskFrom -> s ^. asCompose ^. cFrom
-        AskTo -> s ^. asCompose ^. cTo
-        AskSubject -> s ^. asCompose ^. cSubject
+    case view (asCompose . cFocus) s of
+        AskFrom -> view (asCompose . cFrom) s
+        AskTo -> view (asCompose . cTo) s
+        AskSubject -> view (asCompose . cSubject) s
 
 getLabelForComposeState :: ComposeState -> Widget Name
 getLabelForComposeState AskFrom = txt "From:"
@@ -55,7 +55,7 @@ interactiveGatherHeaders :: AppState
 interactiveGatherHeaders s e =
     case e of
         (T.VtyEvent (EvKey KEnter [])) ->
-            if s ^. asCompose ^. cFocus == AskSubject
+            if view (asCompose . cFocus) s == AskSubject
                 then M.suspendAndResume $ liftIO $ invokeEditor s
                 else M.continue $ nextFocus s
         _ ->
@@ -71,17 +71,17 @@ interactiveGatherHeadersDefault s ev =
     T.handleEventLensed s (asCompose . focusedLens s) E.handleEditorEvent ev
 
 focusedLens :: AppState -> Lens' Compose (E.Editor Text Name)
-focusedLens s = case s ^. asCompose ^. cFocus of
+focusedLens s = case view (asCompose . cFocus) s of
   AskFrom -> cFrom
   AskTo -> cTo
   AskSubject -> cSubject
 
 nextFocus :: AppState -> AppState
 nextFocus s =
-    case s ^. asCompose ^. cFocus of
-        AskFrom -> s & asCompose . cFocus .~ AskTo
-        AskTo -> s & asCompose . cFocus .~ AskSubject
-        AskSubject -> s & asCompose . cFocus .~ AskTo  -- no-op, since we spawn the editor before we draw the widget
+    case view (asCompose . cFocus) s of
+        AskFrom -> set (asCompose . cFocus) AskTo s
+        AskTo -> set (asCompose . cFocus) AskSubject s
+        AskSubject -> set (asCompose . cFocus) AskTo s  -- no-op, since we spawn the editor before we draw the widget
 
 invokeEditor :: AppState -> IO (AppState)
 invokeEditor s = do
@@ -90,5 +90,5 @@ invokeEditor s = do
   tmpfile <- emptySystemTempFile "purebred.tmp"
   status <- system (editor <> " " <> tmpfile)
   case status of
-    ExitFailure _ -> pure $ s & asAppMode .~ Main -- ^ show error XXX
-    ExitSuccess -> pure $ s & asAppMode .~ ComposeEditor & asCompose . cTmpFile ?~ tmpfile -- ^ go to compose editor
+    ExitFailure _ -> pure $ set asAppMode Main s -- ^ show error XXX
+    ExitSuccess -> pure $ set asAppMode ComposeEditor s & asCompose . cTmpFile ?~ tmpfile -- ^ go to compose editor

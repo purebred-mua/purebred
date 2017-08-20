@@ -4,11 +4,11 @@ module UI.ComposeEditor.Keybindings where
 import qualified Brick.Main             as M
 import qualified Brick.Types            as T
 import qualified Brick.Widgets.Edit     as E
-import           Control.Lens.Fold      ((^?!))
-import           Control.Lens.Getter    ((^.))
-import           Control.Lens.Lens      ((&))
-import           Control.Lens.Prism     (_Just)
-import           Control.Lens.Setter    ((.~), set)
+import Control.Lens.Fold ((^?!))
+import Control.Lens.Getter (view)
+import Control.Lens.Lens ((&))
+import Control.Lens.Prism (_Just)
+import Control.Lens.Setter (set)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Text              (unlines)
 import           Data.Text.Lazy.IO      (readFile)
@@ -18,8 +18,8 @@ import           Network.Mail.Mime      (Address (..), renderSendMail,
 import           Prelude                hiding (readFile, unlines)
 import           UI.Keybindings         (cancelToMain, initialCompose)
 import Types
-       (ComposeState(..), AppState, Keybinding(..), Mode(..), Name(..),
-        asAppMode, asCompose, cFrom, cSubject, cTmpFile, cTo, cFocus)
+       (AppState, Keybinding(..), Mode(..), Name(..),
+        asAppMode, asCompose, cFrom, cSubject, cTmpFile, cTo)
 
 
 composeEditorKeybindings :: [Keybinding]
@@ -30,23 +30,24 @@ composeEditorKeybindings =
 
 sendMail :: AppState -> T.EventM Name (T.Next AppState)
 sendMail s = do
-    body <- liftIO $ readFile (s ^. asCompose ^. cTmpFile ^?! _Just)  -- XXX if something has removed the tmpfile for whatever reason we go b00m :(
+    -- XXX if something has removed the tmpfile for whatever reason we go b00m :(
+    body <- liftIO $ readFile (view (asCompose . cTmpFile) s ^?! _Just)
     let to =
             Address
                 Nothing
-                (unlines $ E.getEditContents $ s ^. asCompose ^. cTo)
+                (unlines $ E.getEditContents $ view (asCompose . cTo) s)
     let from =
             Address
                 Nothing
-                (unlines $ E.getEditContents $ s ^. asCompose ^. cFrom)
+                (unlines $ E.getEditContents $ view (asCompose . cFrom) s)
     let m =
             simpleMail'
                 to
                 from
-                (unlines $ E.getEditContents $ s ^. asCompose ^. cSubject)
+                (unlines $ E.getEditContents $ view (asCompose . cSubject) s)
                 body
     liftIO $ renderSendMail m
-    M.continue $ s & asCompose .~ initialCompose & asAppMode .~ Main
+    M.continue $ set asCompose initialCompose s & set asAppMode Main
 
 resetCompose :: AppState -> AppState
-resetCompose s = s & asCompose .~ initialCompose & asAppMode .~ Main
+resetCompose s = set asCompose initialCompose s & set asAppMode Main
