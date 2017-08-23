@@ -25,7 +25,9 @@ systemTests =
     localOption (mkTimeout testTimeout) $
     testGroup
         "user acceptance tests"
-        [testUserViewsMailSuccessfully, testUserCanSwitchBackToIndex]
+        [ testUserViewsMailSuccessfully
+        , testUserCanManipulateNMQuery
+        , testUserCanSwitchBackToIndex]
 
 -- | maximum amount of time we allow a step to run until we fail it
 -- 6 seconds should be plenty
@@ -48,9 +50,9 @@ testUserViewsMailSuccessfully =
               "This is a test mail"
               assertSubstrInOutput]
 
-testUserCanSwitchBackToIndex ::
+testUserCanManipulateNMQuery ::
   TestTree
-testUserCanSwitchBackToIndex =
+testUserCanManipulateNMQuery =
     withResource setUp tearDown $
     \mdir ->
          tmuxSession
@@ -90,6 +92,71 @@ testUserCanSwitchBackToIndex =
               "Item 0 of 0"
               assertSubstrInOutput]
 
+testUserCanSwitchBackToIndex ::
+  TestTree
+testUserCanSwitchBackToIndex =
+    withResource setUp tearDown $
+    \mdir ->
+         tmuxSession
+             mdir
+             "user can switch back to mail index during composition"
+             steps
+  where
+    steps =
+        [ ApplicationStep
+              "m"
+              "start composition"
+              False
+              "From"
+              assertSubstrInOutput
+        , ApplicationStep
+              "testuser@foo.test\r"
+              "enter from email"
+              False
+              "To"
+              assertSubstrInOutput
+        , ApplicationStep
+              "user@to.test\r"
+              "enter to: email"
+              False
+              "Subject"
+              assertSubstrInOutput
+        , ApplicationStep
+              "test subject\r"
+              "enter subject"
+              False
+              "~"
+              assertSubstrInOutput
+        , ApplicationStep
+              "iThis is a test body"
+              "enter mail body"
+              False
+              "body"
+              assertSubstrInOutput
+        , ApplicationStep
+              "Escape"
+              "exit insert mode in vim"
+              False
+              "body"
+              assertSubstrInOutput
+        , ApplicationStep
+              ": x\r"
+              "exit vim"
+              False
+              "Attachments"
+              assertSubstrInOutput
+        , ApplicationStep
+              "Tab"
+              "switch back to index"
+              False
+              "Testmail"
+              assertSubstrInOutput
+        , ApplicationStep
+              "Tab"
+              "switch back to the compose editor"
+              False
+              "test subject"
+              assertSubstrInOutput]
 
 data ApplicationStep = ApplicationStep
     { asKeys :: String  -- ^ the actual commands to send
