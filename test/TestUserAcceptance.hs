@@ -43,7 +43,8 @@ testUserViewsMailSuccessfully =
          tmuxSession mdir "user can view mail" steps
   where
     steps =
-        [ ApplicationStep
+        [ ApplicationStep "" "shows tag" False "inbox" assertSubstrInOutput
+        , ApplicationStep
               "Enter"
               "view mail"
               False
