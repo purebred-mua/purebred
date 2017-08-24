@@ -65,10 +65,10 @@ testUserCanManipulateNMQuery =
               ":"
               "focus command"
               False
-              "Purebred"
+              "37;40mtag"
               assertSubstrInOutput
         , ApplicationStep
-              "Down"
+              "C-e"
               "move cursor to the end of the current input"
               False
               "Purebred"
@@ -77,7 +77,7 @@ testUserCanManipulateNMQuery =
               "C-u"
               "delete all input"
               False
-              "Purebred"
+              "37;40m"
               assertSubstrInOutput
         , ApplicationStep
               "tag:foo"
@@ -90,6 +90,12 @@ testUserCanManipulateNMQuery =
               "apply"
               False
               "Item 0 of 0"
+              assertSubstrInOutput
+        , ApplicationStep
+              ""
+              "notmuch editor is unfocused"
+              False
+              "94;40mtag:foo"
               assertSubstrInOutput]
 
 testUserCanSwitchBackToIndex ::
@@ -274,7 +280,7 @@ holdOffTime = 10^6
 --   wait a bit and try again.
 waitForString :: MVar String -> String -> String -> IO (String)
 waitForString baton sessionname substr = do
-    out <- readProcess "tmux" ["capture-pane", "-p", "-t", sessionname] []
+    out <- readProcess "tmux" ["capture-pane", "-e", "-p", "-t", sessionname] []
     if substr `isInfixOf` out
         then putMVar baton "ready" >> pure out
         else do

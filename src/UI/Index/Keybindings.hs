@@ -103,7 +103,11 @@ cancelSearch s = continue $ set (asMailIndex . miMode) BrowseMail s
 
 applySearchTerms :: AppState -> T.EventM Name (T.Next AppState)
 applySearchTerms s = do
-    let searchterms = currentLine $ view (asMailIndex . miSearchEditor . E.editContentsL) s
+    let searchterms =
+            currentLine $
+            view (asMailIndex . miSearchEditor . E.editContentsL) s
     vec <- liftIO $ getMessages searchterms (view (asConfig . confNotmuch) s)
     let listWidget = (L.list ListOfMails vec 1)
-    continue $ set (asMailIndex . miListOfMails) listWidget s & set asAppMode Main
+    continue $
+        set (asMailIndex . miListOfMails) listWidget s & set asAppMode Main &
+        set (asMailIndex . miMode) BrowseMail
