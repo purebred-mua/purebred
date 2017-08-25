@@ -81,23 +81,24 @@ testUserCanManipulateNMQuery =
               "37;40m"
               assertSubstrInOutput
         , ApplicationStep
-              "tag:foo"
+              "tag:replied"
               "enter new tag"
               True
-              "tag:foo"
+              "tag:replied"
               assertSubstrInOutput
         , ApplicationStep
               "Enter"
               "apply"
               False
-              "Item 0 of 0"
+              "Item 0 of 1"
               assertSubstrInOutput
         , ApplicationStep
-              ""
-              "notmuch editor is unfocused"
+              "Enter"
+              "view current mail"
               False
-              "94;40mtag:foo"
-              assertSubstrInOutput]
+              "HOLY PUREBRED"
+              assertSubstrInOutput
+        ]
 
 testUserCanSwitchBackToIndex ::
   TestTree
