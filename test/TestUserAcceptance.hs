@@ -32,7 +32,7 @@ systemTests =
 -- | maximum amount of time we allow a step to run until we fail it
 -- 6 seconds should be plenty
 testTimeout :: Integer
-testTimeout = 10 ^ 6 * 6
+testTimeout = 10 ^ 6 * 8
 
 
 testUserViewsMailSuccessfully ::
