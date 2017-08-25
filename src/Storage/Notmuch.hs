@@ -14,7 +14,6 @@ import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import Types (NotmuchSettings, nmDatabase, nmNewTag)
 import Control.Lens.Getter (view)
-import Control.Lens.Setter (set)
 
 
 -- | creates a vector of parsed mails from a not much search
@@ -43,6 +42,7 @@ messageToMail ignoredTag m =
     (decodeUtf8 . fromMaybe "" <$> messageHeader "To" m) <*>
     (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
     messageFilename m <*>
+    messageDate m <*>
     (tagsToText m ignoredTag) <*>
     isNewMail m ignoredTag
 

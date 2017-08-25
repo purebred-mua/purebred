@@ -50,6 +50,7 @@ library
                      , network
                      , directory
                      , bytestring
+                     , time
 
 executable purebred
   hs-source-dirs:      app
@@ -84,3 +85,4 @@ test-suite unittests
                      , temporary
                      , text
                      , resourcet
+                     , time
