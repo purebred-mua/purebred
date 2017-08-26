@@ -31,7 +31,6 @@ library
                      , UI.Mail.Main
                      , UI.Mail.Keybindings
                      , Config.Main
-                     , Config.Types
                      , Storage.Notmuch
                      , Storage.ParsedMail
   build-depends:       base >= 4.8 && < 5
