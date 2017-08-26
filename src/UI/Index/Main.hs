@@ -19,8 +19,6 @@ import Graphics.Vty.Input.Events (Event)
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Text (Text, pack)
-import Storage.Mail
-       (mailFrom, mailSubject, mailTags, Mail, mailIsNew, mailDate)
 import UI.Draw.Main (editorDrawContent)
 import UI.Keybindings (handleEvent)
 import UI.Status.Main (statusbar)
@@ -37,7 +35,7 @@ renderMailList :: AppState -> Widget Name
 renderMailList s = let listFocus = view (asMailIndex . miMode) s == BrowseMail
                    in L.renderList listDrawElement listFocus (view (asMailIndex . miListOfMails) s)
 
-listDrawElement :: Bool -> Mail -> Widget Name
+listDrawElement :: Bool -> NotmuchMail -> Widget Name
 listDrawElement sel a =
     let selected w = if sel then withAttr L.listSelectedAttr w else w
         newMail m w = if (view mailIsNew m) then withAttr listNewMailAttr w else w
@@ -60,7 +58,7 @@ mailAttr = "mail"
 mailTagsAttr :: AttrName
 mailTagsAttr = mailAttr <> "tags"
 
-renderMailTagsWidget :: Mail -> Widget Name
+renderMailTagsWidget :: NotmuchMail -> Widget Name
 renderMailTagsWidget m =
     let ts = view mailTags m
     in withAttr mailTagsAttr $ vLimit 1 $ txt $ unwords ts

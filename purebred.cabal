@@ -33,7 +33,6 @@ library
                      , Config.Main
                      , Config.Types
                      , Storage.Notmuch
-                     , Storage.Mail
                      , Storage.ParsedMail
   build-depends:       base >= 4.8 && < 5
                      , lens

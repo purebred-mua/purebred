@@ -11,7 +11,6 @@ import Control.Lens.Setter ((?~), set)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text.Zipper (currentLine)
 import qualified Graphics.Vty as V
-import Storage.Mail (Mail)
 import Storage.Notmuch (getMessages)
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
@@ -60,7 +59,7 @@ updateStateWithParsedMail s =
                     set asAppMode ViewMail
         Nothing -> pure s
 
-mailIndexEvent :: AppState -> (L.List Name Mail -> L.List Name Mail) -> T.EventM n (T.Next AppState)
+mailIndexEvent :: AppState -> (L.List Name NotmuchMail -> L.List Name NotmuchMail) -> T.EventM n (T.Next AppState)
 mailIndexEvent s fx =
     continue $
     set

@@ -9,7 +9,7 @@ import qualified Brick.Widgets.List        as L
 import           Control.Lens
 import qualified Data.Text                 as T
 import qualified Graphics.Vty.Input.Events as Vty
-import           Storage.Mail              (Mail)
+import Data.Time (UTCTime)
 
 
 -- | The global application mode
@@ -42,12 +42,12 @@ search and composes e-mails from here.
 
 -}
 data MailIndex = MailIndex
-    { _miListOfMails  :: L.List Name Mail
+    { _miListOfMails  :: L.List Name NotmuchMail
     , _miSearchEditor :: E.Editor T.Text Name
     , _miMode         :: MainMode
     }
 
-miListOfMails :: Lens' MailIndex (L.List Name Mail)
+miListOfMails :: Lens' MailIndex (L.List Name NotmuchMail)
 miListOfMails f (MailIndex a b c) = fmap (\a' -> MailIndex a' b c) (f a)
 
 miSearchEditor :: Lens' MailIndex (E.Editor T.Text Name)
@@ -229,3 +229,35 @@ data ParsedMail
     | RFC2822 [Header]
               Body
     deriving (Show,Eq)
+
+-- | an email from the notmuch database
+data NotmuchMail = NotmuchMail
+    { _mailSubject :: T.Text
+    , _mailTo :: T.Text
+    , _mailFrom :: T.Text
+    , _mailFilepath :: String
+    , _mailDate :: UTCTime
+    , _mailTags :: [T.Text]
+    , _mailIsNew :: Bool
+    } deriving (Show)
+
+mailSubject :: Lens' NotmuchMail T.Text
+mailSubject = lens _mailSubject (\m s -> m { _mailSubject = s })
+
+mailTo :: Lens' NotmuchMail T.Text
+mailTo = lens _mailTo (\m t -> m { _mailTo = t })
+
+mailFrom :: Lens' NotmuchMail T.Text
+mailFrom = lens _mailFrom (\m f -> m { _mailFrom = f })
+
+mailFilepath :: Lens' NotmuchMail String
+mailFilepath = lens _mailFilepath (\m fp -> m { _mailFilepath = fp })
+
+mailDate :: Lens' NotmuchMail UTCTime
+mailDate = lens _mailDate (\m d -> m { _mailDate = d })
+
+mailTags :: Lens' NotmuchMail [T.Text]
+mailTags = lens _mailTags (\m t -> m { _mailTags = t })
+
+mailIsNew :: Lens' NotmuchMail Bool
+mailIsNew = lens _mailIsNew (\m n -> m { _mailIsNew = n })

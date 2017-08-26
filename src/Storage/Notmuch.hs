@@ -3,7 +3,7 @@
 -- | module for integrating notmuch within purebred
 module Storage.Notmuch where
 
-import           Storage.Mail
+import Types (NotmuchMail(..))
 import           Notmuch
 import           Notmuch.Search
 
@@ -19,7 +19,7 @@ import Control.Lens.Getter (view)
 -- | creates a vector of parsed mails from a not much search
 -- Note, that at this point in time only free form searches are supported. Also,
 -- we filter out the tag which we use to mark mails as new mails
-getMessages :: T.Text -> NotmuchSettings -> IO (Vec.Vector Mail)
+getMessages :: T.Text -> NotmuchSettings -> IO (Vec.Vector NotmuchMail)
 getMessages s settings = do
   db' <- databaseOpen (view nmDatabase settings)
   case db' of
@@ -35,9 +35,9 @@ messageToMail
     :: HasTags Message
     => T.Text
     -> Message
-    -> IO Mail
+    -> IO NotmuchMail
 messageToMail ignoredTag m =
-    Mail <$>
+    NotmuchMail <$>
     (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
     (decodeUtf8 . fromMaybe "" <$> messageHeader "To" m) <*>
     (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>

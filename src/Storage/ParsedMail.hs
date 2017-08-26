@@ -11,10 +11,9 @@ import Control.Lens.Getter (view)
 import qualified Data.Text           as T
 import Data.Text.IO (readFile)
 import Prelude hiding (readFile)
-import Storage.Mail (Mail, mailFilepath)
-import Types (ParsedMail(..))
+import Types (ParsedMail(..), NotmuchMail, mailFilepath)
 
-parseMail :: Mail -> IO (Either String ParsedMail)
+parseMail :: NotmuchMail -> IO (Either String ParsedMail)
 parseMail m = do
     msg <- try (readFile $ view mailFilepath m) :: IO (Either IOError T.Text)
     case msg of
