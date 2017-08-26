@@ -49,6 +49,7 @@ library
                      , directory
                      , bytestring
                      , time
+                     , case-insensitive
 
 executable purebred
   hs-source-dirs:      app
@@ -84,3 +85,4 @@ test-suite unittests
                      , text
                      , resourcet
                      , time
+                     , regex-posix

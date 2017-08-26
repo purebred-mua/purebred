@@ -18,6 +18,7 @@ import System.Directory
        (getCurrentDirectory, removeDirectoryRecursive)
 import Test.Tasty (TestTree, testGroup, withResource, mkTimeout, localOption)
 import Test.Tasty.HUnit (testCaseSteps, assertBool, Assertion)
+import Text.Regex.Posix ((=~))
 
 systemTests ::
   TestTree
@@ -27,13 +28,43 @@ systemTests =
         "user acceptance tests"
         [ testUserViewsMailSuccessfully
         , testUserCanManipulateNMQuery
-        , testUserCanSwitchBackToIndex]
+        , testUserCanSwitchBackToIndex
+        , testCanToggleHeaders]
 
 -- | maximum amount of time we allow a step to run until we fail it
 -- 6 seconds should be plenty
 testTimeout :: Integer
 testTimeout = 10 ^ 6 * 8
 
+
+testCanToggleHeaders ::
+  TestTree
+testCanToggleHeaders =
+    withResource setUp tearDown $
+    \mdir ->
+         tmuxSession mdir "user can toggle Headers" steps
+  where
+    steps =
+        [ ApplicationStep
+              "Enter"
+              "view mail"
+              False
+              "This is a test mail"
+              assertSubstrInOutput
+        , ApplicationStep
+              "h"
+              "show all headers"
+              False
+              "return-path"
+              assertSubstrInOutput
+        , ApplicationStep
+              "h"
+              "filtered headers"
+              False
+              "from"
+              (\o _ ->
+                    assertBool "regex matches out" $
+                    o =~ ("Purebred.*\n.*from" :: String))]
 
 testUserViewsMailSuccessfully ::
   TestTree
@@ -270,9 +301,6 @@ performStep sessionname (ApplicationStep keys _ asLiteral expect _) = do
     out <- waitForString baton sessionname expect
     _ <- takeMVar baton
     pure out
-
-capturePane :: String -> IO String
-capturePane sessionname = readProcess "tmux" ["capture-pane", "-p", "-t", sessionname] []
 
 holdOffTime :: Int
 holdOffTime = 10^6

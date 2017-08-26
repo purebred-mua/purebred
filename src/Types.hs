@@ -10,6 +10,7 @@ import           Control.Lens
 import qualified Data.Text                 as T
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
+import qualified Data.CaseInsensitive as CI
 
 
 -- | The global application mode
@@ -57,12 +58,18 @@ miMode :: Lens' MailIndex MainMode
 miMode f (MailIndex a b c) = fmap (\c' -> MailIndex a b c') (f c)
 
 
+data HeadersState = ShowAll | Filtered
+
 data MailView = MailView
     { _mvMail :: Maybe ParsedMail
+    , _mvHeadersState :: HeadersState
     }
 
-mvMail :: Iso' MailView (Maybe ParsedMail)
-mvMail = iso (\(MailView a) -> a) MailView
+mvMail :: Lens' MailView (Maybe ParsedMail)
+mvMail = lens _mvMail (\mv pm -> mv { _mvMail = pm })
+
+mvHeadersState :: Lens' MailView HeadersState
+mvHeadersState = lens _mvHeadersState (\mv hs -> mv { _mvHeadersState = hs })
 
 data ComposeState
     = AskFrom
@@ -158,7 +165,7 @@ ivSearchKeybindings f (IndexViewSettings a b) = fmap (\b' -> IndexViewSettings a
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
     , _mvPreferedContentType :: T.Text
-    , _mvHeadersToShow       :: [T.Text]
+    , _mvHeadersToShow       :: (CI.CI T.Text -> Bool)
     , _mvKeybindings         :: [Keybinding]
     }
 
@@ -168,8 +175,8 @@ mvIndexRows f (MailViewSettings a b c d) = fmap (\a' -> MailViewSettings a' b c 
 mvPreferredContentType :: Lens' MailViewSettings T.Text
 mvPreferredContentType f (MailViewSettings a b c d) = fmap (\b' -> MailViewSettings a b' c d) (f b)
 
-mvHeadersToShow :: Lens' MailViewSettings [T.Text]
-mvHeadersToShow f (MailViewSettings a b c d) = fmap (\c' -> MailViewSettings a b c' d) (f c)
+mvHeadersToShow :: Getter MailViewSettings (CI.CI T.Text -> Bool)
+mvHeadersToShow = to (\(MailViewSettings _ _ h _) -> h)
 
 mvKeybindings :: Lens' MailViewSettings [Keybinding]
 mvKeybindings f (MailViewSettings a b c d) = fmap (\d' -> MailViewSettings a b c d') (f d)

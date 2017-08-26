@@ -45,7 +45,7 @@ initialState conf = do
                      Nothing
                      searchterms)
                 BrowseMail
-    let mv = MailView Nothing
+    let mv = MailView Nothing Filtered
     return $ AppState conf mi mv initialCompose Main Nothing
 
 theApp :: AppState -> M.App AppState e Name

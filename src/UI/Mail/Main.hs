@@ -1,18 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Mail.Main where
 
-import qualified Brick.Main                as M
-import           Brick.Types               (Padding (..), ViewportType (..),
-                                            Widget)
-import qualified Brick.Types               as T
-import           Brick.Widgets.Core        (padLeft, padTop, txt, txtWrap,
-                                            vLimit, viewport, (<+>), (<=>))
-import qualified Brick.Widgets.List        as L
-import           Codec.MIME.Type           (MIMEContent (..), MIMEParam (..),
-                                            MIMEValue (..), Type (..),
-                                            showMIMEType)
+import qualified Brick.Main as M
+import Brick.AttrMap (AttrName)
+import Brick.Types (Padding(..), ViewportType(..), Widget)
+import qualified Brick.Types as T
+import Brick.Widgets.Core
+       (padLeft, padTop, txt, txtWrap, vLimit, viewport, (<+>), (<=>),
+        withAttr)
+import qualified Brick.Widgets.List as L
+
+import Data.Monoid ((<>))
+import Codec.MIME.Type
+       (MIMEContent(..), MIMEParam(..), MIMEValue(..), Type(..),
+        showMIMEType)
+import qualified Data.CaseInsensitive as CI
 import Control.Lens.Getter (view)
 import Control.Lens.Setter (set)
+import Data.CaseInsensitive (mk)
 import           Control.Monad.IO.Class    (liftIO)
 import qualified Data.Text                 as T
 import           Graphics.Vty.Input.Events (Event)
@@ -37,14 +42,14 @@ drawMail s =
 -- | TODO: See #19
 mailView :: AppState -> Maybe ParsedMail -> Widget Name
 mailView s (Just (MIMEMail m)) =
-    let filtered_headers =
-            filter
-                (\x ->
-                      paramName x `elem` showHeaders s) $
-            mime_val_headers m
+    let filtered_headers = filter (headerFilter s . mk . paramName) $ mime_val_headers m
         widgets =
             (\h ->
-                  txt (paramName h) <+> padLeft (Pad 1) (txtWrap (paramValue h))) <$>
+                  withAttr headerKeyAttr $
+                  txt (paramName h) <+>
+                  padLeft
+                      (Pad 1)
+                      (withAttr headerValueAttr $ txtWrap (paramValue h))) <$>
             filtered_headers
         body = padTop (Pad 1) $ mimeContentToView s m
     in foldr (<=>) (padTop (Pad 1) body) widgets
@@ -73,9 +78,20 @@ indexViewRows s = view (asConfig . confMailView . mvIndexRows) s
 preferContentType :: AppState -> T.Text
 preferContentType s = view (asConfig . confMailView . mvPreferredContentType) s
 
-showHeaders :: AppState -> [T.Text]
-showHeaders s = view (asConfig . confMailView . mvHeadersToShow) s
+headerFilter :: AppState -> (CI.CI T.Text -> Bool)
+headerFilter s =
+    case view (asMailView . mvHeadersState) s of
+        Filtered -> view (asConfig . confMailView . mvHeadersToShow) s
+        ShowAll -> const True
 
+headerAttr :: AttrName
+headerAttr = "header"
+
+headerKeyAttr :: AttrName
+headerKeyAttr = headerAttr <> "key"
+
+headerValueAttr :: AttrName
+headerValueAttr = headerAttr <> "value"
 
 -- | event handling for viewing a single mail
 

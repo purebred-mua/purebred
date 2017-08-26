@@ -55,7 +55,7 @@ updateStateWithParsedMail s =
                 Left e -> pure $ s & asError ?~ e & set asAppMode Main
                 Right pmail ->
                     pure $
-                    set asMailView (MailView (Just pmail)) s &
+                    set (asMailView . mvMail) (Just pmail) s &
                     set asAppMode ViewMail
         Nothing -> pure s
 

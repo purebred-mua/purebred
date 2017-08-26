@@ -6,6 +6,7 @@ import Brick.Util (fg, on)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty as V
+import UI.Mail.Main (headerKeyAttr, headerValueAttr)
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
 import UI.Index.Main (listNewMailAttr, mailTagsAttr)
 import UI.Index.Keybindings
@@ -25,6 +26,8 @@ defaultColorMap = A.attrMap V.defAttr
     , (E.editAttr,            V.brightBlue `on` V.black)
     , (A.attrName "error",    fg V.red)
     , (A.attrName "statusbar", V.black `on` V.brightWhite)
+    , (headerKeyAttr, fg V.cyan)
+    , (headerValueAttr, fg V.brightCyan)
     ]
 
 defaultConfig :: String -> IO Configuration
@@ -41,7 +44,7 @@ defaultConfig dbfp =
         , _confMailView = MailViewSettings
           { _mvIndexRows = 10
           , _mvPreferedContentType = "text/plain"
-          , _mvHeadersToShow = ["subject", "to", "from"]
+          , _mvHeadersToShow = (`elem` ["subject", "to", "from"])
           , _mvKeybindings = displayMailKeybindings
           }
         , _confIndexView = IndexViewSettings
