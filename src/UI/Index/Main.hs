@@ -19,7 +19,8 @@ import Graphics.Vty.Input.Events (Event)
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Text (Text, pack)
-import Storage.Mail (from, subject, mailTags, Mail, mailIsNew, mailDate)
+import Storage.Mail
+       (mailFrom, mailSubject, mailTags, Mail, mailIsNew, mailDate)
 import UI.Draw.Main (editorDrawContent)
 import UI.Keybindings (handleEvent)
 import UI.Status.Main (statusbar)
@@ -40,9 +41,9 @@ listDrawElement :: Bool -> Mail -> Widget Name
 listDrawElement sel a =
     let selected w = if sel then withAttr L.listSelectedAttr w else w
         newMail m w = if (view mailIsNew m) then withAttr listNewMailAttr w else w
-        widget = padLeft (Pad 1) $ (hLimit 15 (txt $ view from a)) <+>
+        widget = padLeft (Pad 1) $ (hLimit 15 (txt $ view mailFrom a)) <+>
                  (padLeft (Pad 1) $ (txt $ formatDate (view mailDate a))) <+>
-                 padLeft (Pad 2) (txt (view subject a)) <+>
+                 padLeft (Pad 2) (txt (view mailSubject a)) <+>
                  (padLeft Max $ renderMailTagsWidget a)
     in (newMail a $ selected widget)
 
