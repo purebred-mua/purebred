@@ -30,29 +30,27 @@ defaultColorMap = A.attrMap V.defAttr
     , (headerValueAttr, fg V.brightCyan)
     ]
 
-defaultConfig :: String -> IO Configuration
+defaultConfig :: String -> Configuration
 defaultConfig dbfp =
-    pure
-        Configuration
-        { _confColorMap = defaultColorMap
-        , _confNotmuch = NotmuchSettings
-          { _nmSearch = "tag:inbox"
-          , _nmDatabase = dbfp
-          , _nmNewTag = "unread"
-          }
-        , _confEditor = "vi"
-        , _confMailView = MailViewSettings
-          { _mvIndexRows = 10
-          , _mvPreferedContentType = "text/plain"
-          , _mvHeadersToShow = (`elem` ["subject", "to", "from"])
-          , _mvKeybindings = displayMailKeybindings
-          }
-        , _confIndexView = IndexViewSettings
-          { _ivKeybindings = indexKeybindings
-          , _ivSearchKeybindings = indexsearchKeybindings
-          }
-        , _confComposeView = ComposeViewSettings
-        {
-          _cvKeybindings = composeEditorKeybindings
-        }
-        }
+    Configuration
+    { _confColorMap = defaultColorMap
+    , _confNotmuch = NotmuchSettings
+      { _nmSearch = "tag:inbox"
+      , _nmDatabase = dbfp
+      , _nmNewTag = "unread"
+      }
+    , _confEditor = "vi"
+    , _confMailView = MailViewSettings
+      { _mvIndexRows = 10
+      , _mvPreferedContentType = "text/plain"
+      , _mvHeadersToShow = (`elem` ["subject", "to", "from"])
+      , _mvKeybindings = displayMailKeybindings
+      }
+    , _confIndexView = IndexViewSettings
+      { _ivKeybindings = indexKeybindings
+      , _ivSearchKeybindings = indexsearchKeybindings
+      }
+    , _confComposeView = ComposeViewSettings
+      { _cvKeybindings = composeEditorKeybindings
+      }
+    }

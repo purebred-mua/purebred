@@ -110,8 +110,8 @@ data NotmuchSettings = NotmuchSettings
 nmSearch :: Lens' NotmuchSettings T.Text
 nmSearch f (NotmuchSettings a b c) = fmap (\a' -> NotmuchSettings a' b c) (f a)
 
-nmDatabase :: Getter NotmuchSettings String
-nmDatabase = to (\(NotmuchSettings _ b _ ) -> b)
+nmDatabase :: Lens' NotmuchSettings String
+nmDatabase = lens _nmDatabase (\nm dbfp -> nm { _nmDatabase = dbfp })
 
 nmNewTag :: Getter NotmuchSettings T.Text
 nmNewTag = to (\(NotmuchSettings _ _ c) -> c)
@@ -212,9 +212,12 @@ asError f (AppState a b c d e g) = fmap (\g' -> AppState a b c d e g') (f g)
 type KBAction = AppState -> EventM Name (Next AppState)
 data Keybinding = Keybinding
     { _kbDescription :: String
-    , _kbEvent       :: Vty.Event
-    , _kbAction      :: KBAction
+    , _kbEvent :: Vty.Event
+    , _kbAction :: KBAction
     }
+instance Eq Keybinding where
+  (==) (Keybinding _ a _) (Keybinding _ b _) = a == b
+  (/=) (Keybinding _ a _) (Keybinding _ b _) = a /= b
 
 kbEvent :: Getter Keybinding Vty.Event
 kbEvent = to (\(Keybinding _ b _) -> b)
