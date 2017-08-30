@@ -8,7 +8,9 @@ import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty as V
 import UI.Mail.Main (headerKeyAttr, headerValueAttr)
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
-import UI.Index.Main (listNewMailAttr, mailTagsAttr)
+import UI.Index.Main
+       (listAttr, listSelectedAttr, listNewMailAttr, mailTagsAttr)
+import UI.Status.Main (statusbarAttr, statusbarErrorAttr)
 import UI.Index.Keybindings
        (indexKeybindings, indexsearchKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings)
@@ -20,18 +22,19 @@ import Types
 import Storage.Notmuch (getDatabasePath)
 
 defaultColorMap :: A.AttrMap
-defaultColorMap = A.attrMap V.defAttr
-    [ (L.listAttr,            V.brightBlue `on` V.black)
-    , (L.listSelectedAttr,    V.white `on` V.yellow)
-    , (listNewMailAttr,       fg V.white `V.withStyle` V.bold)
-    , (mailTagsAttr,              fg V.cyan)
-    , (E.editFocusedAttr,     V.white `on` V.black)
-    , (E.editAttr,            V.brightBlue `on` V.black)
-    , (A.attrName "error",    fg V.red)
-    , (A.attrName "statusbar", V.black `on` V.brightWhite)
-    , (headerKeyAttr, fg V.cyan)
-    , (headerValueAttr, fg V.brightCyan)
-    ]
+defaultColorMap =
+    A.attrMap
+        V.defAttr
+        [ (listAttr, V.brightBlue `on` V.black)
+        , (listSelectedAttr, V.white `on` V.yellow)
+        , (listNewMailAttr, fg V.white `V.withStyle` V.bold)
+        , (mailTagsAttr, fg V.cyan)
+        , (E.editFocusedAttr, V.white `on` V.black)
+        , (E.editAttr, V.brightBlue `on` V.black)
+        , (statusbarErrorAttr, fg V.red)
+        , (statusbarAttr, V.black `on` V.brightWhite)
+        , (headerKeyAttr, fg V.cyan)
+        , (headerValueAttr, fg V.brightCyan)]
 
 defaultConfig :: UserConfiguration
 defaultConfig =

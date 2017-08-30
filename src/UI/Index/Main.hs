@@ -49,6 +49,12 @@ listDrawElement sel a =
 formatDate :: UTCTime -> Text
 formatDate t = pack $ formatTime defaultTimeLocale "%d/%b" (utctDay t)
 
+listAttr :: AttrName
+listAttr = L.listAttr
+
+listSelectedAttr :: AttrName
+listSelectedAttr = L.listSelectedAttr
+
 listNewMailAttr :: AttrName
 listNewMailAttr = L.listAttr <> "newmail"
 
