@@ -30,13 +30,13 @@ defaultColorMap = A.attrMap V.defAttr
     , (headerValueAttr, fg V.brightCyan)
     ]
 
-defaultConfig :: String -> Configuration
-defaultConfig dbfp =
+defaultConfig :: Configuration
+defaultConfig =
     Configuration
     { _confColorMap = defaultColorMap
     , _confNotmuch = NotmuchSettings
       { _nmSearch = "tag:inbox"
-      , _nmDatabase = dbfp
+      , _nmDatabase = ""
       , _nmNewTag = "unread"
       }
     , _confEditor = "vi"

@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Purebred (getDatabasePath, purebred, defaultConfig)
+import Purebred (purebred, defaultConfig)
 
 main :: IO ()
-main = do
-  fp <- getDatabasePath
-  purebred $ defaultConfig fp
+main = purebred defaultConfig
