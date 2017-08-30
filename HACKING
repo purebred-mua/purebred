@@ -21,6 +21,12 @@ communication is the key here rather than hacking away.
 - no perf optimisations without measurements (preferably in the commit
   message)
 
+- use the weakest abstraction possible:
+  - traverse > mapM
+  - pure > return
+  - Data.Semigroup.<> > Data.Monoid.<>
+  - and so on...
+
 ## UI Development
 
 For development, we've put a bit of consideration to what type of users we'd
