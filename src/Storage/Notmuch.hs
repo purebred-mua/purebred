@@ -19,7 +19,7 @@ import Control.Lens.Getter (view)
 -- | creates a vector of parsed mails from a not much search
 -- Note, that at this point in time only free form searches are supported. Also,
 -- we filter out the tag which we use to mark mails as new mails
-getMessages :: T.Text -> NotmuchSettings -> IO (Vec.Vector NotmuchMail)
+getMessages :: T.Text -> NotmuchSettings FilePath -> IO (Vec.Vector NotmuchMail)
 getMessages s settings = do
   db' <- databaseOpen (view nmDatabase settings)
   case db' of

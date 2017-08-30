@@ -28,9 +28,7 @@ myMailKeybindings =
                 continue $ set asAppMode Main $ s)]
 
 main :: IO ()
-main = do
-  fp <- getDatabasePath
-  let cfg = defaultConfig fp
-  let cfg' = set (confIndexView . ivKeybindings) (indexKeybindings `union` myIndexKeybindings) cfg &
-             set (confMailView . mvKeybindings) (displayMailKeybindings `union` myMailKeybindings)
-  purebred cfg'
+main = purebred $ tweak defaultConfig where
+  tweak =
+    over (confIndexView . ivKeybindings) (`union` myIndexKeybindings)
+    . over (confMailView . mvKeybindings) (`union` myMailKeybindings)

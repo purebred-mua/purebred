@@ -8,6 +8,7 @@ module Purebred (
   getDatabasePath,
   defaultConfig,
   defaultColorMap,
+  over,
   set,
   (&),
   purebred,
@@ -44,7 +45,7 @@ import Types
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.Main (halt, continue, defaultMain)
 import Control.Lens.Lens ((&))
-import Control.Lens.Setter (set)
+import Control.Lens.Setter (over, set)
 
 data AppConfig = AppConfig
     { databaseFilepath :: Maybe String
@@ -59,13 +60,12 @@ appconfig =
          (long "database" <> metavar "DATABASE" <>
           help "Filepath to notmuch database"))
 
-purebred :: Configuration -> IO ()
+purebred :: UserConfiguration -> IO ()
 purebred config = do
     appconf <- execParser opts
-    dbfp <- case databaseFilepath appconf of
-            Nothing -> getDatabasePath
-            Just fp -> pure fp
-    let cfg' = set (confNotmuch . nmDatabase) dbfp config
+    let
+      setDB = (maybe id (const . pure) (databaseFilepath appconf))
+      cfg' = over (confNotmuch . nmDatabase) setDB config
     buildLaunch `catch`
         \e -> hPrint stderr (e :: IOException) >> hFlush stderr
     launch cfg'
@@ -92,10 +92,14 @@ buildLaunch = do
         \(_,_,_,ph) -> waitForProcess ph >>=
         exitWith
 
-launch :: Configuration -> IO ()
+launch :: UserConfiguration -> IO ()
 launch cfg = do
-    s <- initialState cfg
+    cfg' <- processConfig cfg
+    s <- initialState cfg'
     void $ defaultMain (theApp s) s
+
+processConfig :: UserConfiguration -> IO InternalConfiguration
+processConfig = (confNotmuch . nmDatabase) id
 
 -- | Recompile the config file if it has changed based on the modification timestamp
 -- Node: Mostly a XMonad.Main.hs rip-off.

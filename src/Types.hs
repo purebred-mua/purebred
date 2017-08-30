@@ -101,46 +101,49 @@ cSubject :: Lens' Compose (E.Editor T.Text Name)
 cSubject f (Compose a b c d e) = fmap (\e' -> Compose a b c d e') (f e)
 
 
-data NotmuchSettings = NotmuchSettings
+data NotmuchSettings a = NotmuchSettings
     { _nmSearch :: T.Text
-    , _nmDatabase :: String
+    , _nmDatabase :: a
     , _nmNewTag :: T.Text
     }
 
-nmSearch :: Lens' NotmuchSettings T.Text
+nmSearch :: Lens' (NotmuchSettings a) T.Text
 nmSearch f (NotmuchSettings a b c) = fmap (\a' -> NotmuchSettings a' b c) (f a)
 
-nmDatabase :: Lens' NotmuchSettings String
-nmDatabase = lens _nmDatabase (\nm dbfp -> nm { _nmDatabase = dbfp })
+nmDatabase :: Lens (NotmuchSettings a) (NotmuchSettings b) a b
+nmDatabase f (NotmuchSettings a b c) = fmap (\b' -> NotmuchSettings a b' c) (f b)
 
-nmNewTag :: Getter NotmuchSettings T.Text
+nmNewTag :: Getter (NotmuchSettings a) T.Text
 nmNewTag = to (\(NotmuchSettings _ _ c) -> c)
 
-data Configuration = Configuration
+data Configuration a = Configuration
     { _confColorMap :: Brick.AttrMap
-    , _confNotmuch :: NotmuchSettings
+    , _confNotmuch :: NotmuchSettings a
     , _confEditor :: T.Text
     , _confMailView :: MailViewSettings
     , _confIndexView :: IndexViewSettings
     , _confComposeView :: ComposeViewSettings
     }
 
-confColorMap :: Getter Configuration Brick.AttrMap
+type UserConfiguration = Configuration (IO FilePath)
+type InternalConfiguration = Configuration FilePath
+
+confColorMap :: Getter (Configuration a) Brick.AttrMap
 confColorMap = to (\(Configuration a _ _ _ _ _) -> a)
 
-confEditor :: Lens' Configuration T.Text
+confEditor :: Lens' (Configuration a) T.Text
 confEditor f (Configuration a b c d e g) = fmap (\c' -> Configuration a b c' d e g) (f c)
 
-confNotmuch :: Lens' Configuration NotmuchSettings
+confNotmuch :: Lens (Configuration a) (Configuration b) (NotmuchSettings a) (NotmuchSettings b)
 confNotmuch f (Configuration a b c d e g) = fmap (\b' -> Configuration a b' c d e g) (f b)
 
-confMailView :: Lens' Configuration MailViewSettings
+confMailView :: Lens' (Configuration a) MailViewSettings
 confMailView f (Configuration a b c d e g) = fmap (\d' -> Configuration a b c d' e g) (f d)
 
-confIndexView :: Lens' Configuration IndexViewSettings
+confIndexView :: Lens' (Configuration a) IndexViewSettings
 confIndexView f (Configuration a b c d e g) = fmap (\e' -> Configuration a b c d e' g) (f e)
 
-confComposeView :: Getter Configuration ComposeViewSettings
+confComposeView :: Getter (Configuration a) ComposeViewSettings
 confComposeView = to (\(Configuration _ _ _ _ _ h) -> h)
 
 
@@ -183,7 +186,7 @@ mvKeybindings f (MailViewSettings a b c d) = fmap (\d' -> MailViewSettings a b c
 
 -- | Overall application state
 data AppState = AppState
-    { _asConfig    :: Configuration
+    { _asConfig    :: InternalConfiguration
     , _asMailIndex :: MailIndex
     , _asMailView  :: MailView
     , _asCompose   :: Compose  -- ^ state to keep when user creates a new mail
@@ -191,7 +194,7 @@ data AppState = AppState
     , _asError     :: Maybe String -- ^ in case of errors, show this error message
     }
 
-asConfig :: Lens' AppState Configuration
+asConfig :: Lens' AppState InternalConfiguration
 asConfig f (AppState a b c d e g) = fmap (\a' -> AppState a' b c d e g) (f a)
 
 asMailIndex :: Lens' AppState MailIndex

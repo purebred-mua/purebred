@@ -33,7 +33,7 @@ appEvent s e =
         GatherHeaders -> interactiveGatherHeaders s e
         ComposeEditor -> composeEditor s e
 
-initialState :: Configuration -> IO AppState
+initialState :: InternalConfiguration -> IO AppState
 initialState conf = do
     let searchterms = view (confNotmuch . nmSearch) conf
     vec <- getMessages searchterms (view confNotmuch conf)

@@ -13,8 +13,11 @@ import UI.Index.Keybindings
        (indexKeybindings, indexsearchKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings)
 import Types
-       (ComposeViewSettings(..), Configuration(..), IndexViewSettings(..),
-        MailViewSettings(..), NotmuchSettings(..))
+  ( ComposeViewSettings(..)
+  , UserConfiguration, Configuration(..), IndexViewSettings(..)
+  , MailViewSettings(..), NotmuchSettings(..)
+  )
+import Storage.Notmuch (getDatabasePath)
 
 defaultColorMap :: A.AttrMap
 defaultColorMap = A.attrMap V.defAttr
@@ -30,13 +33,13 @@ defaultColorMap = A.attrMap V.defAttr
     , (headerValueAttr, fg V.brightCyan)
     ]
 
-defaultConfig :: Configuration
+defaultConfig :: UserConfiguration
 defaultConfig =
     Configuration
     { _confColorMap = defaultColorMap
     , _confNotmuch = NotmuchSettings
       { _nmSearch = "tag:inbox"
-      , _nmDatabase = ""
+      , _nmDatabase = getDatabasePath
       , _nmNewTag = "unread"
       }
     , _confEditor = "vi"
