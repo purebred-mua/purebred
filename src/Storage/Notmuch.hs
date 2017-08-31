@@ -36,20 +36,19 @@ messageToMail
     => T.Text
     -> Message
     -> IO NotmuchMail
-messageToMail ignoredTag m =
+messageToMail ignoredTag m = do
+    tgs <- tags m
     NotmuchMail <$>
-    (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
-    (decodeUtf8 . fromMaybe "" <$> messageHeader "To" m) <*>
-    (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
-    messageFilename m <*>
-    messageDate m <*>
-    (tagsToText m ignoredTag) <*>
-    isNewMail m ignoredTag
+      (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
+      (decodeUtf8 . fromMaybe "" <$> messageHeader "To" m) <*>
+      (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
+      messageFilename m <*>
+      messageDate m <*>
+      (pure $ tagsToText tgs ignoredTag) <*>
+      (pure $ isNewMail tgs ignoredTag)
 
-tagsToText :: HasTags a => a -> T.Text -> IO [T.Text]
-tagsToText m ignored = do
-  t <- tags m
-  pure $ filter (/= ignored) $ decodeUtf8 <$> t
+tagsToText :: [Tag] -> T.Text -> [T.Text]
+tagsToText t ignored = filter (/= ignored) $ decodeUtf8 <$> t
 
 getDatabasePath :: IO (FilePath)
 getDatabasePath = getFromNotmuchConfig "database.path"
@@ -61,7 +60,5 @@ getFromNotmuchConfig key = do
   stdout <- readProcess cmd args []
   pure $ filter (/= '\n') stdout
 
-isNewMail :: HasTags Message => Message -> T.Text -> IO Bool
-isNewMail m newTag = do
-  t <- tags m
-  pure $ newTag `elem` (decodeUtf8 <$> t)
+isNewMail :: [Tag] -> T.Text -> Bool
+isNewMail t newTag = newTag `elem` (decodeUtf8 <$> t)
