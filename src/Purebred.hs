@@ -46,6 +46,7 @@ import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.Main (halt, continue, defaultMain)
 import Control.Lens.Lens ((&))
 import Control.Lens.Setter (over, set)
+import Control.Lens.Getter (view)
 
 data AppConfig = AppConfig
     { databaseFilepath :: Maybe String
@@ -99,7 +100,12 @@ launch cfg = do
     void $ defaultMain (theApp s) s
 
 processConfig :: UserConfiguration -> IO InternalConfiguration
-processConfig = (confNotmuch . nmDatabase) id
+processConfig cfg = do
+    fp <- view (confNotmuch . nmDatabase) cfg
+    ed <- view confEditor cfg
+    pure $ cfg
+      & set (confNotmuch . nmDatabase) fp
+      & set confEditor ed
 
 -- | Recompile the config file if it has changed based on the modification timestamp
 -- Node: Mostly a XMonad.Main.hs rip-off.

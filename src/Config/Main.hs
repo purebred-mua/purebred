@@ -4,8 +4,9 @@ module Config.Main where
 import qualified Brick.AttrMap as A
 import Brick.Util (fg, on)
 import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty as V
+import System.Environment (lookupEnv)
+import Data.Maybe (fromMaybe)
 import UI.Mail.Main (headerKeyAttr, headerValueAttr)
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
 import UI.Index.Main
@@ -45,7 +46,7 @@ defaultConfig =
       , _nmDatabase = getDatabasePath
       , _nmNewTag = "unread"
       }
-    , _confEditor = "vi"
+    , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
     , _confMailView = MailViewSettings
       { _mvIndexRows = 10
       , _mvPreferedContentType = "text/plain"

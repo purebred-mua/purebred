@@ -116,34 +116,34 @@ nmDatabase f (NotmuchSettings a b c) = fmap (\b' -> NotmuchSettings a b' c) (f b
 nmNewTag :: Getter (NotmuchSettings a) T.Text
 nmNewTag = to (\(NotmuchSettings _ _ c) -> c)
 
-data Configuration a = Configuration
+data Configuration a b = Configuration
     { _confColorMap :: Brick.AttrMap
     , _confNotmuch :: NotmuchSettings a
-    , _confEditor :: T.Text
+    , _confEditor :: b
     , _confMailView :: MailViewSettings
     , _confIndexView :: IndexViewSettings
     , _confComposeView :: ComposeViewSettings
     }
 
-type UserConfiguration = Configuration (IO FilePath)
-type InternalConfiguration = Configuration FilePath
+type UserConfiguration = Configuration (IO FilePath) (IO String)
+type InternalConfiguration = Configuration FilePath String
 
-confColorMap :: Getter (Configuration a) Brick.AttrMap
+confColorMap :: Getter (Configuration a b) Brick.AttrMap
 confColorMap = to (\(Configuration a _ _ _ _ _) -> a)
 
-confEditor :: Lens' (Configuration a) T.Text
+confEditor :: Lens (Configuration a b) (Configuration a b') b b'
 confEditor f (Configuration a b c d e g) = fmap (\c' -> Configuration a b c' d e g) (f c)
 
-confNotmuch :: Lens (Configuration a) (Configuration b) (NotmuchSettings a) (NotmuchSettings b)
+confNotmuch :: Lens (Configuration a c) (Configuration b c) (NotmuchSettings a) (NotmuchSettings b)
 confNotmuch f (Configuration a b c d e g) = fmap (\b' -> Configuration a b' c d e g) (f b)
 
-confMailView :: Lens' (Configuration a) MailViewSettings
+confMailView :: Lens' (Configuration a b) MailViewSettings
 confMailView f (Configuration a b c d e g) = fmap (\d' -> Configuration a b c d' e g) (f d)
 
-confIndexView :: Lens' (Configuration a) IndexViewSettings
+confIndexView :: Lens' (Configuration a b) IndexViewSettings
 confIndexView f (Configuration a b c d e g) = fmap (\e' -> Configuration a b c d e' g) (f e)
 
-confComposeView :: Getter (Configuration a) ComposeViewSettings
+confComposeView :: Getter (Configuration a b) ComposeViewSettings
 confComposeView = to (\(Configuration _ _ _ _ _ h) -> h)
 
 
