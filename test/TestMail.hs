@@ -18,5 +18,5 @@ testMailHasBeenMoved = testCase "does not crash" $ do
   msg <- parseMail m
   Left "/path/does/not/exist: openFile: does not exist (No such file or directory)" @?= msg
   where
-    m = NotmuchMail "" "" "" "/path/does/not/exist" t ["unread"] True
+    m = NotmuchMail "" "" "/path/does/not/exist" t ["unread"] True
     t = UTCTime (fromGregorian 2017 7 7) (secondsToDiffTime 39292)
