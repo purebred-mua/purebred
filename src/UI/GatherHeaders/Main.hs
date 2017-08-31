@@ -12,12 +12,10 @@ import           Control.Lens.Getter          (view)
 import           Control.Lens.Lens            (Lens', (&))
 import           Control.Lens.Setter          (set, (?~))
 import           Control.Monad.IO.Class       (liftIO)
-import           Data.Maybe                   (fromMaybe)
 import           Data.Monoid                  ((<>))
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Graphics.Vty                 (Event (..), Key (..))
-import           System.Environment           (lookupEnv)
 import           System.Exit                  (ExitCode (..))
 import           System.IO.Temp               (emptySystemTempFile)
 import           System.Process               (system)
@@ -85,8 +83,7 @@ nextFocus s =
 
 invokeEditor :: AppState -> IO (AppState)
 invokeEditor s = do
-  mEnv <- lookupEnv "EDITOR"
-  let editor = fromMaybe "vi" mEnv
+  let editor = view (asConfig . confEditor) s
   tmpfile <- emptySystemTempFile "purebred.tmp"
   status <- system (editor <> " " <> tmpfile)
   case status of
