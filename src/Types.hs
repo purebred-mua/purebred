@@ -246,7 +246,6 @@ data ParsedMail
 -- | an email from the notmuch database
 data NotmuchMail = NotmuchMail
     { _mailSubject :: T.Text
-    , _mailTo :: T.Text
     , _mailFrom :: T.Text
     , _mailFilepath :: String
     , _mailDate :: UTCTime
@@ -256,9 +255,6 @@ data NotmuchMail = NotmuchMail
 
 mailSubject :: Lens' NotmuchMail T.Text
 mailSubject = lens _mailSubject (\m s -> m { _mailSubject = s })
-
-mailTo :: Lens' NotmuchMail T.Text
-mailTo = lens _mailTo (\m t -> m { _mailTo = t })
 
 mailFrom :: Lens' NotmuchMail T.Text
 mailFrom = lens _mailFrom (\m f -> m { _mailFrom = f })

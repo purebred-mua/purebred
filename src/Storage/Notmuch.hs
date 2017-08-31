@@ -40,7 +40,6 @@ messageToMail ignoredTag m = do
     tgs <- tags m
     NotmuchMail <$>
       (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
-      (decodeUtf8 . fromMaybe "" <$> messageHeader "To" m) <*>
       (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
       messageFilename m <*>
       messageDate m <*>
