@@ -4,8 +4,8 @@
 module Storage.Notmuch where
 
 import Types (NotmuchMail(..))
-import           Notmuch
-import           Notmuch.Search
+import Notmuch
+import Notmuch.Search
 
 import           Data.Maybe     (fromMaybe)
 import qualified Data.Vector    as Vec
@@ -32,22 +32,20 @@ getMessages s settings = do
         return $ Vec.fromList mails
 
 messageToMail
-    :: HasTags Message
+    :: HasTags (Message n RO)
     => T.Text
-    -> Message
+    -> Message n RO
     -> IO NotmuchMail
 messageToMail ignoredTag m = do
     tgs <- tags m
+    let tgs' = decodeUtf8 . getTag <$> tgs
     NotmuchMail <$>
       (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
       (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
       messageFilename m <*>
       messageDate m <*>
-      (pure $ tagsToText tgs ignoredTag) <*>
-      (pure $ isNewMail tgs ignoredTag)
-
-tagsToText :: [Tag] -> T.Text -> [T.Text]
-tagsToText t ignored = filter (/= ignored) $ decodeUtf8 <$> t
+      (pure $ filter (/= ignoredTag) tgs') <*>
+      (pure $ ignoredTag `elem` tgs')
 
 getDatabasePath :: IO (FilePath)
 getDatabasePath = getFromNotmuchConfig "database.path"
@@ -58,6 +56,3 @@ getFromNotmuchConfig key = do
   let args = ["config", "get", key]
   stdout <- readProcess cmd args []
   pure $ filter (/= '\n') stdout
-
-isNewMail :: [Tag] -> T.Text -> Bool
-isNewMail t newTag = newTag `elem` (decodeUtf8 <$> t)
