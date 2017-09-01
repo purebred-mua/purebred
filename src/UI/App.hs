@@ -36,7 +36,7 @@ appEvent s e =
 initialState :: InternalConfiguration -> IO AppState
 initialState conf = do
     let searchterms = view (confNotmuch . nmSearch) conf
-    vec <- getMessages searchterms (view confNotmuch conf)
+    vec <- either error pure =<< getMessages searchterms (view confNotmuch conf)
     let mi =
             MailIndex
                 (L.list ListOfMails vec 1)

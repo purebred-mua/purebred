@@ -18,13 +18,15 @@ import qualified Data.CaseInsensitive as CI
 import Control.Lens.Getter (view)
 import Control.Lens.Setter (set)
 import Data.CaseInsensitive (mk)
-import           Control.Monad.IO.Class    (liftIO)
-import qualified Data.Text                 as T
-import           Graphics.Vty.Input.Events (Event)
-import           UI.Index.Keybindings      (updateStateWithParsedMail)
-import           UI.Index.Main             (renderMailList)
-import           UI.Keybindings            (handleEvent)
-import           UI.Status.Main            (statusbar)
+import Control.Monad.IO.Class (liftIO)
+import qualified Data.Text as T
+import Graphics.Vty.Input.Events (Event)
+import UI.Index.Keybindings
+       (updateStateWithParsedMail, updateReadState)
+import Storage.Notmuch (removeTag)
+import UI.Index.Main (renderMailList)
+import UI.Keybindings (handleEvent)
+import UI.Status.Main (statusbar)
 import Types
 
 -- | Instead of using the entire rendering area to show the email, we still show
@@ -109,4 +111,5 @@ displayMailDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
 displayMailDefault s ev = do
             l' <- L.handleListEvent ev (view (asMailIndex . miListOfMails) s)
             s' <- liftIO $ updateStateWithParsedMail (set (asMailIndex . miListOfMails) l' s)
+                  >>= updateReadState removeTag
             M.continue s'

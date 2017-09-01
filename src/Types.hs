@@ -252,7 +252,7 @@ data NotmuchMail = NotmuchMail
     , _mailDate :: UTCTime
     , _mailTags :: [T.Text]
     , _mailId :: ByteString
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 mailSubject :: Lens' NotmuchMail T.Text
 mailSubject = lens _mailSubject (\m s -> m { _mailSubject = s })

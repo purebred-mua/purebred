@@ -55,6 +55,7 @@ library
                      , xdg-basedir
                      , filepath
                      , unix
+                     , mtl
 
 executable purebred
   hs-source-dirs:      app
@@ -76,8 +77,9 @@ test-suite unittests
                      , purebred
                      , brick
                      , tasty-hunit
+                     , tasty-quickcheck
+                     , quickcheck-text
                      , tasty
-                     , tasty-golden
                      , directory
                      , process
                      , unbounded-delays
