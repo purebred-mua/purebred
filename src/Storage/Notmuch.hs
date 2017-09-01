@@ -45,7 +45,8 @@ messageToMail ignoredTag m = do
       messageFilename m <*>
       messageDate m <*>
       (pure $ filter (/= ignoredTag) tgs') <*>
-      (pure $ ignoredTag `elem` tgs')
+      (pure $ ignoredTag `elem` tgs') <*>
+      messageId m
 
 getDatabasePath :: IO (FilePath)
 getDatabasePath = getFromNotmuchConfig "database.path"

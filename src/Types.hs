@@ -7,7 +7,8 @@ import           Brick.Types               (EventM, Next)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Control.Lens
-import qualified Data.Text                 as T
+import Data.ByteString (ByteString)
+import qualified Data.Text as T
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
@@ -251,6 +252,7 @@ data NotmuchMail = NotmuchMail
     , _mailDate :: UTCTime
     , _mailTags :: [T.Text]
     , _mailIsNew :: Bool
+    , _mailId :: ByteString
     } deriving (Show)
 
 mailSubject :: Lens' NotmuchMail T.Text
