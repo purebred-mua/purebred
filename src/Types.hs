@@ -251,7 +251,6 @@ data NotmuchMail = NotmuchMail
     , _mailFilepath :: String
     , _mailDate :: UTCTime
     , _mailTags :: [T.Text]
-    , _mailIsNew :: Bool
     , _mailId :: ByteString
     } deriving (Show)
 
@@ -269,9 +268,6 @@ mailDate = lens _mailDate (\m d -> m { _mailDate = d })
 
 mailTags :: Lens' NotmuchMail [T.Text]
 mailTags = lens _mailTags (\m t -> m { _mailTags = t })
-
-mailIsNew :: Lens' NotmuchMail Bool
-mailIsNew = lens _mailIsNew (\m n -> m { _mailIsNew = n })
 
 mailId :: Lens' NotmuchMail ByteString
 mailId = lens _mailId (\m i -> m { _mailId = i })

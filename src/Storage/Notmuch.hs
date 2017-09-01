@@ -12,7 +12,7 @@ import qualified Data.Vector    as Vec
 import           System.Process (readProcess)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
-import Types (NotmuchSettings, nmDatabase, nmNewTag)
+import Types (NotmuchSettings, nmDatabase, mailTags)
 import Control.Lens.Getter (view)
 
 
@@ -28,15 +28,14 @@ getMessages s settings = do
     Right db -> do
         q <- query db (FreeForm $ T.unpack s)
         msgs <- messages q
-        mails <- mapM (messageToMail $ view nmNewTag settings) msgs
+        mails <- mapM messageToMail msgs
         return $ Vec.fromList mails
 
 messageToMail
     :: HasTags (Message n RO)
-    => T.Text
-    -> Message n RO
+    => Message n RO
     -> IO NotmuchMail
-messageToMail ignoredTag m = do
+messageToMail m = do
     tgs <- tags m
     let tgs' = decodeUtf8 . getTag <$> tgs
     NotmuchMail <$>
@@ -44,8 +43,7 @@ messageToMail ignoredTag m = do
       (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
       messageFilename m <*>
       messageDate m <*>
-      (pure $ filter (/= ignoredTag) tgs') <*>
-      (pure $ ignoredTag `elem` tgs') <*>
+      pure tgs' <*>
       messageId m
 
 getDatabasePath :: IO (FilePath)
@@ -57,3 +55,6 @@ getFromNotmuchConfig key = do
   let args = ["config", "get", key]
   stdout <- readProcess cmd args []
   pure $ filter (/= '\n') stdout
+
+mailIsNew :: T.Text -> NotmuchMail -> Bool
+mailIsNew ignoredTag m = ignoredTag `elem` (view mailTags m)

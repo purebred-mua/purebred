@@ -22,6 +22,7 @@ import Data.Text (Text, pack)
 import UI.Draw.Main (editorDrawContent)
 import UI.Keybindings (handleEvent)
 import UI.Status.Main (statusbar)
+import Storage.Notmuch (mailIsNew)
 import Types
 
 drawMain :: AppState -> [Widget Name]
@@ -33,16 +34,19 @@ drawMain s = [ui]
 
 renderMailList :: AppState -> Widget Name
 renderMailList s = let listFocus = view (asMailIndex . miMode) s == BrowseMail
-                   in L.renderList listDrawElement listFocus (view (asMailIndex . miListOfMails) s)
+                   in L.renderList (listDrawElement s) listFocus (view (asMailIndex . miListOfMails) s)
 
-listDrawElement :: Bool -> NotmuchMail -> Widget Name
-listDrawElement sel a =
+listDrawElement :: AppState -> Bool -> NotmuchMail -> Widget Name
+listDrawElement s sel a =
     let selected w = if sel then withAttr L.listSelectedAttr w else w
-        newMail m w = if (view mailIsNew m) then withAttr listNewMailAttr w else w
+        settings = view (asConfig . confNotmuch) s
+        newMail m w = if (mailIsNew (view nmNewTag settings) m)
+                      then withAttr listNewMailAttr w
+                      else w
         widget = padLeft (Pad 1) $ (hLimit 15 (txt $ view mailFrom a)) <+>
                  (padLeft (Pad 1) $ (txt $ formatDate (view mailDate a))) <+>
                  padLeft (Pad 2) (txt (view mailSubject a)) <+>
-                 (padLeft Max $ renderMailTagsWidget a)
+                 (padLeft Max $ renderMailTagsWidget a (view nmNewTag settings))
     in (newMail a $ selected widget)
 
 
@@ -64,9 +68,9 @@ mailAttr = "mail"
 mailTagsAttr :: AttrName
 mailTagsAttr = mailAttr <> "tags"
 
-renderMailTagsWidget :: NotmuchMail -> Widget Name
-renderMailTagsWidget m =
-    let ts = view mailTags m
+renderMailTagsWidget :: NotmuchMail -> Text -> Widget Name
+renderMailTagsWidget m ignored =
+    let ts = filter (/= ignored) $ view mailTags m
     in withAttr mailTagsAttr $ vLimit 1 $ txt $ unwords ts
 
 -- | We currently have two modes on the main view we need to distinguish
