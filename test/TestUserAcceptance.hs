@@ -100,12 +100,6 @@ testUserCanManipulateNMQuery =
               "37;40mtag"
               assertSubstrInOutput
         , ApplicationStep
-              "C-e"
-              "move cursor to the end of the current input"
-              False
-              "Purebred"
-              assertSubstrInOutput
-        , ApplicationStep
               "C-u"
               "delete all input"
               False

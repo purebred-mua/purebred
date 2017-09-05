@@ -5,9 +5,10 @@ import Brick.Main (continue, halt)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import Data.Text.Zipper (gotoEOL)
 import Control.Lens.Getter (view)
 import Control.Lens.Lens ((&))
-import Control.Lens.Setter ((?~), set)
+import Control.Lens.Setter ((?~), set, over)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text.Zipper (currentLine)
 import qualified Graphics.Vty as V
@@ -39,7 +40,9 @@ indexsearchKeybindings =
     ]
 
 focusSearch :: AppState -> T.EventM Name (T.Next AppState)
-focusSearch s = continue $ set (asMailIndex . miMode) SearchMail s
+focusSearch s = continue $ s
+                & set (asMailIndex . miMode) SearchMail
+                & over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
 
 displayMail :: AppState -> T.EventM Name (T.Next AppState)
 displayMail s = do
