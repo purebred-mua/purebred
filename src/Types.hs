@@ -272,3 +272,6 @@ mailTags = lens _mailTags (\m t -> m { _mailTags = t })
 
 mailIsNew :: Lens' NotmuchMail Bool
 mailIsNew = lens _mailIsNew (\m n -> m { _mailIsNew = n })
+
+mailId :: Lens' NotmuchMail ByteString
+mailId = lens _mailId (\m i -> m { _mailId = i })
