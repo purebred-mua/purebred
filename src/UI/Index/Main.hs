@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Index.Main where
 
-import Brick.AttrMap (AttrName)
-import Data.Monoid ((<>))
 import qualified Brick.Main as M
 import Brick.Types (Padding(..), Widget)
 import qualified Brick.Types as T
+import Brick.AttrMap (AttrName)
 import Brick.Widgets.Core
        (hLimit, padLeft, txt, vBox, vLimit, withAttr, (<+>))
 import Data.Text (unwords)
@@ -24,6 +23,9 @@ import UI.Keybindings (handleEvent)
 import UI.Status.Main (statusbar)
 import Storage.Notmuch (mailIsNew)
 import Types
+import Config.Main
+       (listNewMailAttr, listNewMailSelectedAttr, mailTagsAttr,
+        listSelectedAttr, listAttr)
 
 drawMain :: AppState -> [Widget Name]
 drawMain s = [ui]
@@ -38,35 +40,24 @@ renderMailList s = let listFocus = view (asMailIndex . miMode) s == BrowseMail
 
 listDrawElement :: AppState -> Bool -> NotmuchMail -> Widget Name
 listDrawElement s sel a =
-    let selected w = if sel then withAttr L.listSelectedAttr w else w
-        settings = view (asConfig . confNotmuch) s
-        newMail m w = if (mailIsNew (view nmNewTag settings) m)
-                      then withAttr listNewMailAttr w
-                      else w
+    let settings = view (asConfig . confNotmuch) s
+        isNewMail = mailIsNew (view nmNewTag settings) a
         widget = padLeft (Pad 1) $ (hLimit 15 (txt $ view mailFrom a)) <+>
                  (padLeft (Pad 1) $ (txt $ formatDate (view mailDate a))) <+>
                  padLeft (Pad 2) (txt (view mailSubject a)) <+>
                  (padLeft Max $ renderMailTagsWidget a (view nmNewTag settings))
-    in (newMail a $ selected widget)
+    in (withAttr (getListAttr isNewMail sel) widget)
 
+getListAttr :: Bool  -- ^ new?
+            -> Bool  -- ^ selected?
+            -> AttrName
+getListAttr True True = listNewMailSelectedAttr  -- new and selected
+getListAttr True False = listNewMailAttr  -- new and not selected
+getListAttr False True = listSelectedAttr  -- not new but selected
+getListAttr False False = listAttr  -- not selected and not new
 
 formatDate :: UTCTime -> Text
 formatDate t = pack $ formatTime defaultTimeLocale "%d/%b" (utctDay t)
-
-listAttr :: AttrName
-listAttr = L.listAttr
-
-listSelectedAttr :: AttrName
-listSelectedAttr = L.listSelectedAttr
-
-listNewMailAttr :: AttrName
-listNewMailAttr = L.listAttr <> "newmail"
-
-mailAttr :: AttrName
-mailAttr = "mail"
-
-mailTagsAttr :: AttrName
-mailTagsAttr = mailAttr <> "tags"
 
 renderMailTagsWidget :: NotmuchMail -> Text -> Widget Name
 renderMailTagsWidget m ignored =

@@ -2,7 +2,6 @@
 module UI.Mail.Main where
 
 import qualified Brick.Main as M
-import Brick.AttrMap (AttrName)
 import Brick.Types (Padding(..), ViewportType(..), Widget)
 import qualified Brick.Types as T
 import Brick.Widgets.Core
@@ -10,7 +9,6 @@ import Brick.Widgets.Core
         withAttr)
 import qualified Brick.Widgets.List as L
 
-import Data.Monoid ((<>))
 import Codec.MIME.Type
        (MIMEContent(..), MIMEParam(..), MIMEValue(..), Type(..),
         showMIMEType)
@@ -28,6 +26,7 @@ import UI.Index.Main (renderMailList)
 import UI.Keybindings (handleEvent)
 import UI.Status.Main (statusbar)
 import Types
+import Config.Main (headerKeyAttr, headerValueAttr)
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.
@@ -85,15 +84,6 @@ headerFilter s =
     case view (asMailView . mvHeadersState) s of
         Filtered -> view (asConfig . confMailView . mvHeadersToShow) s
         ShowAll -> const True
-
-headerAttr :: AttrName
-headerAttr = "header"
-
-headerKeyAttr :: AttrName
-headerKeyAttr = headerAttr <> "key"
-
-headerValueAttr :: AttrName
-headerValueAttr = headerAttr <> "value"
 
 -- | event handling for viewing a single mail
 
