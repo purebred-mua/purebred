@@ -29,12 +29,47 @@ systemTests =
         [ testUserViewsMailSuccessfully
         , testUserCanManipulateNMQuery
         , testUserCanSwitchBackToIndex
-        , testCanToggleHeaders]
+        , testCanToggleHeaders
+        , testSetsMailToRead]
 
 -- | maximum amount of time we allow a step to run until we fail it
 -- 6 seconds should be plenty
 testTimeout :: Integer
 testTimeout = 10 ^ 6 * 8
+
+
+testSetsMailToRead ::
+  TestTree
+testSetsMailToRead =
+  withResource setUp tearDown $
+  \mdir ->
+    tmuxSession mdir "user can toggle read tag" steps
+  where steps =
+          [ApplicationStep
+             ""
+             "is unread (bold)"
+             False
+             "is Purebred"
+             (\o _ ->
+                assertBool "regex doesn't match out" $
+                o =~ ("\ESC\\[1;.*Testmail" :: String))
+          ,ApplicationStep "Enter" "views mail" False "This is a test mail" assertSubstrInOutput
+          ,ApplicationStep
+             "Escape"
+             "is set to read"
+             False
+             "is Purebred"
+             (\o _ ->
+                assertBool "regex doesn't match out" $
+                o =~ ("\ESC\\[37.*Testmail" :: String))
+          ,ApplicationStep
+             "t"
+             "toggled back to unread"
+             False
+             "1;37;43m" -- wait for the screen turns bold
+             (\o _ ->
+                assertBool "regex doesn't match out" $
+                o =~ ("\ESC\\[1;.*Testmail" :: String))]
 
 
 testCanToggleHeaders ::
