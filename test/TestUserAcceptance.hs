@@ -10,7 +10,9 @@ import Control.Concurrent
        (newEmptyMVar, putMVar, takeMVar, MVar, threadDelay)
 import Control.Exception (catch, IOException)
 import System.IO (hPutStr, stderr)
-import Control.Monad (void)
+import System.Environment (lookupEnv)
+import Control.Monad (void, when)
+import Data.Maybe (isJust)
 
 import Data.List (isInfixOf)
 import System.Process (callProcess, readProcess)
@@ -320,6 +322,8 @@ runSteps stepfx steps =
         (\a ->
               do stepfx (asDescription a)
                  out <- performStep "purebredtest" a
+                 d <- lookupEnv "DEBUG"
+                 when (isJust d) $ hPutStr stderr ("\n\n" ++ asDescription a ++ "\n\n" ++ out)
                  ((asAssertInOutput a) out (asExpected a)))
         steps
 
