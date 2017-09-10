@@ -18,7 +18,8 @@ before_install:
 
 script:
   - stack --system-ghc --no-terminal --skip-ghc-check install
-  - stack --system-ghc --no-terminal --skip-ghc-check test
+  - DEBUG=1 stack --system-ghc --no-terminal --skip-ghc-check test 2> /tmp/test.log
+  - cat /tmp/test.log
 
 matrix:
   include:
