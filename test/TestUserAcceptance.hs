@@ -98,7 +98,7 @@ testCanToggleHeaders =
               "h"
               "filtered headers"
               False
-              "from"
+              "This is a test mail"
               (\o _ ->
                     assertBool "regex matches out" $
                     o =~ ("Purebred.*\n.*from" :: String))]
