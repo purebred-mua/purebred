@@ -8,9 +8,11 @@ import Types (NotmuchMail(..))
 import Notmuch
 import Notmuch.Search
 
-import Control.Monad (void)
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Except (runExceptT)
+import Control.Monad ((>=>))
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Except (MonadError, runExceptT, throwError)
+import Data.Foldable (traverse_)
+import Data.Functor (($>))
 import Data.Traversable (traverse)
 import Data.List (union)
 import Data.Maybe (fromMaybe)
@@ -33,13 +35,13 @@ getMessages :: T.Text
             -> IO (Either String (Vec.Vector NotmuchMail))
 getMessages s settings =
   first show <$>
-  bracket (runExceptT (databaseOpenReadOnly (view nmDatabase settings))
-           >>= either (error . show) pure)
-          (void . runExceptT . databaseDestroy)
-          (\db -> runExceptT $ do
+  bracket (runExceptT (databaseOpenReadOnly (view nmDatabase settings)))
+          (runExceptT . traverse_ databaseDestroy)
+          (runExceptT . (either throwError pure >=> go))
+  where go db = do
               msgs <- query db (FreeForm $ T.unpack s) >>= messages
               mails <- liftIO $ mapM messageToMail msgs
-              return $ Vec.fromList mails)
+              pure $ Vec.fromList mails
 
 setNotmuchMailTags
     :: FilePath
@@ -49,22 +51,22 @@ setNotmuchMailTags dbpath m =
   case mailTagsToNotmuchTags m of
     Nothing -> pure $ Left "Tags are corrupt"
     Just nmtags ->
-      bracket (runExceptT (databaseOpen dbpath) >>= either (error . show) pure)
-              (void . runExceptT . databaseDestroy)
-              (\db -> tagsToMessage nmtags m db)
+      bracket (runExceptT (databaseOpen dbpath))
+              (runExceptT . traverse_ databaseDestroy)
+              (runExceptT . (either (throwError . show) pure >=> tagsToMessage nmtags m))
 
 tagsToMessage
-  :: [Tag] -> NotmuchMail -> Database RW -> IO (Either String NotmuchMail)
+  :: (MonadError String m, MonadIO m)
+  => [Tag] -> NotmuchMail -> Database RW -> m NotmuchMail
 tagsToMessage xs m db =
-  runExceptT
-    (findMessage db
-                 (view mailId m)) >>=
-  \case
-    Left e -> pure $ Left (show e)
-    Right Nothing -> pure $ Left "boop"
-    Right (Just msg) -> do
-      _ <- runExceptT (messageSetTags xs msg)
-      pure $ Right m
+  -- This is nasty.  We have to run the transformer so we can change the
+  -- error type.  Instead, we should update hs-notmuch to abstract over
+  -- an "AsNotmuchError" typeclass, then create our own error sum type
+  -- with an instance of it.
+  runExceptT (
+    findMessage db (view mailId m)
+    >>= traverse (\msg -> messageSetTags xs msg $> m)
+  ) >>= either (throwError . show) (maybe (throwError "boop") pure)
 
 addTag :: NotmuchMail -> T.Text -> NotmuchMail
 addTag m t = over mailTags (`union` [t]) m
