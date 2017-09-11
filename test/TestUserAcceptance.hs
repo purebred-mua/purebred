@@ -42,10 +42,7 @@ testTimeout = 10 ^ 6 * 8
 
 testSetsMailToRead ::
   TestTree
-testSetsMailToRead =
-  withResource setUp tearDown $
-  \mdir ->
-    tmuxSession mdir "user can toggle read tag" steps
+testSetsMailToRead = tmuxSession "user can toggle read tag" steps
   where steps =
           [ApplicationStep
              ""
@@ -76,10 +73,7 @@ testSetsMailToRead =
 
 testCanToggleHeaders ::
   TestTree
-testCanToggleHeaders =
-    withResource setUp tearDown $
-    \mdir ->
-         tmuxSession mdir "user can toggle Headers" steps
+testCanToggleHeaders = tmuxSession "user can toggle Headers" steps
   where
     steps =
         [ ApplicationStep
@@ -105,10 +99,7 @@ testCanToggleHeaders =
 
 testUserViewsMailSuccessfully ::
   TestTree
-testUserViewsMailSuccessfully =
-    withResource setUp tearDown $
-    \mdir ->
-         tmuxSession mdir "user can view mail" steps
+testUserViewsMailSuccessfully = tmuxSession "user can view mail" steps
   where
     steps =
         [ ApplicationStep "" "shows tag" False "inbox" assertSubstrInOutput
@@ -122,12 +113,9 @@ testUserViewsMailSuccessfully =
 testUserCanManipulateNMQuery ::
   TestTree
 testUserCanManipulateNMQuery =
-    withResource setUp tearDown $
-    \mdir ->
-         tmuxSession
-             mdir
-             "manipulating notmuch search query results in empty index"
-             steps
+    tmuxSession
+        "manipulating notmuch search query results in empty index"
+        steps
   where
     steps =
         [ ApplicationStep
@@ -159,18 +147,12 @@ testUserCanManipulateNMQuery =
               "view current mail"
               False
               "HOLY PUREBRED"
-              assertSubstrInOutput
-        ]
+              assertSubstrInOutput]
 
 testUserCanSwitchBackToIndex ::
   TestTree
 testUserCanSwitchBackToIndex =
-    withResource setUp tearDown $
-    \mdir ->
-         tmuxSession
-             mdir
-             "user can switch back to mail index during composition"
-             steps
+    tmuxSession "user can switch back to mail index during composition" steps
   where
     steps =
         [ ApplicationStep
@@ -242,23 +224,23 @@ assertSubstrInOutput out substr = assertBool "in out" $ substr `isInfixOf` out
 defaultSessionName :: String
 defaultSessionName = "purebredtest"
 
-tearDown :: String -> IO ()
-tearDown testmdir = do
-  removeDirectoryRecursive testmdir
+tearDown :: (String, String) -> IO ()
+tearDown (testdir, _)= do
+  removeDirectoryRecursive testdir
   cleanUpTmuxSession defaultSessionName
 
-setUp :: IO (String)
+setUp :: IO (String, String)
 setUp = do
-  testmdir <- setUpTmuxSession defaultSessionName >> setUpTempMaildir
+  (testdir, testmdir) <- setUpTmuxSession defaultSessionName >> setUpTempMaildir
   startApplication defaultSessionName testmdir
-  pure testmdir
+  pure (testdir, testmdir)
 
-setUpTempMaildir :: IO (String)
+setUpTempMaildir :: IO (String, String)
 setUpTempMaildir = do
   systmp <- getCanonicalTemporaryDirectory
   testdir <- createTempDirectory systmp defaultSessionName
   mdir <- setUpMaildir testdir
-  setUpNotmuchCfg testdir mdir >>= setUpNotmuch >> pure mdir
+  setUpNotmuchCfg testdir mdir >>= setUpNotmuch >> pure (testdir, mdir)
 
 -- | run notmuch to create the notmuch database
 -- Note: discard stdout which otherwise clobbers the test output
@@ -313,8 +295,10 @@ cleanUpTmuxSession sessionname = do
 
 
 -- | Run all application steps in a session defined by session name.
-tmuxSession :: IO String -> String -> [ApplicationStep] -> TestTree
-tmuxSession _ tcname xs = testCaseSteps tcname $ \step -> runSteps step xs
+tmuxSession :: String -> [ApplicationStep] -> TestTree
+tmuxSession tcname xs =
+  withResource setUp tearDown $
+  \_ -> testCaseSteps tcname $ \step -> runSteps step xs
 
 runSteps :: (String -> IO ()) -> [ApplicationStep] -> IO ()
 runSteps stepfx steps =
