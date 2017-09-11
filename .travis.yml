@@ -32,6 +32,3 @@ matrix:
   - env: STACK_YAML="stack.yaml" NOTMUCHVER=0.25
     compiler: ": #stack default - notmuch: 0.25"
     addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
-
-  allow_failures:
-  - env: STACK_YAML="stack.yaml" NOTMUCHVER=0.25
