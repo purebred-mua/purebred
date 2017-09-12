@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | module to integrate with a mail parser. This is needed to actually view the
@@ -8,18 +9,25 @@ import Codec.MIME.Parse (parseMIMEMessage)
 import Codec.MIME.Type
        (MIMEParam(..), MIMEValue(..), mime_val_headers)
 import Control.Exception (try)
-import Control.Lens.Getter (view)
-import qualified Data.Text           as T
+import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Data.Text as T
 import Data.Text.IO (readFile)
 import Prelude hiding (readFile)
-import Types (ParsedMail(..), NotmuchMail, mailFilepath)
+import Storage.Notmuch (mailFilepath)
 
-parseMail :: NotmuchMail -> IO (Either String ParsedMail)
-parseMail m = do
-    msg <- try (readFile $ view mailFilepath m) :: IO (Either IOError T.Text)
-    case msg of
-        Left e -> pure $ Left $ show e
-        Right contents -> pure $ Right $ MIMEMail (parseMIMEMessage contents)
+import Error
+import Types (ParsedMail(..), NotmuchMail)
+
+parseMail
+  :: (MonadError Error m, MonadIO m)
+  => NotmuchMail -> FilePath -> m ParsedMail
+parseMail m dbpath = do
+  filePath <- mailFilepath m dbpath
+  liftIO (try (readFile filePath))
+    >>= either
+      (throwError . FileReadError filePath)
+      (pure . MIMEMail . parseMIMEMessage)
 
 getFrom :: ParsedMail -> T.Text
 getFrom (MIMEMail v) = findHeader v "from"

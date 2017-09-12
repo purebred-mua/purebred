@@ -3,7 +3,7 @@
 module UI.Status.Main where
 
 import Brick.Types (Widget)
-import Brick.Widgets.Core (str, withAttr, (<+>))
+import Brick.Widgets.Core (str, withAttr, (<+>), strWrap)
 import qualified Brick.Widgets.List  as L
 import Control.Lens.Getter (view)
 import Data.Maybe (fromMaybe)
@@ -16,7 +16,7 @@ import Config.Main (statusbarAttr, statusbarErrorAttr)
 statusbar :: AppState -> Widget Name
 statusbar s =
     case view asError s of
-        Just e -> withAttr statusbarErrorAttr $ str (show e)
+        Just e -> withAttr statusbarErrorAttr $ strWrap (show e)
         Nothing ->
             let l = view (asMailIndex . miListOfMails) s
                 total = str $ show $ length $ view L.listElementsL l
