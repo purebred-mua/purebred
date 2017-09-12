@@ -252,7 +252,6 @@ data ParsedMail
 data NotmuchMail = NotmuchMail
     { _mailSubject :: T.Text
     , _mailFrom :: T.Text
-    , _mailFilepath :: String
     , _mailDate :: UTCTime
     , _mailTags :: [T.Text]
     , _mailId :: ByteString
@@ -263,9 +262,6 @@ mailSubject = lens _mailSubject (\m s -> m { _mailSubject = s })
 
 mailFrom :: Lens' NotmuchMail T.Text
 mailFrom = lens _mailFrom (\m f -> m { _mailFrom = f })
-
-mailFilepath :: Lens' NotmuchMail String
-mailFilepath = lens _mailFilepath (\m fp -> m { _mailFilepath = fp })
 
 mailDate :: Lens' NotmuchMail UTCTime
 mailDate = lens _mailDate (\m d -> m { _mailDate = d })

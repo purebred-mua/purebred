@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -6,6 +7,7 @@ module Storage.Notmuch where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError)
+import qualified Data.ByteString as B
 import Data.Traversable (traverse)
 import Data.List (union)
 import Data.Maybe (fromMaybe)
@@ -39,6 +41,14 @@ getMessages s settings =
               mails <- liftIO $ mapM messageToMail msgs
               pure $ Vec.fromList mails
 
+mailFilepath
+  :: (MonadError Error m, MonadIO m)
+  => NotmuchMail -> FilePath -> m FilePath
+mailFilepath m dbpath =
+  bracketT (databaseOpenReadOnly dbpath) databaseDestroy go
+  where
+    go db = getMessage db (view mailId m) >>= messageFilename
+
 setNotmuchMailTags
   :: (MonadError Error m, MonadIO m)
   => FilePath
@@ -58,6 +68,15 @@ tagsToMessage xs m db =
   in
     findMessage db msgId
     >>= maybe (throwError (MessageNotFound msgId)) (messageSetTags xs)
+
+-- | Get message by message ID, throwing MessageNotFound if not found
+--
+getMessage
+  :: (MonadError Error m, MonadIO m)
+  => Database mode -> B.ByteString -> m (Message 0 mode)
+getMessage db msgId =
+  findMessage db msgId
+  >>= maybe (throwError (MessageNotFound msgId)) pure
 
 addTag :: NotmuchMail -> T.Text -> NotmuchMail
 addTag m t = over mailTags (`union` [t]) m
@@ -79,7 +98,6 @@ messageToMail m = do
     NotmuchMail <$>
       (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
       (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
-      messageFilename m <*>
       messageDate m <*>
       pure tgs' <*>
       messageId m

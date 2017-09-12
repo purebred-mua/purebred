@@ -3,15 +3,13 @@ module TestMail where
 
 import Data.Text (Text, pack)
 import Types (NotmuchMail(..))
-import Storage.ParsedMail (parseMail)
 import Storage.Notmuch (addTag, removeTag)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck
-       (testProperty, Arbitrary, arbitrary, listOf, choose, Gen)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.QuickCheck.Utf8 (utf8BS, genValidUtf8)
+       (testProperty, Arbitrary, arbitrary, choose, Gen)
+import Test.QuickCheck.Utf8 (utf8BS)
 import Data.Text.Arbitrary ()
-import Data.Time.Calendar (fromGregorian, Day(..))
+import Data.Time.Calendar (Day(..))
 import Data.Time.Clock (secondsToDiffTime, UTCTime(..), DiffTime)
 
 mailTests ::
@@ -19,17 +17,7 @@ mailTests ::
 mailTests =
     testGroup
         "mail parsing tests"
-        [testMailHasBeenMoved, testAddingTags, testRemovingTags]
-
-testMailHasBeenMoved ::
-  TestTree
-testMailHasBeenMoved = testCase "does not crash" $ do
-  msg <- parseMail m
-  Left "/path/does/not/exist: openFile: does not exist (No such file or directory)" @?= msg
-  where
-    m = NotmuchMail "" "" "/path/does/not/exist" t ["unread"] "0815"
-    t = UTCTime (fromGregorian 2017 7 7) (secondsToDiffTime 39292)
-
+        [testAddingTags, testRemovingTags]
 
 testAddingTags :: TestTree
 testAddingTags = testProperty "no duplicates when adding tags" propNoDuplicatesAdded
@@ -37,6 +25,7 @@ testAddingTags = testProperty "no duplicates when adding tags" propNoDuplicatesA
     propNoDuplicatesAdded :: NotmuchMail -> Text -> Bool
     propNoDuplicatesAdded m a = addTag (addTag m a) a == addTag m a
 
+testRemovingTags :: TestTree
 testRemovingTags = testProperty "remove tags" propRemoveTags
   where
     propRemoveTags :: NotmuchMail -> Text -> Bool
@@ -49,7 +38,6 @@ instance Arbitrary NotmuchMail where
         (pack <$> arbitrary) <*>
         arbitrary <*>
         arbitrary <*>
-        listOf genValidUtf8 <*>
         utf8BS
 
 instance Arbitrary UTCTime where

@@ -73,9 +73,9 @@ updateStateWithParsedMail :: AppState -> IO AppState
 updateStateWithParsedMail s = ($ s) <$>
     case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
         Just (_,m) -> either
-            (\e -> setError (GenericError e) . set asAppMode Main)
+            (\e -> setError e . set asAppMode Main)
             (\pmail -> set (asMailView . mvMail) (Just pmail) . set asAppMode ViewMail)
-            <$> liftIO (parseMail m)
+            <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
         Nothing -> pure id
 
 mailIndexEvent :: AppState -> (L.List Name NotmuchMail -> L.List Name NotmuchMail) -> T.EventM n (T.Next AppState)
@@ -99,10 +99,11 @@ replyMail :: AppState -> T.EventM Name (T.Next AppState)
 replyMail s =
   continue . ($ s)
   =<< case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
-    Just (_, m) -> either handleErr handleMail <$> liftIO (parseMail m)
+    Just (_, m) -> either handleErr handleMail
+                   <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
     Nothing -> pure id
   where
-    handleErr e = set asAppMode Main . setError (GenericError e)
+    handleErr e = set asAppMode Main . setError e
     handleMail pmail =
       set (asCompose . cTo) (E.editor GatherHeadersTo Nothing $ getFrom pmail)
       . set (asCompose . cFrom) (E.editor GatherHeadersFrom Nothing $ getTo pmail)
