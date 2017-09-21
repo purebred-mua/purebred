@@ -14,21 +14,35 @@ before_install:
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
   - mkdir -p /tmp/notmuch
   - curl -L https://notmuchmail.org/releases/notmuch-$NOTMUCHVER.tar.gz | tar xz --wildcards --strip-components=1 -C /tmp/notmuch
-  - pushd /tmp/notmuch && ./configure --without-emacs --without-ruby && make && sudo make install && popd
+  - pushd /tmp/notmuch && ./configure --prefix=/usr --without-emacs --without-ruby && make && sudo make install && popd
 
 script:
-  - stack --system-ghc --no-terminal --skip-ghc-check install
-  - DEBUG=1 stack --system-ghc --no-terminal --skip-ghc-check test 2> /tmp/test.log
+  - stack $STACK_ARGS --system-ghc --no-terminal --skip-ghc-check install
+  - DEBUG=1 stack $STACK_ARGS --system-ghc --no-terminal --skip-ghc-check test 2> /tmp/test.log
   - cat /tmp/test.log
 
 matrix:
   include:
-  # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
-  # variable, such as using --stack-yaml to point to a different file.
-  - env: STACK_YAML="stack.yaml" NOTMUCHVER=0.24.2
-    compiler: ": #stack default - notmuch: 0.24.2"
+  - env: STACK_ARGS="--resolver lts-8" NOTMUCHVER=0.24.2
+    compiler: ": #stack lts-8 - notmuch: 0.24.2"
     addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
 
-  - env: STACK_YAML="stack.yaml" NOTMUCHVER=0.25
-    compiler: ": #stack default - notmuch: 0.25"
+  - env: STACK_ARGS="--resolver lts-8" NOTMUCHVER=0.25
+    compiler: ": #stack lts-8 - notmuch: 0.25"
     addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+
+  - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.24.2
+    compiler: ": #stack lts-9 - notmuch: 0.24.2"
+    addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+
+  - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.25
+    compiler: ": #stack lts-9 - notmuch: 0.25"
+    addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+
+  - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.24.2
+    compiler: ": #stack lts-9 - notmuch: 0.24.2"
+    addons: {apt: {packages: [ghc-8.2.1, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+
+  - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.25
+    compiler: ": #stack lts-9 - notmuch: 0.25"
+    addons: {apt: {packages: [ghc-8.2.1, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
