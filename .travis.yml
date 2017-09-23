@@ -40,9 +40,9 @@ matrix:
     addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.24.2
-    compiler: ": #stack lts-9 - notmuch: 0.24.2"
+    compiler: ": #stack nightly - notmuch: 0.24.2"
     addons: {apt: {packages: [ghc-8.2.1, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.25
-    compiler: ": #stack lts-9 - notmuch: 0.25"
+    compiler: ": #stack nightly - notmuch: 0.25"
     addons: {apt: {packages: [ghc-8.2.1, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
