@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 {-# LANGUAGE OverloadedStrings #-}
 module TestUserAcceptance where
@@ -6,26 +7,27 @@ import qualified Data.Text as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Data.Ini (parseIni, writeIniFileWith, KeySeparator(..), WriteIniSettings(..))
 import Data.Semigroup ((<>))
-import Control.Concurrent
-       (newEmptyMVar, putMVar, takeMVar, MVar, threadDelay)
+import Control.Concurrent (threadDelay)
 import Control.Exception (catch, IOException)
 import System.IO (hPutStr, stderr)
 import System.Environment (lookupEnv)
 import Control.Monad (void, when)
 import Data.Maybe (isJust)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Reader (runReaderT, ask, ReaderT)
 
+import Control.Lens (view, _3, _2)
 import Data.List (isInfixOf)
 import System.Process (callProcess, readProcess)
 import System.Directory
        (getCurrentDirectory, removeDirectoryRecursive)
-import Test.Tasty (TestTree, testGroup, withResource, mkTimeout, localOption)
-import Test.Tasty.HUnit (testCaseSteps, assertBool, Assertion)
+import Test.Tasty (TestTree, TestName, testGroup, withResource)
+import Test.Tasty.HUnit (testCaseSteps, assertBool)
 import Text.Regex.Posix ((=~))
 
 systemTests ::
   TestTree
 systemTests =
-    localOption (mkTimeout testTimeout) $
     testGroup
         "user acceptance tests"
         [ testUserViewsMailSuccessfully
@@ -34,206 +36,144 @@ systemTests =
         , testCanToggleHeaders
         , testSetsMailToRead]
 
--- | maximum amount of time we allow a step to run until we fail it
--- 6 seconds should be plenty
-testTimeout :: Integer
-testTimeout = 10 ^ 6 * 8
-
-
 testSetsMailToRead ::
   TestTree
-testSetsMailToRead = tmuxSession "user can toggle read tag" steps
-  where steps =
-          [ApplicationStep
-             ""
-             "is unread (bold)"
-             False
-             "is Purebred"
-             (\o _ ->
-                assertBool "regex doesn't match out" $
-                o =~ ("\ESC\\[1;.*Testmail" :: String))
-          ,ApplicationStep "Enter" "views mail" False "This is a test mail" assertSubstrInOutput
-          ,ApplicationStep
-             "Escape"
-             "is set to read"
-             False
-             "is Purebred"
-             (\o _ ->
-                assertBool "regex doesn't match out" $
-                o =~ ("\ESC\\[37.*Testmail" :: String))
-          ,ApplicationStep
-             "t"
-             "toggled back to unread"
-             False
-             "1;37;43m" -- wait for the screen turns bold
-             (\o _ ->
-                assertBool "regex doesn't match out" $
-                o =~ ("\ESC\\[1;.*Testmail" :: String))]
+testSetsMailToRead = withTmuxSession "user can toggle read tag" $
+  \step -> do
+    startApplication
+    liftIO $ step "mail is shown as unread (bold)"
+    out <- capture
+    assertRegex "\ESC\\[1;.*Testmail" out
 
+    liftIO $ step "view mail and purebred sets it to read"
+    _ <- sendKeys "Enter" "This is a test mail"
+    out <- sendKeys "Escape" "is Purebred"
+    assertRegex "\ESC\\[37.*Testmail" out
+
+    liftIO $ step "toggle it back to unread"
+    -- wait for the screen turns bold
+    out <- sendKeys "t" "1;37;43m"
+    assertRegex "\ESC\\[1;.*Testmail" out
 
 testCanToggleHeaders ::
   TestTree
-testCanToggleHeaders = tmuxSession "user can toggle Headers" steps
-  where
-    steps =
-        [ ApplicationStep
-              "Enter"
-              "view mail"
-              False
-              "This is a test mail"
-              assertSubstrInOutput
-        , ApplicationStep
-              "h"
-              "show all headers"
-              False
-              "return-path"
-              assertSubstrInOutput
-        , ApplicationStep
-              "h"
-              "filtered headers"
-              False
-              "This is a test mail"
-              (\o _ ->
-                    assertBool "regex matches out" $
-                    o =~ ("Purebred.*\n.*from" :: String))]
+testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
+  \step -> do
+    startApplication
+    liftIO $ step "view mail"
+    out <- sendKeys "Enter" "This is a test mail"
+    assertSubstrInOutput "This is a test mail" out
+
+    liftIO $ step "toggle to show all headers"
+    out <- sendKeys "h" "return-path"
+    assertSubstrInOutput "return-path" out
+
+    liftIO $ step "toggle filtered headers"
+    out <- sendKeys "h" "This is a test mail"
+    assertRegex "Purebred.*\n.*from" out
 
 testUserViewsMailSuccessfully ::
   TestTree
-testUserViewsMailSuccessfully = tmuxSession "user can view mail" steps
-  where
-    steps =
-        [ ApplicationStep "" "shows tag" False "inbox" assertSubstrInOutput
-        , ApplicationStep
-              "Enter"
-              "view mail"
-              False
-              "This is a test mail"
-              assertSubstrInOutput]
+testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
+  \step -> do
+    startApplication
+    liftIO $ step "shows tag"
+    out <- capture
+    assertSubstrInOutput "inbox" out
+
+    liftIO $ step "view mail"
+    out <- sendKeys "Enter" "This is a test mail"
+    assertSubstrInOutput "This is a test mail" out
 
 testUserCanManipulateNMQuery ::
   TestTree
 testUserCanManipulateNMQuery =
-    tmuxSession
-        "manipulating notmuch search query results in empty index"
-        steps
-  where
-    steps =
-        [ ApplicationStep
-              ":"
-              "focus command"
-              False
-              "37;40mtag"
-              assertSubstrInOutput
-        , ApplicationStep
-              "C-u"
-              "delete all input"
-              False
-              "37;40m"
-              assertSubstrInOutput
-        , ApplicationStep
-              "tag:replied"
-              "enter new tag"
-              True
-              "tag:replied"
-              assertSubstrInOutput
-        , ApplicationStep
-              "Enter"
-              "apply"
-              False
-              "Item 0 of 1"
-              assertSubstrInOutput
-        , ApplicationStep
-              "Enter"
-              "view current mail"
-              False
-              "HOLY PUREBRED"
-              assertSubstrInOutput]
+    withTmuxSession
+        "manipulating notmuch search query results in empty index" $
+        \step -> do
+          startApplication
+          liftIO $ step "focus command"
+          out <- sendKeys ":" "37;40mtag"
+          assertSubstrInOutput "37;40mtag" out
+
+          liftIO $ step "delete all input"
+          out <- sendKeys "C-u" "37;40m"
+          assertSubstrInOutput "37;40m" out
+
+          liftIO $ step "enter new tag"
+          _ <- sendLiteralKeys "tag:replied"
+
+          liftIO $ step "apply"
+          out <- sendKeys "Enter" "Item 0 of 1"
+          assertSubstrInOutput "Item 0 of 1" out
+
+          liftIO $ step "view currently selected mail"
+          out <- sendKeys "Enter" "HOLY PUREBRED"
+          assertSubstrInOutput "HOLY PUREBRED" out
 
 testUserCanSwitchBackToIndex ::
   TestTree
 testUserCanSwitchBackToIndex =
-    tmuxSession "user can switch back to mail index during composition" steps
-  where
-    steps =
-        [ ApplicationStep
-              "m"
-              "start composition"
-              False
-              "From"
-              assertSubstrInOutput
-        , ApplicationStep
-              "testuser@foo.test\r"
-              "enter from email"
-              False
-              "To"
-              assertSubstrInOutput
-        , ApplicationStep
-              "user@to.test\r"
-              "enter to: email"
-              False
-              "Subject"
-              assertSubstrInOutput
-        , ApplicationStep
-              "test subject\r"
-              "enter subject"
-              False
-              "~"
-              assertSubstrInOutput
-        , ApplicationStep
-              "iThis is a test body"
-              "enter mail body"
-              False
-              "body"
-              assertSubstrInOutput
-        , ApplicationStep
-              "Escape"
-              "exit insert mode in vim"
-              False
-              "body"
-              assertSubstrInOutput
-        , ApplicationStep
-              ": x\r"
-              "exit vim"
-              False
-              "Attachments"
-              assertSubstrInOutput
-        , ApplicationStep
-              "Tab"
-              "switch back to index"
-              False
-              "Testmail"
-              assertSubstrInOutput
-        , ApplicationStep
-              "Tab"
-              "switch back to the compose editor"
-              False
-              "test subject"
-              assertSubstrInOutput]
+  withTmuxSession "user can switch back to mail index during composition" $
+        \step -> do
+            startApplication
+            liftIO $ step "start composition"
+            out <- sendKeys "m" "From"
+            assertSubstrInOutput "From" out
 
-data ApplicationStep = ApplicationStep
-    { asKeys :: String  -- ^ the actual commands to send
-    , asDescription :: String  -- ^ step definition
-    , asAsLiteralKey :: Bool  -- ^ disables key name lookup and sends literal input
-    , asExpected :: String  -- ^ wait until the terminal shows the expected string or timeout
-    , asAssertInOutput :: String -> String -> Assertion  -- ^ assert this against the snapshot
-    }
+            liftIO $ step "enter from email"
+            out <- sendKeys "testuser@foo.test\r" "To"
+            assertSubstrInOutput "To" out
 
-assertSubstrInOutput :: String -> String -> Assertion
-assertSubstrInOutput out substr = assertBool "in out" $ substr `isInfixOf` out
+            liftIO $ step "enter to: email"
+            out <- sendKeys  "user@to.test\r" "Subject"
+            assertSubstrInOutput "Subject" out
+
+            liftIO $ step "enter subject"
+            out <- sendKeys  "test subject\r" "~"
+            assertSubstrInOutput "~" out
+
+            liftIO $ step "enter mail body"
+            out <- sendKeys  "iThis is a test body" "body"
+            assertSubstrInOutput "body" out
+
+            liftIO $ step "exit insert mode in vim"
+            out <- sendKeys  "Escape" "body"
+            assertSubstrInOutput "body" out
+
+            liftIO $ step "exit vim"
+            out <- sendKeys  ": x\r" "Attachments"
+            assertSubstrInOutput "Attachments" out
+
+            liftIO $ step "switch back to index"
+            out <- sendKeys  "Tab" "Testmail"
+            assertSubstrInOutput "Testmail" out
+
+            liftIO $ step "switch back to the compose editor"
+            out <- sendKeys  "Tab" "test subject"
+            assertSubstrInOutput "test subject" out
+
+type Env = (String, String, String)
+
+assertSubstrInOutput :: String -> String -> ReaderT Env IO ()
+assertSubstrInOutput substr out = liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
+
+assertRegex :: String -> String -> ReaderT Env IO ()
+assertRegex regex out = liftIO $ assertBool (regex <> " does not match out\n\n" <> out) $ out =~ (regex :: String)
 
 defaultSessionName :: String
 defaultSessionName = "purebredtest"
 
-tearDown :: (String, String) -> IO ()
-tearDown (testdir, _)= do
+tearDown :: (String, String, String) -> IO ()
+tearDown (testdir, _, _)= do
   removeDirectoryRecursive testdir
   cleanUpTmuxSession defaultSessionName
 
-setUp :: IO (String, String)
+setUp :: IO (String, String, String)
 setUp = do
-  (testdir, testmdir) <- setUpTmuxSession defaultSessionName >> setUpTempMaildir
-  startApplication defaultSessionName testmdir
-  pure (testdir, testmdir)
+  let sessionname = defaultSessionName
+  (testdir, testmdir) <- setUpTmuxSession sessionname >> setUpTempMaildir
+  pure (testdir, testmdir, sessionname)
 
 setUpTempMaildir :: IO (String, String)
 setUpTempMaildir = do
@@ -290,70 +230,83 @@ cleanUpTmuxSession sessionname = do
         (callProcess "tmux" ["kill-session", "-t", sessionname])
         (\e ->
               do let err = show (e :: IOException)
-                 hPutStr stderr ("Exception when killing session: " ++ err)
+                 hPutStr stderr ("Exception when killing session: " <> err)
                  pure ())
 
 
 -- | Run all application steps in a session defined by session name.
-tmuxSession :: String -> [ApplicationStep] -> TestTree
-tmuxSession tcname xs =
-  withResource setUp tearDown $
-  \_ -> testCaseSteps tcname $ \step -> runSteps step xs
+withTmuxSession :: TestName -> ((String -> IO ()) -> ReaderT Env IO ()) -> TestTree
+withTmuxSession tcname testfx =
+    withResource setUp tearDown $
+      \env -> testCaseSteps tcname $ \stepfx -> env >>= runReaderT (testfx stepfx)
 
-runSteps :: (String -> IO ()) -> [ApplicationStep] -> IO ()
-runSteps stepfx steps =
-    mapM_
-        (\a ->
-              do stepfx (asDescription a)
-                 out <- performStep "purebredtest" a
-                 d <- lookupEnv "DEBUG"
-                 when (isJust d) $ hPutStr stderr ("\n\n" ++ asDescription a ++ "\n\n" ++ out)
-                 ((asAssertInOutput a) out (asExpected a)))
-        steps
+sendKeys :: String -> String -> ReaderT Env IO (String)
+sendKeys keys expect = do
+    liftIO $ callProcess "tmux" $ communicateSessionArgs keys False
+    waitForString expect defaultCountdown
 
-performStep :: String -> ApplicationStep -> IO (String)
-performStep sessionname (ApplicationStep keys _ asLiteral expect _) = do
-    callProcess "tmux" $ communicateSessionArgs keys asLiteral
-    baton <- newEmptyMVar
-    out <- waitForString baton sessionname expect
-    _ <- takeMVar baton
-    pure out
+sendLiteralKeys :: String -> ReaderT Env IO (String)
+sendLiteralKeys keys = do
+    liftIO $ callProcess "tmux" $ communicateSessionArgs keys True
+    waitForString keys defaultCountdown
+
+capture :: ReaderT Env IO (String)
+capture = do
+  sessionname <- getSessionName
+  liftIO $ readProcess "tmux" ["capture-pane", "-e", "-p", "-t", sessionname] []
+
+getSessionName :: ReaderT Env IO (String)
+getSessionName = view (_3 . ask)
+
+getTestMaildir :: ReaderT Env IO (String)
+getTestMaildir = view (_2 . ask)
 
 holdOffTime :: Int
 holdOffTime = 10^6
 
+-- | convenience function to print captured output to STDERR
+debugOutput :: String -> IO ()
+debugOutput out = do
+  d <- lookupEnv "DEBUG"
+  when (isJust d) $ hPutStr stderr ("\n\n" <> out)
+
 -- | wait for the application to render a new interface which we determine with
---   a given substring. If the expected substring is not in the captured pane,
---   wait a bit and try again.
-waitForString :: MVar String -> String -> String -> IO (String)
-waitForString baton sessionname substr = do
-    out <- readProcess "tmux" ["capture-pane", "-e", "-p", "-t", sessionname] []
-    if substr `isInfixOf` out
-        then putMVar baton "ready" >> pure out
-        else do
-            threadDelay holdOffTime
-            waitForString baton sessionname substr
+--   a given substring. If we exceed the number of tries return with the last
+--   captured output, but indicate an error by setting the baton to 0
+waitForString :: String -> Int -> ReaderT Env IO (String)
+waitForString substr n = do
+  out <- capture >>= checkPane
+  liftIO $ assertBool ("Wait time exceeded. Expected: '"
+                       <> substr
+                       <> "' last screen shot:\n\n "
+                       <> out) (substr `isInfixOf` out)
+  pure out
+  where
+    checkPane :: String -> ReaderT Env IO String
+    checkPane out
+      | substr `isInfixOf` out = pure out
+      | n <= 0 = pure out
+      | otherwise = do
+          liftIO $ threadDelay holdOffTime
+          waitForString substr (n - 1)
+
+defaultCountdown :: Int
+defaultCountdown = 5
 
 -- | start the application
 -- Note: this is currently defined as an additional test step for no good
 -- reason.
-startApplication :: String -> String -> IO ()
-startApplication sessionname testmdir =
-    void $
-    performStep
-        sessionname
-        (ApplicationStep
-             ("purebred --database " <> testmdir <> "\r")
-             "start application"
-             False
-             "Purebred: Item"
-             assertSubstrInOutput)
+startApplication :: ReaderT Env IO ()
+startApplication = do
+  testmdir <- getTestMaildir
+  liftIO $ callProcess "tmux" $ communicateSessionArgs ("purebred --database " <> testmdir <> "\r") False
+  void $ waitForString "Purebred: Item" defaultCountdown
 
 communicateSessionArgs :: String -> Bool -> [String]
 communicateSessionArgs keys asLiteral =
-    let base = words $ "send-keys -t " ++ defaultSessionName
+    let base = words $ "send-keys -t " <> defaultSessionName
         postfix =
             if asLiteral
                 then ["-l"]
                 else []
-    in base ++ postfix ++ [keys]
+    in base <> postfix <> [keys]
