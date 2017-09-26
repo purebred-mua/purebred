@@ -13,6 +13,8 @@ import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
 
+{-# ANN module "HLint: ignore Avoid lambda" #-}
+
 
 -- | The global application mode
 data Mode
@@ -148,7 +150,7 @@ confComposeView :: Getter (Configuration a b) ComposeViewSettings
 confComposeView = to (\(Configuration _ _ _ _ _ h) -> h)
 
 
-data ComposeViewSettings = ComposeViewSettings
+newtype ComposeViewSettings = ComposeViewSettings
     { _cvKeybindings :: [Keybinding]
     }
 
@@ -169,7 +171,7 @@ ivSearchKeybindings f (IndexViewSettings a b) = fmap (\b' -> IndexViewSettings a
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
     , _mvPreferedContentType :: T.Text
-    , _mvHeadersToShow       :: (CI.CI T.Text -> Bool)
+    , _mvHeadersToShow       :: CI.CI T.Text -> Bool
     , _mvKeybindings         :: [Keybinding]
     }
 

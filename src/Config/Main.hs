@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module Config.Main where
 
 import qualified Brick.AttrMap as A
