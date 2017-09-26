@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module UI.Mail.Main where
 
 import qualified Brick.Main as M
@@ -35,10 +36,10 @@ import Config.Main (headerKeyAttr, headerValueAttr)
 -- for each key press. This might have to change in the future.
 drawMail :: AppState -> [Widget Name]
 drawMail s =
-    [ (vLimit (indexViewRows s) (renderMailList s)) <=>
+    [ vLimit (indexViewRows s) (renderMailList s) <=>
       statusbar s <=>
-      (viewport ScrollingMailView Vertical $
-       (mailView s (view (asMailView . mvMail) s)))]
+      viewport ScrollingMailView Vertical (mailView s (view (asMailView . mvMail) s))
+    ]
 
 -- | TODO: See #19
 mailView :: AppState -> Maybe ParsedMail -> Widget Name
@@ -67,17 +68,17 @@ mimeContentToView s (MIMEValue _ _ (Multi xs) _ _) =
                       preferContentType s)
                 xs
         picked =
-            if length mval == 0
-                then head xs
+            if null mval
+                then head xs  -- FIXME non-total
                 else head mval
     in mimeContentToView s picked
 
 -- | The size limit of the index list
 indexViewRows :: AppState -> Int
-indexViewRows s = view (asConfig . confMailView . mvIndexRows) s
+indexViewRows = view (asConfig . confMailView . mvIndexRows)
 
 preferContentType :: AppState -> T.Text
-preferContentType s = view (asConfig . confMailView . mvPreferredContentType) s
+preferContentType = view (asConfig . confMailView . mvPreferredContentType)
 
 headerFilter :: AppState -> (CI.CI T.Text -> Bool)
 headerFilter s =
@@ -90,12 +91,11 @@ headerFilter s =
 -- | The mail view shows a shortened list of mails. Forward all key strokes to
 -- the list of mails by default.
 mailEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
-mailEvent s ev =
+mailEvent s =
     handleEvent
         (view (asConfig . confMailView . mvKeybindings) s)
         displayMailDefault
         s
-        ev
 
 displayMailDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
 displayMailDefault s ev = do

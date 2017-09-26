@@ -1,5 +1,4 @@
 -- | The main application module
-{-# LANGUAGE OverloadedStrings #-}
 module UI.App where
 
 import qualified Brick.Main as M

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module UI.Status.Main where
 
-import Types (NotmuchMail)
 import Brick.Types (Widget)
 import Brick.Widgets.Core (str, withAttr, (<+>))
 import qualified Brick.Widgets.List  as L
@@ -10,8 +10,7 @@ import Data.Maybe (fromMaybe)
 import Data.Vector (length)
 import Prelude hiding (length)
 import UI.Draw.Main (fillLine)
-import Types
-       (AppState, Name, asError, asMailIndex, miListOfMails)
+import Types (NotmuchMail, AppState, Name, asError, asMailIndex, miListOfMails)
 import Config.Main (statusbarAttr, statusbarErrorAttr)
 
 statusbar :: AppState -> Widget Name

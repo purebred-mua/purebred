@@ -7,9 +7,12 @@ import Control.Lens.Getter (view)
 import qualified Graphics.Vty        as V
 import Types
 
+{-# ANN module "HLint: ignore Avoid lambda" #-}
+
 displayMailKeybindings :: [Keybinding]
 displayMailKeybindings =
-  [ Keybinding "Return to list of mails" (V.EvKey V.KEsc []) (\s -> M.continue $ set asAppMode Main $ s)
+  [ Keybinding "Return to list of mails"
+    (V.EvKey V.KEsc []) (\s -> M.continue $ set asAppMode Main s)
   , Keybinding "Scroll e-mail up" (V.EvKey V.KBS []) (\s -> scrollMailViewPage s T.Up)
   , Keybinding "Scroll e-mail down" (V.EvKey (V.KChar ' ') []) (\s -> scrollMailViewPage s T.Down)
   , Keybinding "toggle between filtered and all Headers" (V.EvKey (V.KChar 'h') []) (M.continue . toggleHeaders)

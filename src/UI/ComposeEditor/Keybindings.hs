@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module UI.ComposeEditor.Keybindings where
 
 import qualified Brick.Main             as M
@@ -26,7 +27,8 @@ composeEditorKeybindings :: [Keybinding]
 composeEditorKeybindings =
     [ Keybinding "Toggle index view" (V.EvKey (V.KChar '\t') []) cancelToMain
     , Keybinding "Send e-mail" (V.EvKey (V.KChar 'y') []) sendMail
-    , Keybinding "Cancel compose" (V.EvKey V.KEsc []) (\s -> M.continue $ resetCompose s)]
+    , Keybinding "Cancel compose" (V.EvKey V.KEsc []) (M.continue . resetCompose)
+    ]
 
 sendMail :: AppState -> T.EventM Name (T.Next AppState)
 sendMail s = do

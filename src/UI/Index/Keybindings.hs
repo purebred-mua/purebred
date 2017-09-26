@@ -1,17 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module UI.Index.Keybindings where
 
 import Brick.Main (continue, halt)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Data.Text.Zipper (gotoEOL)
 import Data.Vector (Vector)
 import Control.Lens.Getter (view)
 import Control.Lens.Lens ((&))
 import Control.Lens.Setter ((?~), set, over)
 import Control.Monad.IO.Class (liftIO)
-import Data.Text.Zipper (currentLine)
+import Control.Monad ((>=>))
+import Data.Text.Zipper (currentLine, gotoEOL)
 import Data.Text (Text)
 import qualified Graphics.Vty as V
 import Storage.Notmuch (getMessages, addTag, removeTag, setNotmuchMailTags)
@@ -33,8 +34,8 @@ indexKeybindings =
     , Keybinding "Switch between editor and main" (V.EvKey (V.KChar '\t') []) toggleComposeEditorAndMain
     , Keybinding "compose new mail" (V.EvKey (V.KChar 'm') []) composeMail
     , Keybinding "reply to mail" (V.EvKey (V.KChar 'r') []) replyMail
-    , Keybinding "toggle unread" (V.EvKey (V.KChar 't') []) (
-        \s -> continue =<< (liftIO $ updateReadState addTag s))
+    , Keybinding "toggle unread" (V.EvKey (V.KChar 't') [])
+      (liftIO . updateReadState addTag >=> continue)
     ]
 
 indexsearchKeybindings :: [Keybinding]
@@ -107,7 +108,8 @@ replyMail s = case L.listSelectedElement (view (asMailIndex . miListOfMails) s) 
       Right pmail -> do
         let s' = set (asCompose . cTo) (E.editor GatherHeadersTo Nothing $ getFrom pmail) s &
                  set (asCompose . cFrom) (E.editor GatherHeadersFrom Nothing $ getTo pmail) &
-                 set (asCompose . cSubject) (E.editor GatherHeadersSubject Nothing $ ("Re: " <> getSubject pmail)) &
+                 set (asCompose . cSubject)
+                   (E.editor GatherHeadersSubject Nothing ("Re: " <> getSubject pmail)) &
                  set (asCompose . cFocus) AskFrom &
                  set asAppMode GatherHeaders
         continue s'
@@ -131,6 +133,6 @@ applySearchTerms s = do
 reloadListOfMails :: AppState -> Either String (Vector NotmuchMail) -> AppState
 reloadListOfMails s (Left e) =  s & asError ?~ e
 reloadListOfMails s (Right vec) =
-  let listWidget = (L.list ListOfMails vec 1)
+  let listWidget = L.list ListOfMails vec 1
   in set (asMailIndex . miListOfMails) listWidget s & set asAppMode Main &
      set (asMailIndex . miMode) BrowseMail

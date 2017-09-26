@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | module to integrate with a mail parser. This is needed to actually view the
 -- entire mail and it's attachments.
-{-# LANGUAGE OverloadedStrings #-}
 module Storage.ParsedMail where
 
 import Codec.MIME.Parse (parseMIMEMessage)

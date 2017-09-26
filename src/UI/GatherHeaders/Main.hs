@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
+
 module UI.GatherHeaders.Main where
 
 import qualified Brick.Main                   as M
@@ -81,7 +82,7 @@ nextFocus s =
         AskTo -> set (asCompose . cFocus) AskSubject s
         AskSubject -> set (asCompose . cFocus) AskTo s  -- no-op, since we spawn the editor before we draw the widget
 
-invokeEditor :: AppState -> IO (AppState)
+invokeEditor :: AppState -> IO AppState
 invokeEditor s = do
   let editor = view (asConfig . confEditor) s
   tmpfile <- emptySystemTempFile "purebred.tmp"

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
+
 module UI.ComposeEditor.Main where
 
 import Brick.Main (continue)
@@ -31,8 +32,8 @@ drawComposeEditor s = [ui <=> attachmentsEditor s]
 drawTableRows :: AppState -> ComposeState -> Widget Name -> Widget Name
 drawTableRows s cs w =
     w <=>
-    ((hLimit 15 $ padRight Max (getLabelForComposeState cs)) <+>
-     E.renderEditor editorDrawContent False (view (asCompose . (focusedLens cs)) s))
+    hLimit 15 (padRight Max (getLabelForComposeState cs)) <+>
+     E.renderEditor editorDrawContent False (view (asCompose . focusedLens cs) s)
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
@@ -46,7 +47,7 @@ attachmentsEditor s =
                       str $ show i)
                 False
                 aList
-    in (padTop (Pad 1) $ attachmentsStatus) <=> attachmentsList
+    in padTop (Pad 1) attachmentsStatus <=> attachmentsList
 
 focusedLens :: ComposeState -> Lens' Compose (E.Editor T.Text Name)
 focusedLens AskFrom = cFrom
@@ -64,10 +65,9 @@ getLabelForComposeState AskSubject = txt "Subject:"
 composeEditor :: AppState
               -> BrickEvent Name e
               -> EventM Name (Next AppState)
-composeEditor s e =
+composeEditor s =
     handleEvent
         (view (asConfig . confComposeView . cvKeybindings) s)
         (\s' _ ->
               continue s')
         s
-        e

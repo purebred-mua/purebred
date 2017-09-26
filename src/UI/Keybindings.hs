@@ -21,7 +21,7 @@ handleEvent
     -> T.EventM Name (T.Next AppState)
 handleEvent kbs def s (T.VtyEvent ev) =
     case lookupKeybinding ev kbs of
-        Just kb -> view (kbAction) kb s
+        Just kb -> view kbAction kb s
         Nothing -> def s ev
 handleEvent _ _ s _ = M.continue s
 

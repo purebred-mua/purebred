@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module UI.Index.Main where
 
 import qualified Brick.Main as M
@@ -7,7 +8,6 @@ import qualified Brick.Types as T
 import Brick.AttrMap (AttrName)
 import Brick.Widgets.Core
        (hLimit, padLeft, txt, vBox, vLimit, withAttr, (<+>))
-import Data.Text (unwords)
 import Prelude hiding (unwords)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
@@ -17,7 +17,7 @@ import Control.Lens.Setter (set)
 import Graphics.Vty.Input.Events (Event)
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Format (formatTime, defaultTimeLocale)
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unwords)
 import UI.Draw.Main (editorDrawContent)
 import UI.Keybindings (handleEvent)
 import UI.Status.Main (statusbar)
@@ -30,7 +30,7 @@ import Config.Main
 drawMain :: AppState -> [Widget Name]
 drawMain s = [ui]
   where
-    editorFocus = (view (asMailIndex . miMode) s == SearchMail)
+    editorFocus = view (asMailIndex . miMode) s == SearchMail
     inputBox = E.renderEditor editorDrawContent editorFocus (view (asMailIndex . miSearchEditor) s)
     ui = vBox [renderMailList s, statusbar s, vLimit 1 inputBox]
 
@@ -42,11 +42,11 @@ listDrawElement :: AppState -> Bool -> NotmuchMail -> Widget Name
 listDrawElement s sel a =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = mailIsNew (view nmNewTag settings) a
-        widget = padLeft (Pad 1) $ (hLimit 15 (txt $ view mailFrom a)) <+>
-                 (padLeft (Pad 1) $ (txt $ formatDate (view mailDate a))) <+>
+        widget = padLeft (Pad 1) $ hLimit 15 (txt $ view mailFrom a) <+>
+                 padLeft (Pad 1) (txt $ formatDate (view mailDate a)) <+>
                  padLeft (Pad 2) (txt (view mailSubject a)) <+>
-                 (padLeft Max $ renderMailTagsWidget a (view nmNewTag settings))
-    in (withAttr (getListAttr isNewMail sel) widget)
+                 padLeft Max (renderMailTagsWidget a (view nmNewTag settings))
+    in withAttr (getListAttr isNewMail sel) widget
 
 getListAttr :: Bool  -- ^ new?
             -> Bool  -- ^ selected?
@@ -69,7 +69,7 @@ renderMailTagsWidget m ignored =
 -- list, the other is to allow the user to easily change the list.
 mainEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 mainEvent s e =
-    case (view (asMailIndex . miMode) s) of
+    case view (asMailIndex . miMode) s of
         BrowseMail ->
             handleEvent
                 (view (asConfig . confIndexView . ivKeybindings) s)

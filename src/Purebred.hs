@@ -17,21 +17,19 @@ module Purebred (
 
 import UI.App (theApp, initialState)
 
-import Control.Monad (unless)
 import Control.Exception.Base (SomeException(..), IOException, catch)
-import Control.Monad (void)
+import Control.Monad (unless, void)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import Data.Semigroup ((<>))
 import System.Process
        (createProcess, proc, runProcess, waitForProcess, ProcessHandle)
 import System.Info (arch, os)
-import System.Exit (ExitCode(..))
+import System.Exit (ExitCode(..), exitWith)
 import System.Environment (getProgName, lookupEnv, getArgs)
 import System.Environment.XDG.BaseDir (getUserConfigDir)
 import System.Directory (getModificationTime, getCurrentDirectory)
 import System.FilePath.Posix ((</>))
-import System.Exit (exitWith)
 import System.IO (hPrint, stderr, hFlush)
 import Data.Maybe (fromMaybe, isJust)
 
@@ -48,24 +46,23 @@ import Control.Lens.Lens ((&))
 import Control.Lens.Setter (over, set)
 import Control.Lens.Getter (view)
 
-data AppConfig = AppConfig
+newtype AppConfig = AppConfig
     { databaseFilepath :: Maybe String
     }
 
 appconfig :: Parser AppConfig
 appconfig =
-    AppConfig <$>
-    (optional $
-     Builder.option
+    AppConfig <$> optional
+     ( Builder.option
          Builder.str
          (long "database" <> metavar "DATABASE" <>
-          help "Filepath to notmuch database"))
+          help "Filepath to notmuch database") )
 
 purebred :: UserConfiguration -> IO ()
 purebred config = do
     appconf <- execParser opts
     let
-      setDB = (maybe id (const . pure) (databaseFilepath appconf))
+      setDB = maybe id (const . pure) (databaseFilepath appconf)
       cfg' = over (confNotmuch . nmDatabase) setDB config
     buildLaunch `catch`
         \e -> hPrint stderr (e :: IOException) >> hFlush stderr

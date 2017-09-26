@@ -1,12 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
+
 -- | module for integrating notmuch within purebred
 module Storage.Notmuch where
-
-import Types (NotmuchMail(..))
-import Notmuch
-import Notmuch.Search
 
 import Control.Monad ((>=>))
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -22,9 +18,12 @@ import System.Process (readProcess)
 import Control.Exception (bracket)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Types (NotmuchSettings, nmDatabase, mailId, mailTags)
+import Types (NotmuchMail(..), NotmuchSettings, nmDatabase, mailId, mailTags)
 import Control.Lens.Getter (view)
 import Control.Lens.Setter (over)
+
+import Notmuch
+import Notmuch.Search
 
 
 -- | creates a vector of parsed mails from a not much search
@@ -94,7 +93,7 @@ messageToMail m = do
       pure tgs' <*>
       messageId m
 
-getDatabasePath :: IO (FilePath)
+getDatabasePath :: IO FilePath
 getDatabasePath = getFromNotmuchConfig "database.path"
 
 getFromNotmuchConfig :: String -> IO String
@@ -105,4 +104,4 @@ getFromNotmuchConfig key = do
   pure $ filter (/= '\n') stdout
 
 mailIsNew :: T.Text -> NotmuchMail -> Bool
-mailIsNew ignoredTag m = ignoredTag `elem` (view mailTags m)
+mailIsNew ignoredTag m = ignoredTag `elem` view mailTags m
