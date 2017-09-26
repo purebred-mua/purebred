@@ -38,8 +38,8 @@ resolver: lts-8.23
 packages:
 - '.'
 - location:
-    git: https://github.com/frasertweedale/hs-notmuch.git
-    commit: 5bc75a6344163899d09153bb9e08bc620ee343ee
+    git: https://github.com/purebred-mua/hs-notmuch.git
+    commit: 80018d8575b97f622cfcbfae509b1016e1b1bba2
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
