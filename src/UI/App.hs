@@ -7,6 +7,9 @@ import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
+import Control.Monad.Except (runExceptT)
+import System.Exit (die)
+
 import Storage.Notmuch (getMessages)
 import UI.ComposeEditor.Main (composeEditor, drawComposeEditor)
 import UI.GatherHeaders.Main
@@ -35,17 +38,20 @@ appEvent s e =
 initialState :: InternalConfiguration -> IO AppState
 initialState conf = do
     let searchterms = view (confNotmuch . nmSearch) conf
-    vec <- either error pure =<< getMessages searchterms (view confNotmuch conf)
-    let mi =
-            MailIndex
+    r <- runExceptT $ getMessages searchterms (view confNotmuch conf)
+    case r of
+      Left e -> die $ show e  -- TODO don't crash?
+      Right vec ->
+        let
+          mi = MailIndex
                 (L.list ListOfMails vec 1)
                 (E.editor
                      EditorInput
                      Nothing
                      searchterms)
                 BrowseMail
-    let mv = MailView Nothing Filtered
-    return $ AppState conf mi mv initialCompose Main Nothing
+          mv = MailView Nothing Filtered
+        in pure $ AppState conf mi mv initialCompose Main Nothing
 
 theApp :: AppState -> M.App AppState e Name
 theApp s =

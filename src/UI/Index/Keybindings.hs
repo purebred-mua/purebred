@@ -10,6 +10,7 @@ import Data.Vector (Vector)
 import Control.Lens.Getter (view)
 import Control.Lens.Lens ((&))
 import Control.Lens.Setter ((?~), set, over)
+import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad ((>=>))
 import Data.Text.Zipper (currentLine, gotoEOL)
@@ -19,6 +20,7 @@ import Storage.Notmuch (getMessages, addTag, removeTag, setNotmuchMailTags)
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Data.Monoid ((<>))
+import Error
 
 -- | Default Keybindings
 indexKeybindings :: [Keybinding]
@@ -60,8 +62,8 @@ updateReadState op s =
         Just (_,m) ->
             let newTag = view (asConfig . confNotmuch . nmNewTag) s
                 dbpath = view (asConfig . confNotmuch . nmDatabase) s
-            in either (\err -> set asError (Just err) s) (updateMailInList s)
-               <$> setNotmuchMailTags dbpath (op m newTag)
+            in either (`setError` s) (updateMailInList s)
+               <$> runExceptT (setNotmuchMailTags dbpath (op m newTag))
         Nothing -> pure $ s & asError ?~ "No mail selected to update tags"
 
 updateMailInList :: AppState -> NotmuchMail -> AppState
@@ -124,15 +126,17 @@ toggleComposeEditorAndMain s =
 cancelSearch  :: AppState -> T.EventM Name (T.Next AppState)
 cancelSearch s = continue $ set (asMailIndex . miMode) BrowseMail s
 
+setError :: Error -> AppState -> AppState
+setError = set asError . Just . show
+
 applySearchTerms :: AppState -> T.EventM Name (T.Next AppState)
 applySearchTerms s = do
-     result <- liftIO $ getMessages searchterms (view (asConfig . confNotmuch) s)
-     continue $ reloadListOfMails s result
+     result <- runExceptT $ getMessages searchterms (view (asConfig . confNotmuch) s)
+     continue $ either (`setError` s) (reloadListOfMails s) result
      where searchterms = currentLine $ view (asMailIndex . miSearchEditor . E.editContentsL) s
 
-reloadListOfMails :: AppState -> Either String (Vector NotmuchMail) -> AppState
-reloadListOfMails s (Left e) =  s & asError ?~ e
-reloadListOfMails s (Right vec) =
+reloadListOfMails :: AppState -> Vector NotmuchMail -> AppState
+reloadListOfMails s vec =
   let listWidget = L.list ListOfMails vec 1
   in set (asMailIndex . miListOfMails) listWidget s & set asAppMode Main &
      set (asMailIndex . miMode) BrowseMail
