@@ -4,18 +4,13 @@
 -- | module for integrating notmuch within purebred
 module Storage.Notmuch where
 
-import Control.Monad ((>=>))
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Except (MonadError, runExceptT, throwError)
-import Data.Foldable (traverse_)
-import Data.Functor (($>))
+import Control.Monad.Except (MonadError, throwError)
 import Data.Traversable (traverse)
 import Data.List (union)
 import Data.Maybe (fromMaybe)
-import Data.Bifunctor (first)
 import qualified Data.Vector as Vec
 import System.Process (readProcess)
-import Control.Exception (bracket)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Types (NotmuchMail(..), NotmuchSettings, nmDatabase, mailId, mailTags)
@@ -24,48 +19,45 @@ import Control.Lens.Setter (over)
 
 import Notmuch
 import Notmuch.Search
+import Notmuch.Util (bracketT)
+
+import Error
 
 
 -- | creates a vector of parsed mails from a not much search
 -- Note, that at this point in time only free form searches are supported. Also,
 -- we filter out the tag which we use to mark mails as new mails
-getMessages :: T.Text
-            -> NotmuchSettings FilePath
-            -> IO (Either String (Vec.Vector NotmuchMail))
+getMessages
+  :: (MonadError Error m, MonadIO m)
+  => T.Text
+  -> NotmuchSettings FilePath
+  -> m (Vec.Vector NotmuchMail)
 getMessages s settings =
-  first show <$>
-  bracket (runExceptT (databaseOpenReadOnly (view nmDatabase settings)))
-          (runExceptT . traverse_ databaseDestroy)
-          (runExceptT . (either throwError pure >=> go))
+  bracketT (databaseOpenReadOnly (view nmDatabase settings)) databaseDestroy go
   where go db = do
               msgs <- query db (FreeForm $ T.unpack s) >>= messages
               mails <- liftIO $ mapM messageToMail msgs
               pure $ Vec.fromList mails
 
 setNotmuchMailTags
-    :: FilePath
-    -> NotmuchMail
-    -> IO (Either String NotmuchMail)
-setNotmuchMailTags dbpath m =
-  case mailTagsToNotmuchTags m of
-    Nothing -> pure $ Left "Tags are corrupt"
-    Just nmtags ->
-      bracket (runExceptT (databaseOpen dbpath))
-              (runExceptT . traverse_ databaseDestroy)
-              (runExceptT . (either (throwError . show) pure >=> tagsToMessage nmtags m))
+  :: (MonadError Error m, MonadIO m)
+  => FilePath
+  -> NotmuchMail
+  -> m NotmuchMail
+setNotmuchMailTags dbpath m = do
+  nmtags <- mailTagsToNotmuchTags m
+  bracketT (databaseOpen dbpath) databaseDestroy (tagsToMessage nmtags m)
+  pure m
+
 
 tagsToMessage
-  :: (MonadError String m, MonadIO m)
-  => [Tag] -> NotmuchMail -> Database RW -> m NotmuchMail
+  :: (MonadError Error m, MonadIO m)
+  => [Tag] -> NotmuchMail -> Database RW -> m ()
 tagsToMessage xs m db =
-  -- This is nasty.  We have to run the transformer so we can change the
-  -- error type.  Instead, we should update hs-notmuch to abstract over
-  -- an "AsNotmuchError" typeclass, then create our own error sum type
-  -- with an instance of it.
-  runExceptT (
-    findMessage db (view mailId m)
-    >>= traverse (\msg -> messageSetTags xs msg $> m)
-  ) >>= either (throwError . show) (maybe (throwError "boop") pure)
+  let msgId = view mailId m
+  in
+    findMessage db msgId
+    >>= maybe (throwError (MessageNotFound msgId)) (messageSetTags xs)
 
 addTag :: NotmuchMail -> T.Text -> NotmuchMail
 addTag m t = over mailTags (`union` [t]) m
@@ -73,10 +65,9 @@ addTag m t = over mailTags (`union` [t]) m
 removeTag :: NotmuchMail -> T.Text -> NotmuchMail
 removeTag m t = over mailTags (filter (/= t)) m
 
-mailTagsToNotmuchTags :: NotmuchMail -> Maybe [Tag]
-mailTagsToNotmuchTags m =
-    let xs = view mailTags m
-    in traverse id (mkTag . encodeUtf8 <$> xs)
+mailTagsToNotmuchTags :: MonadError Error m => NotmuchMail -> m [Tag]
+mailTagsToNotmuchTags = traverse (mkTag' . encodeUtf8) . view mailTags
+  where mkTag' s = maybe (throwError (InvalidTag s)) pure $ mkTag s
 
 messageToMail
     :: HasTags (Message n a)
