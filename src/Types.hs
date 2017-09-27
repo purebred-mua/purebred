@@ -13,6 +13,8 @@ import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
 
+import Error
+
 {-# ANN module "HLint: ignore Avoid lambda" #-}
 
 
@@ -194,7 +196,7 @@ data AppState = AppState
     , _asMailView  :: MailView
     , _asCompose   :: Compose  -- ^ state to keep when user creates a new mail
     , _asAppMode   :: Mode
-    , _asError     :: Maybe String -- ^ in case of errors, show this error message
+    , _asError     :: Maybe Error -- ^ in case of errors, show this error message
     }
 
 asConfig :: Lens' AppState InternalConfiguration
@@ -212,7 +214,7 @@ asCompose f (AppState a b c d e g) = fmap (\d' -> AppState a b c d' e g) (f d)
 asAppMode :: Lens' AppState Mode
 asAppMode f (AppState a b c d e g) = fmap (\e' -> AppState a b c d e' g) (f e)
 
-asError :: Lens' AppState (Maybe String)
+asError :: Lens' AppState (Maybe Error)
 asError f (AppState a b c d e g) = fmap (\g' -> AppState a b c d e g') (f g)
 
 type KBAction = AppState -> EventM Name (Next AppState)

@@ -16,7 +16,7 @@ import Config.Main (statusbarAttr, statusbarErrorAttr)
 statusbar :: AppState -> Widget Name
 statusbar s =
     case view asError s of
-        Just e -> withAttr statusbarErrorAttr $ str e
+        Just e -> withAttr statusbarErrorAttr $ str (show e)
         Nothing ->
             let l = view (asMailIndex . miListOfMails) s
                 total = str $ show $ length $ view L.listElementsL l

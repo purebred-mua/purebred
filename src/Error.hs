@@ -29,6 +29,7 @@ data Error
   = NotmuchError Status
   | InvalidTag B.ByteString
   | MessageNotFound B.ByteString -- message id
+  | GenericError String
   deriving (Show)
 
 instance AsNotmuchError Error where
