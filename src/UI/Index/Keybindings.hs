@@ -7,9 +7,7 @@ import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Data.Vector (Vector)
-import Control.Lens.Getter (view)
-import Control.Lens.Lens ((&))
-import Control.Lens.Setter ((?~), set, over)
+import Control.Lens (over, set, view)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad ((>=>))
@@ -47,9 +45,9 @@ indexsearchKeybindings =
     ]
 
 focusSearch :: AppState -> T.EventM Name (T.Next AppState)
-focusSearch s = continue $ s
-                & set (asMailIndex . miMode) SearchMail
-                & over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+focusSearch = continue
+                . set (asMailIndex . miMode) SearchMail
+                . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
 
 displayMail :: AppState -> T.EventM Name (T.Next AppState)
 displayMail s = do
@@ -58,31 +56,27 @@ displayMail s = do
 
 updateReadState :: (NotmuchMail -> Text -> NotmuchMail) -> AppState -> IO AppState
 updateReadState op s =
-    case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
+    ($ s) <$> case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
         Just (_,m) ->
             let newTag = view (asConfig . confNotmuch . nmNewTag) s
                 dbpath = view (asConfig . confNotmuch . nmDatabase) s
-            in either (`setError` s) (updateMailInList s)
+            in either setError updateMailInList
                <$> runExceptT (setNotmuchMailTags dbpath (op m newTag))
-        Nothing -> pure $ s & asError ?~ "No mail selected to update tags"
+        Nothing -> pure $ setError (GenericError "No mail selected to update tags")
 
-updateMailInList :: AppState -> NotmuchMail -> AppState
-updateMailInList s m =
+updateMailInList :: NotmuchMail -> AppState -> AppState
+updateMailInList m s =
     let l = L.listModify (const m) (view (asMailIndex . miListOfMails) s)
     in set (asMailIndex . miListOfMails) l s
 
 updateStateWithParsedMail :: AppState -> IO AppState
-updateStateWithParsedMail s =
+updateStateWithParsedMail s = ($ s) <$>
     case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
-        Just (_,m) -> do
-            parsed <- parseMail m
-            case parsed of
-                Left e -> pure $ s & asError ?~ e & set asAppMode Main
-                Right pmail ->
-                    pure $
-                    set (asMailView . mvMail) (Just pmail) s &
-                    set asAppMode ViewMail
-        Nothing -> pure s
+        Just (_,m) -> either
+            (\e -> setError (GenericError e) . set asAppMode Main)
+            (\pmail -> set (asMailView . mvMail) (Just pmail) . set asAppMode ViewMail)
+            <$> liftIO (parseMail m)
+        Nothing -> pure id
 
 mailIndexEvent :: AppState -> (L.List Name NotmuchMail -> L.List Name NotmuchMail) -> T.EventM n (T.Next AppState)
 mailIndexEvent s fx =
@@ -102,20 +96,20 @@ composeMail :: AppState -> T.EventM Name (T.Next AppState)
 composeMail s = continue $ set asAppMode GatherHeaders s
 
 replyMail :: AppState -> T.EventM Name (T.Next AppState)
-replyMail s = case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
-  Just (_, m) -> do
-    parsed <- liftIO $ parseMail m
-    case parsed of
-      Left e -> continue $ s & asError ?~ e & set asAppMode Main
-      Right pmail -> do
-        let s' = set (asCompose . cTo) (E.editor GatherHeadersTo Nothing $ getFrom pmail) s &
-                 set (asCompose . cFrom) (E.editor GatherHeadersFrom Nothing $ getTo pmail) &
-                 set (asCompose . cSubject)
-                   (E.editor GatherHeadersSubject Nothing ("Re: " <> getSubject pmail)) &
-                 set (asCompose . cFocus) AskFrom &
-                 set asAppMode GatherHeaders
-        continue s'
-  Nothing -> continue s
+replyMail s =
+  continue . ($ s)
+  =<< case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
+    Just (_, m) -> either handleErr handleMail <$> liftIO (parseMail m)
+    Nothing -> pure id
+  where
+    handleErr e = set asAppMode Main . setError (GenericError e)
+    handleMail pmail =
+      set (asCompose . cTo) (E.editor GatherHeadersTo Nothing $ getFrom pmail)
+      . set (asCompose . cFrom) (E.editor GatherHeadersFrom Nothing $ getTo pmail)
+      . set (asCompose . cSubject)
+        (E.editor GatherHeadersSubject Nothing ("Re: " <> getSubject pmail))
+      . set (asCompose . cFocus) AskFrom
+      . set asAppMode GatherHeaders
 
 toggleComposeEditorAndMain :: AppState -> T.EventM Name (T.Next AppState)
 toggleComposeEditorAndMain s =
@@ -127,16 +121,16 @@ cancelSearch  :: AppState -> T.EventM Name (T.Next AppState)
 cancelSearch s = continue $ set (asMailIndex . miMode) BrowseMail s
 
 setError :: Error -> AppState -> AppState
-setError = set asError . Just . show
+setError = set asError . Just
 
 applySearchTerms :: AppState -> T.EventM Name (T.Next AppState)
-applySearchTerms s = do
-     result <- runExceptT $ getMessages searchterms (view (asConfig . confNotmuch) s)
-     continue $ either (`setError` s) (reloadListOfMails s) result
+applySearchTerms s =
+   runExceptT (getMessages searchterms (view (asConfig . confNotmuch) s))
+   >>= continue . ($ s) . either setError reloadListOfMails
      where searchterms = currentLine $ view (asMailIndex . miSearchEditor . E.editContentsL) s
 
-reloadListOfMails :: AppState -> Vector NotmuchMail -> AppState
-reloadListOfMails s vec =
-  let listWidget = L.list ListOfMails vec 1
-  in set (asMailIndex . miListOfMails) listWidget s & set asAppMode Main &
-     set (asMailIndex . miMode) BrowseMail
+reloadListOfMails :: Vector NotmuchMail -> AppState -> AppState
+reloadListOfMails vec =
+  set (asMailIndex . miListOfMails) (L.list ListOfMails vec 1)
+  . set asAppMode Main
+  . set (asMailIndex . miMode) BrowseMail
