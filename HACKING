@@ -24,7 +24,7 @@ communication is the key here rather than hacking away.
 - use the weakest abstraction possible:
   - traverse > mapM
   - pure > return
-  - Data.Semigroup.<> > Data.Monoid.<>
+  - ``Data.Semigroup.<>`` > ``Data.Monoid.<>`` > ``Data.List.++``
   - and so on...
 
 ## UI Development
