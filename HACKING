@@ -27,6 +27,18 @@ communication is the key here rather than hacking away.
   - Data.Semigroup.<> > Data.Monoid.<>
   - and so on...
 
+
+### Style
+
+- HLint is your friend.  But not always.  If you want to suppress a
+  hint (e.g.  suppressing "Avoid lambda" for consistent and
+  refactoring-friendly lens definitoions), be sure to include an
+  explicit type annotation so that it will play nice with
+  ``OverloadedStrings``.
+
+    {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
+
+
 ## UI Development
 
 For development, we've put a bit of consideration to what type of users we'd

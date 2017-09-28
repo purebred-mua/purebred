@@ -15,7 +15,7 @@ import qualified Data.CaseInsensitive as CI
 
 import Error
 
-{-# ANN module "HLint: ignore Avoid lambda" #-}
+{-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
 
 -- | The global application mode

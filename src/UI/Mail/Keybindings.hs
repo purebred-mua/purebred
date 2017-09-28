@@ -7,7 +7,7 @@ import Control.Lens.Getter (view)
 import qualified Graphics.Vty        as V
 import Types
 
-{-# ANN module "HLint: ignore Avoid lambda" #-}
+{-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
 displayMailKeybindings :: [Keybinding]
 displayMailKeybindings =
