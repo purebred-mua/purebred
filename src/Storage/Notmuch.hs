@@ -63,11 +63,7 @@ setNotmuchMailTags dbpath m = do
 tagsToMessage
   :: (MonadError Error m, MonadIO m)
   => [Tag] -> NotmuchMail -> Database RW -> m ()
-tagsToMessage xs m db =
-  let msgId = view mailId m
-  in
-    findMessage db msgId
-    >>= maybe (throwError (MessageNotFound msgId)) (messageSetTags xs)
+tagsToMessage xs msg db = getMessage db (view mailId msg) >>= messageSetTags xs
 
 -- | Get message by message ID, throwing MessageNotFound if not found
 --
