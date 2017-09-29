@@ -20,7 +20,7 @@ import Control.Lens (view, _3, _2)
 import Data.List (isInfixOf)
 import System.Process (callProcess, readProcess)
 import System.Directory
-       (getCurrentDirectory, removeDirectoryRecursive)
+       (getCurrentDirectory, removeDirectoryRecursive, removeFile)
 import Test.Tasty (TestTree, TestName, testGroup, withResource)
 import Test.Tasty.HUnit (testCaseSteps, assertBool)
 import Text.Regex.Posix ((=~))
@@ -34,7 +34,21 @@ systemTests =
         , testUserCanManipulateNMQuery
         , testUserCanSwitchBackToIndex
         , testCanToggleHeaders
-        , testSetsMailToRead]
+        , testSetsMailToRead
+        , testErrorHandling]
+
+testErrorHandling ::
+  TestTree
+testErrorHandling = withTmuxSession "error handling" $
+  \step -> do
+    startApplication
+
+    testmdir <- getTestMaildir
+    liftIO $ removeFile (testmdir <> "/new/1502941827.R15455991756849358775.url")
+
+    liftIO $ step "shows error message"
+    out <- sendKeys "Enter" "FileReadError"
+    assertSubstrInOutput "openFile: does not exist" out
 
 testSetsMailToRead ::
   TestTree
