@@ -88,5 +88,5 @@ invokeEditor s = do
   tmpfile <- emptySystemTempFile "purebred.tmp"
   status <- system (editor <> " " <> tmpfile)
   case status of
-    ExitFailure _ -> pure $ set asAppMode Main s -- ^ show error XXX
+    ExitFailure _ -> pure $ set asAppMode BrowseMail s -- ^ show error XXX
     ExitSuccess -> pure $ set asAppMode ComposeEditor s & asCompose . cTmpFile ?~ tmpfile -- ^ go to compose editor

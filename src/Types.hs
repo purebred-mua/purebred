@@ -20,10 +20,12 @@ import Error
 
 -- | The global application mode
 data Mode
-    = Main  -- ^ focus is on the main screen
+    = BrowseMail  -- ^ input focus goes to navigating the list of mails (main screen)
+    | SearchMail  -- ^ input focus goes to manipulating the notmuch search (main screen)
     | ViewMail  -- ^ focus is on the screen showing the entire mail
     | GatherHeaders  -- ^ focus is on the command line to gather input for composing an e-mail
     | ComposeEditor  -- ^ edit the final e-mail
+    deriving (Eq,Show)
 
 -- | Used to identify widgets in brick
 data Name =
@@ -35,12 +37,6 @@ data Name =
     | GatherHeadersSubject
     deriving (Eq,Show,Ord)
 
--- | Modes for the main window to distinguish focus
-data MainMode
-    = BrowseMail   -- ^ input focus goes to navigating the list of mails
-    | SearchMail   -- ^ input focus goes to manipulating the notmuch search
-    deriving (Eq)
-
 {- | main application interface
 
 The main UI shows a list of e-mails, allows the user to manipulate the notmuch
@@ -50,18 +46,13 @@ search and composes e-mails from here.
 data MailIndex = MailIndex
     { _miListOfMails  :: L.List Name NotmuchMail
     , _miSearchEditor :: E.Editor T.Text Name
-    , _miMode         :: MainMode
     }
 
 miListOfMails :: Lens' MailIndex (L.List Name NotmuchMail)
-miListOfMails f (MailIndex a b c) = fmap (\a' -> MailIndex a' b c) (f a)
+miListOfMails f (MailIndex a b) = fmap (\a' -> MailIndex a' b) (f a)
 
 miSearchEditor :: Lens' MailIndex (E.Editor T.Text Name)
-miSearchEditor f (MailIndex a b c) = fmap (\b' -> MailIndex a b' c) (f b)
-
-miMode :: Lens' MailIndex MainMode
-miMode f (MailIndex a b c) = fmap (\c' -> MailIndex a b c') (f c)
-
+miSearchEditor f (MailIndex a b) = fmap (\b' -> MailIndex a b') (f b)
 
 data HeadersState = ShowAll | Filtered
 

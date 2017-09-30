@@ -49,7 +49,7 @@ sendMail s = do
                 (unlines $ E.getEditContents $ view (asCompose . cSubject) s)
                 body
     liftIO $ renderSendMail m
-    M.continue $ set asCompose initialCompose s & set asAppMode Main
+    M.continue $ set asCompose initialCompose s & set asAppMode BrowseMail
 
 resetCompose :: AppState -> AppState
-resetCompose s = set asCompose initialCompose s & set asAppMode Main
+resetCompose s = set asCompose initialCompose s & set asAppMode BrowseMail
