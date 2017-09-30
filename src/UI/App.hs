@@ -9,14 +9,15 @@ import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import Control.Monad.Except (runExceptT)
 import System.Exit (die)
+import Data.Maybe (fromMaybe)
 
 import Storage.Notmuch (getMessages)
-import UI.ComposeEditor.Main (composeEditor, drawComposeEditor)
+import UI.ComposeEditor.Main (drawComposeEditor)
 import UI.GatherHeaders.Main
-       (drawInteractiveHeaders, interactiveGatherHeaders)
-import UI.Index.Main (drawMain, mainEvent)
-import UI.Keybindings (initialCompose)
-import UI.Mail.Main (drawMail, mailEvent)
+       (drawInteractiveHeaders)
+import UI.Index.Main (drawMain)
+import UI.Keybindings (initialCompose, handleKeyboardEvent)
+import UI.Mail.Main (drawMail)
 import Types
 
 drawUI :: AppState -> [Widget Name]
@@ -29,13 +30,7 @@ drawUI s =
         ComposeEditor -> drawComposeEditor s
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
-appEvent s e =
-    case view asAppMode s of
-        BrowseMail -> mainEvent s e
-        SearchMail -> mainEvent s e
-        ViewMail -> mailEvent s e
-        GatherHeaders -> interactiveGatherHeaders s e
-        ComposeEditor -> composeEditor s e
+appEvent s e = handleKeyboardEvent s e
 
 initialState :: InternalConfiguration -> IO AppState
 initialState conf = do

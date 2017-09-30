@@ -59,6 +59,7 @@ library
                      , filepath
                      , unix
                      , mtl
+                     , containers
 
 executable purebred
   hs-source-dirs:      app
