@@ -29,7 +29,7 @@ lookupKeybinding :: Event -> [Keybinding] -> Maybe Keybinding
 lookupKeybinding e = find (\x -> view kbEvent x == e)
 
 cancelToMain :: AppState -> T.EventM Name (T.Next AppState)
-cancelToMain s = M.continue $ set asAppMode Main s
+cancelToMain s = M.continue $ set asAppMode BrowseMail s
 
 initialCompose :: Compose
 initialCompose =

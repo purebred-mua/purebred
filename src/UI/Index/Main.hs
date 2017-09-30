@@ -30,12 +30,12 @@ import Config.Main
 drawMain :: AppState -> [Widget Name]
 drawMain s = [ui]
   where
-    editorFocus = view (asMailIndex . miMode) s == SearchMail
+    editorFocus = view asAppMode s == SearchMail
     inputBox = E.renderEditor editorDrawContent editorFocus (view (asMailIndex . miSearchEditor) s)
     ui = vBox [renderMailList s, statusbar s, vLimit 1 inputBox]
 
 renderMailList :: AppState -> Widget Name
-renderMailList s = let listFocus = view (asMailIndex . miMode) s == BrowseMail
+renderMailList s = let listFocus = view asAppMode s == BrowseMail
                    in L.renderList (listDrawElement s) listFocus (view (asMailIndex . miListOfMails) s)
 
 listDrawElement :: AppState -> Bool -> NotmuchMail -> Widget Name
@@ -69,17 +69,17 @@ renderMailTagsWidget m ignored =
 -- list, the other is to allow the user to easily change the list.
 mainEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 mainEvent s e =
-    case view (asMailIndex . miMode) s of
-        BrowseMail ->
-            handleEvent
-                (view (asConfig . confIndexView . ivKeybindings) s)
-                listEventDefault
-                s
-                e
+    case view asAppMode s of
         SearchMail ->
             handleEvent
                 (view (asConfig . confIndexView . ivSearchKeybindings) s)
                 searchInputEventDefault
+                s
+                e
+        _ ->
+            handleEvent
+                (view (asConfig . confIndexView . ivKeybindings) s)
+                listEventDefault
                 s
                 e
 
@@ -95,7 +95,7 @@ listEventDefault s e =
     L.handleListEvent e (view (asMailIndex . miListOfMails) s) >>=
     \mi' ->
          M.continue $
-         set (asMailIndex . miListOfMails) mi' s & set asAppMode Main &
+         set (asMailIndex . miListOfMails) mi' s & set asAppMode BrowseMail &
          set asError Nothing
 
 
@@ -107,4 +107,4 @@ searchInputEventDefault s ev =
     E.handleEditorEvent ev (view (asMailIndex . miSearchEditor) s) >>=
     \ed ->
          M.continue $
-         set (asMailIndex . miSearchEditor) ed s & set asAppMode Main
+         set (asMailIndex . miSearchEditor) ed s & set asAppMode BrowseMail

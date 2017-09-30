@@ -22,7 +22,8 @@ import Types
 drawUI :: AppState -> [Widget Name]
 drawUI s =
     case view asAppMode s of
-        Main -> drawMain s
+        BrowseMail -> drawMain s
+        SearchMail -> drawMain s
         ViewMail -> drawMail s
         GatherHeaders -> drawInteractiveHeaders s
         ComposeEditor -> drawComposeEditor s
@@ -30,7 +31,8 @@ drawUI s =
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 appEvent s e =
     case view asAppMode s of
-        Main -> mainEvent s e
+        BrowseMail -> mainEvent s e
+        SearchMail -> mainEvent s e
         ViewMail -> mailEvent s e
         GatherHeaders -> interactiveGatherHeaders s e
         ComposeEditor -> composeEditor s e
@@ -49,9 +51,8 @@ initialState conf = do
                      EditorInput
                      Nothing
                      searchterms)
-                BrowseMail
           mv = MailView Nothing Filtered
-        in pure $ AppState conf mi mv initialCompose Main Nothing
+        in pure $ AppState conf mi mv initialCompose BrowseMail Nothing
 
 theApp :: AppState -> M.App AppState e Name
 theApp s =

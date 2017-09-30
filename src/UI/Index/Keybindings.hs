@@ -46,7 +46,7 @@ indexsearchKeybindings =
 
 focusSearch :: AppState -> T.EventM Name (T.Next AppState)
 focusSearch = continue
-                . set (asMailIndex . miMode) SearchMail
+                . set asAppMode SearchMail
                 . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
 
 displayMail :: AppState -> T.EventM Name (T.Next AppState)
@@ -73,7 +73,7 @@ updateStateWithParsedMail :: AppState -> IO AppState
 updateStateWithParsedMail s = ($ s) <$>
     case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
         Just (_,m) -> either
-            (\e -> setError e . set asAppMode Main)
+            (\e -> setError e . set asAppMode BrowseMail)
             (\pmail -> set (asMailView . mvMail) (Just pmail) . set asAppMode ViewMail)
             <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
         Nothing -> pure id
@@ -103,7 +103,7 @@ replyMail s =
                    <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
     Nothing -> pure id
   where
-    handleErr e = set asAppMode Main . setError e
+    handleErr e = set asAppMode BrowseMail . setError e
     handleMail pmail =
       set (asCompose . cTo) (E.editor GatherHeadersTo Nothing $ getFrom pmail)
       . set (asCompose . cFrom) (E.editor GatherHeadersFrom Nothing $ getTo pmail)
@@ -119,7 +119,7 @@ toggleComposeEditorAndMain s =
         Nothing -> continue s
 
 cancelSearch  :: AppState -> T.EventM Name (T.Next AppState)
-cancelSearch s = continue $ set (asMailIndex . miMode) BrowseMail s
+cancelSearch s = continue $ set asAppMode BrowseMail s
 
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
@@ -133,5 +133,4 @@ applySearchTerms s =
 reloadListOfMails :: Vector NotmuchMail -> AppState -> AppState
 reloadListOfMails vec =
   set (asMailIndex . miListOfMails) (L.list ListOfMails vec 1)
-  . set asAppMode Main
-  . set (asMailIndex . miMode) BrowseMail
+  . set asAppMode BrowseMail
