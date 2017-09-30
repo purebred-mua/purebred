@@ -12,6 +12,7 @@ import qualified Data.Text as T
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
+import Data.Map.Lazy (Map)
 
 import Error
 
@@ -20,12 +21,12 @@ import Error
 
 -- | The global application mode
 data Mode
-    = BrowseMail  -- ^ input focus goes to navigating the list of mails (main screen)
-    | SearchMail  -- ^ input focus goes to manipulating the notmuch search (main screen)
-    | ViewMail  -- ^ focus is on the screen showing the entire mail
-    | GatherHeaders  -- ^ focus is on the command line to gather input for composing an e-mail
-    | ComposeEditor  -- ^ edit the final e-mail
-    deriving (Eq,Show)
+    = BrowseMail   -- ^ input focus goes to navigating the list of mails (main screen)
+    | SearchMail   -- ^ input focus goes to manipulating the notmuch search (main screen)
+    | ViewMail   -- ^ focus is on the screen showing the entire mail
+    | GatherHeaders   -- ^ focus is on the command line to gather input for composing an e-mail
+    | ComposeEditor   -- ^ edit the final e-mail
+    deriving (Eq,Show,Ord)
 
 -- | Used to identify widgets in brick
 data Name =
@@ -117,68 +118,41 @@ data Configuration a b = Configuration
     , _confNotmuch :: NotmuchSettings a
     , _confEditor :: b
     , _confMailView :: MailViewSettings
-    , _confIndexView :: IndexViewSettings
-    , _confComposeView :: ComposeViewSettings
+    , _confKeybindings :: Map Mode [Keybinding]
     }
 
 type UserConfiguration = Configuration (IO FilePath) (IO String)
 type InternalConfiguration = Configuration FilePath String
 
 confColorMap :: Getter (Configuration a b) Brick.AttrMap
-confColorMap = to (\(Configuration a _ _ _ _ _) -> a)
+confColorMap = to (\(Configuration a _ _ _ _) -> a)
 
 confEditor :: Lens (Configuration a b) (Configuration a b') b b'
-confEditor f (Configuration a b c d e g) = fmap (\c' -> Configuration a b c' d e g) (f c)
+confEditor f (Configuration a b c d e) = fmap (\c' -> Configuration a b c' d e) (f c)
 
 confNotmuch :: Lens (Configuration a c) (Configuration b c) (NotmuchSettings a) (NotmuchSettings b)
-confNotmuch f (Configuration a b c d e g) = fmap (\b' -> Configuration a b' c d e g) (f b)
+confNotmuch f (Configuration a b c d e) = fmap (\b' -> Configuration a b' c d e) (f b)
 
 confMailView :: Lens' (Configuration a b) MailViewSettings
-confMailView f (Configuration a b c d e g) = fmap (\d' -> Configuration a b c d' e g) (f d)
+confMailView f (Configuration a b c d e) = fmap (\d' -> Configuration a b c d' e) (f d)
 
-confIndexView :: Lens' (Configuration a b) IndexViewSettings
-confIndexView f (Configuration a b c d e g) = fmap (\e' -> Configuration a b c d e' g) (f e)
-
-confComposeView :: Getter (Configuration a b) ComposeViewSettings
-confComposeView = to (\(Configuration _ _ _ _ _ h) -> h)
-
-
-newtype ComposeViewSettings = ComposeViewSettings
-    { _cvKeybindings :: [Keybinding]
-    }
-
-cvKeybindings :: Lens' ComposeViewSettings [Keybinding]
-cvKeybindings f (ComposeViewSettings a) = fmap (\a' -> ComposeViewSettings a') (f a)
-
-data IndexViewSettings = IndexViewSettings
-    { _ivKeybindings       :: [Keybinding]
-    , _ivSearchKeybindings :: [Keybinding]
-    }
-
-ivKeybindings :: Lens' IndexViewSettings [Keybinding]
-ivKeybindings f (IndexViewSettings a b) = fmap (\a' -> IndexViewSettings a' b) (f a)
-
-ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding]
-ivSearchKeybindings f (IndexViewSettings a b) = fmap (\b' -> IndexViewSettings a b') (f b)
+confKeybindings :: Lens' (Configuration a b) (Map Mode [Keybinding])
+confKeybindings f (Configuration a b c d e) = fmap (\e' -> Configuration a b c d e') (f e)
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
     , _mvPreferedContentType :: T.Text
     , _mvHeadersToShow       :: CI.CI T.Text -> Bool
-    , _mvKeybindings         :: [Keybinding]
     }
 
 mvIndexRows :: Lens' MailViewSettings Int
-mvIndexRows f (MailViewSettings a b c d) = fmap (\a' -> MailViewSettings a' b c d) (f a)
+mvIndexRows f (MailViewSettings a b c) = fmap (\a' -> MailViewSettings a' b c) (f a)
 
 mvPreferredContentType :: Lens' MailViewSettings T.Text
-mvPreferredContentType f (MailViewSettings a b c d) = fmap (\b' -> MailViewSettings a b' c d) (f b)
+mvPreferredContentType f (MailViewSettings a b c) = fmap (\b' -> MailViewSettings a b' c) (f b)
 
 mvHeadersToShow :: Getter MailViewSettings (CI.CI T.Text -> Bool)
-mvHeadersToShow = to (\(MailViewSettings _ _ h _) -> h)
-
-mvKeybindings :: Lens' MailViewSettings [Keybinding]
-mvKeybindings f (MailViewSettings a b c d) = fmap (\d' -> MailViewSettings a b c d') (f d)
+mvHeadersToShow = to (\(MailViewSettings _ _ h) -> h)
 
 -- | Overall application state
 data AppState = AppState
