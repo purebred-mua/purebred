@@ -20,6 +20,7 @@ indexKeybindings =
     , Keybinding (V.EvKey (V.KChar 'm') []) (composeMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '?') []) (viewHelp `chain` continue)
     ]
 
 indexsearchKeybindings :: [Keybinding (E.Editor Text Name) (Next AppState)]

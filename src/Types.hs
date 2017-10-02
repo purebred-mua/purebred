@@ -21,12 +21,13 @@ import Error
 
 -- | The global application mode
 data Mode
-    = BrowseMail  -- ^ input focus goes to navigating the list of mails (main screen)
-    | SearchMail  -- ^ input focus goes to manipulating the notmuch search (main screen)
-    | ViewMail  -- ^ focus is on the screen showing the entire mail
-    | GatherHeaders  -- ^ focus is on the command line to gather input for composing an e-mail
-    | ComposeEditor  -- ^ edit the final e-mail
-    deriving (Eq,Show)
+    = BrowseMail   -- ^ input focus goes to navigating the list of mails (main screen)
+    | SearchMail   -- ^ input focus goes to manipulating the notmuch search (main screen)
+    | ViewMail   -- ^ focus is on the screen showing the entire mail
+    | GatherHeaders   -- ^ focus is on the command line to gather input for composing an e-mail
+    | ComposeEditor   -- ^ edit the final e-mail
+    | Help  -- ^ shows all keybindings
+    deriving (Eq,Show,Ord)
 
 -- | Used to identify widgets in brick
 data Name =
@@ -36,6 +37,7 @@ data Name =
     | GatherHeadersFrom
     | GatherHeadersTo
     | GatherHeadersSubject
+    | ScrollingHelpView
     deriving (Eq,Show,Ord)
 
 {- | main application interface
@@ -120,29 +122,32 @@ data Configuration a b = Configuration
     , _confMailView :: MailViewSettings
     , _confIndexView :: IndexViewSettings
     , _confComposeView :: ComposeViewSettings
+    , _confHelpView :: HelpViewSettings
     }
 
 type UserConfiguration = Configuration (IO FilePath) (IO String)
 type InternalConfiguration = Configuration FilePath String
 
 confColorMap :: Getter (Configuration a b) Brick.AttrMap
-confColorMap = to (\(Configuration a _ _ _ _ _) -> a)
+confColorMap = to (\(Configuration a _ _ _ _ _ _) -> a)
 
 confEditor :: Lens (Configuration a b) (Configuration a b') b b'
-confEditor f (Configuration a b c d e g) = fmap (\c' -> Configuration a b c' d e g) (f c)
+confEditor f (Configuration a b c d e g h) = fmap (\c' -> Configuration a b c' d e g h) (f c)
 
 confNotmuch :: Lens (Configuration a c) (Configuration b c) (NotmuchSettings a) (NotmuchSettings b)
-confNotmuch f (Configuration a b c d e g) = fmap (\b' -> Configuration a b' c d e g) (f b)
+confNotmuch f (Configuration a b c d e g h) = fmap (\b' -> Configuration a b' c d e g h) (f b)
 
 confMailView :: Lens' (Configuration a b) MailViewSettings
-confMailView f (Configuration a b c d e g) = fmap (\d' -> Configuration a b c d' e g) (f d)
+confMailView f (Configuration a b c d e g h) = fmap (\d' -> Configuration a b c d' e g h) (f d)
 
 confIndexView :: Lens' (Configuration a b) IndexViewSettings
-confIndexView f (Configuration a b c d e g) = fmap (\e' -> Configuration a b c d e' g) (f e)
+confIndexView f (Configuration a b c d e g h) = fmap (\e' -> Configuration a b c d e' g h) (f e)
 
 confComposeView :: Getter (Configuration a b) ComposeViewSettings
-confComposeView = to (\(Configuration _ _ _ _ _ h) -> h)
+confComposeView = to (\(Configuration _ _ _ _ _ g _) -> g)
 
+confHelpView :: Getter (Configuration a b) HelpViewSettings
+confHelpView = to (\(Configuration _ _ _ _ _ _ h) -> h)
 
 newtype ComposeViewSettings = ComposeViewSettings
     { _cvKeybindings :: [Keybinding (E.Editor T.Text Name) (Next AppState)]
@@ -150,6 +155,13 @@ newtype ComposeViewSettings = ComposeViewSettings
 
 cvKeybindings :: Lens' ComposeViewSettings [Keybinding (E.Editor T.Text Name) (Next AppState)]
 cvKeybindings f (ComposeViewSettings a) = fmap (\a' -> ComposeViewSettings a') (f a)
+
+newtype HelpViewSettings = HelpViewSettings
+  { _hvKeybindings :: [Keybinding (Widget Name) (Next AppState)]
+  }
+
+hvKeybindings :: Lens' HelpViewSettings [Keybinding (Widget Name) (Next AppState)]
+hvKeybindings f (HelpViewSettings a) = fmap (\a' -> HelpViewSettings a') (f a)
 
 data IndexViewSettings = IndexViewSettings
     { _ivKeybindings       :: [Keybinding (L.List Name NotmuchMail) (Next AppState)]
@@ -277,6 +289,7 @@ mailId = lens _mailId (\m i -> m { _mailId = i })
 class Scrollable n where
   makeViewportScroller :: AppState -> ViewportScroll n
 
--- XXX this is currently our only scrolling view
 instance Scrollable Name where
-  makeViewportScroller _ = viewportScroll ScrollingMailView
+  makeViewportScroller s = case view asAppMode s of
+    Help -> viewportScroll ScrollingHelpView
+    _ -> viewportScroll ScrollingMailView

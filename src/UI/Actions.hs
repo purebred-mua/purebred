@@ -1,10 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
-module UI.Actions
-       (backToIndex, quit, focusSearch, displayMail, setUnread,
-        applySearchTerms, mailIndexUp, mailIndexDown, switchComposeEditor,
-        composeMail, replyMail, scrollUp, scrollDown, toggleHeaders, send,
-        reset, initialCompose, continue, chain)
-       where
+module UI.Actions (
+  backToIndex
+  , quit
+  , focusSearch
+  , displayMail
+  , setUnread
+  , applySearchTerms
+  , mailIndexUp
+  , mailIndexDown
+  , switchComposeEditor
+  , composeMail
+  , replyMail
+  , scrollUp
+  , scrollDown
+  , toggleHeaders
+  , send
+  , reset
+  , initialCompose
+  , continue
+  , chain
+  , viewHelp
+  ) where
 
 import qualified Brick.Main as B (continue, halt, vScrollPage)
 import qualified Brick.Types as T
@@ -44,6 +60,9 @@ backToIndex =
     { _aDescription = "back to the index"
     , _aAction = pure . set asAppMode BrowseMail
     }
+
+viewHelp :: Action ctx AppState
+viewHelp = Action "view all key bindings" (pure . set asAppMode Help)
 
 composeMail :: Action (L.List Name NotmuchMail) AppState
 composeMail =

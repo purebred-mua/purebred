@@ -17,6 +17,7 @@ import UI.GatherHeaders.Main
 import UI.Index.Main (drawMain, mainEvent)
 import UI.Actions (initialCompose)
 import UI.Mail.Main (drawMail, mailEvent)
+import UI.Help.Main (drawHelp, handleHelpEvents)
 import Types
 
 drawUI :: AppState -> [Widget Name]
@@ -27,6 +28,7 @@ drawUI s =
         ViewMail -> drawMail s
         GatherHeaders -> drawInteractiveHeaders s
         ComposeEditor -> drawComposeEditor s
+        Help -> drawHelp s
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 appEvent s ev = case ev of
@@ -37,6 +39,7 @@ appEvent s ev = case ev of
         ViewMail -> mailEvent s e
         GatherHeaders -> interactiveGatherHeaders s e
         ComposeEditor -> composeEditor s e
+        Help -> handleHelpEvents s e
   _ -> M.continue s  -- we only handle Vty events
 
 initialState :: InternalConfiguration -> IO AppState
