@@ -44,7 +44,20 @@ systemTests =
         , testUserCanSwitchBackToIndex
         , testCanToggleHeaders
         , testSetsMailToRead
-        , testErrorHandling]
+        , testErrorHandling
+        , testHelp
+        ]
+
+testHelp :: TestTree
+testHelp = withTmuxSession "help view" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "shows Keybindings"
+    sendKeys "?" (Literal "back to the index")
+
+    sendKeys "Escape" (Literal "Purebred")
+    pure ()
 
 testErrorHandling ::
   TestTree

@@ -14,11 +14,8 @@ import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
 import UI.Index.Keybindings
        (indexKeybindings, indexsearchKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings, displayIndexKeybindings)
+import UI.Help.Keybindings (helpKeybindings)
 import Types
-  ( ComposeViewSettings(..)
-  , UserConfiguration, Configuration(..), IndexViewSettings(..)
-  , MailViewSettings(..), NotmuchSettings(..)
-  )
 import Storage.Notmuch (getDatabasePath)
 
 defaultColorMap :: A.AttrMap
@@ -35,7 +32,8 @@ defaultColorMap =
         , (statusbarErrorAttr, fg V.red)
         , (statusbarAttr, V.black `on` V.brightWhite)
         , (headerKeyAttr, fg V.cyan)
-        , (headerValueAttr, fg V.brightCyan)]
+        , (headerValueAttr, fg V.brightCyan)
+        , (helpTitleAttr, fg V.cyan `V.withStyle` V.bold)]
 
 statusbarAttr :: A.AttrName
 statusbarAttr = "statusbar"
@@ -70,6 +68,15 @@ headerKeyAttr = headerAttr <> "key"
 headerValueAttr :: A.AttrName
 headerValueAttr = headerAttr <> "value"
 
+helpAttr :: A.AttrName
+helpAttr = "help"
+
+helpTitleAttr :: A.AttrName
+helpTitleAttr = helpAttr <> "title"
+
+helpKeybindingAttr :: A.AttrName
+helpKeybindingAttr = helpAttr <> "keybinding"
+
 defaultConfig :: UserConfiguration
 defaultConfig =
     Configuration
@@ -93,5 +100,8 @@ defaultConfig =
       }
     , _confComposeView = ComposeViewSettings
       { _cvKeybindings = composeEditorKeybindings
+      }
+    , _confHelpView = HelpViewSettings
+      { _hvKeybindings = helpKeybindings
       }
     }
