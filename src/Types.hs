@@ -3,7 +3,8 @@ module Types where
 
 import Codec.MIME.Type (MIMEValue)
 import qualified Brick.AttrMap             as Brick
-import           Brick.Types               (EventM, Next)
+import Brick.Types (EventM, Next, Widget)
+import Brick.Main (viewportScroll, ViewportScroll)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Control.Lens
@@ -144,41 +145,45 @@ confComposeView = to (\(Configuration _ _ _ _ _ h) -> h)
 
 
 newtype ComposeViewSettings = ComposeViewSettings
-    { _cvKeybindings :: [Keybinding]
+    { _cvKeybindings :: [Keybinding (E.Editor T.Text Name)]
     }
 
-cvKeybindings :: Lens' ComposeViewSettings [Keybinding]
+cvKeybindings :: Lens' ComposeViewSettings [Keybinding (E.Editor T.Text Name)]
 cvKeybindings f (ComposeViewSettings a) = fmap (\a' -> ComposeViewSettings a') (f a)
 
 data IndexViewSettings = IndexViewSettings
-    { _ivKeybindings       :: [Keybinding]
-    , _ivSearchKeybindings :: [Keybinding]
+    { _ivKeybindings       :: [Keybinding (L.List Name NotmuchMail)]
+    , _ivSearchKeybindings :: [Keybinding (E.Editor T.Text Name)]
     }
 
-ivKeybindings :: Lens' IndexViewSettings [Keybinding]
+ivKeybindings :: Lens' IndexViewSettings [Keybinding (L.List Name NotmuchMail)]
 ivKeybindings f (IndexViewSettings a b) = fmap (\a' -> IndexViewSettings a' b) (f a)
 
-ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding]
+ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding (E.Editor T.Text Name)]
 ivSearchKeybindings f (IndexViewSettings a b) = fmap (\b' -> IndexViewSettings a b') (f b)
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
     , _mvPreferedContentType :: T.Text
     , _mvHeadersToShow       :: CI.CI T.Text -> Bool
-    , _mvKeybindings         :: [Keybinding]
+    , _mvKeybindings         :: [Keybinding (Widget Name)]
+    , _mvIndexKeybindings    :: [Keybinding (L.List Name NotmuchMail)]
     }
 
 mvIndexRows :: Lens' MailViewSettings Int
-mvIndexRows f (MailViewSettings a b c d) = fmap (\a' -> MailViewSettings a' b c d) (f a)
+mvIndexRows f (MailViewSettings a b c d e) = fmap (\a' -> MailViewSettings a' b c d e) (f a)
 
 mvPreferredContentType :: Lens' MailViewSettings T.Text
-mvPreferredContentType f (MailViewSettings a b c d) = fmap (\b' -> MailViewSettings a b' c d) (f b)
+mvPreferredContentType f (MailViewSettings a b c d e) = fmap (\b' -> MailViewSettings a b' c d e) (f b)
 
 mvHeadersToShow :: Getter MailViewSettings (CI.CI T.Text -> Bool)
-mvHeadersToShow = to (\(MailViewSettings _ _ h _) -> h)
+mvHeadersToShow = to (\(MailViewSettings _ _ h _ _) -> h)
 
-mvKeybindings :: Lens' MailViewSettings [Keybinding]
-mvKeybindings f (MailViewSettings a b c d) = fmap (\d' -> MailViewSettings a b c d') (f d)
+mvKeybindings :: Lens' MailViewSettings [Keybinding (Widget Name)]
+mvKeybindings f (MailViewSettings a b c d e) = fmap (\d' -> MailViewSettings a b c d' e) (f d)
+
+mvIndexKeybindings :: Lens' MailViewSettings [Keybinding (L.List Name NotmuchMail)]
+mvIndexKeybindings f (MailViewSettings a b c d e) = fmap (\e' -> MailViewSettings a b c d e') (f e)
 
 -- | Overall application state
 data AppState = AppState
@@ -208,24 +213,30 @@ asAppMode f (AppState a b c d e g) = fmap (\e' -> AppState a b c d e' g) (f e)
 asError :: Lens' AppState (Maybe Error)
 asError f (AppState a b c d e g) = fmap (\g' -> AppState a b c d e g') (f g)
 
-type KBAction = AppState -> EventM Name (Next AppState)
-data Keybinding = Keybinding
-    { _kbDescription :: String
-    , _kbEvent :: Vty.Event
-    , _kbAction :: KBAction
+data Action n = Action
+    { _aDescription :: String
+    , _aAction :: AppState -> EventM Name (Next AppState)
     }
-instance Eq Keybinding where
-  (==) (Keybinding _ a _) (Keybinding _ b _) = a == b
-  (/=) (Keybinding _ a _) (Keybinding _ b _) = a /= b
 
-kbEvent :: Getter Keybinding Vty.Event
-kbEvent = to (\(Keybinding _ b _) -> b)
+aAction :: Getter (Action a) (AppState -> EventM Name (Next AppState))
+aAction = to (\(Action _ b) -> b)
 
-kbAction :: Getter Keybinding KBAction
-kbAction = to (\(Keybinding _ _ c) -> c)
+data Keybinding a = Keybinding
+    { _kbEvent :: Vty.Event
+    , _kbAction :: Action a
+    }
+instance Eq (Keybinding a) where
+  (==) (Keybinding a _) (Keybinding b _) = a == b
+  (/=) (Keybinding a _) (Keybinding b _) = a /= b
 
-kbDescription :: Getter Keybinding String
-kbDescription = to (\(Keybinding a _ _) -> a)
+kbEvent :: Getter (Keybinding a) Vty.Event
+kbEvent = to (\(Keybinding b _) -> b)
+
+kbAction :: Getter (Keybinding a) (Action a)
+kbAction = to (\(Keybinding _ c) -> c)
+
+aDescription :: Getter (Action a) String
+aDescription = to (\(Action a _ ) -> a)
 
 type Body = T.Text
 type Header = T.Text
@@ -262,3 +273,10 @@ mailTags = lens _mailTags (\m t -> m { _mailTags = t })
 
 mailId :: Lens' NotmuchMail ByteString
 mailId = lens _mailId (\m i -> m { _mailId = i })
+
+class Scrollable n where
+  makeViewportScroller :: AppState -> ViewportScroll n
+
+-- XXX this is currently our only scrolling view
+instance Scrollable Name where
+  makeViewportScroller _ = viewportScroll ScrollingMailView

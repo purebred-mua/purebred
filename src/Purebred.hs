@@ -1,10 +1,12 @@
 module Purebred (
   module Types,
+  module UI.Actions,
   module UI.Index.Keybindings,
   module UI.Mail.Keybindings,
   Event(..),
   Key(..),
   Modifier(..),
+  List(..),
   getDatabasePath,
   defaultConfig,
   defaultColorMap,
@@ -35,6 +37,7 @@ import Data.Maybe (fromMaybe, isJust)
 
 import UI.Index.Keybindings
 import UI.Mail.Keybindings
+import UI.Actions
 import Storage.Notmuch (getDatabasePath)
 import Config.Main (defaultConfig, defaultColorMap)
 import Types
@@ -42,6 +45,7 @@ import Types
 -- re-exports for configuration
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.Main (halt, continue, defaultMain)
+import Brick.Widgets.List (List(..))
 import Control.Lens.Lens ((&))
 import Control.Lens.Setter (over, set)
 import Control.Lens.Getter (view)

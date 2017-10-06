@@ -15,7 +15,7 @@ import UI.ComposeEditor.Main (composeEditor, drawComposeEditor)
 import UI.GatherHeaders.Main
        (drawInteractiveHeaders, interactiveGatherHeaders)
 import UI.Index.Main (drawMain, mainEvent)
-import UI.Keybindings (initialCompose)
+import UI.Actions (initialCompose)
 import UI.Mail.Main (drawMail, mailEvent)
 import Types
 

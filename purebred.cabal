@@ -23,6 +23,7 @@ library
                      , Error
                      , Types
                      , UI.Keybindings
+                     , UI.Actions
                      , UI.Draw.Main
                      , UI.Index.Keybindings
                      , UI.Index.Main

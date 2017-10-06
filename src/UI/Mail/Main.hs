@@ -20,7 +20,7 @@ import Data.CaseInsensitive (mk)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text as T
 import Graphics.Vty.Input.Events (Event)
-import UI.Index.Keybindings
+import UI.Actions
        (updateStateWithParsedMail, updateReadState)
 import Storage.Notmuch (removeTag)
 import UI.Index.Main (renderMailList)
