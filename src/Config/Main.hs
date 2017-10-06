@@ -85,6 +85,7 @@ defaultConfig =
       , _mvPreferedContentType = "text/plain"
       , _mvHeadersToShow = (`elem` ["subject", "to", "from"])
       , _mvKeybindings = displayMailKeybindings
+      , _mvIndexKeybindings = []
       }
     , _confIndexView = IndexViewSettings
       { _ivKeybindings = indexKeybindings

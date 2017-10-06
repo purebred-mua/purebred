@@ -4,28 +4,24 @@ Example configuration, which uses more mutt-alike keybindings
 import Purebred
 import Data.List (union)
 
-myIndexKeybindings :: [Keybinding]
+myIndexKeybindings :: [Keybinding (List Name NotmuchMail)]
 myIndexKeybindings =
-    [ Keybinding "Quits the application" (EvKey (KChar 'q') []) halt
+    [ Keybinding (EvKey (KChar 'q') []) haltApp
     , Keybinding
-          "Manipulate the notmuch database query"
           (EvKey (KChar '/') [])
           focusSearch
-    , Keybinding "display an e-mail" (EvKey KEnter []) displayMail
-    , Keybinding "mail index down" (EvKey KDown []) mailIndexDown
-    , Keybinding "mail index down" (EvKey (KChar 'j') []) mailIndexDown
-    , Keybinding "mail index up" (EvKey KUp []) mailIndexUp
-    , Keybinding "mail index up" (EvKey (KChar 'k') []) mailIndexUp
-    , Keybinding "Switch between editor and main" (EvKey (KChar '\t') []) toggleComposeEditorAndMain
-    , Keybinding "compose new mail" (EvKey (KChar 'm') []) composeMail]
+    , Keybinding (EvKey KEnter []) displayMail
+    , Keybinding (EvKey KDown []) mailIndexDown
+    , Keybinding (EvKey (KChar 'j') []) mailIndexDown
+    , Keybinding (EvKey KUp []) mailIndexUp
+    , Keybinding (EvKey (KChar 'k') []) mailIndexUp
+    , Keybinding (EvKey (KChar '\t') []) switchComposeEditor
+    , Keybinding (EvKey (KChar 'm') []) composeMail]
 
-myMailKeybindings :: [Keybinding]
+myMailKeybindings :: [Keybinding a]
 myMailKeybindings =
-    [ Keybinding
-          "Return to list of mails"
-          (EvKey (KChar 'q') [])
-          (\s ->
-                continue $ set asAppMode Main $ s)]
+    [ Keybinding (EvKey (KChar 'q') []) backToIndex
+    ]
 
 main :: IO ()
 main = purebred $ tweak defaultConfig where
