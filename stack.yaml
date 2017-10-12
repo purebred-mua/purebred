@@ -46,9 +46,10 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
 - mime-0.4.0.2
-- brick-0.20.1
+- brick-0.28
 - data-clist-0.1.2.0
-- word-wrap-0.1
+- word-wrap-0.2
+- vty-5.18.1
 
 # Override default flag values for local packages and extra-deps
 flags: {}
