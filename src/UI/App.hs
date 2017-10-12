@@ -29,13 +29,15 @@ drawUI s =
         ComposeEditor -> drawComposeEditor s
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
-appEvent s e =
+appEvent s ev = case ev of
+  T.VtyEvent e ->
     case view asAppMode s of
         BrowseMail -> mainEvent s e
         SearchMail -> mainEvent s e
         ViewMail -> mailEvent s e
         GatherHeaders -> interactiveGatherHeaders s e
         ComposeEditor -> composeEditor s e
+  _ -> M.continue s  -- we only handle Vty events
 
 initialState :: InternalConfiguration -> IO AppState
 initialState conf = do

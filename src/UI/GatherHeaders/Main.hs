@@ -49,11 +49,11 @@ getLabelForComposeState AskSubject = txt "Subject:"
 -- | event handling for composing e-mail
 -- | asks interactively for headers before composing the e-mail
 interactiveGatherHeaders :: AppState
-                         -> T.BrickEvent Name e
+                         -> Event
                          -> T.EventM Name (T.Next AppState)
 interactiveGatherHeaders s e =
     case e of
-        (T.VtyEvent (EvKey KEnter [])) ->
+        (EvKey KEnter []) ->
             if view (asCompose . cFocus) s == AskSubject
                 then M.suspendAndResume $ liftIO $ invokeEditor s
                 else M.continue $ nextFocus s

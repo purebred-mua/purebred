@@ -90,7 +90,7 @@ headerFilter s =
 
 -- | The mail view shows a shortened list of mails. Forward all key strokes to
 -- the list of mails by default.
-mailEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
+mailEvent :: AppState -> Event -> T.EventM Name (T.Next AppState)
 mailEvent s =
     handleEvent
         (view (asConfig . confMailView . mvKeybindings) s)
