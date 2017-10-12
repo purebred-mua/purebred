@@ -2,19 +2,29 @@
 
 module UI.Mail.Main where
 
+import qualified Brick.Main as M
 import Brick.Types (Padding(..), ViewportType(..), Widget)
+import qualified Brick.Types as T
 import Brick.Widgets.Core
        (padLeft, padTop, txt, txtWrap, vLimit, viewport, (<+>), (<=>),
         withAttr)
+import qualified Brick.Widgets.List as L
 
 import Codec.MIME.Type
        (MIMEContent(..), MIMEParam(..), MIMEValue(..), Type(..),
         showMIMEType)
 import qualified Data.CaseInsensitive as CI
 import Control.Lens.Getter (view)
+import Control.Lens.Setter (set)
 import Data.CaseInsensitive (mk)
+import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text as T
+import Graphics.Vty.Input.Events (Event)
+import UI.Index.Keybindings
+       (updateStateWithParsedMail, updateReadState)
+import Storage.Notmuch (removeTag)
 import UI.Index.Main (renderMailList)
+import UI.Keybindings (handleEvent)
 import UI.Status.Main (statusbar)
 import Types
 import Config.Main (headerKeyAttr, headerValueAttr)
@@ -75,3 +85,21 @@ headerFilter s =
     case view (asMailView . mvHeadersState) s of
         Filtered -> view (asConfig . confMailView . mvHeadersToShow) s
         ShowAll -> const True
+
+-- | event handling for viewing a single mail
+
+-- | The mail view shows a shortened list of mails. Forward all key strokes to
+-- the list of mails by default.
+mailEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
+mailEvent s =
+    handleEvent
+        (view (asConfig . confMailView . mvKeybindings) s)
+        displayMailDefault
+        s
+
+displayMailDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
+displayMailDefault s ev = do
+            l' <- L.handleListEvent ev (view (asMailIndex . miListOfMails) s)
+            s' <- liftIO $ updateStateWithParsedMail (set (asMailIndex . miListOfMails) l' s)
+                  >>= updateReadState removeTag
+            M.continue s'

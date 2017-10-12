@@ -10,15 +10,15 @@ import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
 import System.Environment (lookupEnv)
 import Data.Maybe (fromMaybe)
-import Data.Map.Lazy (fromList)
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
 import UI.Index.Keybindings
        (indexKeybindings, indexsearchKeybindings)
-import UI.GatherHeaders.Keybindings (interactiveGatherHeadersKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings)
 import Types
-       (UserConfiguration, Configuration(..), MailViewSettings(..),
-        NotmuchSettings(..), Mode(..))
+  ( ComposeViewSettings(..)
+  , UserConfiguration, Configuration(..), IndexViewSettings(..)
+  , MailViewSettings(..), NotmuchSettings(..)
+  )
 import Storage.Notmuch (getDatabasePath)
 
 defaultColorMap :: A.AttrMap
@@ -84,11 +84,13 @@ defaultConfig =
       { _mvIndexRows = 10
       , _mvPreferedContentType = "text/plain"
       , _mvHeadersToShow = (`elem` ["subject", "to", "from"])
+      , _mvKeybindings = displayMailKeybindings
       }
-    , _confKeybindings = fromList
-          [ (BrowseMail, indexKeybindings)
-          , (SearchMail, indexsearchKeybindings)
-          , (ViewMail, displayMailKeybindings)
-          , (GatherHeaders, interactiveGatherHeadersKeybindings)
-          , (ComposeEditor, composeEditorKeybindings)]
+    , _confIndexView = IndexViewSettings
+      { _ivKeybindings = indexKeybindings
+      , _ivSearchKeybindings = indexsearchKeybindings
+      }
+    , _confComposeView = ComposeViewSettings
+      { _cvKeybindings = composeEditorKeybindings
+      }
     }
