@@ -4,7 +4,7 @@
 module UI.ComposeEditor.Main where
 
 import Brick.Main (continue)
-import Brick.Types (BrickEvent, EventM, Next, Padding(..), Widget)
+import Brick.Types (EventM, Next, Padding(..), Widget)
 import Brick.Widgets.Core
        (fill, hLimit, padRight, padTop, str, txt, vLimit, withAttr, (<+>),
         (<=>))
@@ -15,6 +15,8 @@ import Control.Lens.Getter (view)
 import Control.Lens.Lens (Lens')
 import qualified Data.Text                    as T
 import Data.Vector (fromList)
+import Graphics.Vty (Event)
+
 import UI.Draw.Main (editorDrawContent)
 import UI.Keybindings (handleEvent)
 import Types
@@ -63,7 +65,7 @@ getLabelForComposeState AskSubject = txt "Subject:"
 
 -- | the editor which shows header fields and attachments
 composeEditor :: AppState
-              -> BrickEvent Name e
+              -> Event
               -> EventM Name (Next AppState)
 composeEditor s =
     handleEvent

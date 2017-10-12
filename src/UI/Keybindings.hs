@@ -17,13 +17,12 @@ handleEvent
     :: [Keybinding]  -- ^ Keybindings to lookup
     -> (AppState -> Event -> T.EventM Name (T.Next AppState))  -- ^ default handler if no keybinding matches
     -> AppState
-    -> T.BrickEvent Name e
+    -> Event
     -> T.EventM Name (T.Next AppState)
-handleEvent kbs def s (T.VtyEvent ev) =
+handleEvent kbs def s ev =
     case lookupKeybinding ev kbs of
         Just kb -> view kbAction kb s
         Nothing -> def s ev
-handleEvent _ _ s _ = M.continue s
 
 lookupKeybinding :: Event -> [Keybinding] -> Maybe Keybinding
 lookupKeybinding e = find (\x -> view kbEvent x == e)

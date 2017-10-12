@@ -67,21 +67,19 @@ renderMailTagsWidget m ignored =
 -- | We currently have two modes on the main view we need to distinguish
 -- keystrokes for. One is to obviously browse the mails which are shown as a
 -- list, the other is to allow the user to easily change the list.
-mainEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
-mainEvent s e =
+mainEvent :: AppState -> Event -> T.EventM Name (T.Next AppState)
+mainEvent s =
     case view asAppMode s of
         SearchMail ->
             handleEvent
                 (view (asConfig . confIndexView . ivSearchKeybindings) s)
                 searchInputEventDefault
                 s
-                e
         _ ->
             handleEvent
                 (view (asConfig . confIndexView . ivKeybindings) s)
                 listEventDefault
                 s
-                e
 
 -- | Handle key strokes on the list of mails.
 -- Most keystrokes are delegated to the list of mails, while one particular
