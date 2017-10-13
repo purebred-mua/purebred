@@ -8,23 +8,17 @@ import qualified Brick.Types as T
 import Brick.Widgets.Core
        (padLeft, padTop, txt, txtWrap, vLimit, viewport, (<+>), (<=>),
         withAttr)
-import qualified Brick.Widgets.List as L
 
 import Codec.MIME.Type
        (MIMEContent(..), MIMEParam(..), MIMEValue(..), Type(..),
         showMIMEType)
 import qualified Data.CaseInsensitive as CI
 import Control.Lens.Getter (view)
-import Control.Lens.Setter (set)
 import Data.CaseInsensitive (mk)
-import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text as T
 import Graphics.Vty.Input.Events (Event)
-import UI.Actions
-       (updateStateWithParsedMail, updateReadState)
-import Storage.Notmuch (removeTag)
 import UI.Index.Main (renderMailList)
-import UI.Keybindings (handleEvent)
+import UI.Keybindings (handleEvent, lookupKeybinding)
 import UI.Status.Main (statusbar)
 import Types
 import Config.Main (headerKeyAttr, headerValueAttr)
@@ -98,8 +92,8 @@ mailEvent s =
         s
 
 displayMailDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
-displayMailDefault s ev = do
-            l' <- L.handleListEvent ev (view (asMailIndex . miListOfMails) s)
-            s' <- liftIO $ updateStateWithParsedMail (set (asMailIndex . miListOfMails) l' s)
-                  >>= updateReadState removeTag
-            M.continue s'
+displayMailDefault s ev =
+    maybe
+        (M.continue s)
+        (\kb -> view (kbAction . aAction) kb s)
+        (lookupKeybinding ev $ view (asConfig . confMailView . mvIndexKeybindings) s)

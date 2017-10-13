@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Keybindings where
 
-import qualified Brick.Main as M
 import qualified Brick.Types as T
 import Control.Lens.Getter (view)
 import Data.List (find)
@@ -12,7 +11,7 @@ import Types
 
 -- | A generic event handler using Keybindings by default if available
 handleEvent
-    :: [Keybinding a]  -- ^ Keybindings to lookup
+    :: [Keybinding ctx (T.Next AppState)]  -- ^ Keybindings to lookup
     -> (AppState -> Event -> T.EventM Name (T.Next AppState))  -- ^ default handler if no keybinding matches
     -> AppState
     -> Event
@@ -22,5 +21,5 @@ handleEvent kbs def s ev =
         Just kb -> view (kbAction . aAction) kb s
         Nothing -> def s ev
 
-lookupKeybinding :: Event -> [Keybinding a] -> Maybe (Keybinding a)
+lookupKeybinding :: Event -> [Keybinding ctx a] -> Maybe (Keybinding ctx a)
 lookupKeybinding e = find (\x -> view kbEvent x == e)
