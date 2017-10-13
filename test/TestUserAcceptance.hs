@@ -1,6 +1,9 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
+{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+
 {-# LANGUAGE OverloadedStrings #-}
+
 module TestUserAcceptance where
 
 import qualified Data.Text as T
@@ -17,13 +20,19 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT, ask, ReaderT)
 
 import Control.Lens (view, _3, _2)
-import Data.List (isInfixOf)
+import Data.List (isInfixOf, intercalate)
 import System.Process (callProcess, readProcess)
 import System.Directory
        (getCurrentDirectory, removeDirectoryRecursive, removeFile)
 import Test.Tasty (TestTree, TestName, testGroup, withResource)
 import Test.Tasty.HUnit (testCaseSteps, assertBool)
 import Text.Regex.Posix ((=~))
+
+-- | A condition to check for in the output of the program
+data Condition
+  = Literal String
+  | Regex String
+  deriving (Show)
 
 systemTests ::
   TestTree
@@ -47,8 +56,8 @@ testErrorHandling = withTmuxSession "error handling" $
     liftIO $ removeFile (testmdir <> "/new/1502941827.R15455991756849358775.url")
 
     liftIO $ step "shows error message"
-    out <- sendKeys "Enter" "FileReadError"
-    assertSubstrInOutput "openFile: does not exist" out
+    sendKeys "Enter" (Literal "FileReadError")
+      >>= assertSubstrInOutput "openFile: does not exist"
 
 testSetsMailToRead ::
   TestTree
@@ -56,18 +65,16 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
   \step -> do
     startApplication
     liftIO $ step "mail is shown as unread (bold)"
-    out <- capture
-    assertRegex "\ESC\\[1;.*Testmail" out
+    capture >>= assertRegex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail")
 
-    liftIO $ step "view mail and purebred sets it to read"
-    _ <- sendKeys "Enter" "This is a test mail"
-    out <- sendKeys "Escape" "is Purebred"
-    assertRegex "\ESC\\[37.*Testmail" out
+    liftIO $ step "view mail and purebred sets it to read (unbold)"
+    sendKeys "Enter" (Literal "This is a test mail")
+    sendKeys "Escape" (Literal "is Purebred")
+      >>= assertRegex "\ESC\\[37.*Testmail"
 
-    liftIO $ step "toggle it back to unread"
-    -- wait for the screen turns bold
-    out <- sendKeys "t" "1;37;43m"
-    assertRegex "\ESC\\[1;.*Testmail" out
+    liftIO $ step "toggle it back to unread (bold again)"
+    sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
+    pure ()
 
 testCanToggleHeaders ::
   TestTree
@@ -75,15 +82,13 @@ testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
   \step -> do
     startApplication
     liftIO $ step "view mail"
-    out <- sendKeys "Enter" "This is a test mail"
-    assertSubstrInOutput "This is a test mail" out
+    sendKeys "Enter" (Literal "This is a test mail")
 
     liftIO $ step "toggle to show all headers"
-    out <- sendKeys "h" "return-path"
-    assertSubstrInOutput "return-path" out
+    sendKeys "h" (Literal "return-path")
 
     liftIO $ step "toggle filtered headers"
-    out <- sendKeys "h" "This is a test mail"
+    out <- sendKeys "h" (Literal "This is a test mail")
     assertRegex "Purebred.*\n.*from" out
 
 testUserViewsMailSuccessfully ::
@@ -96,8 +101,8 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
     assertSubstrInOutput "inbox" out
 
     liftIO $ step "view mail"
-    out <- sendKeys "Enter" "This is a test mail"
-    assertSubstrInOutput "This is a test mail" out
+    sendKeys "Enter" (Literal "This is a test mail")
+    pure ()
 
 testUserCanManipulateNMQuery ::
   TestTree
@@ -107,23 +112,20 @@ testUserCanManipulateNMQuery =
         \step -> do
           startApplication
           liftIO $ step "focus command"
-          out <- sendKeys ":" "37;40mtag"
-          assertSubstrInOutput "37;40mtag" out
+          sendKeys ":" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "tag"))
 
           liftIO $ step "delete all input"
-          out <- sendKeys "C-u" "37;40m"
-          assertSubstrInOutput "37;40m" out
+          sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
           liftIO $ step "enter new tag"
           _ <- sendLiteralKeys "tag:replied"
 
           liftIO $ step "apply"
-          out <- sendKeys "Enter" "Item 0 of 1"
-          assertSubstrInOutput "Item 0 of 1" out
+          sendKeys "Enter" (Literal "Item 0 of 1")
 
           liftIO $ step "view currently selected mail"
-          out <- sendKeys "Enter" "HOLY PUREBRED"
-          assertSubstrInOutput "HOLY PUREBRED" out
+          sendKeys "Enter" (Literal "HOLY PUREBRED")
+          pure ()
 
 testUserCanSwitchBackToIndex ::
   TestTree
@@ -132,40 +134,32 @@ testUserCanSwitchBackToIndex =
         \step -> do
             startApplication
             liftIO $ step "start composition"
-            out <- sendKeys "m" "From"
-            assertSubstrInOutput "From" out
+            sendKeys "m" (Literal "From")
 
             liftIO $ step "enter from email"
-            out <- sendKeys "testuser@foo.test\r" "To"
-            assertSubstrInOutput "To" out
+            sendKeys "testuser@foo.test\r" (Literal "To")
 
             liftIO $ step "enter to: email"
-            out <- sendKeys  "user@to.test\r" "Subject"
-            assertSubstrInOutput "Subject" out
+            sendKeys "user@to.test\r" (Literal "Subject")
 
             liftIO $ step "enter subject"
-            out <- sendKeys  "test subject\r" "~"
-            assertSubstrInOutput "~" out
+            sendKeys "test subject\r" (Literal "~")
 
             liftIO $ step "enter mail body"
-            out <- sendKeys  "iThis is a test body" "body"
-            assertSubstrInOutput "body" out
+            sendKeys "iThis is a test body" (Literal "body")
 
             liftIO $ step "exit insert mode in vim"
-            out <- sendKeys  "Escape" "body"
-            assertSubstrInOutput "body" out
+            sendKeys "Escape" (Literal "body")
 
             liftIO $ step "exit vim"
-            out <- sendKeys  ": x\r" "Attachments"
-            assertSubstrInOutput "Attachments" out
+            sendKeys ": x\r" (Literal "Attachments")
 
             liftIO $ step "switch back to index"
-            out <- sendKeys  "Tab" "Testmail"
-            assertSubstrInOutput "Testmail" out
+            sendKeys "Tab" (Literal "Testmail")
 
             liftIO $ step "switch back to the compose editor"
-            out <- sendKeys  "Tab" "test subject"
-            assertSubstrInOutput "test subject" out
+            sendKeys "Tab" (Literal "test subject")
+            pure ()
 
 type Env = (String, String, String)
 
@@ -173,7 +167,7 @@ assertSubstrInOutput :: String -> String -> ReaderT Env IO ()
 assertSubstrInOutput substr out = liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
 
 assertRegex :: String -> String -> ReaderT Env IO ()
-assertRegex regex out = liftIO $ assertBool (regex <> " does not match out\n\n" <> out) $ out =~ (regex :: String)
+assertRegex regex out = liftIO $ assertBool (regex <> " does not match out\n\n" <> out <> "\n\n raw:\n\n" <> show out) $ out =~ (regex :: String)
 
 defaultSessionName :: String
 defaultSessionName = "purebredtest"
@@ -254,10 +248,13 @@ withTmuxSession tcname testfx =
     withResource setUp tearDown $
       \env -> testCaseSteps tcname $ \stepfx -> env >>= runReaderT (testfx stepfx)
 
-sendKeys :: String -> String -> ReaderT Env IO (String)
+-- | Send keys into the program and wait for the condition to be
+-- met, failing the test if the condition is not met after some
+-- time.
+sendKeys :: String -> Condition -> ReaderT Env IO String
 sendKeys keys expect = do
     liftIO $ callProcess "tmux" $ communicateSessionArgs keys False
-    waitForString expect defaultCountdown
+    waitForCondition expect defaultCountdown
 
 sendLiteralKeys :: String -> ReaderT Env IO (String)
 sendLiteralKeys keys = do
@@ -285,24 +282,35 @@ debugOutput out = do
   when (isJust d) $ hPutStr stderr ("\n\n" <> out)
 
 -- | wait for the application to render a new interface which we determine with
---   a given substring. If we exceed the number of tries return with the last
---   captured output, but indicate an error by setting the baton to 0
-waitForString :: String -> Int -> ReaderT Env IO (String)
-waitForString substr n = do
+--   a given condition. We check up to @n@ times, waiting a short duration
+--   between each check, and failing if the tries exhaust with the condition
+--   not met.
+waitForCondition :: Condition -> Int -> ReaderT Env IO String
+waitForCondition cond n = do
   out <- capture >>= checkPane
-  liftIO $ assertBool ("Wait time exceeded. Expected: '"
-                       <> substr
-                       <> "' last screen shot:\n\n "
-                       <> out) (substr `isInfixOf` out)
+  liftIO $ assertBool
+    ( "Wait time exceeded. Condition not met: '" <> show cond
+      <> "' last screen shot:\n\n " <> out <> "\n\n" <> " raw: " <> show out )
+    (checkCondition cond out)
   pure out
   where
     checkPane :: String -> ReaderT Env IO String
     checkPane out
-      | substr `isInfixOf` out = pure out
+      | checkCondition cond out = pure out
       | n <= 0 = pure out
       | otherwise = do
           liftIO $ threadDelay holdOffTime
-          waitForString substr (n - 1)
+          waitForCondition cond (n - 1)
+
+checkCondition :: Condition -> String -> Bool
+checkCondition (Literal s) = (s `isInfixOf`)
+checkCondition (Regex re) = (=~ re)
+
+-- | Convenience version of 'waitForCondition' that checks for a
+-- literal string.
+--
+waitForString :: String -> Int -> ReaderT Env IO (String)
+waitForString = waitForCondition . Literal
 
 defaultCountdown :: Int
 defaultCountdown = 5
@@ -324,3 +332,35 @@ communicateSessionArgs keys asLiteral =
                 then ["-l"]
                 else []
     in base <> postfix <> [keys]
+
+
+type AnsiAttrParam = String
+type AnsiFGParam = String
+type AnsiBGParam = String
+
+-- | Generate a regex for an escape sequence setting the given
+-- foreground and background parameters
+--
+-- tmux < 03d01eabb5c5227f56b6b44d04964c1328802628 (first released
+-- in tmux-2.5) ran attributes, foreground colour and background
+-- colour params separated by semicolons (foreground first).
+--
+-- After that commit, attributes, foreground colours and background
+-- colours are written in separate escape sequences.  Therefore for
+-- compatibility with different versions of tmux there are two
+-- patterns to check.
+--
+buildAnsiRegex :: [AnsiAttrParam] -> [AnsiFGParam] -> [AnsiBGParam] -> String
+buildAnsiRegex attrs fgs bgs =
+  let
+    withSemis = intercalate ";"
+    wrap [] = ""
+    wrap xs = "\ESC\\[" <> withSemis xs <> "m"
+    tmux24 = wrap (attrs <> fgs <> bgs)
+    tmux25 = wrap attrs <> wrap fgs <> wrap bgs
+    choice "" "" = ""
+    choice "" r = r
+    choice l "" = l
+    choice l r = "(" <> l <> "|" <> r <> ")"
+  in
+    choice tmux24 tmux25
