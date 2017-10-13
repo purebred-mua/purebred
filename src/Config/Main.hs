@@ -13,7 +13,7 @@ import Data.Maybe (fromMaybe)
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
 import UI.Index.Keybindings
        (indexKeybindings, indexsearchKeybindings)
-import UI.Mail.Keybindings (displayMailKeybindings)
+import UI.Mail.Keybindings (displayMailKeybindings, displayIndexKeybindings)
 import Types
   ( ComposeViewSettings(..)
   , UserConfiguration, Configuration(..), IndexViewSettings(..)
@@ -85,7 +85,7 @@ defaultConfig =
       , _mvPreferedContentType = "text/plain"
       , _mvHeadersToShow = (`elem` ["subject", "to", "from"])
       , _mvKeybindings = displayMailKeybindings
-      , _mvIndexKeybindings = []
+      , _mvIndexKeybindings = displayIndexKeybindings
       }
     , _confIndexView = IndexViewSettings
       { _ivKeybindings = indexKeybindings

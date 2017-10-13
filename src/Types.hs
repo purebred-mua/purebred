@@ -145,29 +145,29 @@ confComposeView = to (\(Configuration _ _ _ _ _ h) -> h)
 
 
 newtype ComposeViewSettings = ComposeViewSettings
-    { _cvKeybindings :: [Keybinding (E.Editor T.Text Name)]
+    { _cvKeybindings :: [Keybinding (E.Editor T.Text Name) (Next AppState)]
     }
 
-cvKeybindings :: Lens' ComposeViewSettings [Keybinding (E.Editor T.Text Name)]
+cvKeybindings :: Lens' ComposeViewSettings [Keybinding (E.Editor T.Text Name) (Next AppState)]
 cvKeybindings f (ComposeViewSettings a) = fmap (\a' -> ComposeViewSettings a') (f a)
 
 data IndexViewSettings = IndexViewSettings
-    { _ivKeybindings       :: [Keybinding (L.List Name NotmuchMail)]
-    , _ivSearchKeybindings :: [Keybinding (E.Editor T.Text Name)]
+    { _ivKeybindings       :: [Keybinding (L.List Name NotmuchMail) (Next AppState)]
+    , _ivSearchKeybindings :: [Keybinding (E.Editor T.Text Name) (Next AppState)]
     }
 
-ivKeybindings :: Lens' IndexViewSettings [Keybinding (L.List Name NotmuchMail)]
+ivKeybindings :: Lens' IndexViewSettings [Keybinding (L.List Name NotmuchMail) (Next AppState)]
 ivKeybindings f (IndexViewSettings a b) = fmap (\a' -> IndexViewSettings a' b) (f a)
 
-ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding (E.Editor T.Text Name)]
+ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding (E.Editor T.Text Name) (Next AppState)]
 ivSearchKeybindings f (IndexViewSettings a b) = fmap (\b' -> IndexViewSettings a b') (f b)
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
     , _mvPreferedContentType :: T.Text
     , _mvHeadersToShow       :: CI.CI T.Text -> Bool
-    , _mvKeybindings         :: [Keybinding (Widget Name)]
-    , _mvIndexKeybindings    :: [Keybinding (L.List Name NotmuchMail)]
+    , _mvKeybindings         :: [Keybinding (Widget Name) (Next AppState)]
+    , _mvIndexKeybindings    :: [Keybinding (L.List Name NotmuchMail) (Next AppState)]
     }
 
 mvIndexRows :: Lens' MailViewSettings Int
@@ -179,10 +179,10 @@ mvPreferredContentType f (MailViewSettings a b c d e) = fmap (\b' -> MailViewSet
 mvHeadersToShow :: Getter MailViewSettings (CI.CI T.Text -> Bool)
 mvHeadersToShow = to (\(MailViewSettings _ _ h _ _) -> h)
 
-mvKeybindings :: Lens' MailViewSettings [Keybinding (Widget Name)]
+mvKeybindings :: Lens' MailViewSettings [Keybinding (Widget Name) (Next AppState)]
 mvKeybindings f (MailViewSettings a b c d e) = fmap (\d' -> MailViewSettings a b c d' e) (f d)
 
-mvIndexKeybindings :: Lens' MailViewSettings [Keybinding (L.List Name NotmuchMail)]
+mvIndexKeybindings :: Lens' MailViewSettings [Keybinding (L.List Name NotmuchMail) (Next AppState)]
 mvIndexKeybindings f (MailViewSettings a b c d e) = fmap (\e' -> MailViewSettings a b c d e') (f e)
 
 -- | Overall application state
@@ -213,29 +213,29 @@ asAppMode f (AppState a b c d e g) = fmap (\e' -> AppState a b c d e' g) (f e)
 asError :: Lens' AppState (Maybe Error)
 asError f (AppState a b c d e g) = fmap (\g' -> AppState a b c d e g') (f g)
 
-data Action n = Action
+data Action ctx a = Action
     { _aDescription :: String
-    , _aAction :: AppState -> EventM Name (Next AppState)
+    , _aAction :: AppState -> EventM Name a
     }
 
-aAction :: Getter (Action a) (AppState -> EventM Name (Next AppState))
+aAction :: Getter (Action ctx a) (AppState -> EventM Name a)
 aAction = to (\(Action _ b) -> b)
 
-data Keybinding a = Keybinding
+data Keybinding ctx a = Keybinding
     { _kbEvent :: Vty.Event
-    , _kbAction :: Action a
+    , _kbAction :: Action ctx a
     }
-instance Eq (Keybinding a) where
+instance Eq (Keybinding ctx a) where
   (==) (Keybinding a _) (Keybinding b _) = a == b
   (/=) (Keybinding a _) (Keybinding b _) = a /= b
 
-kbEvent :: Getter (Keybinding a) Vty.Event
+kbEvent :: Getter (Keybinding ctx a) Vty.Event
 kbEvent = to (\(Keybinding b _) -> b)
 
-kbAction :: Getter (Keybinding a) (Action a)
+kbAction :: Getter (Keybinding ctx a) (Action ctx a)
 kbAction = to (\(Keybinding _ c) -> c)
 
-aDescription :: Getter (Action a) String
+aDescription :: Getter (Action ctx a) String
 aDescription = to (\(Action a _ ) -> a)
 
 type Body = T.Text

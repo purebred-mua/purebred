@@ -7,15 +7,14 @@ module Purebred (
   Key(..),
   Modifier(..),
   List(..),
+  Next,
   getDatabasePath,
   defaultConfig,
   defaultColorMap,
   over,
   set,
   (&),
-  purebred,
-  halt,
-  continue) where
+  purebred) where
 
 import UI.App (theApp, initialState)
 
@@ -44,7 +43,8 @@ import Types
 
 -- re-exports for configuration
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
-import Brick.Main (halt, continue, defaultMain)
+import Brick.Main (defaultMain)
+import Brick.Types (Next)
 import Brick.Widgets.List (List(..))
 import Control.Lens.Lens ((&))
 import Control.Lens.Setter (over, set)
