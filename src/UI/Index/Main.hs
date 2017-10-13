@@ -107,4 +107,4 @@ searchInputEventDefault s ev =
     E.handleEditorEvent ev (view (asMailIndex . miSearchEditor) s) >>=
     \ed ->
          M.continue $
-         set (asMailIndex . miSearchEditor) ed s & set asAppMode BrowseMail
+         set (asMailIndex . miSearchEditor) ed s
