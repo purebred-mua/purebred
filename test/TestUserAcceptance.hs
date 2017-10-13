@@ -197,7 +197,7 @@ setUpNotmuch notmuchcfg = void $ readProcess "notmuch" ["--config=" <> notmuchcf
 
 -- | write a notmuch config
 -- Note: currently writes a minimal config pointing to our database
-setUpNotmuchCfg :: FilePath -> FilePath -> IO (FilePath)
+setUpNotmuchCfg :: FilePath -> FilePath -> IO FilePath
 setUpNotmuchCfg testdir testmdir = do
   let (Right ini) = parseIni (T.pack "[database]\npath=" <> T.pack testmdir)
   let nmcfg = testdir <> "/notmuch-config"
@@ -205,7 +205,7 @@ setUpNotmuchCfg testdir testmdir = do
   pure nmcfg
 
 -- | setup a temporary Maildir for notmuch and the test session
-setUpMaildir :: FilePath -> IO (FilePath)
+setUpMaildir :: FilePath -> IO FilePath
 setUpMaildir testdir = do
   let testmdir = testdir <> "/Maildir/"
   c <- getCurrentDirectory
@@ -217,23 +217,20 @@ setUpMaildir testdir = do
 -- Note: the width and height are the default values tmux uses, but I thought
 -- it's better to be explicit.
 setUpTmuxSession :: String -> IO ()
-setUpTmuxSession sessionname = do
+setUpTmuxSession sessionname =
     callProcess
         "tmux"
         [ "new-session"
-        , "-x"
-        , "80"
-        , "-y"
-        , "24"
+        , "-x", "80"
+        , "-y", "24"
         , "-d"
-        , "-s"
-        , sessionname
-        , "-n"
-        , "purebred"]
+        , "-s", sessionname
+        , "-n", "purebred"
+        ]
 
 -- | Kills the whole session including pane and application
 cleanUpTmuxSession :: String -> IO ()
-cleanUpTmuxSession sessionname = do
+cleanUpTmuxSession sessionname =
     catch
         (callProcess "tmux" ["kill-session", "-t", sessionname])
         (\e ->
@@ -256,20 +253,20 @@ sendKeys keys expect = do
     liftIO $ callProcess "tmux" $ communicateSessionArgs keys False
     waitForCondition expect defaultCountdown
 
-sendLiteralKeys :: String -> ReaderT Env IO (String)
+sendLiteralKeys :: String -> ReaderT Env IO String
 sendLiteralKeys keys = do
     liftIO $ callProcess "tmux" $ communicateSessionArgs keys True
     waitForString keys defaultCountdown
 
-capture :: ReaderT Env IO (String)
+capture :: ReaderT Env IO String
 capture = do
   sessionname <- getSessionName
   liftIO $ readProcess "tmux" ["capture-pane", "-e", "-p", "-t", sessionname] []
 
-getSessionName :: ReaderT Env IO (String)
+getSessionName :: ReaderT Env IO String
 getSessionName = view (_3 . ask)
 
-getTestMaildir :: ReaderT Env IO (String)
+getTestMaildir :: ReaderT Env IO String
 getTestMaildir = view (_2 . ask)
 
 holdOffTime :: Int
@@ -309,7 +306,7 @@ checkCondition (Regex re) = (=~ re)
 -- | Convenience version of 'waitForCondition' that checks for a
 -- literal string.
 --
-waitForString :: String -> Int -> ReaderT Env IO (String)
+waitForString :: String -> Int -> ReaderT Env IO String
 waitForString = waitForCondition . Literal
 
 defaultCountdown :: Int
@@ -326,12 +323,7 @@ startApplication = do
 
 communicateSessionArgs :: String -> Bool -> [String]
 communicateSessionArgs keys asLiteral =
-    let base = words $ "send-keys -t " <> defaultSessionName
-        postfix =
-            if asLiteral
-                then ["-l"]
-                else []
-    in base <> postfix <> [keys]
+  ["send-keys", "-t", defaultSessionName] <> ["-l" | asLiteral] <> [keys]
 
 
 type AnsiAttrParam = String
