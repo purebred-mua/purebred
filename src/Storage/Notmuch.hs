@@ -9,15 +9,14 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError)
 import qualified Data.ByteString as B
 import Data.Traversable (traverse)
-import Data.List (union)
+import Data.List (union, notElem)
 import Data.Maybe (fromMaybe)
 import qualified Data.Vector as Vec
 import System.Process (readProcess)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Types (NotmuchMail(..), NotmuchSettings, nmDatabase, mailId, mailTags)
-import Control.Lens.Getter (view)
-import Control.Lens.Setter (over)
+import Control.Lens (view, over, set)
 
 import Notmuch
 import Notmuch.Search
@@ -74,11 +73,14 @@ getMessage db msgId =
   findMessage db msgId
   >>= maybe (throwError (MessageNotFound msgId)) pure
 
-addTag :: NotmuchMail -> T.Text -> NotmuchMail
-addTag m t = over mailTags (`union` [t]) m
+setTags :: NotmuchMail -> [T.Text] -> NotmuchMail
+setTags m ts = set mailTags ts m
 
-removeTag :: NotmuchMail -> T.Text -> NotmuchMail
-removeTag m t = over mailTags (filter (/= t)) m
+addTags :: NotmuchMail -> [T.Text] -> NotmuchMail
+addTags m ts = over mailTags (`union` ts) m
+
+removeTags :: NotmuchMail -> [T.Text] -> NotmuchMail
+removeTags m ts = over mailTags (filter (`notElem` ts)) m
 
 mailTagsToNotmuchTags :: MonadError Error m => NotmuchMail -> m [Tag]
 mailTagsToNotmuchTags = traverse (mkTag' . encodeUtf8) . view mailTags

@@ -29,6 +29,7 @@ data Mode
     | GatherHeaders   -- ^ focus is on the command line to gather input for composing an e-mail
     | ComposeEditor   -- ^ edit the final e-mail
     | Help  -- ^ shows all keybindings
+    | ManageTags -- ^ add/remove tags
     deriving (Eq,Show,Ord)
 
 -- | Used to identify widgets in brick
@@ -40,6 +41,7 @@ data Name =
     | GatherHeadersTo
     | GatherHeadersSubject
     | ScrollingHelpView
+    | ManageTagsEditor
     deriving (Eq,Show,Ord)
 
 {- | main application interface
@@ -166,15 +168,19 @@ hvKeybindings :: Lens' HelpViewSettings [Keybinding 'Help (Next AppState)]
 hvKeybindings f (HelpViewSettings a) = fmap (\a' -> HelpViewSettings a') (f a)
 
 data IndexViewSettings = IndexViewSettings
-    { _ivKeybindings       :: [Keybinding 'BrowseMail (Next AppState)]
+    { _ivKeybindings :: [Keybinding 'BrowseMail (Next AppState)]
     , _ivSearchKeybindings :: [Keybinding 'SearchMail (Next AppState)]
+    , _ivManageTagsKeybindings :: [Keybinding 'ManageTags (Next AppState)]
     }
 
 ivKeybindings :: Lens' IndexViewSettings [Keybinding 'BrowseMail (Next AppState)]
-ivKeybindings f (IndexViewSettings a b) = fmap (\a' -> IndexViewSettings a' b) (f a)
+ivKeybindings f (IndexViewSettings a b c) = fmap (\a' -> IndexViewSettings a' b c) (f a)
 
 ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding 'SearchMail (Next AppState)]
-ivSearchKeybindings f (IndexViewSettings a b) = fmap (\b' -> IndexViewSettings a b') (f b)
+ivSearchKeybindings f (IndexViewSettings a b c) = fmap (\b' -> IndexViewSettings a b' c) (f b)
+
+ivManageTagsKeybindings :: Lens' IndexViewSettings [Keybinding 'ManageTags (Next AppState)]
+ivManageTagsKeybindings f (IndexViewSettings a b c) = fmap (\c' -> IndexViewSettings a b c') (f c)
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
