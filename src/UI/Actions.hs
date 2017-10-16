@@ -28,6 +28,10 @@ module UI.Actions (
   , chain
   , chain'
   , viewHelp
+  , setTags
+  , addTags
+  , removeTags
+  , reloadMails
   ) where
 
 import qualified Brick.Main as Brick
@@ -39,17 +43,18 @@ import Network.Mail.Mime (Address(..), renderSendMail, simpleMail')
 import Data.Proxy
 import Data.Semigroup ((<>))
 import Data.Vector (Vector)
-import Data.Text (unlines)
+import Data.Text (splitOn, strip, intercalate, unlines, Text)
 import Data.Text.Lazy.IO (readFile)
 import Prelude hiding (readFile, unlines)
-import Control.Lens (set, over, view, _Just)
+import Control.Applicative ((<|>))
+import Control.Lens (set, over, view, _Just, (&))
 import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
-import Control.Monad.IO.Class (liftIO)
-import Data.Text.Zipper (currentLine, gotoEOL)
-import Data.Text (Text)
-import Storage.Notmuch (getMessages, addTag, removeTag, setNotmuchMailTags)
+import Control.Monad.IO.Class (liftIO, MonadIO)
+import Data.Text.Zipper (currentLine, gotoEOL, textZipper)
+import qualified Storage.Notmuch as Notmuch
+       (getMessages, addTags, setTags, removeTags, setNotmuchMailTags)
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
@@ -95,6 +100,10 @@ instance Completable 'SearchMail where
 instance Completable 'ComposeEditor where
   complete _ = sendMail
 
+instance Completable 'ManageTags where
+  complete _ = \s -> do
+    s' <- liftIO $ applyEditorMailTags s
+    restoreNMSearch s'
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
@@ -105,16 +114,44 @@ class Resetable (m :: Mode) where
 instance Resetable 'ComposeEditor where
   reset _ = pure . set asCompose initialCompose
 
+instance Resetable 'ManageTags where
+  reset _ = \s -> let terms = textZipper [(view (asConfig . confNotmuch . nmSearch) s)] Nothing
+                  in pure $ s &
+                     set (asMailIndex . miSearchEditor . E.editContentsL) (terms)
+                     . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+
 -- | Generalisation of focus changes between widgets on the same "view"
 -- expressed with the mode in the application state.
 --
 class Focusable (m :: Mode) where
   switchFocus :: Proxy m -> AppState -> T.EventM Name AppState
 
+instance Focusable 'SearchMail where
+  switchFocus _ = pure . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+
+instance Focusable 'ManageTags where
+  switchFocus _ = prepareTagEditMode
+
 instance Focusable 'BrowseMail where
   switchFocus _ = pure
-                  . set asAppMode SearchMail
-                  . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+
+-- | Problem: How to chain actions, which operate not on the same mode, but a
+-- mode switched by the previous action?
+class HasMode (a :: Mode) where
+  mode :: Proxy a -> Mode
+
+-- promote the type to a value we can use for chaining actions
+instance HasMode 'BrowseMail where
+  mode _ = BrowseMail
+
+instance HasMode 'SearchMail where
+  mode _ = SearchMail
+
+instance HasMode 'ViewMail where
+  mode _ = ViewMail
+
+instance HasMode 'ManageTags where
+  mode _ = ManageTags
 
 quit :: Action ctx (T.Next AppState)
 quit = Action "quit the application" Brick.halt
@@ -181,18 +218,18 @@ composeMail =
     , _aAction = pure . set asAppMode GatherHeaders
     }
 
-displayMail :: Action 'BrowseMail AppState
+displayMail :: Action ctx AppState
 displayMail =
     Action
     { _aDescription = "display an e-mail"
-    , _aAction = \s -> liftIO $ updateStateWithParsedMail s >>= updateReadState removeTag
+    , _aAction = \s -> liftIO $ updateStateWithParsedMail s >>= updateReadState Notmuch.removeTags
     }
 
 setUnread :: Action 'BrowseMail AppState
 setUnread =
     Action
     { _aDescription = "toggle unread"
-    , _aAction = (liftIO . updateReadState addTag)
+    , _aAction = (liftIO . updateReadState Notmuch.addTags)
     }
 
 mailIndexUp :: Action 'BrowseMail AppState
@@ -236,32 +273,80 @@ toggleHeaders = Action
       Filtered -> set (asMailView . mvHeadersState) ShowAll s
       ShowAll -> set (asMailView . mvHeadersState) Filtered s
 
+setTags :: [Text] -> Action ctx AppState
+setTags ts =
+    Action
+    { _aDescription = "apply given tags"
+    , _aAction = (\s -> liftIO . selectedMailHelper s $ \m -> applyMailTags m ts Notmuch.setTags s)
+    }
+
+addTags :: [Text] -> Action ctx AppState
+addTags ts =
+    Action
+    { _aDescription = "add given tags"
+    , _aAction = (\s -> liftIO . selectedMailHelper s $ \m -> applyMailTags m ts Notmuch.removeTags s)
+    }
+
+removeTags :: [Text] -> Action ctx AppState
+removeTags ts =
+    Action
+    { _aDescription = "remove given tags"
+    , _aAction = (\s -> liftIO . selectedMailHelper s $ \m -> applyMailTags m ts Notmuch.removeTags s)
+    }
+
+reloadMails :: Action 'BrowseMail AppState
+reloadMails = Action "reload list of mails" applySearch
+
 -- Function definitions for actions
 --
 applySearch :: AppState -> T.EventM Name AppState
 applySearch s =
-   runExceptT (getMessages searchterms (view (asConfig . confNotmuch) s))
-   >>= pure . ($ s) . either setError reloadListOfMails
+   runExceptT (Notmuch.getMessages searchterms (view (asConfig . confNotmuch) s))
+   >>= pure . ($ s) . either setError updateMailsList
      where searchterms = currentLine $ view (asMailIndex . miSearchEditor . E.editContentsL) s
 
+selectedMailHelper
+    :: Applicative f
+    => AppState -> (NotmuchMail -> f (AppState -> AppState)) -> f AppState
+selectedMailHelper s func =
+  ($ s) <$> case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
+  Just (_, m) -> func m
+  Nothing -> pure $ setError (GenericError "No mail selected.")
+
+applyMailTags
+    :: MonadIO f
+    => t1
+    -> t
+    -> (t1 -> t -> NotmuchMail)
+    -> AppState
+    -> f (AppState -> AppState)
+applyMailTags m ts op s = let dbpath = view (asConfig . confNotmuch . nmDatabase) s
+  in either setError updateMailInList <$> runExceptT (Notmuch.setNotmuchMailTags dbpath (op m ts))
+
+applyEditorMailTags :: AppState -> IO AppState
+applyEditorMailTags s = selectedMailHelper s $ \m ->
+  let contents = (unlines $ E.getEditContents $ view (asMailIndex . miSearchEditor) s)
+      tags = strip <$> splitOn "," contents
+  in applyMailTags m tags Notmuch.setTags s
+
+restoreNMSearch :: AppState -> T.EventM Name AppState
+restoreNMSearch s =
+  let z = textZipper [(view (asConfig . confNotmuch . nmSearch) s)] Nothing
+  in pure $ set (asMailIndex . miSearchEditor . E.editContentsL) z s
+
 updateStateWithParsedMail :: AppState -> IO AppState
-updateStateWithParsedMail s = ($ s) <$>
-    case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
-        Just (_,m) -> either
+updateStateWithParsedMail s = selectedMailHelper s $ \m ->
+        either
             (\e -> setError e . set asAppMode BrowseMail)
             (\pmail -> set (asMailView . mvMail) (Just pmail) . set asAppMode ViewMail)
             <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
-        Nothing -> pure id
 
-updateReadState :: (NotmuchMail -> Text -> NotmuchMail) -> AppState -> IO AppState
-updateReadState op s =
-    ($ s) <$> case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
-        Just (_,m) ->
+updateReadState :: (NotmuchMail -> [Text] -> NotmuchMail) -> AppState -> IO AppState
+updateReadState op s = selectedMailHelper s $ \m ->
             let newTag = view (asConfig . confNotmuch . nmNewTag) s
                 dbpath = view (asConfig . confNotmuch . nmDatabase) s
             in either setError updateMailInList
-               <$> runExceptT (setNotmuchMailTags dbpath (op m newTag))
-        Nothing -> pure $ setError (GenericError "No mail selected to update tags")
+               <$> runExceptT (Notmuch.setNotmuchMailTags dbpath (op m [newTag]))
 
 updateMailInList :: NotmuchMail -> AppState -> AppState
 updateMailInList m s =
@@ -271,10 +356,10 @@ updateMailInList m s =
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
 
-reloadListOfMails :: Vector NotmuchMail -> AppState -> AppState
-reloadListOfMails vec =
-  set (asMailIndex . miListOfMails) (L.list ListOfMails vec 1)
-  . set asAppMode BrowseMail
+updateMailsList :: Vector NotmuchMail -> AppState -> AppState
+updateMailsList vec s =
+    let current = view (asMailIndex . miListOfMails . L.listSelectedL) s <|> Just 0
+    in over (asMailIndex . miListOfMails) (L.listReplace vec current) s
 
 mailIndexEvent
     :: (L.List Name NotmuchMail -> L.List Name NotmuchMail)
@@ -286,6 +371,19 @@ mailIndexEvent fx s =
         (asMailIndex . miListOfMails)
         (fx $ view (asMailIndex . miListOfMails) s)
         s
+
+prepareTagEditMode :: AppState -> T.EventM Name AppState
+prepareTagEditMode s = case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
+  Just (_, m) ->
+    let tags = intercalate "," $ view mailTags m
+        contents = currentLine $ view (asMailIndex . miSearchEditor . E.editContentsL) s
+    in pure
+       $ s
+       & set (asMailIndex . miSearchEditor) (E.editor ManageTagsEditor (Just 1) tags)
+       -- shelf the current search state
+       . set (asConfig . confNotmuch . nmSearch) contents
+       . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+  Nothing -> pure s
 
 replyToMail :: AppState -> T.EventM Name AppState
 replyToMail s =

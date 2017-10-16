@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-
 Example configuration, which uses more mutt-alike keybindings
 -}
@@ -15,11 +16,15 @@ myIndexKeybindings =
     , Keybinding (EvKey KUp []) (mailIndexUp `chain` continue)
     , Keybinding (EvKey (KChar 'k') []) (mailIndexUp `chain` continue)
     , Keybinding (EvKey (KChar '\t') []) (switchComposeEditor `chain` continue)
+    , Keybinding (EvKey (KChar 'a') []) ((removeTags ["inbox"] `chain` addTags ["archive"]) `chain` reloadMails `chain` continue)
     , Keybinding (EvKey (KChar 'm') []) (composeMail `chain` continue)]
 
-myMailKeybindings :: [Keybinding ctx (Next AppState)]
+myMailKeybindings :: [Keybinding 'ViewMail (Next AppState)]
 myMailKeybindings =
     [ Keybinding (EvKey (KChar 'q') []) (backToIndex `chain` continue)
+    , Keybinding (EvKey (KChar 'a') []) ((removeTags ["inbox"] `chain` addTags ["archive"])
+                                         `chain'` (mailIndexDown :: Action 'BrowseMail AppState)
+                                         `chain` displayMail `chain` continue)
     ]
 
 myDisplayIndexKeybindings :: [Keybinding 'BrowseMail (Next AppState)]

@@ -30,7 +30,7 @@ import Config.Main
 drawMain :: AppState -> [Widget Name]
 drawMain s = [ui]
   where
-    editorFocus = view asAppMode s == SearchMail
+    editorFocus = view asAppMode s `elem` [SearchMail, ManageTags]
     inputBox = E.renderEditor editorDrawContent editorFocus (view (asMailIndex . miSearchEditor) s)
     ui = vBox [renderMailList s, statusbar s, vLimit 1 inputBox]
 
@@ -70,15 +70,20 @@ renderMailTagsWidget m ignored =
 mainEvent :: AppState -> Event -> T.EventM Name (T.Next AppState)
 mainEvent s =
     case view asAppMode s of
-        SearchMail ->
+        BrowseMail ->
             handleEvent
-                (view (asConfig . confIndexView . ivSearchKeybindings) s)
+                (view (asConfig . confIndexView . ivKeybindings) s)
+                listEventDefault
+                s
+        ManageTags ->
+            handleEvent
+                (view (asConfig . confIndexView . ivManageTagsKeybindings) s)
                 searchInputEventDefault
                 s
         _ ->
             handleEvent
-                (view (asConfig . confIndexView . ivKeybindings) s)
-                listEventDefault
+                (view (asConfig . confIndexView . ivSearchKeybindings) s)
+                searchInputEventDefault
                 s
 
 -- | Handle key strokes on the list of mails.

@@ -25,6 +25,7 @@ drawUI s =
     case view asAppMode s of
         BrowseMail -> drawMain s
         SearchMail -> drawMain s
+        ManageTags -> drawMain s
         ViewMail -> drawMail s
         GatherHeaders -> drawInteractiveHeaders s
         ComposeEditor -> drawComposeEditor s
@@ -36,6 +37,7 @@ appEvent s ev = case ev of
     case view asAppMode s of
         BrowseMail -> mainEvent s e
         SearchMail -> mainEvent s e
+        ManageTags -> mainEvent s e
         ViewMail -> mailEvent s e
         GatherHeaders -> interactiveGatherHeaders s e
         ComposeEditor -> composeEditor s e

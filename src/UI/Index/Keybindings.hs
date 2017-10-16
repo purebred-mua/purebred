@@ -20,10 +20,18 @@ indexKeybindings =
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (viewHelp `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'R') []) (reloadMails `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '`') []) (noop `chain'` (focus :: Action 'ManageTags AppState) `chain` continue)
     ]
 
 indexsearchKeybindings :: [Keybinding 'SearchMail (Brick.Next AppState)]
 indexsearchKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (backToIndex `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (done `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain` backToIndex `chain` continue)
+    ]
+
+managetagsKeybindings :: [Keybinding 'ManageTags (Brick.Next AppState)]
+managetagsKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain` backToIndex `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain` backToIndex `chain` continue)
     ]

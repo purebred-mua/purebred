@@ -130,6 +130,14 @@ testUserCanManipulateNMQuery =
           liftIO $ step "delete all input"
           sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
+          liftIO $ step "search for non existing tags yielding no results"
+          _ <- sendLiteralKeys "does not match anything"
+          sendKeys "Enter" (Literal "Item 0 of 0")
+
+          liftIO $ step "search for mail correctly tagged"
+          sendKeys ":" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "does"))
+          sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+
           liftIO $ step "enter new tag"
           _ <- sendLiteralKeys "tag:replied"
 

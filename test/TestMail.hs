@@ -3,7 +3,7 @@ module TestMail where
 
 import Data.Text (Text, pack)
 import Types (NotmuchMail(..))
-import Storage.Notmuch (addTag, removeTag)
+import Storage.Notmuch (addTags, removeTags)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck
        (testProperty, Arbitrary, arbitrary, choose, Gen)
@@ -22,14 +22,14 @@ mailTests =
 testAddingTags :: TestTree
 testAddingTags = testProperty "no duplicates when adding tags" propNoDuplicatesAdded
   where
-    propNoDuplicatesAdded :: NotmuchMail -> Text -> Bool
-    propNoDuplicatesAdded m a = addTag (addTag m a) a == addTag m a
+    propNoDuplicatesAdded :: NotmuchMail -> [Text] -> Bool
+    propNoDuplicatesAdded m as = addTags (addTags m as) as == addTags m as
 
 testRemovingTags :: TestTree
 testRemovingTags = testProperty "remove tags" propRemoveTags
   where
-    propRemoveTags :: NotmuchMail -> Text -> Bool
-    propRemoveTags m a = removeTag (removeTag m a) a == removeTag m a
+    propRemoveTags :: NotmuchMail -> [Text] -> Bool
+    propRemoveTags m as = removeTags (removeTags m as) as == removeTags m as
 
 instance Arbitrary NotmuchMail where
     arbitrary =
