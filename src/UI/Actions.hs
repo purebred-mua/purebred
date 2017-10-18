@@ -1,14 +1,17 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module UI.Actions (
-  backToIndex
+  Scrollable(..)
+  , backToIndex
   , quit
-  , focusSearch
+  , focus
+  , done
+  , abort
   , displayMail
   , setUnread
-  , applySearchTerms
   , mailIndexUp
   , mailIndexDown
   , switchComposeEditor
@@ -17,15 +20,14 @@ module UI.Actions (
   , scrollUp
   , scrollDown
   , toggleHeaders
-  , send
-  , reset
   , initialCompose
   , continue
   , chain
   , viewHelp
   ) where
 
-import qualified Brick.Main as B (continue, halt, vScrollPage)
+import qualified Brick.Main as Brick
+       (continue, halt, vScrollPage, viewportScroll, ViewportScroll)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -36,7 +38,7 @@ import Data.Vector (Vector)
 import Data.Text (unlines)
 import Data.Text.Lazy.IO (readFile)
 import Prelude hiding (readFile, unlines)
-import Control.Lens (set, over, view, (&), _Just)
+import Control.Lens (set, over, view, _Just)
 import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
@@ -48,15 +50,73 @@ import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
 
+class Scrollable (n :: Mode) where
+  makeViewportScroller :: Proxy n -> Brick.ViewportScroll Name
+
+instance Scrollable 'ViewMail where
+  makeViewportScroller _ = Brick.viewportScroll ScrollingMailView
+
+instance Scrollable 'Help where
+  makeViewportScroller _ = Brick.viewportScroll ScrollingHelpView
+
+-- | An action - typically completed by a key press (e.g. Enter) - and it's
+-- contents are used to be applied to an action.
+--
+-- For example: the user changes
+-- the notmuch search terms to find a particular mail. To apply his changes, he
+-- 'completes' his text entered by pressing Enter.
+--
+-- Another example is sending e-mail. So the complete action for the
+-- ComposeEditor is sent, since that's at the end of the composition process.
+--
+class Completable (m :: Mode) where
+  complete :: Proxy m -> AppState -> T.EventM Name AppState
+
+instance Completable 'SearchMail where
+  complete _ = applySearch
+
+instance Completable 'ComposeEditor where
+  complete _ = sendMail
+
+
+-- | Generalisation of reset actions, whether they reset editors back to their
+-- initial state or throw away composed, but not yet sent mails.
+--
+class Resetable (m :: Mode) where
+  reset :: Proxy m -> AppState -> T.EventM Name AppState
+
+instance Resetable 'ComposeEditor where
+  reset _ = pure . set asCompose initialCompose
+
+-- | Generalisation of focus changes between widgets on the same "view"
+-- expressed with the mode in the application state.
+--
+class Focusable (m :: Mode) where
+  switchFocus :: Proxy m -> AppState -> T.EventM Name AppState
+
+instance Focusable 'BrowseMail where
+  switchFocus _ = pure
+                  . set asAppMode SearchMail
+                  . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+
 quit :: Action ctx (T.Next AppState)
-quit = Action "quit the application" B.halt
+quit = Action "quit the application" Brick.halt
 
 continue :: Action ctx (T.Next AppState)
-continue = Action "" B.continue
+continue = Action "" Brick.continue
 
 chain :: Action ctx AppState -> Action ctx a -> Action ctx a
 chain (Action d1 f1) (Action d2 f2) =
   Action (if null d2 then d1 else d1 <> " and then " <> d2) (f1 >=> f2)
+
+done :: forall a. Completable a => Action a AppState
+done = Action "apply" (complete (Proxy :: Proxy a))
+
+abort :: forall a. Resetable a => Action a AppState
+abort = Action "cancel" (reset (Proxy :: Proxy a))
+
+focus :: forall a. Focusable a => Action a AppState
+focus = Action "switch focus" (switchFocus (Proxy :: Proxy a))
 
 backToIndex :: Action ctx AppState
 backToIndex =
@@ -68,20 +128,23 @@ backToIndex =
 viewHelp :: Action ctx AppState
 viewHelp = Action "view all key bindings" (pure . set asAppMode Help)
 
+scrollUp :: forall ctx. (Scrollable ctx) => Action ctx AppState
+scrollUp = Action
+  { _aDescription = "scrolling up"
+  , _aAction = (\s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Up >> pure s)
+  }
+
+scrollDown :: forall ctx. (Scrollable ctx) => Action ctx AppState
+scrollDown = Action
+  { _aDescription = "scrolling down"
+  , _aAction = (\s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s)
+  }
+
 composeMail :: Action 'BrowseMail AppState
 composeMail =
     Action
     { _aDescription = "compose a new mail"
     , _aAction = pure . set asAppMode GatherHeaders
-    }
-
-focusSearch :: Action 'BrowseMail AppState
-focusSearch =
-    Action
-    { _aDescription = "Manipulate the notmuch database query"
-    , _aAction = (pure
-                  . set asAppMode SearchMail
-                  . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL))
     }
 
 displayMail :: Action 'BrowseMail AppState
@@ -96,13 +159,6 @@ setUnread =
     Action
     { _aDescription = "toggle unread"
     , _aAction = (liftIO . updateReadState addTag)
-    }
-
-applySearchTerms :: Action 'SearchMail AppState
-applySearchTerms =
-    Action
-    { _aDescription = "apply search"
-    , _aAction = applySearch
     }
 
 mailIndexUp :: Action 'BrowseMail AppState
@@ -135,18 +191,6 @@ replyMail =
     , _aAction = replyToMail
     }
 
-scrollUp :: forall ctx. (Scrollable ctx) => Action ctx AppState
-scrollUp = Action
-  { _aDescription = "scrolling up"
-  , _aAction = (\s -> B.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Up >> pure s)
-  }
-
-scrollDown :: forall ctx. (Scrollable ctx) => Action ctx AppState
-scrollDown = Action
-  { _aDescription = "scrolling down"
-  , _aAction = (\s -> B.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s)
-  }
-
 toggleHeaders :: Action 'ViewMail AppState
 toggleHeaders = Action
   { _aDescription = "toggle mail headers"
@@ -158,18 +202,8 @@ toggleHeaders = Action
       Filtered -> set (asMailView . mvHeadersState) ShowAll s
       ShowAll -> set (asMailView . mvHeadersState) Filtered s
 
-send :: Action 'ComposeEditor AppState
-send = Action
-  { _aDescription = "send mail"
-  , _aAction = sendMail
-  }
-
-reset :: Action 'ComposeEditor AppState
-reset = Action
-  { _aDescription = "cancel compose"
-  , _aAction = pure . set asCompose initialCompose . set asAppMode BrowseMail
-  }
-
+-- Function definitions for actions
+--
 applySearch :: AppState -> T.EventM Name AppState
 applySearch s =
    runExceptT (getMessages searchterms (view (asConfig . confNotmuch) s))
@@ -255,7 +289,7 @@ sendMail s = do
                 (unlines $ E.getEditContents $ view (asCompose . cSubject) s)
                 body
     liftIO $ renderSendMail m
-    pure $ set asCompose initialCompose s & set asAppMode BrowseMail
+    pure $ set asCompose initialCompose s
 
 initialCompose :: Compose
 initialCompose =
