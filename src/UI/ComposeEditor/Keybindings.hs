@@ -12,6 +12,6 @@ import Types
 composeEditorKeybindings :: [Keybinding 'ComposeEditor (Brick.Next AppState)]
 composeEditorKeybindings =
     [ Keybinding (V.EvKey (V.KChar '\t') []) (backToIndex `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'y') []) (send `chain` continue)
-    , Keybinding (V.EvKey V.KEsc []) (reset `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'y') []) (done `chain` backToIndex `chain` continue)
+    , Keybinding (V.EvKey V.KEsc []) (abort `chain` backToIndex `chain` continue)
     ]

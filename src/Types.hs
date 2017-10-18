@@ -7,13 +7,11 @@ module Types where
 import Codec.MIME.Type (MIMEValue)
 import qualified Brick.AttrMap             as Brick
 import Brick.Types (EventM, Next)
-import Brick.Main (viewportScroll, ViewportScroll)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Control.Lens
 import Data.ByteString (ByteString)
 import qualified Data.Text as T
-import Data.Proxy
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
@@ -290,11 +288,3 @@ mailTags = lens _mailTags (\m t -> m { _mailTags = t })
 mailId :: Lens' NotmuchMail ByteString
 mailId = lens _mailId (\m i -> m { _mailId = i })
 
-class Scrollable (n :: Mode) where
-  makeViewportScroller :: Proxy n -> ViewportScroll Name
-
-instance Scrollable 'ViewMail where
-  makeViewportScroller _ = viewportScroll ScrollingMailView
-
-instance Scrollable 'Help where
-  makeViewportScroller _ = viewportScroll ScrollingHelpView
