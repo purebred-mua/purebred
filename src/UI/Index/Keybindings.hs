@@ -1,15 +1,14 @@
+{-# LANGUAGE DataKinds #-}
+
 module UI.Index.Keybindings where
 
-import Brick.Types (Next)
-import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
-import Data.Text (Text)
+import qualified Brick.Types as Brick
 import qualified Graphics.Vty as V
 import UI.Actions
 import Types
 
 -- | Default Keybindings
-indexKeybindings :: [Keybinding (L.List Name NotmuchMail) (Next AppState)]
+indexKeybindings :: [Keybinding 'BrowseMail (Brick.Next AppState)]
 indexKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) quit
     , Keybinding (V.EvKey (V.KChar ':') []) (focusSearch `chain` continue)
@@ -23,7 +22,7 @@ indexKeybindings =
     , Keybinding (V.EvKey (V.KChar '?') []) (viewHelp `chain` continue)
     ]
 
-indexsearchKeybindings :: [Keybinding (E.Editor Text Name) (Next AppState)]
+indexsearchKeybindings :: [Keybinding 'SearchMail (Brick.Next AppState)]
 indexsearchKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (backToIndex `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (applySearchTerms `chain` continue)

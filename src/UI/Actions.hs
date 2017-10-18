@@ -1,4 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module UI.Actions (
   backToIndex
   , quit
@@ -27,6 +30,7 @@ import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Network.Mail.Mime (Address(..), renderSendMail, simpleMail')
+import Data.Proxy
 import Data.Semigroup ((<>))
 import Data.Vector (Vector)
 import Data.Text (unlines)
@@ -64,14 +68,14 @@ backToIndex =
 viewHelp :: Action ctx AppState
 viewHelp = Action "view all key bindings" (pure . set asAppMode Help)
 
-composeMail :: Action (L.List Name NotmuchMail) AppState
+composeMail :: Action 'BrowseMail AppState
 composeMail =
     Action
     { _aDescription = "compose a new mail"
     , _aAction = pure . set asAppMode GatherHeaders
     }
 
-focusSearch :: Action (L.List Name NotmuchMail) AppState
+focusSearch :: Action 'BrowseMail AppState
 focusSearch =
     Action
     { _aDescription = "Manipulate the notmuch database query"
@@ -80,42 +84,42 @@ focusSearch =
                   . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL))
     }
 
-displayMail :: Action (L.List Name NotmuchMail) AppState
+displayMail :: Action 'BrowseMail AppState
 displayMail =
     Action
     { _aDescription = "display an e-mail"
     , _aAction = \s -> liftIO $ updateStateWithParsedMail s >>= updateReadState removeTag
     }
 
-setUnread :: Action (L.List Name NotmuchMail) AppState
+setUnread :: Action 'BrowseMail AppState
 setUnread =
     Action
     { _aDescription = "toggle unread"
     , _aAction = (liftIO . updateReadState addTag)
     }
 
-applySearchTerms :: Action (E.Editor Text Name) AppState
+applySearchTerms :: Action 'SearchMail AppState
 applySearchTerms =
     Action
     { _aDescription = "apply search"
     , _aAction = applySearch
     }
 
-mailIndexUp :: Action (L.List Name NotmuchMail) AppState
+mailIndexUp :: Action 'BrowseMail AppState
 mailIndexUp =
     Action
     { _aDescription = "mail index up one e-mail"
     , _aAction = mailIndexEvent L.listMoveUp
     }
 
-mailIndexDown :: Action (L.List Name NotmuchMail) AppState
+mailIndexDown :: Action 'BrowseMail AppState
 mailIndexDown =
     Action
     { _aDescription = "mail index down one e-mail"
     , _aAction = mailIndexEvent L.listMoveDown
     }
 
-switchComposeEditor :: Action (L.List Name NotmuchMail) AppState
+switchComposeEditor :: Action 'BrowseMail AppState
 switchComposeEditor =
     Action
     { _aDescription = "switch to compose editor"
@@ -124,26 +128,26 @@ switchComposeEditor =
                           Nothing -> pure s
     }
 
-replyMail :: Action (L.List Name NotmuchMail) AppState
+replyMail :: Action 'BrowseMail AppState
 replyMail =
     Action
     { _aDescription = "reply to an e-mail"
     , _aAction = replyToMail
     }
 
-scrollUp :: Scrollable ctx => Action (T.Widget ctx) AppState
+scrollUp :: forall ctx. (Scrollable ctx) => Action ctx AppState
 scrollUp = Action
   { _aDescription = "scrolling up"
-  , _aAction = (\s -> B.vScrollPage (makeViewportScroller s) T.Up >> pure s)
-  }
-  
-scrollDown :: Scrollable ctx => Action (T.Widget ctx) AppState
-scrollDown = Action
-  { _aDescription = "scrolling down"
-  , _aAction = (\s -> B.vScrollPage (makeViewportScroller s) T.Down >> pure s)
+  , _aAction = (\s -> B.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Up >> pure s)
   }
 
-toggleHeaders :: Action (T.Widget Name) AppState
+scrollDown :: forall ctx. (Scrollable ctx) => Action ctx AppState
+scrollDown = Action
+  { _aDescription = "scrolling down"
+  , _aAction = (\s -> B.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s)
+  }
+
+toggleHeaders :: Action 'ViewMail AppState
 toggleHeaders = Action
   { _aDescription = "toggle mail headers"
   , _aAction = pure . go
@@ -154,13 +158,13 @@ toggleHeaders = Action
       Filtered -> set (asMailView . mvHeadersState) ShowAll s
       ShowAll -> set (asMailView . mvHeadersState) Filtered s
 
-send :: Action (E.Editor Text Name) AppState
+send :: Action 'ComposeEditor AppState
 send = Action
   { _aDescription = "send mail"
   , _aAction = sendMail
   }
 
-reset :: Action (E.Editor Text Name) AppState
+reset :: Action 'ComposeEditor AppState
 reset = Action
   { _aDescription = "cancel compose"
   , _aAction = pure . set asCompose initialCompose . set asAppMode BrowseMail

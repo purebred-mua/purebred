@@ -1,15 +1,19 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
+
 -- | Basic types for the UI used by this library
 module Types where
 
 import Codec.MIME.Type (MIMEValue)
 import qualified Brick.AttrMap             as Brick
-import Brick.Types (EventM, Next, Widget)
+import Brick.Types (EventM, Next)
 import Brick.Main (viewportScroll, ViewportScroll)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Control.Lens
 import Data.ByteString (ByteString)
 import qualified Data.Text as T
+import Data.Proxy
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
@@ -150,36 +154,36 @@ confHelpView :: Getter (Configuration a b) HelpViewSettings
 confHelpView = to (\(Configuration _ _ _ _ _ _ h) -> h)
 
 newtype ComposeViewSettings = ComposeViewSettings
-    { _cvKeybindings :: [Keybinding (E.Editor T.Text Name) (Next AppState)]
+    { _cvKeybindings :: [Keybinding 'ComposeEditor (Next AppState)]
     }
 
-cvKeybindings :: Lens' ComposeViewSettings [Keybinding (E.Editor T.Text Name) (Next AppState)]
+cvKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeEditor (Next AppState)]
 cvKeybindings f (ComposeViewSettings a) = fmap (\a' -> ComposeViewSettings a') (f a)
 
 newtype HelpViewSettings = HelpViewSettings
-  { _hvKeybindings :: [Keybinding (Widget Name) (Next AppState)]
+  { _hvKeybindings :: [Keybinding 'Help (Next AppState)]
   }
 
-hvKeybindings :: Lens' HelpViewSettings [Keybinding (Widget Name) (Next AppState)]
+hvKeybindings :: Lens' HelpViewSettings [Keybinding 'Help (Next AppState)]
 hvKeybindings f (HelpViewSettings a) = fmap (\a' -> HelpViewSettings a') (f a)
 
 data IndexViewSettings = IndexViewSettings
-    { _ivKeybindings       :: [Keybinding (L.List Name NotmuchMail) (Next AppState)]
-    , _ivSearchKeybindings :: [Keybinding (E.Editor T.Text Name) (Next AppState)]
+    { _ivKeybindings       :: [Keybinding 'BrowseMail (Next AppState)]
+    , _ivSearchKeybindings :: [Keybinding 'SearchMail (Next AppState)]
     }
 
-ivKeybindings :: Lens' IndexViewSettings [Keybinding (L.List Name NotmuchMail) (Next AppState)]
+ivKeybindings :: Lens' IndexViewSettings [Keybinding 'BrowseMail (Next AppState)]
 ivKeybindings f (IndexViewSettings a b) = fmap (\a' -> IndexViewSettings a' b) (f a)
 
-ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding (E.Editor T.Text Name) (Next AppState)]
+ivSearchKeybindings :: Lens' IndexViewSettings [Keybinding 'SearchMail (Next AppState)]
 ivSearchKeybindings f (IndexViewSettings a b) = fmap (\b' -> IndexViewSettings a b') (f b)
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
     , _mvPreferedContentType :: T.Text
     , _mvHeadersToShow       :: CI.CI T.Text -> Bool
-    , _mvKeybindings         :: [Keybinding (Widget Name) (Next AppState)]
-    , _mvIndexKeybindings    :: [Keybinding (L.List Name NotmuchMail) (Next AppState)]
+    , _mvKeybindings         :: [Keybinding 'ViewMail (Next AppState)]
+    , _mvIndexKeybindings    :: [Keybinding 'BrowseMail (Next AppState)]
     }
 
 mvIndexRows :: Lens' MailViewSettings Int
@@ -191,10 +195,10 @@ mvPreferredContentType f (MailViewSettings a b c d e) = fmap (\b' -> MailViewSet
 mvHeadersToShow :: Getter MailViewSettings (CI.CI T.Text -> Bool)
 mvHeadersToShow = to (\(MailViewSettings _ _ h _ _) -> h)
 
-mvKeybindings :: Lens' MailViewSettings [Keybinding (Widget Name) (Next AppState)]
+mvKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail (Next AppState)]
 mvKeybindings f (MailViewSettings a b c d e) = fmap (\d' -> MailViewSettings a b c d' e) (f d)
 
-mvIndexKeybindings :: Lens' MailViewSettings [Keybinding (L.List Name NotmuchMail) (Next AppState)]
+mvIndexKeybindings :: Lens' MailViewSettings [Keybinding 'BrowseMail (Next AppState)]
 mvIndexKeybindings f (MailViewSettings a b c d e) = fmap (\e' -> MailViewSettings a b c d e') (f e)
 
 -- | Overall application state
@@ -225,7 +229,7 @@ asAppMode f (AppState a b c d e g) = fmap (\e' -> AppState a b c d e' g) (f e)
 asError :: Lens' AppState (Maybe Error)
 asError f (AppState a b c d e g) = fmap (\g' -> AppState a b c d e g') (f g)
 
-data Action ctx a = Action
+data Action (ctx :: Mode) a = Action
     { _aDescription :: String
     , _aAction :: AppState -> EventM Name a
     }
@@ -233,7 +237,7 @@ data Action ctx a = Action
 aAction :: Getter (Action ctx a) (AppState -> EventM Name a)
 aAction = to (\(Action _ b) -> b)
 
-data Keybinding ctx a = Keybinding
+data Keybinding (ctx :: Mode) a = Keybinding
     { _kbEvent :: Vty.Event
     , _kbAction :: Action ctx a
     }
@@ -286,10 +290,11 @@ mailTags = lens _mailTags (\m t -> m { _mailTags = t })
 mailId :: Lens' NotmuchMail ByteString
 mailId = lens _mailId (\m i -> m { _mailId = i })
 
-class Scrollable n where
-  makeViewportScroller :: AppState -> ViewportScroll n
+class Scrollable (n :: Mode) where
+  makeViewportScroller :: Proxy n -> ViewportScroll Name
 
-instance Scrollable Name where
-  makeViewportScroller s = case view asAppMode s of
-    Help -> viewportScroll ScrollingHelpView
-    _ -> viewportScroll ScrollingMailView
+instance Scrollable 'ViewMail where
+  makeViewportScroller _ = viewportScroll ScrollingMailView
+
+instance Scrollable 'Help where
+  makeViewportScroller _ = viewportScroll ScrollingHelpView
