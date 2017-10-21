@@ -10,7 +10,9 @@ import Data.Maybe (fromMaybe)
 import Data.Vector (length)
 import Prelude hiding (length)
 import UI.Draw.Main (fillLine)
-import Types (NotmuchMail, AppState, Name, asError, asMailIndex, miListOfMails)
+import Types
+       (NotmuchMail, AppState, Name, asError, asMailIndex, miListOfMails,
+        asAppMode)
 import Config.Main (statusbarAttr, statusbarErrorAttr)
 
 statusbar :: AppState -> Widget Name
@@ -20,8 +22,9 @@ statusbar s =
         Nothing ->
             let l = view (asMailIndex . miListOfMails) s
                 total = str $ show $ length $ view L.listElementsL l
+                mode = str $ show $ view asAppMode s
             in withAttr statusbarAttr $ str "Purebred: " <+>
-               str "Item " <+> currentIndexW l <+> str " of " <+> total <+> fillLine
+               str "Item " <+> currentIndexW l <+> str " of " <+> total <+> fillLine <+> mode
 
 currentIndexW :: L.List Name NotmuchMail -> Widget Name
 currentIndexW l = str $ show $ currentIndex l
