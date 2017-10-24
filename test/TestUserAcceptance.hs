@@ -46,7 +46,44 @@ systemTests =
         , testSetsMailToRead
         , testErrorHandling
         , testHelp
+        , testManageTags
         ]
+
+testManageTags :: TestTree
+testManageTags = withTmuxSession "manage tags" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "focus command to show mail tags"
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "inbox,unread"))
+
+    liftIO $ step "delete all input"
+    sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+
+    liftIO $ step "enter new tag"
+    _ <- sendLiteralKeys "foo, bar ,unread"
+
+    liftIO $ step "apply"
+    sendKeys "Enter" (Literal "foo bar unread")
+
+    -- find newly tagged mail
+    liftIO $ step "focus tag search"
+    sendKeys ":" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "tag"))
+    sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+
+    liftIO $ step "enter tag to search `foo and bar`"
+    _ <- sendLiteralKeys "tag:foo and tag:bar"
+
+    liftIO $ step "apply"
+    sendKeys "Enter" (Literal "tag:foo and tag:bar")
+
+    liftIO $ step "attempt to add a new tag"
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "bar,foo"))
+
+    liftIO $ step "cancel tagging and expect old search restored"
+    sendKeys "Escape" (Literal "tag:foo and tag:bar")
+
+    pure ()
 
 testHelp :: TestTree
 testHelp = withTmuxSession "help view" $
