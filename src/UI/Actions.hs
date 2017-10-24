@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,6 +12,7 @@ module UI.Actions (
   , focus
   , done
   , abort
+  , noop
   , displayMail
   , setUnread
   , mailIndexUp
@@ -23,6 +26,7 @@ module UI.Actions (
   , initialCompose
   , continue
   , chain
+  , chain'
   , viewHelp
   ) where
 
@@ -58,6 +62,19 @@ instance Scrollable 'ViewMail where
 
 instance Scrollable 'Help where
   makeViewportScroller _ = Brick.viewportScroll ScrollingHelpView
+
+
+class ModeTransition (s :: Mode) (d :: Mode) where
+
+instance ModeTransition s s where
+
+instance ModeTransition 'ManageTags 'BrowseMail where
+
+instance ModeTransition 'BrowseMail 'SearchMail where
+
+instance ModeTransition 'BrowseMail 'ManageTags where
+
+instance ModeTransition 'ViewMail 'BrowseMail where
 
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
 -- contents are used to be applied to an action.
@@ -109,6 +126,17 @@ chain :: Action ctx AppState -> Action ctx a -> Action ctx a
 chain (Action d1 f1) (Action d2 f2) =
   Action (if null d2 then d1 else d1 <> " and then " <> d2) (f1 >=> f2)
 
+chain'
+    :: forall ctx ctx' a.
+       (HasMode ctx', ModeTransition ctx ctx')
+    => Action ctx AppState
+    -> Action ctx' a
+    -> Action ctx a
+chain' (Action d1 f1) (Action d2 f2) =
+  Action (if null d2 then d1 else d1 <> " and then " <> d2) (f1 >=> switchMode >=> f2)
+  where
+    switchMode = pure . set asAppMode (mode (Proxy :: Proxy ctx'))
+
 done :: forall a. Completable a => Action a AppState
 done = Action "apply" (complete (Proxy :: Proxy a))
 
@@ -117,6 +145,12 @@ abort = Action "cancel" (reset (Proxy :: Proxy a))
 
 focus :: forall a. Focusable a => Action a AppState
 focus = Action "switch focus" (switchFocus (Proxy :: Proxy a))
+
+-- | A no-op action which just returns the current AppState
+-- This action can be used at the start of an Action chain where an immediate
+-- mode switch is required
+noop :: Action ctx AppState
+noop = Action "" pure
 
 backToIndex :: Action ctx AppState
 backToIndex =

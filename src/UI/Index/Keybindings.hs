@@ -11,7 +11,7 @@ import Types
 indexKeybindings :: [Keybinding 'BrowseMail (Brick.Next AppState)]
 indexKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) quit
-    , Keybinding (V.EvKey (V.KChar ':') []) (focus `chain` continue)
+    , Keybinding (V.EvKey (V.KChar ':') []) (noop `chain'` (focus :: Action 'SearchMail AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (displayMail `chain` continue)
     , Keybinding (V.EvKey V.KDown []) (mailIndexDown `chain` continue)
     , Keybinding (V.EvKey V.KUp []) (mailIndexUp `chain` continue)
