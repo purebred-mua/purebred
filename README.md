@@ -10,3 +10,9 @@ An MUA built around [*notmuch*](https://notmuchmail.org/).
 - a bunch of uncontroversial Haskell dependencies
 - notmuch
 - not much else (*geddit?*)
+
+## Status
+
+This project is in it's infancy, but please join us and help.
+
+![](screenshot.png)
