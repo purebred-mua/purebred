@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Help.Main where
 
-import Brick.Main (continue)
 import Brick.Types (Padding(..), Widget)
 import qualified Brick.Types as T
 import Brick.Widgets.Core
@@ -12,7 +11,6 @@ import Control.Lens (view, views)
 import Data.Semigroup ((<>))
 import Data.Text (Text, singleton, intercalate, pack)
 import Config.Main (helpTitleAttr, helpKeybindingAttr)
-import UI.Keybindings (handleEvent)
 import Types
 
 drawHelp :: AppState -> [Widget Name]
@@ -74,13 +72,3 @@ ppMod MMeta = "<Meta>"
 ppMod MAlt = "<Alt>"
 ppMod MShift = "<Shift>"
 ppMod MCtrl = "<Ctrl>"
-
--- | event handling for help view
-handleHelpEvents :: AppState
-              -> Event
-              -> T.EventM Name (T.Next AppState)
-handleHelpEvents s =
-    handleEvent
-        (view (asConfig . confHelpView . hvKeybindings) s)
-        (\s' _ -> continue s')
-        s

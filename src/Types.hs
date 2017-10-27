@@ -139,11 +139,11 @@ confMailView f (Configuration a b c d e g h) = fmap (\d' -> Configuration a b c 
 confIndexView :: Lens' (Configuration a b) IndexViewSettings
 confIndexView f (Configuration a b c d e g h) = fmap (\e' -> Configuration a b c d e' g h) (f e)
 
-confComposeView :: Getter (Configuration a b) ComposeViewSettings
-confComposeView = to (\(Configuration _ _ _ _ _ g _) -> g)
+confComposeView :: Lens' (Configuration a b) ComposeViewSettings
+confComposeView f (Configuration a b c d e g h) = fmap (\g' -> Configuration a b c d e g' h) (f g)
 
-confHelpView :: Getter (Configuration a b) HelpViewSettings
-confHelpView = to (\(Configuration _ _ _ _ _ _ h) -> h)
+confHelpView :: Lens' (Configuration a b) HelpViewSettings
+confHelpView f (Configuration a b c d e g h) = fmap (\h' -> Configuration a b c d e g h') (f h)
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvKeybindings :: [Keybinding 'ComposeEditor (Next AppState)]

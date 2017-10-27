@@ -3,8 +3,7 @@
 
 module UI.ComposeEditor.Main where
 
-import Brick.Main (continue)
-import Brick.Types (EventM, Next, Padding(..), Widget)
+import Brick.Types (Padding(..), Widget)
 import Brick.Widgets.Core
        (fill, hLimit, padRight, padTop, str, txt, vLimit, withAttr, (<+>),
         (<=>))
@@ -15,10 +14,8 @@ import Control.Lens.Getter (view)
 import Control.Lens.Lens (Lens')
 import qualified Data.Text                    as T
 import Data.Vector (fromList)
-import Graphics.Vty (Event)
 
 import UI.Draw.Main (editorDrawContent)
-import UI.Keybindings (handleEvent)
 import Types
 
 drawComposeEditor :: AppState -> [Widget Name]
@@ -60,16 +57,3 @@ getLabelForComposeState :: Mode -> Widget Name
 getLabelForComposeState GatherHeadersFrom = txt "From:"
 getLabelForComposeState GatherHeadersTo = txt "To:"
 getLabelForComposeState _ = txt "Subject:"
-
--- | event handling for composing e-mail
-
--- | the editor which shows header fields and attachments
-composeEditor :: AppState
-              -> Event
-              -> EventM Name (Next AppState)
-composeEditor s =
-    handleEvent
-        (view (asConfig . confComposeView . cvKeybindings) s)
-        (\s' _ ->
-              continue s')
-        s
