@@ -2,9 +2,7 @@
 
 module UI.Mail.Main where
 
-import qualified Brick.Main as M
 import Brick.Types (Padding(..), ViewportType(..), Widget)
-import qualified Brick.Types as T
 import Brick.Widgets.Core
        (padLeft, padTop, txt, txtWrap, vLimit, viewport, (<+>), (<=>),
         withAttr)
@@ -16,9 +14,7 @@ import qualified Data.CaseInsensitive as CI
 import Control.Lens.Getter (view)
 import Data.CaseInsensitive (mk)
 import qualified Data.Text as T
-import Graphics.Vty.Input.Events (Event)
 import UI.Index.Main (renderMailList)
-import UI.Keybindings (handleEvent, lookupKeybinding)
 import UI.Status.Main (statusbar)
 import Types
 import Config.Main (headerKeyAttr, headerValueAttr)
@@ -79,21 +75,3 @@ headerFilter s =
     case view (asMailView . mvHeadersState) s of
         Filtered -> view (asConfig . confMailView . mvHeadersToShow) s
         ShowAll -> const True
-
--- | event handling for viewing a single mail
-
--- | The mail view shows a shortened list of mails. Forward all key strokes to
--- the list of mails by default.
-mailEvent :: AppState -> Event -> T.EventM Name (T.Next AppState)
-mailEvent s =
-    handleEvent
-        (view (asConfig . confMailView . mvKeybindings) s)
-        displayMailDefault
-        s
-
-displayMailDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
-displayMailDefault s ev =
-    maybe
-        (M.continue s)
-        (\kb -> view (kbAction . aAction) kb s)
-        (lookupKeybinding ev $ view (asConfig . confMailView . mvIndexKeybindings) s)
