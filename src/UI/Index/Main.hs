@@ -94,12 +94,7 @@ mainEvent s =
 -- Maybe that will remove anything important for the user to see. Do we need
 -- something like an error log?
 listEventDefault :: AppState -> Event -> T.EventM Name (T.Next AppState)
-listEventDefault s e =
-    L.handleListEvent e (view (asMailIndex . miListOfMails) s) >>=
-    \mi' ->
-         M.continue $
-         set (asMailIndex . miListOfMails) mi' s & set asAppMode BrowseMail &
-         set asError Nothing
+listEventDefault s e = M.continue =<< T.handleEventLensed s (asMailIndex . miListOfMails) L.handleListEvent e
 
 
 -- | Search search input is mostly straight forward, since every keystroke is
