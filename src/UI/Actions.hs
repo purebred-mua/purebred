@@ -284,7 +284,7 @@ addTags :: [Text] -> Action ctx AppState
 addTags ts =
     Action
     { _aDescription = "add given tags"
-    , _aAction = (\s -> liftIO . selectedMailHelper s $ \m -> applyMailTags m ts Notmuch.removeTags s)
+    , _aAction = (\s -> liftIO . selectedMailHelper s $ \m -> applyMailTags m ts Notmuch.addTags s)
     }
 
 removeTags :: [Text] -> Action ctx AppState
