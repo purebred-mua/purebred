@@ -32,10 +32,11 @@ module UI.Actions (
   , addTags
   , removeTags
   , reloadMails
+  , invokeEditor
   ) where
 
 import qualified Brick.Main as Brick
-       (continue, halt, vScrollPage, viewportScroll, ViewportScroll)
+       (suspendAndResume, continue, halt, vScrollPage, viewportScroll, ViewportScroll)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -45,9 +46,12 @@ import Data.Semigroup ((<>))
 import Data.Vector (Vector)
 import Data.Text (splitOn, strip, intercalate, unlines, Text)
 import Data.Text.Lazy.IO (readFile)
+import System.Exit (ExitCode(..))
+import System.IO.Temp (emptySystemTempFile)
+import System.Process (system)
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
-import Control.Lens (set, over, view, _Just, (&))
+import Control.Lens (set, over, view, _Just, (&), (?~))
 import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
@@ -81,6 +85,8 @@ instance ModeTransition 'BrowseMail 'ManageTags where
 
 instance ModeTransition 'ViewMail 'BrowseMail where
 
+instance ModeTransition 'BrowseMail 'GatherHeadersFrom where
+
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
 -- contents are used to be applied to an action.
 --
@@ -104,6 +110,12 @@ instance Completable 'ManageTags where
   complete _ = \s -> do
     s' <- liftIO $ applyEditorMailTags s
     restoreNMSearch s'
+
+instance Completable 'GatherHeadersFrom where
+  complete _ = pure . set asAppMode GatherHeadersTo
+
+instance Completable 'GatherHeadersTo where
+  complete _ = pure . set asAppMode GatherHeadersSubject
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
@@ -135,6 +147,14 @@ instance Focusable 'ManageTags where
 instance Focusable 'BrowseMail where
   switchFocus _ = pure
 
+instance Focusable 'GatherHeadersFrom where
+  switchFocus _ = \s -> case view (asCompose . cTmpFile) s of
+                          Just _ -> pure $ set asAppMode ComposeEditor s
+                          Nothing -> pure $ set asAppMode GatherHeadersFrom s
+
+instance Focusable 'GatherHeadersTo where
+  switchFocus _ = pure . set asAppMode GatherHeadersTo
+
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
 class HasMode (a :: Mode) where
@@ -153,11 +173,20 @@ instance HasMode 'ViewMail where
 instance HasMode 'ManageTags where
   mode _ = ManageTags
 
+instance HasMode 'GatherHeadersFrom where
+  mode _ = GatherHeadersFrom
+
+instance HasMode 'GatherHeadersTo where
+  mode _ = GatherHeadersTo
+
 quit :: Action ctx (T.Next AppState)
 quit = Action "quit the application" Brick.halt
 
 continue :: Action ctx (T.Next AppState)
 continue = Action "" Brick.continue
+
+invokeEditor :: Action ctx (T.Next AppState)
+invokeEditor = Action "invoke external editor" (Brick.suspendAndResume . liftIO . invokeEditor')
 
 chain :: Action ctx AppState -> Action ctx a -> Action ctx a
 chain (Action d1 f1) (Action d2 f2) =
@@ -215,7 +244,7 @@ composeMail :: Action 'BrowseMail AppState
 composeMail =
     Action
     { _aDescription = "compose a new mail"
-    , _aAction = pure . set asAppMode GatherHeaders
+    , _aAction = pure . set asAppMode GatherHeadersFrom
     }
 
 displayMail :: Action ctx AppState
@@ -395,12 +424,11 @@ replyToMail s =
   where
     handleErr e = set asAppMode BrowseMail . setError e
     handleMail pmail =
-      set (asCompose . cTo) (E.editor GatherHeadersTo Nothing $ getFrom pmail)
-      . set (asCompose . cFrom) (E.editor GatherHeadersFrom Nothing $ getTo pmail)
+      set (asCompose . cTo) (E.editor ComposeTo Nothing $ getFrom pmail)
+      . set (asCompose . cFrom) (E.editor ComposeFrom Nothing $ getTo pmail)
       . set (asCompose . cSubject)
-        (E.editor GatherHeadersSubject Nothing ("Re: " <> getSubject pmail))
-      . set (asCompose . cFocus) AskFrom
-      . set asAppMode GatherHeaders
+        (E.editor ComposeSubject Nothing ("Re: " <> getSubject pmail))
+      . set asAppMode GatherHeadersFrom
 
 sendMail :: AppState -> T.EventM Name AppState
 sendMail s = do
@@ -427,7 +455,16 @@ initialCompose :: Compose
 initialCompose =
     Compose
         Nothing
-        AskFrom
-        (E.editor GatherHeadersFrom Nothing "")
-        (E.editor GatherHeadersTo Nothing "")
-        (E.editor GatherHeadersSubject Nothing "")
+        (E.editor ComposeFrom Nothing "")
+        (E.editor ComposeTo Nothing "")
+        (E.editor ComposeSubject Nothing "")
+
+
+invokeEditor' :: AppState -> IO AppState
+invokeEditor' s = do
+  let editor = view (asConfig . confEditor) s
+  tmpfile <- emptySystemTempFile "purebred.tmp"
+  status <- system (editor <> " " <> tmpfile)
+  case status of
+    ExitFailure _ -> pure $ set asAppMode BrowseMail s -- ^ show error XXX
+    ExitSuccess -> pure $ set asAppMode ComposeEditor s & asCompose . cTmpFile ?~ tmpfile -- ^ go to compose editor

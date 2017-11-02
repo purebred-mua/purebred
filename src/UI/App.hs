@@ -27,7 +27,9 @@ drawUI s =
         SearchMail -> drawMain s
         ManageTags -> drawMain s
         ViewMail -> drawMail s
-        GatherHeaders -> drawInteractiveHeaders s
+        GatherHeadersFrom -> drawInteractiveHeaders s
+        GatherHeadersTo -> drawInteractiveHeaders s
+        GatherHeadersSubject -> drawInteractiveHeaders s
         ComposeEditor -> drawComposeEditor s
         Help -> drawHelp s
 
@@ -39,7 +41,9 @@ appEvent s ev = case ev of
         SearchMail -> mainEvent s e
         ManageTags -> mainEvent s e
         ViewMail -> mailEvent s e
-        GatherHeaders -> interactiveGatherHeaders s e
+        GatherHeadersFrom -> interactiveGatherHeaders s e
+        GatherHeadersTo -> interactiveGatherHeaders s e
+        GatherHeadersSubject -> interactiveGatherHeaders s e
         ComposeEditor -> composeEditor s e
         Help -> handleHelpEvents s e
   _ -> M.continue s  -- we only handle Vty events

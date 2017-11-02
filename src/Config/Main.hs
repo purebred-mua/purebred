@@ -11,6 +11,10 @@ import qualified Graphics.Vty as V
 import System.Environment (lookupEnv)
 import Data.Maybe (fromMaybe)
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
+import UI.GatherHeaders.Keybindings
+       (interactiveGatherHeadersKeybindings,
+        interactiveGatherHeadersToKeybindings,
+        interactiveGatherHeadersSubjectKeybindings)
 import UI.Index.Keybindings
        (indexKeybindings, indexsearchKeybindings, managetagsKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings, displayIndexKeybindings)
@@ -101,6 +105,9 @@ defaultConfig =
       }
     , _confComposeView = ComposeViewSettings
       { _cvKeybindings = composeEditorKeybindings
+      , _cvFromKeybindings = interactiveGatherHeadersKeybindings
+      , _cvToKeybindings = interactiveGatherHeadersToKeybindings
+      , _cvSubjectKeybindings = interactiveGatherHeadersSubjectKeybindings
       }
     , _confHelpView = HelpViewSettings
       { _hvKeybindings = helpKeybindings

@@ -40,7 +40,6 @@ modeTitle BrowseMail = "Index of Mails"
 modeTitle SearchMail = "Search Editor"
 modeTitle ViewMail = "Mail Viewer"
 modeTitle ComposeEditor = "Editor to Compose a new Mail"
-modeTitle GatherHeaders = "Enter new e-mail headers (from, to, subject)"
 modeTitle m = pack $ show m
 
 ppKbEvent :: Event -> Text
