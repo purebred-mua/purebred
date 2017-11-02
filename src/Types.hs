@@ -26,7 +26,9 @@ data Mode
     = BrowseMail   -- ^ input focus goes to navigating the list of mails (main screen)
     | SearchMail   -- ^ input focus goes to manipulating the notmuch search (main screen)
     | ViewMail   -- ^ focus is on the screen showing the entire mail
-    | GatherHeaders   -- ^ focus is on the command line to gather input for composing an e-mail
+    | GatherHeadersFrom   -- ^ focus is on the command line to gather input for composing an e-mail
+    | GatherHeadersTo   -- ^ focus is on the command line to gather input for composing an e-mail
+    | GatherHeadersSubject   -- ^ focus is on the command line to gather input for composing an e-mail
     | ComposeEditor   -- ^ edit the final e-mail
     | Help  -- ^ shows all keybindings
     | ManageTags -- ^ add/remove tags
@@ -37,9 +39,9 @@ data Name =
     EditorInput
     | ListOfMails
     | ScrollingMailView
-    | GatherHeadersFrom
-    | GatherHeadersTo
-    | GatherHeadersSubject
+    | ComposeFrom
+    | ComposeTo
+    | ComposeSubject
     | ScrollingHelpView
     | ManageTagsEditor
     deriving (Eq,Show,Ord)
@@ -74,34 +76,24 @@ mvMail = lens _mvMail (\mv pm -> mv { _mvMail = pm })
 mvHeadersState :: Lens' MailView HeadersState
 mvHeadersState = lens _mvHeadersState (\mv hs -> mv { _mvHeadersState = hs })
 
-data ComposeState
-    = AskFrom
-    | AskTo
-    | AskSubject
-    deriving (Eq)
-
 data Compose = Compose
     { _cTmpFile :: Maybe String
-    , _cFocus   :: ComposeState
     , _cFrom    :: E.Editor T.Text Name
     , _cTo      :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
     }
 
 cTmpFile :: Lens' Compose (Maybe String)
-cTmpFile f (Compose a b c d e) = fmap (\a' -> Compose a' b c d e) (f a)
-
-cFocus :: Lens' Compose ComposeState
-cFocus f (Compose a b c d e) = fmap (\b' -> Compose a b' c d e) (f b)
+cTmpFile f (Compose a b c d) = fmap (\a' -> Compose a' b c d) (f a)
 
 cFrom :: Lens' Compose (E.Editor T.Text Name)
-cFrom f (Compose a b c d e) = fmap (\c' -> Compose a b c' d e) (f c)
+cFrom f (Compose a b c d) = fmap (\b' -> Compose a b' c d) (f b)
 
 cTo :: Lens' Compose (E.Editor T.Text Name)
-cTo f (Compose a b c d e) = fmap (\d' -> Compose a b c d' e) (f d)
+cTo f (Compose a b c d) = fmap (\c' -> Compose a b c' d) (f c)
 
 cSubject :: Lens' Compose (E.Editor T.Text Name)
-cSubject f (Compose a b c d e) = fmap (\e' -> Compose a b c d e') (f e)
+cSubject f (Compose a b c d) = fmap (\d' -> Compose a b c d') (f d)
 
 
 data NotmuchSettings a = NotmuchSettings
@@ -153,12 +145,24 @@ confComposeView = to (\(Configuration _ _ _ _ _ g _) -> g)
 confHelpView :: Getter (Configuration a b) HelpViewSettings
 confHelpView = to (\(Configuration _ _ _ _ _ _ h) -> h)
 
-newtype ComposeViewSettings = ComposeViewSettings
+data ComposeViewSettings = ComposeViewSettings
     { _cvKeybindings :: [Keybinding 'ComposeEditor (Next AppState)]
+    , _cvFromKeybindings :: [Keybinding 'GatherHeadersFrom (Next AppState)]
+    , _cvToKeybindings :: [Keybinding 'GatherHeadersTo (Next AppState)]
+    , _cvSubjectKeybindings :: [Keybinding 'GatherHeadersSubject (Next AppState)]
     }
 
 cvKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeEditor (Next AppState)]
-cvKeybindings f (ComposeViewSettings a) = fmap (\a' -> ComposeViewSettings a') (f a)
+cvKeybindings = lens _cvKeybindings (\cv x -> cv { _cvKeybindings = x })
+
+cvFromKeybindings :: Lens' ComposeViewSettings [Keybinding 'GatherHeadersFrom (Next AppState)]
+cvFromKeybindings = lens _cvFromKeybindings (\cv x -> cv { _cvFromKeybindings = x })
+
+cvToKeybindings :: Lens' ComposeViewSettings [Keybinding 'GatherHeadersTo (Next AppState)]
+cvToKeybindings = lens _cvToKeybindings (\cv x -> cv { _cvToKeybindings = x })
+
+cvSubjectKeybindings :: Lens' ComposeViewSettings [Keybinding 'GatherHeadersSubject (Next AppState)]
+cvSubjectKeybindings = lens _cvSubjectKeybindings (\cv x -> cv { _cvSubjectKeybindings = x })
 
 newtype HelpViewSettings = HelpViewSettings
   { _hvKeybindings :: [Keybinding 'Help (Next AppState)]

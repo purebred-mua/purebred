@@ -16,7 +16,7 @@ indexKeybindings =
     , Keybinding (V.EvKey V.KDown []) (mailIndexDown `chain` continue)
     , Keybinding (V.EvKey V.KUp []) (mailIndexUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar '\t') []) (switchComposeEditor `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'm') []) (composeMail `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'm') []) (noop `chain'` (focus :: Action 'GatherHeadersFrom AppState) `chain`continue)
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (viewHelp `chain` continue)

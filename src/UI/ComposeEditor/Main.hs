@@ -24,18 +24,18 @@ import Types
 drawComposeEditor :: AppState -> [Widget Name]
 drawComposeEditor s = [ui <=> attachmentsEditor s]
   where
-    ui = foldr (drawTableRows s) (txt T.empty) [AskSubject, AskFrom, AskTo]
+    ui = foldr (drawTableRows s) (txt T.empty) [GatherHeadersSubject, GatherHeadersFrom, GatherHeadersTo]
 
 -- | align labels to the right and values to the left, e.g.
 --
 --     Foo: bar
 -- Subject: test
 --
-drawTableRows :: AppState -> ComposeState -> Widget Name -> Widget Name
-drawTableRows s cs w =
+drawTableRows :: AppState -> Mode -> Widget Name -> Widget Name
+drawTableRows s m w =
     w <=>
-    hLimit 15 (padRight Max (getLabelForComposeState cs)) <+>
-     E.renderEditor editorDrawContent False (view (asCompose . focusedLens cs) s)
+    hLimit 15 (padRight Max (getLabelForComposeState m)) <+>
+     E.renderEditor editorDrawContent False (view (asCompose . focusedLens m) s)
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
@@ -51,15 +51,15 @@ attachmentsEditor s =
                 aList
     in padTop (Pad 1) attachmentsStatus <=> attachmentsList
 
-focusedLens :: ComposeState -> Lens' Compose (E.Editor T.Text Name)
-focusedLens AskFrom = cFrom
-focusedLens AskTo = cTo
-focusedLens AskSubject = cSubject
+focusedLens :: Mode -> Lens' Compose (E.Editor T.Text Name)
+focusedLens GatherHeadersFrom = cFrom
+focusedLens GatherHeadersTo = cTo
+focusedLens _ = cSubject
 
-getLabelForComposeState :: ComposeState -> Widget Name
-getLabelForComposeState AskFrom = txt "From:"
-getLabelForComposeState AskTo = txt "To:"
-getLabelForComposeState AskSubject = txt "Subject:"
+getLabelForComposeState :: Mode -> Widget Name
+getLabelForComposeState GatherHeadersFrom = txt "From:"
+getLabelForComposeState GatherHeadersTo = txt "To:"
+getLabelForComposeState _ = txt "Subject:"
 
 -- | event handling for composing e-mail
 
