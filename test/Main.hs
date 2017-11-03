@@ -2,6 +2,7 @@ module Main where
 
 import TestMail (mailTests)
 import TestUserAcceptance (systemTests)
+import TestActions (actionTests)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 tests ::
@@ -12,7 +13,7 @@ tests = testGroup "tests" [unittests, systemTests]
 --
 unittests :: TestTree
 unittests =
-    testGroup "unit tests" [mailTests]
+    testGroup "unit tests" [mailTests, actionTests]
 
 main ::
   IO ()
