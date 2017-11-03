@@ -18,6 +18,6 @@ actionTests =
 
 testModeDescription :: TestTree
 testModeDescription = testCase "mode present in the switch action"
-                      $ view aDescription a @?= "switch mode to ManageTags"
+                      $ view aDescription a @?= "switch mode to ManageMailTags"
   where
-    a = focus :: Action 'ManageTags AppState
+    a = focus :: Action 'ManageMailTags AppState

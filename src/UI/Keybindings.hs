@@ -50,16 +50,24 @@ class EventHandler (m :: Mode)  where
                     -> Brick.EventM Name (Brick.Next AppState)
 
 instance EventHandler 'BrowseMail where
-  keybindingsL _ = asConfig . confIndexView . ivKeybindings
+  keybindingsL _ = asConfig . confIndexView . ivBrowseMailsKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miListOfMails) L.handleListEvent e
 
-instance EventHandler 'SearchMail where
-  keybindingsL _ = asConfig . confIndexView . ivSearchKeybindings
-  fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miSearchEditor) E.handleEditorEvent e
+instance EventHandler 'BrowseThreads where
+  keybindingsL _ = asConfig . confIndexView . ivBrowseThreadsKeybindings
+  fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miListOfThreads) L.handleListEvent e
 
-instance EventHandler 'ManageTags where
-  keybindingsL _ = asConfig . confIndexView . ivManageTagsKeybindings
-  fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miSearchEditor) E.handleEditorEvent e
+instance EventHandler 'SearchThreads where
+  keybindingsL _ = asConfig . confIndexView . ivSearchThreadsKeybindings
+  fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miSearchThreadsEditor) E.handleEditorEvent e
+
+instance EventHandler 'ManageMailTags where
+  keybindingsL _ = asConfig . confIndexView . ivManageMailTagsKeybindings
+  fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miMailTagsEditor) E.handleEditorEvent e
+
+instance EventHandler 'ManageThreadTags where
+  keybindingsL _ = asConfig . confIndexView . ivManageThreadTagsKeybindings
+  fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miThreadTagsEditor) E.handleEditorEvent e
 
 instance EventHandler 'ViewMail where
   keybindingsL _ = asConfig . confMailView . mvKeybindings
