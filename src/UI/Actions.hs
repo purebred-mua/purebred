@@ -14,6 +14,7 @@ module UI.Actions (
   , abort
   , noop
   , displayMail
+  , displayThreadMails
   , setUnread
   , mailIndexUp
   , mailIndexDown
@@ -31,8 +32,8 @@ module UI.Actions (
   , setTags
   , addTags
   , removeTags
-  , reloadMails
   , invokeEditor
+  , reloadList
   ) where
 
 import qualified Brick.Main as Brick
@@ -43,7 +44,6 @@ import qualified Brick.Widgets.List as L
 import Network.Mail.Mime (Address(..), renderSendMail, simpleMail')
 import Data.Proxy
 import Data.Semigroup ((<>))
-import Data.Vector (Vector)
 import Data.Text (splitOn, strip, intercalate, unlines, Text)
 import Data.Text.Lazy.IO (readFile)
 import System.Exit (ExitCode(..))
@@ -51,14 +51,14 @@ import System.IO.Temp (emptySystemTempFile)
 import System.Process (system)
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
-import Control.Lens (set, over, view, _Just, (&), (?~))
+import Control.Lens (set, over, view, _Just, (&), (?~), Getting)
 import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Text.Zipper (currentLine, gotoEOL, textZipper)
 import qualified Storage.Notmuch as Notmuch
-       (getMessages, addTags, setTags, removeTags, setNotmuchMailTags)
+       (getThreadMessages, getThreads, addTags, setTags, removeTags, setNotmuchMailTags)
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
@@ -77,15 +77,25 @@ class ModeTransition (s :: Mode) (d :: Mode) where
 
 instance ModeTransition s s where
 
-instance ModeTransition 'ManageTags 'BrowseMail where
+instance ModeTransition 'ManageMailTags 'BrowseMail where
 
-instance ModeTransition 'BrowseMail 'SearchMail where
+instance ModeTransition 'BrowseThreads 'SearchThreads where
 
-instance ModeTransition 'BrowseMail 'ManageTags where
+instance ModeTransition 'BrowseMail 'ManageMailTags where
 
 instance ModeTransition 'ViewMail 'BrowseMail where
 
-instance ModeTransition 'BrowseMail 'GatherHeadersFrom where
+instance ModeTransition 'BrowseThreads 'GatherHeadersFrom where
+
+instance ModeTransition 'BrowseThreads 'BrowseMail where
+
+instance ModeTransition 'ManageThreadTags 'BrowseThreads where
+
+instance ModeTransition 'BrowseMail 'BrowseThreads  where
+
+instance ModeTransition 'BrowseMail 'Help  where
+
+instance ModeTransition 'SearchThreads 'BrowseThreads  where
 
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
 -- contents are used to be applied to an action.
@@ -100,16 +110,17 @@ instance ModeTransition 'BrowseMail 'GatherHeadersFrom where
 class Completable (m :: Mode) where
   complete :: Proxy m -> AppState -> T.EventM Name AppState
 
-instance Completable 'SearchMail where
+instance Completable 'SearchThreads where
   complete _ = applySearch
 
 instance Completable 'ComposeEditor where
   complete _ = sendMail
 
-instance Completable 'ManageTags where
-  complete _ = \s -> do
-    s' <- liftIO $ applyEditorMailTags s
-    restoreNMSearch s'
+instance Completable 'ManageMailTags where
+  complete _ = liftIO . applyEditorMailTags
+
+instance Completable 'ManageThreadTags where
+  complete _ = pure -- TODO
 
 instance Completable 'GatherHeadersFrom where
   complete _ = pure . set asAppMode GatherHeadersTo
@@ -126,11 +137,11 @@ class Resetable (m :: Mode) where
 instance Resetable 'ComposeEditor where
   reset _ = pure . set asCompose initialCompose
 
-instance Resetable 'ManageTags where
-  reset _ = \s -> let terms = textZipper [(view (asConfig . confNotmuch . nmSearch) s)] Nothing
-                  in pure $ s &
-                     set (asMailIndex . miSearchEditor . E.editContentsL) (terms)
-                     . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+instance Resetable 'ManageMailTags where
+  reset _ = pure . set (asMailIndex . miMailTagsEditor . E.editContentsL) (textZipper [] Nothing)
+
+instance Resetable 'ManageThreadTags where
+  reset _ = pure . set (asMailIndex . miThreadTagsEditor . E.editContentsL) (textZipper [] Nothing)
 
 -- | Generalisation of focus changes between widgets on the same "view"
 -- expressed with the mode in the application state.
@@ -138,10 +149,10 @@ instance Resetable 'ManageTags where
 class Focusable (m :: Mode) where
   switchFocus :: Proxy m -> AppState -> T.EventM Name AppState
 
-instance Focusable 'SearchMail where
-  switchFocus _ = pure . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+instance Focusable 'SearchThreads where
+  switchFocus _ = pure . over (asMailIndex . miSearchThreadsEditor) (E.applyEdit gotoEOL)
 
-instance Focusable 'ManageTags where
+instance Focusable 'ManageMailTags where
   switchFocus _ = prepareTagEditMode
 
 instance Focusable 'BrowseMail where
@@ -155,6 +166,12 @@ instance Focusable 'GatherHeadersFrom where
 instance Focusable 'GatherHeadersTo where
   switchFocus _ = pure . set asAppMode GatherHeadersTo
 
+instance Focusable 'BrowseThreads where
+  switchFocus _ = pure . set asAppMode BrowseThreads
+
+instance Focusable 'Help where
+  switchFocus _ = pure . set asAppMode Help
+
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
 class HasMode (a :: Mode) where
@@ -164,14 +181,20 @@ class HasMode (a :: Mode) where
 instance HasMode 'BrowseMail where
   mode _ = BrowseMail
 
-instance HasMode 'SearchMail where
-  mode _ = SearchMail
+instance HasMode 'SearchThreads where
+  mode _ = SearchThreads
 
 instance HasMode 'ViewMail where
   mode _ = ViewMail
 
-instance HasMode 'ManageTags where
-  mode _ = ManageTags
+instance HasMode 'ManageMailTags where
+  mode _ = ManageMailTags
+
+instance HasMode 'BrowseThreads where
+  mode _ = BrowseThreads
+
+instance HasMode 'Help where
+  mode _ = Help
 
 instance HasMode 'GatherHeadersFrom where
   mode _ = GatherHeadersFrom
@@ -222,7 +245,7 @@ backToIndex :: Action ctx AppState
 backToIndex =
     Action
     { _aDescription = "back to the index"
-    , _aAction = pure . set asAppMode BrowseMail
+    , _aAction = pure . set asAppMode BrowseThreads
     }
 
 viewHelp :: Action ctx AppState
@@ -240,7 +263,7 @@ scrollDown = Action
   , _aAction = (\s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s)
   }
 
-composeMail :: Action 'BrowseMail AppState
+composeMail :: Action 'BrowseThreads AppState
 composeMail =
     Action
     { _aDescription = "compose a new mail"
@@ -252,6 +275,13 @@ displayMail =
     Action
     { _aDescription = "display an e-mail"
     , _aAction = \s -> liftIO $ updateStateWithParsedMail s >>= updateReadState Notmuch.removeTags
+    }
+
+displayThreadMails :: Action 'BrowseThreads AppState
+displayThreadMails =
+    Action
+    { _aDescription = "display an e-mail for threads"
+    , _aAction = liftIO . setMailsForThread
     }
 
 setUnread :: Action 'BrowseMail AppState
@@ -275,7 +305,7 @@ mailIndexDown =
     , _aAction = mailIndexEvent L.listMoveDown
     }
 
-switchComposeEditor :: Action 'BrowseMail AppState
+switchComposeEditor :: Action 'BrowseThreads AppState
 switchComposeEditor =
     Action
     { _aDescription = "switch to compose editor"
@@ -306,41 +336,52 @@ setTags :: [Text] -> Action ctx AppState
 setTags ts =
     Action
     { _aDescription = "apply given tags"
-    , _aAction = (\s -> liftIO . selectedMailHelper s $ \m -> applyMailTags m ts Notmuch.setTags s)
+    , _aAction = (\s -> liftIO . selectedItemHelper (asMailIndex . miListOfMails) s $ \m -> applyMailTags m ts Notmuch.setTags s)
     }
 
 addTags :: [Text] -> Action ctx AppState
 addTags ts =
     Action
     { _aDescription = "add given tags"
-    , _aAction = (\s -> liftIO . selectedMailHelper s $ \m -> applyMailTags m ts Notmuch.addTags s)
+    , _aAction = (\s -> liftIO . selectedItemHelper (asMailIndex . miListOfMails) s $ \m -> applyMailTags m ts Notmuch.addTags s)
     }
 
 removeTags :: [Text] -> Action ctx AppState
 removeTags ts =
     Action
     { _aDescription = "remove given tags"
-    , _aAction = (\s -> liftIO . selectedMailHelper s $ \m -> applyMailTags m ts Notmuch.removeTags s)
+    , _aAction = (\s -> liftIO . selectedItemHelper (asMailIndex . miListOfMails) s $ \m -> applyMailTags m ts Notmuch.removeTags s)
     }
 
-reloadMails :: Action 'BrowseMail AppState
-reloadMails = Action "reload list of mails" applySearch
+reloadList :: Action 'BrowseThreads AppState
+reloadList = Action "reload list of threads" applySearch
 
 -- Function definitions for actions
 --
 applySearch :: AppState -> T.EventM Name AppState
-applySearch s =
-   runExceptT (Notmuch.getMessages searchterms (view (asConfig . confNotmuch) s))
-   >>= pure . ($ s) . either setError updateMailsList
-     where searchterms = currentLine $ view (asMailIndex . miSearchEditor . E.editContentsL) s
+applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
+                >>= pure . ($ s) . either setError (updateList)
+   where searchterms = currentLine $ view (asMailIndex . miSearchThreadsEditor . E.editContentsL) s
+         updateList vec s' =
+           let current = view (asMailIndex . miListOfThreads . L.listSelectedL) s' <|> Just 0
+           in over (asMailIndex . miListOfThreads) (L.listReplace vec current) s'
 
-selectedMailHelper
+setMailsForThread :: AppState -> IO AppState
+setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
+  let dbpath = view (asConfig . confNotmuch . nmDatabase) s
+      updateThreadMails vec = over (asMailIndex . miListOfMails) (L.listReplace vec (Just 0))
+  in either setError updateThreadMails <$> runExceptT (Notmuch.getThreadMessages dbpath t)
+
+selectedItemHelper
     :: Applicative f
-    => AppState -> (NotmuchMail -> f (AppState -> AppState)) -> f AppState
-selectedMailHelper s func =
-  ($ s) <$> case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
+    => Getting (L.List n t) AppState (L.List n t)
+    -> AppState
+    -> (t -> f (AppState -> AppState))
+    -> f AppState
+selectedItemHelper l s func =
+  ($ s) <$> case L.listSelectedElement (view l s) of
   Just (_, m) -> func m
-  Nothing -> pure $ setError (GenericError "No mail selected.")
+  Nothing -> pure $ setError (GenericError "No item selected.")
 
 applyMailTags
     :: MonadIO f
@@ -353,25 +394,20 @@ applyMailTags m ts op s = let dbpath = view (asConfig . confNotmuch . nmDatabase
   in either setError updateMailInList <$> runExceptT (Notmuch.setNotmuchMailTags dbpath (op m ts))
 
 applyEditorMailTags :: AppState -> IO AppState
-applyEditorMailTags s = selectedMailHelper s $ \m ->
-  let contents = (unlines $ E.getEditContents $ view (asMailIndex . miSearchEditor) s)
+applyEditorMailTags s = selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
+  let contents = (unlines $ E.getEditContents $ view (asMailIndex . miMailTagsEditor) s)
       tags = strip <$> splitOn "," contents
   in applyMailTags m tags Notmuch.setTags s
 
-restoreNMSearch :: AppState -> T.EventM Name AppState
-restoreNMSearch s =
-  let z = textZipper [(view (asConfig . confNotmuch . nmSearch) s)] Nothing
-  in pure $ set (asMailIndex . miSearchEditor . E.editContentsL) z s
-
 updateStateWithParsedMail :: AppState -> IO AppState
-updateStateWithParsedMail s = selectedMailHelper s $ \m ->
+updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
         either
             (\e -> setError e . set asAppMode BrowseMail)
             (\pmail -> set (asMailView . mvMail) (Just pmail) . set asAppMode ViewMail)
             <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
 
 updateReadState :: (NotmuchMail -> [Text] -> NotmuchMail) -> AppState -> IO AppState
-updateReadState op s = selectedMailHelper s $ \m ->
+updateReadState op s = selectedItemHelper (asMailIndex . miListOfMails)s $ \m ->
             let newTag = view (asConfig . confNotmuch . nmNewTag) s
                 dbpath = view (asConfig . confNotmuch . nmDatabase) s
             in either setError updateMailInList
@@ -384,11 +420,6 @@ updateMailInList m s =
 
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
-
-updateMailsList :: Vector NotmuchMail -> AppState -> AppState
-updateMailsList vec s =
-    let current = view (asMailIndex . miListOfMails . L.listSelectedL) s <|> Just 0
-    in over (asMailIndex . miListOfMails) (L.listReplace vec current) s
 
 mailIndexEvent
     :: (L.List Name NotmuchMail -> L.List Name NotmuchMail)
@@ -404,14 +435,12 @@ mailIndexEvent fx s =
 prepareTagEditMode :: AppState -> T.EventM Name AppState
 prepareTagEditMode s = case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
   Just (_, m) ->
-    let tags = intercalate "," $ view mailTags m
-        contents = currentLine $ view (asMailIndex . miSearchEditor . E.editContentsL) s
+    let lineOfTags = intercalate "," $ view mailTags m
+        contents = textZipper [lineOfTags] Nothing
     in pure
        $ s
-       & set (asMailIndex . miSearchEditor) (E.editor ManageTagsEditor (Just 1) tags)
-       -- shelf the current search state
-       . set (asConfig . confNotmuch . nmSearch) contents
-       . over (asMailIndex . miSearchEditor) (E.applyEdit gotoEOL)
+       & set (asMailIndex . miMailTagsEditor . E.editContentsL) (contents)
+       . over (asMailIndex . miMailTagsEditor) (E.applyEdit gotoEOL)
   Nothing -> pure s
 
 replyToMail :: AppState -> T.EventM Name AppState

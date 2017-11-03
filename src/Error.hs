@@ -29,6 +29,7 @@ data Error
   = NotmuchError Status
   | InvalidTag B.ByteString
   | MessageNotFound B.ByteString -- message id
+  | ThreadNotFound B.ByteString -- thread id
   | FileReadError FilePath IOError -- ^ failed to read a file
   | GenericError String
   deriving (Show)

@@ -11,23 +11,25 @@ import Data.Vector (length)
 import Prelude hiding (length)
 import UI.Draw.Main (fillLine)
 import Types
-       (NotmuchMail, AppState, Name, asError, asMailIndex, miListOfMails,
-        asAppMode)
 import Config.Main (statusbarAttr, statusbarErrorAttr)
 
 statusbar :: AppState -> Widget Name
 statusbar s =
     case view asError s of
         Just e -> withAttr statusbarErrorAttr $ strWrap (show e)
-        Nothing ->
-            let l = view (asMailIndex . miListOfMails) s
-                total = str $ show $ length $ view L.listElementsL l
-                mode = str $ show $ view asAppMode s
-            in withAttr statusbarAttr $ str "Purebred: " <+>
+        Nothing -> case view asAppMode s of
+          BrowseMail -> renderStatusbar BrowseMail (view (asMailIndex . miListOfMails) s)
+          m -> renderStatusbar m (view (asMailIndex . miListOfThreads) s)
+
+renderStatusbar :: Mode -> L.List Name e -> Widget Name
+renderStatusbar m l =
+  let mode = str $ show $ m
+      total = str $ show $ length $ view L.listElementsL l
+  in withAttr statusbarAttr $ str "Purebred: " <+>
                str "Item " <+> currentIndexW l <+> str " of " <+> total <+> fillLine <+> mode
 
-currentIndexW :: L.List Name NotmuchMail -> Widget Name
+currentIndexW :: L.List Name e -> Widget Name
 currentIndexW l = str $ show $ currentIndex l
 
-currentIndex :: L.List Name NotmuchMail -> Int
+currentIndex :: L.List Name e -> Int
 currentIndex l = fromMaybe 0 $ view L.listSelectedL l

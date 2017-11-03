@@ -15,8 +15,8 @@ import qualified Data.Vector as Vec
 import System.Process (readProcess)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Types (NotmuchMail(..), NotmuchSettings, nmDatabase, mailId, mailTags)
-import Control.Lens (view, over, set)
+import Types
+import Control.Lens (view, over, set, firstOf, folded)
 
 import Notmuch
 import Notmuch.Search
@@ -93,12 +93,12 @@ messageToMail
 messageToMail m = do
     tgs <- tags m
     let tgs' = decodeUtf8 . getTag <$> tgs
-    NotmuchMail <$>
-      (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m) <*>
-      (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m) <*>
-      messageDate m <*>
-      pure tgs' <*>
-      messageId m
+    NotmuchMail
+      <$> (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m)
+      <*> (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m)
+      <*> messageDate m
+      <*> pure tgs'
+      <*> messageId m
 
 getDatabasePath :: IO FilePath
 getDatabasePath = getFromNotmuchConfig "database.path"
@@ -110,5 +110,59 @@ getFromNotmuchConfig key = do
   stdout <- readProcess cmd args []
   pure $ filter (/= '\n') stdout
 
-mailIsNew :: T.Text -> NotmuchMail -> Bool
-mailIsNew ignoredTag m = ignoredTag `elem` view mailTags m
+-- | creates a vector of threads from a notmuch search
+--
+getThreads
+  :: (HasThreads Query, MonadError Error m, MonadIO m)
+  => T.Text
+  -> NotmuchSettings FilePath
+  -> m (Vec.Vector NotmuchThread)
+getThreads s settings =
+  bracketT (databaseOpenReadOnly (view nmDatabase settings)) databaseDestroy go
+  where
+    go db = do
+        ts <- query db (FreeForm $ T.unpack s) >>= threads
+        t <- liftIO $ traverse threadToThread ts
+        pure $ Vec.fromList t
+
+-- | returns a vector of *all* messages belonging to the given thread
+--
+getThreadMessages
+  :: (MonadError Error m, MonadIO m)
+  => FilePath
+  -> NotmuchThread
+  -> m (Vec.Vector NotmuchMail)
+getThreadMessages fp t =
+  bracketT (databaseOpenReadOnly fp) databaseDestroy go
+  where go db = do
+          msgs <- getThread db (view thId t) >>= messages
+          mails <- liftIO $ traverse messageToMail msgs
+          pure $ Vec.fromList mails
+
+-- | retrieve a given thread from the notmuch database by it's id
+-- Note: The notmuch API does not provide a designated endpoint for retrieving
+-- the thread by it's ID. We're cheating here by simply querying for the given
+-- thread id.
+--
+getThread
+  :: (MonadError Error m, MonadIO m)
+  => Database mode -> B.ByteString -> m (Thread mode)
+getThread db tid = do
+  t <- query db (Thread tid) >>= threads
+  maybe (throwError (ThreadNotFound tid)) pure (firstOf folded t)
+
+threadToThread
+  :: (HasTags (Thread a), HasThread (Thread a))
+  => Thread a
+  -> IO NotmuchThread
+threadToThread m = do
+    tgs <- tags m
+    auth <- threadAuthors m
+    let tgs' = decodeUtf8 . getTag <$> tgs
+    NotmuchThread
+      <$> (decodeUtf8 <$> threadSubject m)
+      <*> (pure $ view matchedAuthors auth)
+      <*> threadNewestDate m
+      <*> pure tgs'
+      <*> threadTotalMessages m
+      <*> threadId m

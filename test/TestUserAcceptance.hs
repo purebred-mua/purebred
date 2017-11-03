@@ -54,6 +54,9 @@ testManageTags = withTmuxSession "manage tags" $
   \step -> do
     startApplication
 
+    liftIO $ step "view mail in thread"
+    sendKeys "Enter" (Literal "Testmail")
+
     liftIO $ step "focus command to show mail tags"
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "inbox,unread"))
 
@@ -61,10 +64,13 @@ testManageTags = withTmuxSession "manage tags" $
     sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
     liftIO $ step "enter new tag"
-    _ <- sendLiteralKeys "foo, bar ,unread"
+    _ <- sendLiteralKeys "foo, bar ,test," -- TODO trailing comma because of #105
 
     liftIO $ step "apply"
-    sendKeys "Enter" (Literal "foo bar unread")
+    sendKeys "Enter" (Literal "foo bar test")
+
+    liftIO $ step "go back to list of threads"
+    sendKeys "Escape" (Literal "Testmail")
 
     -- find newly tagged mail
     liftIO $ step "focus tag search"
@@ -76,6 +82,9 @@ testManageTags = withTmuxSession "manage tags" $
 
     liftIO $ step "apply"
     sendKeys "Enter" (Literal "tag:foo and tag:bar")
+
+    liftIO $ step "view mail in thread"
+    sendKeys "Enter" (Literal "Testmail")
 
     liftIO $ step "attempt to add a new tag"
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "bar,foo"))
@@ -91,7 +100,7 @@ testHelp = withTmuxSession "help view" $
     startApplication
 
     liftIO $ step "shows Keybindings"
-    sendKeys "?" (Literal "back to the index")
+    sendKeys "?" (Literal "quit the application")
 
     sendKeys "Escape" (Literal "Purebred")
     pure ()
@@ -105,6 +114,9 @@ testErrorHandling = withTmuxSession "error handling" $
     testmdir <- getTestMaildir
     liftIO $ removeFile (testmdir <> "/new/1502941827.R15455991756849358775.url")
 
+    liftIO $ step "open thread"
+    sendKeys "Enter" (Literal "Testmail")
+
     liftIO $ step "shows error message"
     sendKeys "Enter" (Literal "FileReadError")
       >>= assertSubstrInOutput "openFile: does not exist"
@@ -114,12 +126,16 @@ testSetsMailToRead ::
 testSetsMailToRead = withTmuxSession "user can toggle read tag" $
   \step -> do
     startApplication
+
+    liftIO $ step "open thread"
+    sendKeys "Enter" (Literal "Testmail")
+
     liftIO $ step "mail is shown as unread (bold)"
     capture >>= assertRegex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail")
 
     liftIO $ step "view mail and purebred sets it to read (unbold)"
     sendKeys "Enter" (Literal "This is a test mail")
-    sendKeys "Escape" (Literal "is Purebred")
+    sendKeys "Escape" (Literal "tag:inbox")
       >>= assertRegex "\ESC\\[37.*Testmail"
 
     liftIO $ step "toggle it back to unread (bold again)"
@@ -131,6 +147,9 @@ testCanToggleHeaders ::
 testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
   \step -> do
     startApplication
+    liftIO $ step "open thread"
+    sendKeys "Enter" (Literal "Testmail")
+
     liftIO $ step "view mail"
     sendKeys "Enter" (Literal "This is a test mail")
 
@@ -149,6 +168,9 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
     liftIO $ step "shows tag"
     out <- capture
     assertSubstrInOutput "inbox" out
+
+    liftIO $ step "open thread"
+    sendKeys "Enter" (Literal "Testmail")
 
     liftIO $ step "view mail"
     sendKeys "Enter" (Literal "This is a test mail")
@@ -180,6 +202,9 @@ testUserCanManipulateNMQuery =
 
           liftIO $ step "apply"
           sendKeys "Enter" (Literal "Item 0 of 1")
+
+          liftIO $ step "open thread"
+          sendKeys "Enter" (Literal "This is Purebred")
 
           liftIO $ step "view currently selected mail"
           sendKeys "Enter" (Literal "HOLY PUREBRED")

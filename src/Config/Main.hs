@@ -16,7 +16,9 @@ import UI.GatherHeaders.Keybindings
         interactiveGatherHeadersToKeybindings,
         interactiveGatherHeadersSubjectKeybindings)
 import UI.Index.Keybindings
-       (indexKeybindings, indexsearchKeybindings, managetagsKeybindings)
+       (browseMailKeybindings, browseThreadsKeybindings,
+        searchThreadsKeybindings, manageThreadTagsKeybindings,
+        manageMailTagsKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings, displayIndexKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
 import Types
@@ -99,9 +101,11 @@ defaultConfig =
       , _mvIndexKeybindings = displayIndexKeybindings
       }
     , _confIndexView = IndexViewSettings
-      { _ivKeybindings = indexKeybindings
-      , _ivSearchKeybindings = indexsearchKeybindings
-      , _ivManageTagsKeybindings = managetagsKeybindings
+      { _ivBrowseThreadsKeybindings = browseThreadsKeybindings
+      , _ivBrowseMailsKeybindings = browseMailKeybindings
+      , _ivSearchThreadsKeybindings = searchThreadsKeybindings
+      , _ivManageMailTagsKeybindings = manageMailTagsKeybindings
+      , _ivManageThreadTagsKeybindings = manageThreadTagsKeybindings
       }
     , _confComposeView = ComposeViewSettings
       { _cvKeybindings = composeEditorKeybindings

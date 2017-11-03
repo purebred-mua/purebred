@@ -14,8 +14,11 @@ import Config.Main (helpTitleAttr, helpKeybindingAttr)
 import Types
 
 drawHelp :: AppState -> [Widget Name]
-drawHelp s = let tweak = views (asConfig . confIndexView . ivKeybindings) (renderKbGroup BrowseMail) s
-                         <=> views (asConfig . confIndexView . ivSearchKeybindings) (renderKbGroup SearchMail) s
+drawHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybindings) (renderKbGroup BrowseMail) s
+                         <=> views (asConfig . confIndexView . ivBrowseThreadsKeybindings) (renderKbGroup BrowseThreads) s
+                         <=> views (asConfig . confIndexView . ivSearchThreadsKeybindings) (renderKbGroup SearchThreads) s
+                         <=> views (asConfig . confIndexView . ivManageMailTagsKeybindings) (renderKbGroup ManageMailTags) s
+                         <=> views (asConfig . confIndexView . ivManageThreadTagsKeybindings) (renderKbGroup ManageThreadTags) s
                          <=> views (asConfig . confMailView . mvIndexKeybindings) (renderKbGroup ViewMail) s
                          <=> views (asConfig . confMailView . mvKeybindings) (renderKbGroup ViewMail) s
                          <=> views (asConfig . confComposeView . cvKeybindings) (renderKbGroup ComposeEditor) s
@@ -34,8 +37,11 @@ renderKeybinding kb = let keys = view kbEvent kb
                          <+> padLeft (Pad 3) (str actions)
 
 modeTitle :: Mode -> Text
-modeTitle BrowseMail = "Index of Mails"
-modeTitle SearchMail = "Search Editor"
+modeTitle BrowseMail = "List of Mails"
+modeTitle BrowseThreads = "List of Threads"
+modeTitle ManageThreadTags = "Edit Labels of Threads"
+modeTitle ManageMailTags = "Edit Labels of Mails"
+modeTitle SearchThreads = "Search Editor"
 modeTitle ViewMail = "Mail Viewer"
 modeTitle ComposeEditor = "Editor to Compose a new Mail"
 modeTitle m = pack $ show m
