@@ -180,8 +180,8 @@ done = Action "apply" (complete (Proxy :: Proxy a))
 abort :: forall a. Resetable a => Action a AppState
 abort = Action "cancel" (reset (Proxy :: Proxy a))
 
-focus :: forall a. Focusable a => Action a AppState
-focus = Action "switch focus" (switchFocus (Proxy :: Proxy a))
+focus :: forall a. (HasMode a, Focusable a) => Action a AppState
+focus = Action ("switch mode to " <> show (mode (Proxy :: Proxy a))) (switchFocus (Proxy :: Proxy a))
 
 -- | A no-op action which just returns the current AppState
 -- This action can be used at the start of an Action chain where an immediate
