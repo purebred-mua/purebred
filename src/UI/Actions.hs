@@ -7,7 +7,6 @@
 
 module UI.Actions (
   Scrollable(..)
-  , backToIndex
   , quit
   , focus
   , done
@@ -19,7 +18,6 @@ module UI.Actions (
   , mailIndexUp
   , mailIndexDown
   , switchComposeEditor
-  , composeMail
   , replyMail
   , scrollUp
   , scrollDown
@@ -28,7 +26,6 @@ module UI.Actions (
   , continue
   , chain
   , chain'
-  , viewHelp
   , setTags
   , addTags
   , removeTags
@@ -83,9 +80,9 @@ instance ModeTransition 'BrowseThreads 'SearchThreads where
 
 instance ModeTransition 'BrowseMail 'ManageMailTags where
 
-instance ModeTransition 'ViewMail 'BrowseMail where
+instance ModeTransition 'BrowseThreads 'ManageThreadTags where
 
-instance ModeTransition 'BrowseThreads 'GatherHeadersFrom where
+instance ModeTransition 'ViewMail 'BrowseMail where
 
 instance ModeTransition 'BrowseThreads 'BrowseMail where
 
@@ -93,9 +90,23 @@ instance ModeTransition 'ManageThreadTags 'BrowseThreads where
 
 instance ModeTransition 'BrowseMail 'BrowseThreads  where
 
-instance ModeTransition 'BrowseMail 'Help  where
-
 instance ModeTransition 'SearchThreads 'BrowseThreads  where
+
+instance ModeTransition 'BrowseThreads 'GatherHeadersFrom where
+
+instance ModeTransition 'BrowseMail 'GatherHeadersFrom where
+
+instance ModeTransition 'GatherHeadersFrom 'BrowseThreads where
+
+instance ModeTransition 'GatherHeadersTo 'BrowseThreads where
+
+instance ModeTransition 'GatherHeadersSubject 'BrowseThreads where
+
+instance ModeTransition 'ComposeEditor 'BrowseThreads where
+
+instance ModeTransition 'Help 'BrowseThreads where
+
+instance ModeTransition s 'Help where  -- help can be reached from any mode
 
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
 -- contents are used to be applied to an action.
@@ -241,16 +252,6 @@ focus = Action ("switch mode to " <> show (mode (Proxy :: Proxy a))) (switchFocu
 noop :: Action ctx AppState
 noop = Action "" pure
 
-backToIndex :: Action ctx AppState
-backToIndex =
-    Action
-    { _aDescription = "back to the index"
-    , _aAction = pure . set asAppMode BrowseThreads
-    }
-
-viewHelp :: Action ctx AppState
-viewHelp = Action "view all key bindings" (pure . set asAppMode Help)
-
 scrollUp :: forall ctx. (Scrollable ctx) => Action ctx AppState
 scrollUp = Action
   { _aDescription = "scrolling up"
@@ -262,13 +263,6 @@ scrollDown = Action
   { _aDescription = "scrolling down"
   , _aAction = (\s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s)
   }
-
-composeMail :: Action 'BrowseThreads AppState
-composeMail =
-    Action
-    { _aDescription = "compose a new mail"
-    , _aAction = pure . set asAppMode GatherHeadersFrom
-    }
 
 displayMail :: Action ctx AppState
 displayMail =
