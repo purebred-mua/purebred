@@ -18,6 +18,7 @@ browseMailKeybindings =
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar '`') []) (noop `chain'` (focus :: Action 'ManageMailTags AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'm') []) (noop `chain'` (focus :: Action 'GatherHeadersFrom AppState) `chain` continue)
     ]
 
 browseThreadsKeybindings :: [Keybinding 'BrowseThreads (Brick.Next AppState)]
@@ -25,15 +26,14 @@ browseThreadsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) quit
     , Keybinding (V.EvKey V.KEnter []) (displayThreadMails `chain'` (focus :: Action 'BrowseMail AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar ':') []) (noop `chain'` (focus :: Action 'SearchThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '?') []) (viewHelp `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '\t') []) (switchComposeEditor `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'm') []) (noop `chain'` (focus :: Action 'GatherHeadersFrom AppState) `chain`continue)
     , Keybinding (V.EvKey (V.KChar '\t') []) (switchComposeEditor `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help AppState) `chain` continue)
     ]
 
 searchThreadsKeybindings :: [Keybinding 'SearchThreads (Brick.Next AppState)]
 searchThreadsKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (backToIndex `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
     ]
 
