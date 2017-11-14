@@ -31,6 +31,7 @@ module UI.Actions (
   , removeTags
   , invokeEditor
   , reloadList
+  , selectNextUnread
   ) where
 
 import qualified Brick.Main as Brick
@@ -43,9 +44,11 @@ import Data.Proxy
 import Data.Semigroup ((<>))
 import Data.Text (splitOn, strip, intercalate, unlines, Text)
 import Data.Text.Lazy.IO (readFile)
+import Data.Maybe (fromMaybe)
 import System.Exit (ExitCode(..))
 import System.IO.Temp (emptySystemTempFile)
 import System.Process (system)
+import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
 import Control.Lens (set, over, view, _Just, (?~), (&), Getting)
@@ -55,8 +58,6 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Text.Zipper (currentLine, gotoEOL, insertMany, clearZipper)
 import qualified Storage.Notmuch as Notmuch
-       (getThreadMessages, getThreads, addTags, setTags, removeTags,
-        getTags, ManageTags(..))
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
@@ -231,7 +232,6 @@ instance ListItemSetter NotmuchMail where
 instance ListItemSetter NotmuchThread where
   updateListItem m = over (asMailIndex . miListOfThreads) (\x -> L.listModify (const m) x)
 
-
 quit :: Action ctx (T.Next AppState)
 quit = Action "quit the application" Brick.halt
 
@@ -388,8 +388,21 @@ removeTags ts =
 reloadList :: Action 'BrowseThreads AppState
 reloadList = Action "reload list of threads" applySearch
 
+selectNextUnread :: Action 'BrowseMail AppState
+selectNextUnread =
+  Action { _aDescription = "select next unread"
+         , _aAction = (\s -> let vec = (view (asMailIndex . miListOfMails . L.listElementsL) s)
+                                 cur = (view (asMailIndex . miListOfMails . L.listSelectedL) s) <|> Just 0
+                                 fx m = Notmuch.hasTag (view (asConfig . confNotmuch . nmNewTag) s) m
+                                 seekIndex i = fromMaybe i . findIndexWithOffset (i + 1) fx
+                             in pure $ over (asMailIndex . miListOfMails) (L.listMoveTo (seekIndex (fromMaybe 0 cur) vec)) s)
+         }
+
 -- Function definitions for actions
 --
+findIndexWithOffset :: Int -> (a -> Bool) -> Vector.Vector a -> Maybe Int
+findIndexWithOffset i fx = fmap (i+) . Vector.findIndex fx . Vector.drop i
+
 applySearch :: AppState -> T.EventM Name AppState
 applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
                 >>= pure . ($ s) . either setError (updateList)
