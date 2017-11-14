@@ -40,6 +40,9 @@ removeTags tgs = over tags (filter (`notElem` tgs))
 getTags :: (ManageTags a) => a -> [T.Text]
 getTags = view tags
 
+hasTag :: (ManageTags a) => T.Text -> a -> Bool
+hasTag t x = t `elem` (view tags x)
+
 instance ManageTags NotmuchMail where
   tags = mailTags
   writeTags = setNotmuchMailTags

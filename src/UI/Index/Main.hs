@@ -16,6 +16,7 @@ import Data.Semigroup ((<>))
 import Data.Text (Text, pack, unwords)
 import UI.Draw.Main (editorDrawContent, fillLine)
 import UI.Status.Main (statusbar)
+import Storage.Notmuch (hasTag)
 import Types
 import Config.Main
        (listNewMailAttr, listNewMailSelectedAttr, mailTagsAttr,
@@ -47,7 +48,7 @@ renderMailList s =
 listDrawMail :: AppState -> Bool -> NotmuchMail -> Widget Name
 listDrawMail s sel a =
     let settings = view (asConfig . confNotmuch) s
-        isNewMail = isNew (view nmNewTag settings) (view mailTags a)
+        isNewMail = hasTag (view nmNewTag settings) a
         widget = padLeft (Pad 1) (txt $ formatDate (view mailDate a)) <+>
                  padLeft (Pad 1) (hLimit 15 (txt $ view mailFrom a)) <+>
                  padLeft (Pad 2) (txt (view mailSubject a)) <+>
@@ -57,7 +58,7 @@ listDrawMail s sel a =
 listDrawThread :: AppState -> Bool -> NotmuchThread -> Widget Name
 listDrawThread s sel a =
     let settings = view (asConfig . confNotmuch) s
-        isNewMail = isNew (view nmNewTag settings) (view thTags a)
+        isNewMail = hasTag (view nmNewTag settings) a
         widget = padLeft (Pad 1) (txt $ formatDate (view thDate a)) <+>
                  padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")") <+>
                  padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings)) <+>
@@ -80,6 +81,3 @@ renderTagsWidget :: [Text] -> Text -> Widget Name
 renderTagsWidget tgs ignored =
     let ts = filter (/= ignored) tgs
     in withAttr mailTagsAttr $ vLimit 1 $ txt $ unwords ts
-
-isNew :: Text -> [Text] -> Bool
-isNew ignoredTag tgs = ignoredTag `elem` tgs
