@@ -6,7 +6,7 @@
 module Storage.Notmuch where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.Except (void, MonadError, throwError)
 import qualified Data.ByteString as B
 import Data.Traversable (traverse)
 import Data.List (union, notElem)
@@ -16,13 +16,37 @@ import System.Process (readProcess)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Types
-import Control.Lens (view, over, set, firstOf, folded)
+import Control.Lens (view, over, set, firstOf, folded, Lens')
 
-import Notmuch
+import qualified Notmuch as Notmuch
 import Notmuch.Search
 import Notmuch.Util (bracketT)
 
 import Error
+
+class ManageTags a where
+  tags :: Lens' a [T.Text]
+  writeTags :: (MonadError Error m, MonadIO m) => FilePath -> a -> m a
+
+setTags :: (ManageTags a) => [T.Text] -> a -> a
+setTags tgs = set tags tgs
+
+addTags :: (ManageTags a) => [T.Text] -> a -> a
+addTags tgs = over tags (`union` tgs)
+
+removeTags :: (ManageTags a) => [T.Text] -> a -> a
+removeTags tgs = over tags (filter (`notElem` tgs))
+
+getTags :: (ManageTags a) => a -> [T.Text]
+getTags = view tags
+
+instance ManageTags NotmuchMail where
+  tags = mailTags
+  writeTags = setNotmuchMailTags
+
+instance ManageTags NotmuchThread where
+  tags = thTags
+  writeTags = setNotmuchThreadTags
 
 
 -- | creates a vector of parsed mails from a not much search
@@ -34,9 +58,9 @@ getMessages
   -> NotmuchSettings FilePath
   -> m (Vec.Vector NotmuchMail)
 getMessages s settings =
-  bracketT (databaseOpenReadOnly (view nmDatabase settings)) databaseDestroy go
+  bracketT (Notmuch.databaseOpenReadOnly (view nmDatabase settings)) Notmuch.databaseDestroy go
   where go db = do
-              msgs <- query db (FreeForm $ T.unpack s) >>= messages
+              msgs <- Notmuch.query db (FreeForm $ T.unpack s) >>= Notmuch.messages
               mails <- liftIO $ mapM messageToMail msgs
               pure $ Vec.fromList mails
 
@@ -44,9 +68,9 @@ mailFilepath
   :: (MonadError Error m, MonadIO m)
   => NotmuchMail -> FilePath -> m FilePath
 mailFilepath m dbpath =
-  bracketT (databaseOpenReadOnly dbpath) databaseDestroy go
+  bracketT (Notmuch.databaseOpenReadOnly dbpath) Notmuch.databaseDestroy go
   where
-    go db = getMessage db (view mailId m) >>= messageFilename
+    go db = getMessage db (view mailId m) >>= Notmuch.messageFilename
 
 setNotmuchMailTags
   :: (MonadError Error m, MonadIO m)
@@ -54,51 +78,53 @@ setNotmuchMailTags
   -> NotmuchMail
   -> m NotmuchMail
 setNotmuchMailTags dbpath m = do
-  nmtags <- mailTagsToNotmuchTags m
-  bracketT (databaseOpen dbpath) databaseDestroy (tagsToMessage nmtags m)
+  nmtags <- toNotmuchTags (view mailTags m)
+  bracketT (Notmuch.databaseOpen dbpath) Notmuch.databaseDestroy (tagsToMessage nmtags (view mailId m))
   pure m
 
+setNotmuchThreadTags
+  :: (MonadError Error m, MonadIO m)
+  => FilePath
+  -> NotmuchThread
+  -> m NotmuchThread
+setNotmuchThreadTags dbpath t = do
+  tgs <- toNotmuchTags (view thTags t)
+  mgs <- getThreadMessages dbpath t
+  void $ bracketT (Notmuch.databaseOpen dbpath) Notmuch.databaseDestroy (go tgs mgs)
+  pure t
+    where go xs msgs db = traverse (\x -> tagsToMessage xs (view mailId x) db) msgs
 
 tagsToMessage
   :: (MonadError Error m, MonadIO m)
-  => [Tag] -> NotmuchMail -> Database RW -> m ()
-tagsToMessage xs msg db = getMessage db (view mailId msg) >>= messageSetTags xs
+  => [Notmuch.Tag] -> B.ByteString -> Notmuch.Database Notmuch.RW -> m ()
+tagsToMessage xs id' db = getMessage db id' >>= Notmuch.messageSetTags xs
 
 -- | Get message by message ID, throwing MessageNotFound if not found
 --
 getMessage
   :: (MonadError Error m, MonadIO m)
-  => Database mode -> B.ByteString -> m (Message 0 mode)
+  => Notmuch.Database mode -> B.ByteString -> m (Notmuch.Message 0 mode)
 getMessage db msgId =
-  findMessage db msgId
+  Notmuch.findMessage db msgId
   >>= maybe (throwError (MessageNotFound msgId)) pure
 
-setTags :: NotmuchMail -> [T.Text] -> NotmuchMail
-setTags m ts = set mailTags ts m
-
-addTags :: NotmuchMail -> [T.Text] -> NotmuchMail
-addTags m ts = over mailTags (`union` ts) m
-
-removeTags :: NotmuchMail -> [T.Text] -> NotmuchMail
-removeTags m ts = over mailTags (filter (`notElem` ts)) m
-
-mailTagsToNotmuchTags :: MonadError Error m => NotmuchMail -> m [Tag]
-mailTagsToNotmuchTags = traverse (mkTag' . encodeUtf8) . view mailTags
-  where mkTag' s = maybe (throwError (InvalidTag s)) pure $ mkTag s
+toNotmuchTags :: MonadError Error m => [T.Text] -> m [Notmuch.Tag]
+toNotmuchTags = traverse (mkTag' . encodeUtf8)
+  where mkTag' s = maybe (throwError (InvalidTag s)) pure $ Notmuch.mkTag s
 
 messageToMail
-    :: HasTags (Message n a)
-    => Message n a
+    :: Notmuch.HasTags (Notmuch.Message n a)
+    => Notmuch.Message n a
     -> IO NotmuchMail
 messageToMail m = do
-    tgs <- tags m
-    let tgs' = decodeUtf8 . getTag <$> tgs
+    tgs <- Notmuch.tags m
+    let tgs' = decodeUtf8 . Notmuch.getTag <$> tgs
     NotmuchMail
-      <$> (decodeUtf8 . fromMaybe "" <$> messageHeader "Subject" m)
-      <*> (decodeUtf8 . fromMaybe "" <$> messageHeader "From" m)
-      <*> messageDate m
+      <$> (decodeUtf8 . fromMaybe "" <$> Notmuch.messageHeader "Subject" m)
+      <*> (decodeUtf8 . fromMaybe "" <$> Notmuch.messageHeader "From" m)
+      <*> Notmuch.messageDate m
       <*> pure tgs'
-      <*> messageId m
+      <*> Notmuch.messageId m
 
 getDatabasePath :: IO FilePath
 getDatabasePath = getFromNotmuchConfig "database.path"
@@ -113,15 +139,15 @@ getFromNotmuchConfig key = do
 -- | creates a vector of threads from a notmuch search
 --
 getThreads
-  :: (HasThreads Query, MonadError Error m, MonadIO m)
+  :: (Notmuch.HasThreads Notmuch.Query, MonadError Error m, MonadIO m)
   => T.Text
   -> NotmuchSettings FilePath
   -> m (Vec.Vector NotmuchThread)
 getThreads s settings =
-  bracketT (databaseOpenReadOnly (view nmDatabase settings)) databaseDestroy go
+  bracketT (Notmuch.databaseOpenReadOnly (view nmDatabase settings)) Notmuch.databaseDestroy go
   where
     go db = do
-        ts <- query db (FreeForm $ T.unpack s) >>= threads
+        ts <- Notmuch.query db (FreeForm $ T.unpack s) >>= Notmuch.threads
         t <- liftIO $ traverse threadToThread ts
         pure $ Vec.fromList t
 
@@ -133,9 +159,9 @@ getThreadMessages
   -> NotmuchThread
   -> m (Vec.Vector NotmuchMail)
 getThreadMessages fp t =
-  bracketT (databaseOpenReadOnly fp) databaseDestroy go
+  bracketT (Notmuch.databaseOpenReadOnly fp) Notmuch.databaseDestroy go
   where go db = do
-          msgs <- getThread db (view thId t) >>= messages
+          msgs <- getThread db (view thId t) >>= Notmuch.messages
           mails <- liftIO $ traverse messageToMail msgs
           pure $ Vec.fromList mails
 
@@ -146,23 +172,23 @@ getThreadMessages fp t =
 --
 getThread
   :: (MonadError Error m, MonadIO m)
-  => Database mode -> B.ByteString -> m (Thread mode)
+  => Notmuch.Database mode -> B.ByteString -> m (Notmuch.Thread mode)
 getThread db tid = do
-  t <- query db (Thread tid) >>= threads
+  t <- Notmuch.query db (Thread tid) >>= Notmuch.threads
   maybe (throwError (ThreadNotFound tid)) pure (firstOf folded t)
 
 threadToThread
-  :: (HasTags (Thread a), HasThread (Thread a))
-  => Thread a
+  :: (Notmuch.HasTags (Notmuch.Thread a), Notmuch.HasThread (Notmuch.Thread a))
+  => Notmuch.Thread a
   -> IO NotmuchThread
 threadToThread m = do
-    tgs <- tags m
-    auth <- threadAuthors m
-    let tgs' = decodeUtf8 . getTag <$> tgs
+    tgs <- Notmuch.tags m
+    auth <- Notmuch.threadAuthors m
+    let tgs' = decodeUtf8 . Notmuch.getTag <$> tgs
     NotmuchThread
-      <$> (decodeUtf8 <$> threadSubject m)
-      <*> (pure $ view matchedAuthors auth)
-      <*> threadNewestDate m
+      <$> (decodeUtf8 <$> Notmuch.threadSubject m)
+      <*> (pure $ view Notmuch.matchedAuthors auth)
+      <*> Notmuch.threadNewestDate m
       <*> pure tgs'
-      <*> threadTotalMessages m
-      <*> threadId m
+      <*> Notmuch.threadTotalMessages m
+      <*> Notmuch.threadId m

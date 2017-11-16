@@ -23,13 +23,13 @@ testAddingTags :: TestTree
 testAddingTags = testProperty "no duplicates when adding tags" propNoDuplicatesAdded
   where
     propNoDuplicatesAdded :: NotmuchMail -> [Text] -> Bool
-    propNoDuplicatesAdded m as = addTags (addTags m as) as == addTags m as
+    propNoDuplicatesAdded m as = addTags as (addTags as m) == addTags as m
 
 testRemovingTags :: TestTree
 testRemovingTags = testProperty "remove tags" propRemoveTags
   where
     propRemoveTags :: NotmuchMail -> [Text] -> Bool
-    propRemoveTags m as = removeTags (removeTags m as) as == removeTags m as
+    propRemoveTags m as = removeTags as (removeTags as m) == removeTags as m
 
 instance Arbitrary NotmuchMail where
     arbitrary =
