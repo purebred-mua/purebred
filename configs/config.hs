@@ -11,6 +11,7 @@ myBrowseThreadsKbs =
   [ Keybinding (EvKey (KChar 'q') []) quit
   , Keybinding (EvKey (KChar 'j') []) (listDown `chain` continue)
   , Keybinding (EvKey (KChar 'k') []) (listUp `chain` continue)
+  , Keybinding (EvKey (KChar 'a') []) ((removeTags ["inbox"] `chain` addTags ["archive"] `chain` continue))
   ]
 
 myBrowseMailKeybindings :: [Keybinding 'BrowseMail (Next AppState)]

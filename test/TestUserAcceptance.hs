@@ -46,11 +46,12 @@ systemTests =
         , testSetsMailToRead
         , testErrorHandling
         , testHelp
-        , testManageTags
+        , testManageTagsOnMails
+        , testManageTagsOnThreads
         ]
 
-testManageTags :: TestTree
-testManageTags = withTmuxSession "manage tags" $
+testManageTagsOnMails :: TestTree
+testManageTagsOnMails = withTmuxSession "manage tags on mails" $
   \step -> do
     startApplication
 
@@ -91,6 +92,28 @@ testManageTags = withTmuxSession "manage tags" $
 
     liftIO $ step "cancel tagging and expect old search restored"
     sendKeys "Escape" (Literal "tag:foo and tag:bar")
+
+    pure ()
+
+testManageTagsOnThreads :: TestTree
+testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "focus command to show thread tags"
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "inbox,unread"))
+
+    liftIO $ step "delete all input"
+    sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+
+    liftIO $ step "enter new tag"
+    _ <- sendLiteralKeys "thread,only," -- TODO trailing comma because of #105
+
+    liftIO $ step "apply"
+    sendKeys "Enter" (Literal "thread only")
+
+    liftIO $ step "view mails to have same tags"
+    sendKeys "Enter" (Literal "only thread")
 
     pure ()
 
