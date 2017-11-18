@@ -12,8 +12,8 @@ browseMailKeybindings :: [Keybinding 'BrowseMail (Brick.Next AppState)]
 browseMailKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain'` (reloadList :: Action 'BrowseThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (displayMail `chain` continue)
-    , Keybinding (V.EvKey V.KDown []) (mailIndexDown `chain` continue)
-    , Keybinding (V.EvKey V.KUp []) (mailIndexUp `chain` continue)
+    , Keybinding (V.EvKey V.KDown []) (listDown `chain` continue)
+    , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help AppState) `chain` continue)

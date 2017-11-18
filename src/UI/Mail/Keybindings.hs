@@ -19,6 +19,6 @@ displayMailKeybindings =
 
 displayIndexKeybindings :: [Keybinding 'BrowseMail (Brick.Next AppState)]
 displayIndexKeybindings =
-    [ Keybinding (V.EvKey V.KDown []) (mailIndexDown `chain` displayMail `chain` continue)
-    , Keybinding (V.EvKey V.KUp []) (mailIndexUp `chain` displayMail `chain` continue)
+    [ Keybinding (V.EvKey V.KDown []) (listDown `chain` displayMail `chain` continue)
+    , Keybinding (V.EvKey V.KUp []) (listUp `chain` displayMail `chain` continue)
     ]
