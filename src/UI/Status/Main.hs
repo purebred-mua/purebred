@@ -19,6 +19,7 @@ statusbar s =
         Just e -> withAttr statusbarErrorAttr $ strWrap (show e)
         Nothing -> case view asAppMode s of
           BrowseMail -> renderStatusbar BrowseMail (view (asMailIndex . miListOfMails) s)
+          ViewMail -> renderStatusbar ViewMail (view (asMailIndex . miListOfMails) s)
           m -> renderStatusbar m (view (asMailIndex . miListOfThreads) s)
 
 renderStatusbar :: Mode -> L.List Name e -> Widget Name

@@ -15,8 +15,8 @@ module UI.Actions (
   , displayMail
   , displayThreadMails
   , setUnread
-  , mailIndexUp
-  , mailIndexDown
+  , listUp
+  , listDown
   , switchComposeEditor
   , replyMail
   , scrollUp
@@ -285,18 +285,24 @@ setUnread =
     , _aAction = (liftIO . updateReadState Notmuch.addTags)
     }
 
-mailIndexUp :: Action 'BrowseMail AppState
-mailIndexUp =
+listUp :: Action m AppState
+listUp =
     Action
     { _aDescription = "mail index up one e-mail"
-    , _aAction = mailIndexEvent L.listMoveUp
+    , _aAction = \s -> case view asAppMode s of
+        BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
+        ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
+        _ -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
     }
 
-mailIndexDown :: Action 'BrowseMail AppState
-mailIndexDown =
+listDown :: Action m AppState
+listDown =
     Action
     { _aDescription = "mail index down one e-mail"
-    , _aAction = mailIndexEvent L.listMoveDown
+    , _aAction = \s -> case view asAppMode s of
+        BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
+        ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
+        _ -> pure $ over (asMailIndex. miListOfThreads) L.listMoveDown s
     }
 
 switchComposeEditor :: Action 'BrowseThreads AppState
@@ -414,17 +420,6 @@ updateMailInList m s =
 
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
-
-mailIndexEvent
-    :: (L.List Name NotmuchMail -> L.List Name NotmuchMail)
-    -> AppState
-    -> T.EventM n AppState
-mailIndexEvent fx s =
-    pure $
-    set
-        (asMailIndex . miListOfMails)
-        (fx $ view (asMailIndex . miListOfMails) s)
-        s
 
 prepareTagEditMode :: AppState -> T.EventM Name AppState
 prepareTagEditMode s = case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
