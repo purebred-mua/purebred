@@ -65,7 +65,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
     liftIO $ step "enter new tag"
-    _ <- sendLiteralKeys "foo, bar ,test," -- TODO trailing comma because of #105
+    _ <- sendLiteralKeys "inbox, foo, bar ,test"
 
     liftIO $ step "apply"
     sendKeys "Enter" (Literal "foo bar test")
@@ -107,7 +107,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
     liftIO $ step "enter new tag"
-    _ <- sendLiteralKeys "thread,only," -- TODO trailing comma because of #105
+    _ <- sendLiteralKeys "thread,only"
 
     liftIO $ step "apply"
     sendKeys "Enter" (Literal "thread only")

@@ -48,12 +48,12 @@ import System.IO.Temp (emptySystemTempFile)
 import System.Process (system)
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
-import Control.Lens (set, over, view, _Just, (&), (?~), Getting)
+import Control.Lens (set, over, view, _Just, (?~), (&), Getting)
 import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO, MonadIO)
-import Data.Text.Zipper (currentLine, gotoEOL, textZipper)
+import Data.Text.Zipper (currentLine, gotoEOL, insertMany, clearZipper)
 import qualified Storage.Notmuch as Notmuch
        (getThreadMessages, getThreads, addTags, setTags, removeTags,
         getTags, ManageTags(..))
@@ -150,10 +150,10 @@ instance Resetable 'ComposeEditor where
   reset _ = pure . set asCompose initialCompose
 
 instance Resetable 'ManageMailTags where
-  reset _ = pure . set (asMailIndex . miMailTagsEditor . E.editContentsL) (textZipper [] Nothing)
+  reset _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Resetable 'ManageThreadTags where
-  reset _ = pure . set (asMailIndex . miThreadTagsEditor . E.editContentsL) (textZipper [] Nothing)
+  reset _ = pure . over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
 
 -- | Generalisation of focus changes between widgets on the same "view"
 -- expressed with the mode in the application state.
@@ -451,11 +451,8 @@ setError = set asError . Just
 setTagEditor :: Notmuch.ManageTags a => AppState -> (Int, a) -> AppState
 setTagEditor s (_, m) =
     let tags = intercalate "," $ Notmuch.getTags m
-        contents = textZipper [tags] Nothing
         widget = if view asAppMode s == ManageMailTags then (asMailIndex . miMailTagsEditor) else (asMailIndex . miThreadTagsEditor)
-    in s
-       & set (widget . E.editContentsL) (contents)
-       . over widget (E.applyEdit gotoEOL)
+    in over (widget . E.editContentsL) (insertMany tags . clearZipper) s
 
 replyToMail :: AppState -> T.EventM Name AppState
 replyToMail s =
