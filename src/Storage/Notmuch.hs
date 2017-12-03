@@ -113,8 +113,7 @@ toNotmuchTags = traverse (mkTag' . encodeUtf8)
   where mkTag' s = maybe (throwError (InvalidTag s)) pure $ Notmuch.mkTag s
 
 messageToMail
-    :: Notmuch.HasTags (Notmuch.Message n a)
-    => Notmuch.Message n a
+    :: Notmuch.Message n a
     -> IO NotmuchMail
 messageToMail m = do
     tgs <- Notmuch.tags m
@@ -139,7 +138,7 @@ getFromNotmuchConfig key = do
 -- | creates a vector of threads from a notmuch search
 --
 getThreads
-  :: (Notmuch.HasThreads Notmuch.Query, MonadError Error m, MonadIO m)
+  :: (MonadError Error m, MonadIO m)
   => T.Text
   -> NotmuchSettings FilePath
   -> m (Vec.Vector NotmuchThread)
@@ -178,8 +177,7 @@ getThread db tid = do
   maybe (throwError (ThreadNotFound tid)) pure (firstOf folded t)
 
 threadToThread
-  :: (Notmuch.HasTags (Notmuch.Thread a), Notmuch.HasThread (Notmuch.Thread a))
-  => Notmuch.Thread a
+  :: Notmuch.Thread a
   -> IO NotmuchThread
 threadToThread m = do
     tgs <- Notmuch.tags m
