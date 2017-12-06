@@ -86,6 +86,8 @@ instance ModeTransition 'BrowseThreads 'ManageThreadTags where
 
 instance ModeTransition 'ViewMail 'BrowseMail where
 
+instance ModeTransition 'ViewMail 'ManageMailTags where
+
 instance ModeTransition 'BrowseThreads 'BrowseMail where
 
 instance ModeTransition 'ManageThreadTags 'BrowseThreads where
