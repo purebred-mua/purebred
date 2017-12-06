@@ -14,7 +14,7 @@ import qualified Data.CaseInsensitive as CI
 import Control.Lens.Getter (view)
 import Data.CaseInsensitive (mk)
 import qualified Data.Text as T
-import UI.Index.Main (renderMailList)
+import UI.Index.Main (renderMailList, renderEditor)
 import UI.Status.Main (statusbar)
 import Types
 import Config.Main (headerKeyAttr, headerValueAttr)
@@ -28,7 +28,8 @@ drawMail :: AppState -> [Widget Name]
 drawMail s =
     [ vLimit (indexViewRows s) (renderMailList s) <=>
       statusbar s <=>
-      viewport ScrollingMailView Vertical (mailView s (view (asMailView . mvMail) s))
+      viewport ScrollingMailView Vertical (mailView s (view (asMailView . mvMail) s)) <=>
+      vLimit 1 (renderEditor s)
     ]
 
 -- | TODO: See #19

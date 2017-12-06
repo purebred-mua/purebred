@@ -59,7 +59,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "Enter" (Literal "Testmail")
 
     liftIO $ step "focus command to show mail tags"
-    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "inbox,unread"))
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "inbox"))
 
     liftIO $ step "delete all input"
     sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
@@ -153,11 +153,7 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
     liftIO $ step "open thread"
     sendKeys "Enter" (Literal "Testmail")
 
-    liftIO $ step "mail is shown as unread (bold)"
-    capture >>= assertRegex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail")
-
-    liftIO $ step "view mail and purebred sets it to read (unbold)"
-    sendKeys "Enter" (Literal "This is a test mail")
+    liftIO $ step "first unread mail is opened"
     sendKeys "Escape" (Literal "tag:inbox")
       >>= assertRegex "\ESC\\[37.*Testmail"
 
