@@ -46,7 +46,8 @@ import Data.Text (splitOn, strip, intercalate, unlines, Text)
 import Data.Text.Lazy.IO (readFile)
 import Data.Maybe (fromMaybe)
 import System.Exit (ExitCode(..))
-import System.IO.Temp (emptySystemTempFile)
+import System.IO (openTempFile, hClose)
+import System.Directory (getTemporaryDirectory)
 import System.Process (system)
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
@@ -56,6 +57,7 @@ import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO, MonadIO)
+import Control.Monad.Catch (bracket)
 import Data.Text.Zipper (currentLine, gotoEOL, insertMany, clearZipper)
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
@@ -518,8 +520,15 @@ initialCompose =
 invokeEditor' :: AppState -> IO AppState
 invokeEditor' s = do
   let editor = view (asConfig . confEditor) s
-  tmpfile <- emptySystemTempFile "purebred.tmp"
+  tmpdir <- getTemporaryDirectory
+  tmpfile <- emptyTempFile tmpdir "purebred.tmp"
   status <- system (editor <> " " <> tmpfile)
   case status of
     ExitFailure _ -> pure $ set asAppMode BrowseMail s -- ^ show error XXX
     ExitSuccess -> pure $ set asAppMode ComposeEditor s & asCompose . cTmpFile ?~ tmpfile -- ^ go to compose editor
+
+emptyTempFile :: FilePath -> String -> IO FilePath
+emptyTempFile targetDir template = bracket
+  (openTempFile targetDir template)
+  (\(_, handle) -> hClose handle)
+  (\(filePath, _) -> pure filePath)

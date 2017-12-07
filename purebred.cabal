@@ -49,7 +49,6 @@ library
                      , notmuch
                      , text
                      , mime
-                     , temporary
                      , process
                      , mime-mail
                      , network
@@ -62,6 +61,7 @@ library
                      , filepath
                      , unix
                      , mtl
+                     , exceptions
 
 executable purebred
   hs-source-dirs:      app
