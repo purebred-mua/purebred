@@ -1,6 +1,6 @@
 name:                purebred
 version:             0.1.0.0
--- synopsis:
+synopsis:            An mail user agent built around notmuch
 -- description:
 homepage:            https://github.com/githubuser/purebred#readme
 license:             AGPL-3
