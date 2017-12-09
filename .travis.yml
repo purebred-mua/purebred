@@ -20,6 +20,7 @@ script:
   - stack $STACK_ARGS --system-ghc --no-terminal --skip-ghc-check install
   - DEBUG=1 stack $STACK_ARGS --system-ghc --no-terminal --skip-ghc-check test 2> /tmp/test.log
   - cat /tmp/test.log
+  - stack $STACK_ARGS --system-ghc --no-terminal --skip-ghc-check haddock
 
 matrix:
   include:
