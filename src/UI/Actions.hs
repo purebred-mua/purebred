@@ -52,10 +52,11 @@ import System.Process (system)
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
-import Control.Lens (set, over, view, _Just, (?~), (&), Getting)
+import Control.Lens (set, over, view, _Just, (&), Getting)
 import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
+import Control.Exception (onException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Catch (bracket)
 import Data.Text.Zipper (currentLine, gotoEOL, insertMany, clearZipper)
@@ -522,10 +523,14 @@ invokeEditor' s = do
   let editor = view (asConfig . confEditor) s
   tmpdir <- getTemporaryDirectory
   tmpfile <- emptyTempFile tmpdir "purebred.tmp"
-  status <- system (editor <> " " <> tmpfile)
+  status <- onException (system (editor <> " " <> tmpfile)) (pure $ setError editorError)
   case status of
-    ExitFailure _ -> pure $ set asAppMode BrowseMail s -- ^ show error XXX
-    ExitSuccess -> pure $ set asAppMode ComposeEditor s & asCompose . cTmpFile ?~ tmpfile -- ^ go to compose editor
+    ExitFailure _ -> pure $ s & set asAppMode BrowseMail & setError editorError
+    ExitSuccess -> pure $ s & set asAppMode ComposeEditor & set (asCompose . cTmpFile) (Just tmpfile) -- go to compose editor
+
+editorError :: Error
+editorError = GenericError ("Editor command exited with error code."
+  <> " Check your editor configuration and your terminal.")
 
 emptyTempFile :: FilePath -> String -> IO FilePath
 emptyTempFile targetDir template = bracket
