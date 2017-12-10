@@ -16,3 +16,10 @@ An MUA built around [*notmuch*](https://notmuchmail.org/).
 This project is in it's infancy, but please join us and help.
 
 ![](screenshot.png)
+
+## Development packages
+### Fedora
+
+We operate a
+[Fedora Copr](https://copr.fedorainfracloud.org/coprs/romanofski/purebred/)
+repository which provides easily installable RPM packages.
