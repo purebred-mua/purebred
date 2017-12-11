@@ -6,9 +6,7 @@ import Brick.Types (Widget)
 import Brick.Widgets.Core (str, withAttr, (<+>), strWrap)
 import qualified Brick.Widgets.List  as L
 import Control.Lens.Getter (view)
-import Data.Maybe (fromMaybe)
-import Data.Vector (length)
-import Prelude hiding (length)
+import Data.Semigroup ((<>))
 import UI.Draw.Main (fillLine)
 import Types
 import Config.Main (statusbarAttr, statusbarErrorAttr)
@@ -24,13 +22,14 @@ statusbar s =
 
 renderStatusbar :: Mode -> L.List Name e -> Widget Name
 renderStatusbar m l =
-  let mode = str $ show $ m
-      total = str $ show $ length $ view L.listElementsL l
-  in withAttr statusbarAttr $ str "Purebred: " <+>
-               str "Item " <+> currentIndexW l <+> str " of " <+> total <+> fillLine <+> mode
+  withAttr statusbarAttr $
+    str "Purebred: " <+> currentItemW l <+> fillLine <+> str (show m)
 
-currentIndexW :: L.List Name e -> Widget Name
-currentIndexW l = str $ show $ currentIndex l
-
-currentIndex :: L.List Name e -> Int
-currentIndex l = fromMaybe 0 $ view L.listSelectedL l
+currentItemW :: L.List Name e -> Widget Name
+currentItemW l = str $
+  maybe
+    "No items"
+    (\i -> "Item " <> show (i + 1) <> " of " <> total)
+    (view L.listSelectedL l)
+  where
+      total = show $ length $ view L.listElementsL l
