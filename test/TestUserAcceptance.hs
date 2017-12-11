@@ -151,11 +151,11 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
     startApplication
 
     liftIO $ step "open thread"
-    sendKeys "Enter" (Literal "Testmail")
+    sendKeys "Enter" (Literal "This is a test mail for purebred")
 
     liftIO $ step "first unread mail is opened"
-    sendKeys "Escape" (Literal "tag:inbox")
-      >>= assertRegex "\ESC\\[37.*Testmail"
+    sendKeys "Escape" (Literal "BrowseMail")
+      >>= assertRegex (buildAnsiRegex [] ["37"] ["43"] <> ".*Testmail")
 
     liftIO $ step "toggle it back to unread (bold again)"
     sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
