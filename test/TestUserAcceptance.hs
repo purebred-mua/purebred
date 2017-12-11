@@ -269,7 +269,10 @@ assertSubstrInOutput :: String -> String -> ReaderT Env IO ()
 assertSubstrInOutput substr out = liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
 
 assertRegex :: String -> String -> ReaderT Env IO ()
-assertRegex regex out = liftIO $ assertBool (regex <> " does not match out\n\n" <> out <> "\n\n raw:\n\n" <> show out) $ out =~ (regex :: String)
+assertRegex regex out = liftIO $ assertBool
+  (show regex <> " does not match out\n\n" <> out
+    <> "\n\n raw:\n\n" <> show out)
+  (out =~ regex)
 
 defaultSessionName :: String
 defaultSessionName = "purebredtest"
