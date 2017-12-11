@@ -210,7 +210,7 @@ testUserCanManipulateNMQuery =
 
           liftIO $ step "search for non existing tags yielding no results"
           _ <- sendLiteralKeys "does not match anything"
-          sendKeys "Enter" (Literal "Item 0 of 0")
+          sendKeys "Enter" (Literal "No items")
 
           liftIO $ step "search for mail correctly tagged"
           sendKeys ":" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "does"))
@@ -220,7 +220,7 @@ testUserCanManipulateNMQuery =
           _ <- sendLiteralKeys "tag:replied"
 
           liftIO $ step "apply"
-          sendKeys "Enter" (Literal "Item 0 of 1")
+          sendKeys "Enter" (Literal "Item 1 of 1")
 
           liftIO $ step "open thread"
           sendKeys "Enter" (Literal "This is Purebred")
