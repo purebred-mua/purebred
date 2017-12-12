@@ -103,17 +103,58 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
   \step -> do
     startApplication
 
-    liftIO $ step "focus command to show thread tags"
-    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+    -- setup: tag the mails in the thread with two different threads and then
+    -- tag the thread as a whole with a new tag. All mails should keep their
+    -- distinct tags, while having received a new tag.
+    liftIO $ step "navigate to thread"
+    sendKeys "Down" (Literal "Item 2 of 3")
+    sendKeys "Down" (Literal "Item 3 of 3")
 
-    liftIO $ step "enter new tag"
-    _ <- sendLiteralKeys "+thread +only"
+    liftIO $ step "show thread mails"
+    sendKeys "Enter" (Literal "ViewMail")
+
+    liftIO $ step "open mail tag editor"
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] ["40"]))
+
+    liftIO $ step "add new tag"
+    _ <- sendLiteralKeys "+archive"
 
     liftIO $ step "apply"
-    sendKeys "Enter" (Literal "thread only")
+    sendKeys "Enter" (Literal "archive")
 
-    liftIO $ step "view mails to have same tags"
-    sendKeys "Enter" (Literal "only thread")
+    liftIO $ step "move to second mail"
+    sendKeys "Down" (Literal "Item 2 of 2")
+
+    liftIO $ step "open mail tag editor"
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] ["40"]))
+
+    liftIO $ step "add new tag"
+    _ <- sendLiteralKeys "+replied -inbox"
+
+    liftIO $ step "apply"
+    sendKeys "Enter" (Literal "replied")
+
+    liftIO $ step "thread tags shows new tags"
+    sendKeys "Escape" (Literal "archive inbox replied")
+
+    liftIO $ step "open thread tag editor"
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] ["40"]))
+
+    liftIO $ step "remove tag"
+    -- "cheating" here a bit, since just invoking tmux with sending literally
+    -- "-only" will fail due to tmux parsing it as an argument, but the mail is
+    -- already tagged with "thread" so the additional adding won't do anything
+    _ <- sendLiteralKeys "+thread"
+
+    liftIO $ step "apply"
+    sendKeys "Enter" (Literal "BrowseThreads")
+
+    liftIO $ step "show thread mails"
+    sendKeys "Enter" (Literal "ViewMail")
+
+    liftIO $ step "navigate to second mail and assert shows old tag"
+    sendKeys "Down" (Literal "Item 2 of 2")
+    sendKeys "Escape" (Regex ("Refactor." <> buildAnsiRegex [] ["36"] [] <> "replied thread$"))
 
     pure ()
 

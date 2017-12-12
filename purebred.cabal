@@ -57,6 +57,7 @@ library
                      , UI.Mail.Keybindings
                      , UI.Help.Main
                      , UI.Help.Keybindings
+                     , UI.Utils
                      , Purebred.Tags
                      , Config.Main
                      , Storage.Notmuch

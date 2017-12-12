@@ -1,0 +1,85 @@
+Return-Path: <noreply@github.com>
+Received: from mail.gocept.net ([2a02:248:101:62::19]:993) by url.lan with
+  IMAP4-SSL; 06 Apr 2017 10:26:52 -0000
+Received: from mail.gocept.net ([unix socket])
+	 by mail.gocept.net (Cyrus v2.4.17) with LMTPA;
+	 Fri, 06 Apr 2017 12:07:12 +0200
+X-Sieve: CMU Sieve 2.4
+Received: from localhost (localhost [127.0.0.1])
+	by mail.gocept.net (Postfix) with ESMTP id BD36414C0011
+	for <roman@bromeco.de>; Fri,  6 Apr 2017 12:07:12 +0200 (CEST)
+X-Virus-Scanned: amavisd-new at gocept.net
+Received: from mail.gocept.net ([127.0.0.1])
+	by localhost (mail.gocept.net [127.0.0.1]) (amavisd-new, port 10024)
+	with ESMTP id AN7cW_4zWqwQ for <roman@bromeco.de>;
+	Fri,  6 Apr 2017 12:07:09 +0200 (CEST)
+Received: from github-smtp2b-ext-cp1-prd.iad.github.net (github-smtp2-ext2.iad.github.net [192.30.252.193])
+	by mail.gocept.net (Postfix) with ESMTPS
+	for <roman@bromeco.de>; Fri,  6 Apr 2017 12:07:08 +0200 (CEST)
+Date: Fri, 06 Apr 2017 03:07:07 -0700
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=github.com;
+	s=pf2014; t=1507284427;
+	bh=EQPzeXDbI6hctd+r4xNkBc7RVb33wAI41BPLe12meqg=;
+	h=From:Reply-To:To:Cc:In-Reply-To:References:Subject:List-ID:
+	 List-Archive:List-Post:List-Unsubscribe:From;
+	b=LwNSmnR64SLX+6sK1QkdhV1ZWuAxGSshz23g9EumYaFYVi1CFPp9H6sLo8VLNkrYw
+	 uaWrh3VWTNTMk/5gCPaRra2XOAC/D47k8uLP8t4No1Q786fLCDshcvfZTfnC6QMLzW
+	 pX17tI1ypuN/DoNiHsbhoVZSyAlNMbWAqTdopLZk=
+From: Fraser Tweedale <notifications@github.com>
+Reply-To: purebred-mua/purebred <reply+0001d8d758dc103c342c8ce70e13c964693a16b64359c76592cf0000000115ef17cb92a163ce017a7876@reply.github.com>
+To: purebred-mua/purebred <purebred@noreply.github.com>
+Cc: Roman Joost <roman@bromeco.de>, 
+ Author <author@noreply.github.com>
+Message-ID: <purebred-mua/purebred/commit/e6ad31b2d72ec8731fc02cd1e9f3c2f99ab0d411/24803446@github.com>
+In-Reply-To: <purebred-mua/purebred/commit/e6ad31b2d72ec8731fc02cd1e9f3c2f99ab0d411@github.com>
+References: <purebred-mua/purebred/commit/e6ad31b2d72ec8731fc02cd1e9f3c2f99ab0d411@github.com>
+Subject: Re: [purebred-mua/purebred] WIP Refactor
+Mime-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--==_mimepart_59d755cb83ea6_627a3fca394c0f3481258";
+ charset=UTF-8
+Content-Transfer-Encoding: 7bit
+Precedence: list
+X-GitHub-Sender: frasertweedale
+X-GitHub-Recipient: romanofski
+X-GitHub-Reason: author
+List-ID: purebred-mua/purebred <purebred.purebred-mua.github.com>
+List-Archive: https://github.com/purebred-mua/purebred
+List-Post: <mailto:reply+0001d8d758dc103c342c8ce70e13c964693a16b64359c76592cf0000000115ef17cb92a163ce017a7876@reply.github.com>
+List-Unsubscribe: <mailto:unsub+0001d8d758dc103c342c8ce70e13c964693a16b64359c76592cf0000000115ef17cb92a163ce017a7876@reply.github.com>,
+ <https://github.com/notifications/unsubscribe/AAHY19zcyRXulGzhX5uHggSS5GHHR5WVks5spfvLgaJpZM4PwREU>
+X-Auto-Response-Suppress: All
+X-GitHub-Recipient-Address: roman@bromeco.de
+X-getmail-retrieved-from-mailbox: =?utf-8?q?INBOX?=
+Content-Length: 2585
+
+
+----==_mimepart_59d755cb83ea6_627a3fca394c0f3481258
+Content-Type: text/plain;
+ charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Thread test
+
+-- 
+You are receiving this because you authored the thread.
+Reply to this email directly or view it on GitHub:
+https://github.com/purebred-mua/purebred/commit/e6ad31b2d72ec8731fc02cd1e9f3c2f99ab0d411#commitcomment-24803446
+----==_mimepart_59d755cb83ea6_627a3fca394c0f3481258
+Content-Type: text/html;
+ charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<p>Thread test</p>
+
+<p style="font-size:small;-webkit-text-size-adjust:none;color:#666;">&mdash;<br />You are receiving this because you authored the thread.<br />Reply to this email directly, <a href="https://github.com/purebred-mua/purebred/commit/e6ad31b2d72ec8731fc02cd1e9f3c2f99ab0d411#commitcomment-24803446">view it on GitHub</a>, or <a href="https://github.com/notifications/unsubscribe-auth/AAHY1-GZyAzy__x15uQJnp_6wHvGq0sqks5spfvLgaJpZM4PwREU">mute the thread</a>.<img alt="" height="1" src="https://github.com/notifications/beacon/AAHY17OM-cgCNHGNQvNQYJN4ubI940xOks5spfvLgaJpZM4PwREU.gif" width="1" /></p>
+<div itemscope itemtype="http://schema.org/EmailMessage">
+<div itemprop="action" itemscope itemtype="http://schema.org/ViewAction">
+  <link itemprop="url" href="https://github.com/purebred-mua/purebred/commit/e6ad31b2d72ec8731fc02cd1e9f3c2f99ab0d411#commitcomment-24803446"></link>
+  <meta itemprop="name" content="View Commit"></meta>
+</div>
+<meta itemprop="description" content="View this Commit on GitHub"></meta>
+</div>
+
+<script type="application/json" data-scope="inboxmarkup">{"api_version":"1.0","publisher":{"api_key":"05dde50f1d1a384dd78767c55493e4bb","name":"GitHub"},"entity":{"external_key":"github/purebred-mua/purebred","title":"purebred-mua/purebred","subtitle":"GitHub repository","main_image_url":"https://cloud.githubusercontent.com/assets/143418/17495839/a5054eac-5d88-11e6-95fc-7290892c7bb5.png","avatar_image_url":"https://cloud.githubusercontent.com/assets/143418/15842166/7c72db34-2c0b-11e6-9aed-b52498112777.png","action":{"name":"Open in GitHub","url":"https://github.com/purebred-mua/purebred"}},"updates":{"snippets":[{"icon":"PERSON","message":"@frasertweedale on e6ad31b: can you add an export list so only the actions are exported?"}],"action":{"name":"View Commit","url":"https://github.com/purebred-mua/purebred/commit/e6ad31b2d72ec8731fc02cd1e9f3c2f99ab0d411#commitcomment-24803446"}}}</script>
+----==_mimepart_59d755cb83ea6_627a3fca394c0f3481258--
