@@ -6,7 +6,7 @@
 module Storage.Notmuch where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Except (void, MonadError, throwError, ExceptT)
+import Control.Monad.Except (MonadError, throwError, ExceptT)
 import qualified Data.ByteString as B
 import Data.Traversable (traverse)
 import Data.List (union, notElem, nub, sort)
@@ -61,7 +61,6 @@ applyTagOp ResetTags = set tags []
 
 class ManageTags a  where
     tags :: Lens' a [T.Text]
-    writeTags :: (MonadError Error m, MonadIO m) => FilePath -> a -> m a
 
 setTags :: (ManageTags a) => [T.Text] -> a -> a
 setTags = set tags
@@ -80,11 +79,9 @@ hasTag t x = t `elem` view tags x
 
 instance ManageTags NotmuchMail where
   tags = mailTags
-  writeTags = setNotmuchMailTags
 
 instance ManageTags NotmuchThread where
   tags = thTags
-  writeTags = setNotmuchThreadTags
 
 -- | A helper function for opening, performing work,
 -- and closing the database
@@ -126,28 +123,6 @@ mailFilepath m dbpath =
   withDatabaseReadOnly dbpath go
   where
     go db = getMessage db (view mailId m) >>= Notmuch.messageFilename
-
-setNotmuchMailTags
-  :: (MonadError Error m, MonadIO m)
-  => FilePath
-  -> NotmuchMail
-  -> m NotmuchMail
-setNotmuchMailTags dbpath m = do
-  nmtags <- toNotmuchTags (view mailTags m)
-  withDatabase dbpath (tagsToMessage nmtags (view mailId m))
-  pure m
-
-setNotmuchThreadTags
-  :: (MonadError Error m, MonadIO m)
-  => FilePath
-  -> NotmuchThread
-  -> m NotmuchThread
-setNotmuchThreadTags dbpath t = do
-  tgs <- toNotmuchTags (view thTags t)
-  mgs <- getThreadMessages dbpath t
-  void $ withDatabase dbpath (go tgs mgs)
-  pure t
-    where go xs msgs db = traverse (\x -> tagsToMessage xs (view mailId x) db) msgs
 
 tagsToMessage
   :: (MonadError Error m, MonadIO m)

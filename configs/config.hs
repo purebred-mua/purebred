@@ -8,19 +8,17 @@ import Data.List (union)
 
 myBrowseThreadsKbs :: [Keybinding 'BrowseThreads (Next AppState)]
 myBrowseThreadsKbs =
-  [ Keybinding (EvKey (KChar 'a') []) ((removeTags ["inbox"] `chain` addTags ["archive"] `chain` continue))
+  [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
   ]
 
 myBrowseMailKeybindings :: [Keybinding 'BrowseMail (Next AppState)]
 myBrowseMailKeybindings =
-    [ Keybinding (EvKey (KChar 'a') []) ((removeTags ["inbox"] `chain` addTags ["archive"]) `chain` continue)
+    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]
 
 myMailKeybindings :: [Keybinding 'ViewMail (Next AppState)]
 myMailKeybindings =
-    [ Keybinding (EvKey (KChar 'a') []) ((removeTags ["inbox"] `chain` addTags ["archive"])
-                                         `chain'` (listDown :: Action 'BrowseMail AppState)
-                                         `chain` displayMail `chain` continue)
+    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]
 
 main :: IO ()
