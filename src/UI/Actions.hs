@@ -396,11 +396,18 @@ reloadList = Action "reload list of threads" applySearch
 selectNextUnread :: Action 'BrowseMail AppState
 selectNextUnread =
   Action { _aDescription = "select next unread"
-         , _aAction = (\s -> let vec = (view (asMailIndex . miListOfMails . L.listElementsL) s)
-                                 cur = (view (asMailIndex . miListOfMails . L.listSelectedL) s) <|> Just 0
-                                 fx m = Notmuch.hasTag (view (asConfig . confNotmuch . nmNewTag) s) m
-                                 seekIndex i = fromMaybe i . findIndexWithOffset (i + 1) fx
-                             in pure $ over (asMailIndex . miListOfMails) (L.listMoveTo (seekIndex (fromMaybe 0 cur) vec)) s)
+         , _aAction = \s ->
+           let
+             vec = view (asMailIndex . miListOfMails . L.listElementsL) s
+             cur = view (asMailIndex . miListOfMails . L.listSelectedL) s <|> Just 0
+             fx = Notmuch.hasTag (view (asConfig . confNotmuch . nmNewTag) s)
+             seekIndex i = fromMaybe i . findIndexWithOffset (i + 1) fx
+           in
+             pure $
+               over
+                 (asMailIndex . miListOfMails)
+                 (L.listMoveTo (seekIndex (fromMaybe 0 cur) vec))
+                 s
          }
 
 -- Function definitions for actions
