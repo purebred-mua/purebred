@@ -399,14 +399,13 @@ selectNextUnread =
          , _aAction = \s ->
            let
              vec = view (asMailIndex . miListOfMails . L.listElementsL) s
-             cur = view (asMailIndex . miListOfMails . L.listSelectedL) s <|> Just 0
+             cur = view (asMailIndex . miListOfMails . L.listSelectedL) s
              fx = Notmuch.hasTag (view (asConfig . confNotmuch . nmNewTag) s)
-             seekIndex i = fromMaybe i . findIndexWithOffset (i + 1) fx
            in
              pure $
                over
                  (asMailIndex . miListOfMails)
-                 (L.listMoveTo (seekIndex (fromMaybe 0 cur) vec))
+                 (L.listMoveTo (maybe 0 (\i -> seekIndex i fx vec) cur))
                  s
          }
 
@@ -414,6 +413,12 @@ selectNextUnread =
 --
 findIndexWithOffset :: Int -> (a -> Bool) -> Vector.Vector a -> Maybe Int
 findIndexWithOffset i fx = fmap (i+) . Vector.findIndex fx . Vector.drop i
+
+-- | Seek forward from an offset, returning the offset if
+-- nothing after it matches the predicate.
+--
+seekIndex :: Int -> (a -> Bool) -> Vector.Vector a -> Int
+seekIndex i f = fromMaybe i . findIndexWithOffset i f
 
 applySearch :: AppState -> T.EventM Name AppState
 applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
