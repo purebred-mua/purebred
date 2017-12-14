@@ -9,14 +9,14 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (void, MonadError, throwError, ExceptT)
 import qualified Data.ByteString as B
 import Data.Traversable (traverse)
-import Data.List (union, notElem)
+import Data.List (union, notElem, nub, sort)
 import Data.Maybe (fromMaybe)
 import qualified Data.Vector as Vec
 import System.Process (readProcess)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Types
-import Control.Lens (view, over, set, firstOf, folded, Lens')
+import Control.Lens (_2, view, over, set, firstOf, folded, Lens')
 
 import qualified Notmuch
 import Notmuch.Search
@@ -24,9 +24,44 @@ import Notmuch.Util (bracketT)
 
 import Error
 
-class ManageTags a where
-  tags :: Lens' a [T.Text]
-  writeTags :: (MonadError Error m, MonadIO m) => FilePath -> a -> m a
+
+-- | apply tag operations on all given mails and write the resulting tags to the
+-- database
+messageTagModify
+  :: (Traversable t, MonadError Error m, MonadIO m)
+  => FilePath  -- ^ database
+  -> [TagOp]
+  -> t (a, NotmuchMail)
+  -> m (t (a, NotmuchMail))
+messageTagModify dbpath ops xs =
+    withDatabase dbpath (\db -> traverse (applyTags ops db) xs)
+
+applyTags
+    :: (MonadError Error m, MonadIO m)
+    => [TagOp]
+    -> Notmuch.Database Notmuch.RW
+    -> (a, NotmuchMail)
+    -> m (a, NotmuchMail)
+applyTags ops db mail = do
+    let mail' = foldr (over _2 . applyTagOp) mail ops
+    if haveTagsChanged mail mail'
+        then do
+            nmtags <- toNotmuchTags (view (_2 . mailTags) mail')
+            tagsToMessage nmtags (view (_2 . mailId) mail') db
+            pure mail'
+        else pure mail'
+
+haveTagsChanged :: (a, NotmuchMail) -> (a, NotmuchMail) -> Bool
+haveTagsChanged m1 m2 = sort (nub (view (_2 . mailTags) m1)) /= sort (nub (view (_2 . mailTags) m2))
+
+applyTagOp :: (ManageTags a) => TagOp -> a -> a
+applyTagOp (AddTag t) = addTags [t]
+applyTagOp (RemoveTag t) = removeTags [t]
+applyTagOp ResetTags = set tags []
+
+class ManageTags a  where
+    tags :: Lens' a [T.Text]
+    writeTags :: (MonadError Error m, MonadIO m) => FilePath -> a -> m a
 
 setTags :: (ManageTags a) => [T.Text] -> a -> a
 setTags = set tags

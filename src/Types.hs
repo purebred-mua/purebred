@@ -360,3 +360,8 @@ thId = lens _thId (\m t -> m { _thId = t })
 -- | Utility for safe conversion from bytestring to text
 decodeLenient :: B.ByteString -> T.Text
 decodeLenient = T.decodeUtf8With T.lenientDecode
+
+-- | Tag operations
+type Tag = T.Text
+data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
+  deriving (Show, Eq)
