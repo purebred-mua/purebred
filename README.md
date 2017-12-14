@@ -13,7 +13,7 @@ An MUA built around [*notmuch*](https://notmuchmail.org/).
 
 ## Status
 
-This project is in it's infancy, but please join us and help.
+This project is in its infancy, but please join us and help.
 
 ![](screenshot.png)
 
