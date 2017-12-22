@@ -33,7 +33,7 @@ data Error
   | FileReadError FilePath IOError -- ^ failed to read a file
   | FileParseError FilePath String -- ^ failed to parse a file
   | GenericError String
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance AsNotmuchError Error where
   _NotmuchError = prism' NotmuchError (\case (NotmuchError e) -> Just e ; _ -> Nothing)
