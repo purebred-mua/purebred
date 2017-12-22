@@ -65,16 +65,13 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "Enter" (Literal "Testmail")
 
     liftIO $ step "focus command to show mail tags"
-    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "inbox"))
-
-    liftIO $ step "delete all input"
-    sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
     liftIO $ step "enter new tag"
-    _ <- sendLiteralKeys "inbox, foo, bar ,test"
+    _ <- sendLiteralKeys "+inbox +foo +bar"
 
     liftIO $ step "apply"
-    sendKeys "Enter" (Literal "foo bar test")
+    sendKeys "Enter" (Literal "bar foo")
 
     liftIO $ step "go back to list of threads"
     sendKeys "Escape" (Literal "Testmail")
@@ -94,7 +91,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "Enter" (Literal "Testmail")
 
     liftIO $ step "attempt to add a new tag"
-    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "bar,foo"))
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
     liftIO $ step "cancel tagging and expect old search restored"
     sendKeys "Escape" (Literal "tag:foo and tag:bar")
@@ -107,13 +104,10 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     startApplication
 
     liftIO $ step "focus command to show thread tags"
-    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "inbox,unread"))
-
-    liftIO $ step "delete all input"
-    sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
     liftIO $ step "enter new tag"
-    _ <- sendLiteralKeys "thread,only"
+    _ <- sendLiteralKeys "+thread +only"
 
     liftIO $ step "apply"
     sendKeys "Enter" (Literal "thread only")

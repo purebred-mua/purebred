@@ -45,7 +45,7 @@ import qualified Brick.Widgets.List as L
 import Network.Mail.Mime (Address(..), renderSendMail, simpleMail')
 import Data.Proxy
 import Data.Semigroup ((<>))
-import Data.Text (splitOn, strip, intercalate, unlines, Text)
+import Data.Text (splitOn, strip, unlines, Text)
 import Data.Text.Lazy.IO (readFile)
 import Data.Maybe (fromMaybe)
 import System.Exit (ExitCode(..))
@@ -62,11 +62,12 @@ import Control.Monad.Except (runExceptT)
 import Control.Exception (onException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Catch (bracket)
-import Data.Text.Zipper (currentLine, gotoEOL, insertMany, clearZipper)
+import Data.Text.Zipper (currentLine, gotoEOL, clearZipper)
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
+import Purebred.Tags (parseTagOps)
 
 class Scrollable (n :: Mode) where
   makeViewportScroller :: Proxy n -> Brick.ViewportScroll Name
@@ -174,10 +175,10 @@ instance Focusable 'SearchThreads where
   switchFocus _ = pure . over (asMailIndex . miSearchThreadsEditor) (E.applyEdit gotoEOL)
 
 instance Focusable 'ManageMailTags where
-  switchFocus _ s = pure $ maybe s (setTagEditor s) (L.listSelectedElement (view (asMailIndex . miListOfMails) s))
+  switchFocus _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Focusable 'ManageThreadTags where
-  switchFocus _ s = pure $ maybe s (setTagEditor s) (L.listSelectedElement (view (asMailIndex . miListOfThreads) s))
+  switchFocus _ = pure . over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
 
 instance Focusable 'BrowseMail where
   switchFocus _ = pure
@@ -504,12 +505,6 @@ updateReadState op s =
 
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
-
-setTagEditor :: Notmuch.ManageTags a => AppState -> (Int, a) -> AppState
-setTagEditor s (_, m) =
-    let tags = intercalate "," $ Notmuch.getTags m
-        widget = if view asAppMode s == ManageMailTags then asMailIndex . miMailTagsEditor else asMailIndex . miThreadTagsEditor
-    in over (widget . E.editContentsL) (insertMany tags . clearZipper) s
 
 replyToMail :: AppState -> T.EventM Name AppState
 replyToMail s =
