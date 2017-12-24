@@ -7,14 +7,13 @@ import Brick.AttrMap (AttrName)
 import Brick.Widgets.Core
        (hLimit, padLeft, txt, vBox, vLimit, withAttr, (<+>))
 import Prelude hiding (unwords)
-import qualified Brick.Widgets.Edit        as E
-import qualified Brick.Widgets.List        as L
+import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Semigroup ((<>))
 import Data.Text (Text, pack, unwords)
-import UI.Draw.Main (editorDrawContent, fillLine)
+import UI.Draw.Main (renderEditorWithLabel, fillLine)
 import UI.Status.Main (statusbar)
 import Storage.Notmuch (hasTag)
 import Types
@@ -30,7 +29,7 @@ drawMain s = [ui]
 
 renderEditor :: AppState -> Widget Name
 renderEditor s = let editorFocus = view asAppMode s `elem` [SearchThreads, ManageThreadTags, ManageMailTags]
-                     render = E.renderEditor editorDrawContent editorFocus
+                     render = renderEditorWithLabel s editorFocus
                  in case view asAppMode s of
                       ManageThreadTags -> render (view (asMailIndex . miThreadTagsEditor) s)
                       ManageMailTags -> render (view (asMailIndex . miMailTagsEditor) s)

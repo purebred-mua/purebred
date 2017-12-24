@@ -10,7 +10,7 @@ import Brick.Widgets.Core
         (<=>))
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Control.Lens (view, traversed)
+import Control.Lens (Lens', view, traversed)
 import Data.Vector.Lens (toVectorOf)
 import qualified Data.Text as T
 
@@ -54,3 +54,8 @@ getLabelForComposeState :: Name -> Widget Name
 getLabelForComposeState ComposeFrom = txt "From:"
 getLabelForComposeState ComposeTo = txt "To:"
 getLabelForComposeState _ = txt "Subject:"
+
+focusedLens :: Mode -> Lens' Compose (E.Editor T.Text Name)
+focusedLens GatherHeadersFrom = cFrom
+focusedLens GatherHeadersTo = cTo
+focusedLens _ = cSubject
