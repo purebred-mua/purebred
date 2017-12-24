@@ -3,23 +3,23 @@
 
 module UI.GatherHeaders.Main where
 
-import Brick.Types (Padding(..), Widget)
-import Brick.Widgets.Core (padRight, vBox, vLimit, (<+>), txt)
-
-import qualified Brick.Widgets.Edit as E
 import Control.Lens (view)
 import qualified Data.Text as T
-import UI.Draw.Main (editorDrawContent)
+
+import Brick.Types (Widget)
+import Brick.Widgets.Core (vBox, txt)
+import qualified Brick.Widgets.Edit as E
+
+import Types
+import UI.Draw.Main (renderEditorWithLabel)
 import UI.Index.Main (renderMailList)
 import UI.Status.Main (statusbar)
-import Types
 
 drawInteractiveHeaders :: AppState -> [Widget Name]
 drawInteractiveHeaders s = [ui]
   where
-    inputBox = E.renderEditor editorDrawContent True (focusedEditor s)
-    inputPrefix = padRight (Pad 1) $ getLabelForComposeState (view asAppMode s)
-    ui = vBox [renderMailList s, statusbar s, inputPrefix <+> vLimit 1 inputBox]
+    inputBox = renderEditorWithLabel s True (focusedEditor s)
+    ui = vBox [renderMailList s, statusbar s, inputBox]
 
 focusedEditor :: AppState -> E.Editor T.Text Name
 focusedEditor s =
