@@ -11,9 +11,12 @@ import Types
 browseMailKeybindings :: [Keybinding 'BrowseMail (Brick.Next AppState)]
 browseMailKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain'` (reloadList :: Action 'BrowseThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (focus `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (displayMail `chain` continue)
     , Keybinding (V.EvKey V.KDown []) (listDown `chain` continue)
     , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help AppState) `chain` continue)
@@ -24,12 +27,15 @@ browseMailKeybindings =
 browseThreadsKeybindings :: [Keybinding 'BrowseThreads (Brick.Next AppState)]
 browseThreadsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) quit
+    , Keybinding (V.EvKey (V.KChar 'q') []) quit
     , Keybinding (V.EvKey V.KEnter []) (displayThreadMails `chain'` (focus :: Action 'BrowseMail AppState) `chain'` selectNextUnread `chain` displayMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar ':') []) (noop `chain'` (focus :: Action 'SearchThreads AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'm') []) (noop `chain'` (focus :: Action 'GatherHeadersFrom AppState) `chain`continue)
     , Keybinding (V.EvKey (V.KChar '`') []) (noop `chain'` (focus :: Action 'ManageThreadTags AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar '\t') []) (switchComposeEditor `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
     ]
 
 searchThreadsKeybindings :: [Keybinding 'SearchThreads (Brick.Next AppState)]
