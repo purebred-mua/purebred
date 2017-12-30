@@ -10,8 +10,10 @@ import Brick.Types (EventM, Next)
 import qualified Brick.Widgets.Edit        as E
 import qualified Brick.Widgets.List        as L
 import           Control.Lens
-import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Encoding.Error as T
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
@@ -302,7 +304,7 @@ data NotmuchMail = NotmuchMail
     , _mailFrom :: T.Text
     , _mailDate :: UTCTime
     , _mailTags :: [T.Text]
-    , _mailId :: ByteString
+    , _mailId :: B.ByteString
     } deriving (Show, Eq)
 
 mailSubject :: Lens' NotmuchMail T.Text
@@ -317,7 +319,7 @@ mailDate = lens _mailDate (\m d -> m { _mailDate = d })
 mailTags :: Lens' NotmuchMail [T.Text]
 mailTags = lens _mailTags (\m t -> m { _mailTags = t })
 
-mailId :: Lens' NotmuchMail ByteString
+mailId :: Lens' NotmuchMail B.ByteString
 mailId = lens _mailId (\m i -> m { _mailId = i })
 
 data NotmuchThread = NotmuchThread
@@ -326,7 +328,7 @@ data NotmuchThread = NotmuchThread
     , _thDate :: UTCTime
     , _thTags :: [T.Text]
     , _thReplies :: Int
-    , _thId :: ByteString
+    , _thId :: B.ByteString
     } deriving (Show, Eq)
 
 thSubject :: Lens' NotmuchThread T.Text
@@ -344,5 +346,9 @@ thTags = lens _thTags (\m t -> m { _thTags = t })
 thReplies :: Lens' NotmuchThread Int
 thReplies = lens _thReplies (\m t -> m { _thReplies = t })
 
-thId :: Lens' NotmuchThread ByteString
+thId :: Lens' NotmuchThread B.ByteString
 thId = lens _thId (\m t -> m { _thId = t })
+
+-- | Utility for safe conversion from bytestring to text
+decodeLenient :: B.ByteString -> T.Text
+decodeLenient = T.decodeUtf8With T.lenientDecode
