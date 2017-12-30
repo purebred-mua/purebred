@@ -61,7 +61,6 @@ library
                      , unix
                      , mtl
                      , exceptions
-                     , profunctors >= 5
                      , purebred-email
 
 executable purebred

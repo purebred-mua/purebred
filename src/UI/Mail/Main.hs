@@ -12,7 +12,6 @@ import Control.Lens (filtered, firstOf, folded, toListOf, view)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import Data.Maybe (fromMaybe)
-import Data.Profunctor (lmap)
 
 import Data.MIME
 
@@ -43,10 +42,7 @@ messageToMailView s msg =
   let
     wantHeader :: CI.CI B.ByteString -> Bool
     wantHeader = case view (asMailView . mvHeadersState) s of
-      Filtered ->
-        -- FIXME the config is currently (CI T.Text -> Bool)
-        lmap (CI.map decodeLenient) $
-        view (asConfig . confMailView . mvHeadersToShow) s
+      Filtered -> view (asConfig . confMailView . mvHeadersToShow) s
       ShowAll -> const True
 
     filteredHeaders =
@@ -67,9 +63,9 @@ messageToMailView s msg =
     foldr (<=>) (padTop (Pad 1) body) headerWidgets
 
 chooseEntity :: AppState -> Message MIME -> Entity
-chooseEntity _ msg =
+chooseEntity s msg =
   let
-    preferredContentType = defaultContentType -- FIXME
+    preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
     match :: Entity -> Bool
     match (h, _) = view contentType h `ctEq` preferredContentType
 
