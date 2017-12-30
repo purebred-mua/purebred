@@ -294,9 +294,7 @@ type Header = T.Text
 -- add support for it
 data ParsedMail
     = MIMEMail MIMEValue
-    | RFC2822 [Header]
-              Body
-    deriving (Show,Eq)
+    | RFC2822 [Header] Body
 
 -- | an email from the notmuch database
 data NotmuchMail = NotmuchMail
