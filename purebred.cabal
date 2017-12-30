@@ -48,7 +48,6 @@ library
                      , vector
                      , notmuch
                      , text
-                     , mime
                      , process
                      , mime-mail
                      , network

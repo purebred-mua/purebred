@@ -4,7 +4,6 @@
 -- | Basic types for the UI used by this library
 module Types where
 
-import Codec.MIME.Type (MIMEValue)
 import qualified Brick.AttrMap             as Brick
 import Brick.Types (EventM, Next)
 import qualified Brick.Widgets.Edit        as E
@@ -86,11 +85,11 @@ miThreadTagsEditor = lens _miThreadTagsEditor (\m v -> m { _miThreadTagsEditor =
 data HeadersState = ShowAll | Filtered
 
 data MailView = MailView
-    { _mvMail :: Maybe ParsedMail
+    { _mvMail :: Maybe (Message MIME)
     , _mvHeadersState :: HeadersState
     }
 
-mvMail :: Lens' MailView (Maybe ParsedMail)
+mvMail :: Lens' MailView (Maybe (Message MIME))
 mvMail = lens _mvMail (\mv pm -> mv { _mvMail = pm })
 
 mvHeadersState :: Lens' MailView HeadersState
@@ -292,13 +291,6 @@ aDescription = to (\(Action a _ ) -> a)
 
 type Body = T.Text
 type Header = T.Text
-
--- | a parsed email representing either a MIME or RFC2822 e-mail. Note: RFC2822
--- is currently not implemented, but we're using the same type for the case we
--- add support for it
-data ParsedMail
-    = MIMEMail MIMEValue
-    | PurebredEmail (Message MIME)
 
 -- | an email from the notmuch database
 data NotmuchMail = NotmuchMail
