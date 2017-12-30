@@ -31,6 +31,7 @@ data Error
   | MessageNotFound B.ByteString -- message id
   | ThreadNotFound B.ByteString -- thread id
   | FileReadError FilePath IOError -- ^ failed to read a file
+  | FileParseError FilePath String -- ^ failed to parse a file
   | GenericError String
   deriving (Show)
 
