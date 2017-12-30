@@ -18,6 +18,8 @@ import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
 
+import Data.MIME
+
 import Error
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
@@ -296,7 +298,7 @@ type Header = T.Text
 -- add support for it
 data ParsedMail
     = MIMEMail MIMEValue
-    | RFC2822 [Header] Body
+    | PurebredEmail (Message MIME)
 
 -- | an email from the notmuch database
 data NotmuchMail = NotmuchMail
