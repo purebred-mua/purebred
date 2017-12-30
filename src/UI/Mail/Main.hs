@@ -13,11 +13,6 @@ import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import Data.Maybe (fromMaybe)
 import Data.Profunctor (lmap)
-import qualified Data.Text as T
-
-import Codec.MIME.Type
-       (MIMEContent(..), MIMEParam(..), MIMEValue(..), Type(..),
-        showMIMEType)
 
 import Data.MIME
 
@@ -39,21 +34,8 @@ drawMail s =
       vLimit 1 (renderEditor s)
     ]
 
--- | TODO: See #19
-mailView :: AppState -> Maybe ParsedMail -> Widget Name
-mailView s (Just (MIMEMail m)) =
-    let filtered_headers = filter (headerFilter s . CI.mk . paramName) $ mime_val_headers m
-        widgets =
-            (\h ->
-                  withAttr headerKeyAttr $
-                  txt (paramName h) <+>
-                  padLeft
-                      (Pad 1)
-                      (withAttr headerValueAttr $ txtWrap (paramValue h))) <$>
-            filtered_headers
-        body = padTop (Pad 1) $ mimeContentToView s m
-    in foldr (<=>) (padTop (Pad 1) body) widgets
-mailView s (Just (PurebredEmail msg)) = messageToMailView s msg
+mailView :: AppState -> Maybe (Message MIME) -> Widget Name
+mailView s (Just msg) = messageToMailView s msg
 mailView _ Nothing = txt "Eeek: this is not supposed to happen"
 
 messageToMailView :: AppState -> Message MIME -> Widget Name
@@ -100,30 +82,6 @@ chooseEntity _ msg =
 entityToView :: Entity -> Widget Name
 entityToView (_, b) = txtWrap $ decodeLenient b
 
-mimeContentToView :: AppState -> MIMEValue -> Widget Name
-mimeContentToView _ (MIMEValue _ _ (Single m) _ _) = txtWrap m
-mimeContentToView s (MIMEValue _ _ (Multi xs) _ _) =
-    let mval =
-            filter
-                (\x ->
-                      showMIMEType (mimeType $ mime_val_type x) ==
-                      preferContentType s)
-                xs
-        picked =
-            if null mval
-                then head xs  -- FIXME non-total
-                else head mval
-    in mimeContentToView s picked
-
 -- | The size limit of the index list
 indexViewRows :: AppState -> Int
 indexViewRows = view (asConfig . confMailView . mvIndexRows)
-
-preferContentType :: AppState -> T.Text
-preferContentType = view (asConfig . confMailView . mvPreferredContentType)
-
-headerFilter :: AppState -> (CI.CI T.Text -> Bool)
-headerFilter s =
-    case view (asMailView . mvHeadersState) s of
-        Filtered -> view (asConfig . confMailView . mvHeadersToShow) s
-        ShowAll -> const True
