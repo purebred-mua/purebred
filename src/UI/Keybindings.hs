@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 module UI.Keybindings where
 
@@ -9,23 +8,11 @@ import qualified Brick.Main as Brick
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Graphics.Vty (Event (..))
-import Control.Lens.Getter (view)
+import Control.Lens ((&), view, set)
 import Data.List (find)
 import Prelude hiding (readFile, unlines)
 import Data.Proxy
 import Types
-
--- | A generic event handler using Keybindings by default if available
-handleEvent
-    :: [Keybinding ctx (Brick.Next AppState)]  -- ^ Keybindings to lookup
-    -> (AppState -> Event -> Brick.EventM Name (Brick.Next AppState))  -- ^ default handler if no keybinding matches
-    -> AppState
-    -> Event
-    -> Brick.EventM Name (Brick.Next AppState)
-handleEvent kbs def s ev =
-    case lookupKeybinding ev kbs of
-        Just kb -> view (kbAction . aAction) kb s
-        Nothing -> def s ev
 
 lookupKeybinding :: Event -> [Keybinding ctx a] -> Maybe (Keybinding ctx a)
 lookupKeybinding e = find (\x -> view kbEvent x == e)
@@ -92,5 +79,5 @@ instance EventHandler 'GatherHeadersSubject where
 dispatch :: EventHandler m => Proxy m -> AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
 dispatch m s e = let kbs = view (keybindingsL m) s
                  in case lookupKeybinding e kbs of
-                      Just kb -> view (kbAction . aAction) kb s
+                      Just kb -> s & view (kbAction . aAction) kb . set asError Nothing
                       Nothing -> fallbackHandler m s e

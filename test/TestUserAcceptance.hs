@@ -142,7 +142,12 @@ testErrorHandling = withTmuxSession "error handling" $
 
     liftIO $ step "shows error message"
     sendKeys "Enter" (Literal "FileReadError")
-      >>= assertSubstrInOutput "openFile: does not exist"
+      >>= assertRegex "openFile:.*does not exist"
+
+    liftIO $ step "error is cleared with next registered keybinding"
+    sendKeys "Up" (Literal "Purebred: Item 1 of 1")
+
+    pure ()
 
 testSetsMailToRead ::
   TestTree
