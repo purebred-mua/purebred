@@ -142,7 +142,7 @@ testErrorHandling = withTmuxSession "error handling" $
 
     liftIO $ step "shows error message"
     sendKeys "Enter" (Literal "FileReadError")
-      >>= assertRegex "openFile:.*does not exist"
+      >>= assertRegex "open(Binary)?File:.*does not exist"
 
     liftIO $ step "error is cleared with next registered keybinding"
     sendKeys "Up" (Literal "Purebred: Item 1 of 1")
@@ -178,11 +178,11 @@ testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
     sendKeys "Enter" (Literal "This is a test mail")
 
     liftIO $ step "toggle to show all headers"
-    sendKeys "h" (Literal "return-path")
+    sendKeys "h" (Regex "[Rr]eturn-[Pp]ath")
 
     liftIO $ step "toggle filtered headers"
     out <- sendKeys "h" (Literal "This is a test mail")
-    assertRegex "Purebred.*\n.*from" out
+    assertRegex "Purebred.*\n.*[Ff]rom" out
 
 testUserViewsMailSuccessfully ::
   TestTree
