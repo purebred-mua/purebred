@@ -12,8 +12,7 @@ import Control.Exception (try)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Text as T
-import Data.Text.IO (readFile)
-import Prelude hiding (readFile)
+import qualified Data.Text.IO as T
 import Storage.Notmuch (mailFilepath)
 
 import Error
@@ -24,7 +23,7 @@ parseMail
   => NotmuchMail -> FilePath -> m ParsedMail
 parseMail m dbpath = do
   filePath <- mailFilepath m dbpath
-  liftIO (try (readFile filePath))
+  liftIO (try (T.readFile filePath))
     >>= either
       (throwError . FileReadError filePath)
       (pure . MIMEMail . parseMIMEMessage)
