@@ -21,6 +21,9 @@ import UI.Index.Keybindings
         manageMailTagsKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings, displayIndexKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
+
+import Data.MIME (ContentType(..))
+
 import Types
 import Storage.Notmuch (getDatabasePath)
 
@@ -95,7 +98,7 @@ defaultConfig =
     , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
     , _confMailView = MailViewSettings
       { _mvIndexRows = 10
-      , _mvPreferedContentType = "text/plain"
+      , _mvPreferedContentType = ContentType "text" "plain" []
       , _mvHeadersToShow = (`elem` ["subject", "to", "from"])
       , _mvKeybindings = displayMailKeybindings
       , _mvIndexKeybindings = displayIndexKeybindings

@@ -215,8 +215,8 @@ ivManageThreadTagsKeybindings f (IndexViewSettings a b c d e) = fmap (\e' -> Ind
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
-    , _mvPreferedContentType :: T.Text
-    , _mvHeadersToShow       :: CI.CI T.Text -> Bool
+    , _mvPreferedContentType :: ContentType
+    , _mvHeadersToShow       :: CI.CI B.ByteString -> Bool
     , _mvKeybindings         :: [Keybinding 'ViewMail (Next AppState)]
     , _mvIndexKeybindings    :: [Keybinding 'BrowseMail (Next AppState)]
     }
@@ -224,10 +224,10 @@ data MailViewSettings = MailViewSettings
 mvIndexRows :: Lens' MailViewSettings Int
 mvIndexRows f (MailViewSettings a b c d e) = fmap (\a' -> MailViewSettings a' b c d e) (f a)
 
-mvPreferredContentType :: Lens' MailViewSettings T.Text
+mvPreferredContentType :: Lens' MailViewSettings ContentType
 mvPreferredContentType f (MailViewSettings a b c d e) = fmap (\b' -> MailViewSettings a b' c d e) (f b)
 
-mvHeadersToShow :: Getter MailViewSettings (CI.CI T.Text -> Bool)
+mvHeadersToShow :: Getter MailViewSettings (CI.CI B.ByteString -> Bool)
 mvHeadersToShow = to (\(MailViewSettings _ _ h _ _) -> h)
 
 mvKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail (Next AppState)]
