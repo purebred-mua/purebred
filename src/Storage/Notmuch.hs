@@ -18,7 +18,7 @@ import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Types
 import Control.Lens (view, over, set, firstOf, folded, Lens')
 
-import qualified Notmuch as Notmuch
+import qualified Notmuch
 import Notmuch.Search
 import Notmuch.Util (bracketT)
 
@@ -29,7 +29,7 @@ class ManageTags a where
   writeTags :: (MonadError Error m, MonadIO m) => FilePath -> a -> m a
 
 setTags :: (ManageTags a) => [T.Text] -> a -> a
-setTags tgs = set tags tgs
+setTags = set tags
 
 addTags :: (ManageTags a) => [T.Text] -> a -> a
 addTags tgs = over tags (`union` tgs)
@@ -41,7 +41,7 @@ getTags :: (ManageTags a) => a -> [T.Text]
 getTags = view tags
 
 hasTag :: (ManageTags a) => T.Text -> a -> Bool
-hasTag t x = t `elem` (view tags x)
+hasTag t x = t `elem` view tags x
 
 instance ManageTags NotmuchMail where
   tags = mailTags
@@ -205,7 +205,7 @@ threadToThread m = do
     let tgs' = decodeUtf8 . Notmuch.getTag <$> tgs
     NotmuchThread
       <$> (decodeUtf8 <$> Notmuch.threadSubject m)
-      <*> (pure $ view Notmuch.matchedAuthors auth)
+      <*> pure (view Notmuch.matchedAuthors auth)
       <*> Notmuch.threadNewestDate m
       <*> pure tgs'
       <*> Notmuch.threadTotalMessages m
