@@ -525,9 +525,9 @@ initialCompose :: Compose
 initialCompose =
     Compose
         Nothing
-        (E.editor ComposeFrom Nothing "")
-        (E.editor ComposeTo Nothing "")
-        (E.editor ComposeSubject Nothing "")
+        (E.editorText ComposeFrom (Just 1) "")
+        (E.editorText ComposeTo (Just 1) "")
+        (E.editorText ComposeSubject (Just 1) "")
 
 
 invokeEditor' :: AppState -> IO AppState

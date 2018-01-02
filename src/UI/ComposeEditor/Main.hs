@@ -21,7 +21,7 @@ import Types
 drawComposeEditor :: AppState -> [Widget Name]
 drawComposeEditor s = [ui <=> attachmentsEditor s]
   where
-    ui = foldr (drawTableRows s) (txt T.empty) [GatherHeadersSubject, GatherHeadersFrom, GatherHeadersTo]
+    ui = foldr (drawTableRows s) (txt T.empty) [GatherHeadersSubject, GatherHeadersTo, GatherHeadersFrom]
 
 -- | align labels to the right and values to the left, e.g.
 --
@@ -30,9 +30,10 @@ drawComposeEditor s = [ui <=> attachmentsEditor s]
 --
 drawTableRows :: AppState -> Mode -> Widget Name -> Widget Name
 drawTableRows s m w =
-    w <=>
-    hLimit 15 (padRight Max (getLabelForComposeState m)) <+>
-     E.renderEditor editorDrawContent False (view (asCompose . focusedLens m) s)
+    w
+    <=> vLimit 1
+    (hLimit 15 (padRight Max (getLabelForComposeState m))
+     <+> E.renderEditor editorDrawContent False (view (asCompose . focusedLens m) s))
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
