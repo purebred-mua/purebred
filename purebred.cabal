@@ -1,14 +1,31 @@
 name:                purebred
 version:             0.1.0.0
 synopsis:            An mail user agent built around notmuch
--- description:
+description:
+  .
+  An MUA built around <https://notmuchmail.org/ notmuch>.
+  Mutt-inspired console interface, but embracing the notmuch
+  storage / search paradigm.
+  .
+  = Requirements
+  .
+  * GHC >= 8.0
+  * notmuch
+  * a local mailer (e.g. @sendmail@)
+  .
+  = Status
+  .
+  The project is in development and is not ready for serious use.
+  Contributions are welcome (bug reports, feedback, doc, code, etc).
+  See HACKING for more info.
+
 homepage:            https://github.com/githubuser/purebred#readme
 license:             AGPL-3
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2017 Author name here
-category:            Graphics
+author:              Róman Joost & Fraser Tweedale
+maintainer:          frase@frase.id.au
+copyright:           2017  Purebred contributors
+category:            Email
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md

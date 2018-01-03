@@ -7,13 +7,14 @@ An MUA built around [*notmuch*](https://notmuchmail.org/).
 ## requirements
 
 - GHC >= 8.0
-- a bunch of uncontroversial Haskell dependencies
 - notmuch
-- not much else (*geddit?*)
+- a local mailer (e.g. ``sendmail``)
 
 ## Status
 
-This project is in its infancy, but please join us and help.
+This project is in its infancy, but please join us and help.  All
+kinds of contributions (bug reports, testing, documentation, code)
+are welcome.  See [HACKING] for more info.
 
 ![](screenshot.png)
 
