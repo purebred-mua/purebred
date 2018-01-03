@@ -35,22 +35,22 @@ addons:
 matrix:
   include:
   - env: STACK_ARGS="--resolver lts-8" NOTMUCHVER=0.24.2
-    compiler: ": #stack lts-8 - notmuch: 0.24.2"
+    compiler: ": #stackage lts-8 (ghc-8.0.2) - notmuch: 0.24.2"
 
   - env: STACK_ARGS="--resolver lts-8" NOTMUCHVER=0.25
-    compiler: ": #stack lts-8 - notmuch: 0.25"
+    compiler: ": #stackage lts-8 (ghc-8.0.2) - notmuch: 0.25"
 
   - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.24.2
-    compiler: ": #stack lts-9 - notmuch: 0.24.2"
+    compiler: ": #stackage lts-9 (ghc-8.0.2) - notmuch: 0.24.2"
 
   - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.25
-    compiler: ": #stack lts-9 - notmuch: 0.25"
+    compiler: ": #stackage lts-9 (ghc-8.0.2) - notmuch: 0.25"
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.24.2
-    compiler: ": #stack nightly - notmuch: 0.24.2"
+    compiler: ": #stackage nightly - notmuch: 0.24.2"
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.25
-    compiler: ": #stack nightly - notmuch: 0.25"
+    compiler: ": #stackage nightly - notmuch: 0.25"
 
   allow_failures:
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.24.2
