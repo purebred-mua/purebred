@@ -113,6 +113,8 @@ instance ModeTransition 'GatherHeadersTo 'GatherHeadersSubject where
 
 instance ModeTransition 'GatherHeadersSubject 'BrowseThreads where
 
+instance ModeTransition 'GatherHeadersSubject 'ComposeEditor where
+
 instance ModeTransition 'ComposeEditor 'BrowseThreads where
 
 instance ModeTransition 'Help 'BrowseThreads where
@@ -188,6 +190,9 @@ instance Focusable 'GatherHeadersTo where
 instance Focusable 'GatherHeadersSubject where
   switchFocus _ = pure . set asAppMode GatherHeadersSubject
 
+instance Focusable 'ComposeEditor where
+  switchFocus _ = pure . set asAppMode ComposeEditor
+
 instance Focusable 'BrowseThreads where
   switchFocus _ = pure . set asAppMode BrowseThreads
 
@@ -226,6 +231,9 @@ instance HasMode 'GatherHeadersTo where
 
 instance HasMode 'GatherHeadersSubject where
   mode _ = GatherHeadersSubject
+
+instance HasMode 'ComposeEditor where
+  mode _ = ComposeEditor
 
 instance HasMode 'ManageThreadTags where
   mode _ = ManageThreadTags
@@ -542,7 +550,7 @@ invokeEditor' s = do
   status <- onException (system (editor <> " " <> tmpfile)) (pure $ setError editorError)
   case status of
     ExitFailure _ -> pure $ s & set asAppMode BrowseMail & setError editorError
-    ExitSuccess -> pure $ s & set asAppMode ComposeEditor & set (asCompose . cTmpFile) (Just tmpfile) -- go to compose editor
+    ExitSuccess -> pure $ s & set (asCompose . cTmpFile) (Just tmpfile)
 
 editorError :: Error
 editorError = GenericError ("Editor command exited with error code."
