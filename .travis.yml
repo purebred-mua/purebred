@@ -17,33 +17,33 @@ before_install:
   - pushd /tmp/notmuch && ./configure --prefix=/usr --without-emacs --without-ruby && make && sudo make install && popd
 
 script:
-  - stack $STACK_ARGS --system-ghc --no-terminal --skip-ghc-check install
-  - DEBUG=1 stack $STACK_ARGS --system-ghc --no-terminal --skip-ghc-check test 2> /tmp/test.log
+  - stack $STACK_ARGS --no-terminal install
+  - DEBUG=1 stack $STACK_ARGS --no-terminal test 2> /tmp/test.log
   - cat /tmp/test.log
-  - stack $STACK_ARGS --system-ghc --no-terminal --skip-ghc-check haddock
+  - stack $STACK_ARGS --no-terminal haddock
 
 matrix:
   include:
   - env: STACK_ARGS="--resolver lts-8" NOTMUCHVER=0.24.2
     compiler: ": #stack lts-8 - notmuch: 0.24.2"
-    addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver lts-8" NOTMUCHVER=0.25
     compiler: ": #stack lts-8 - notmuch: 0.25"
-    addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.24.2
     compiler: ": #stack lts-9 - notmuch: 0.24.2"
-    addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.25
     compiler: ": #stack lts-9 - notmuch: 0.25"
-    addons: {apt: {packages: [ghc-8.0.2, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.24.2
     compiler: ": #stack nightly - notmuch: 0.24.2"
-    addons: {apt: {packages: [ghc-8.2.1, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.25
     compiler: ": #stack nightly - notmuch: 0.25"
-    addons: {apt: {packages: [ghc-8.2.1, tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
