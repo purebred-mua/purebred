@@ -3,16 +3,15 @@
 
 module UI.GatherHeaders.Main where
 
-import           Brick.Types                  (Padding (..), Widget)
-import           Brick.Widgets.Core           (padRight, vBox, vLimit, (<+>))
+import Brick.Types (Padding(..), Widget)
+import Brick.Widgets.Core (padRight, vBox, vLimit, (<+>), txt)
 
-import qualified Brick.Widgets.Edit           as E
-import           Control.Lens.Getter          (view)
-import qualified Data.Text                    as T
-import           UI.Draw.Main                 (editorDrawContent)
-import           UI.Index.Main                (renderMailList)
-import           UI.Status.Main               (statusbar)
-import UI.ComposeEditor.Main (getLabelForComposeState)
+import qualified Brick.Widgets.Edit as E
+import Control.Lens (view)
+import qualified Data.Text as T
+import UI.Draw.Main (editorDrawContent)
+import UI.Index.Main (renderMailList)
+import UI.Status.Main (statusbar)
 import Types
 
 drawInteractiveHeaders :: AppState -> [Widget Name]
@@ -28,3 +27,8 @@ focusedEditor s =
         GatherHeadersFrom -> view (asCompose . cFrom) s
         GatherHeadersTo -> view (asCompose . cTo) s
         _ -> view (asCompose . cSubject) s
+
+getLabelForComposeState :: Mode -> Widget Name
+getLabelForComposeState GatherHeadersFrom = txt "From:"
+getLabelForComposeState GatherHeadersTo = txt "To:"
+getLabelForComposeState _ = txt "Subject:"

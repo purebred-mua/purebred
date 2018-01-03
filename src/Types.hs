@@ -4,11 +4,12 @@
 -- | Basic types for the UI used by this library
 module Types where
 
-import qualified Brick.AttrMap             as Brick
+import qualified Brick.AttrMap as Brick
+import qualified Brick.Focus as Brick
 import Brick.Types (EventM, Next)
-import qualified Brick.Widgets.Edit        as E
-import qualified Brick.Widgets.List        as L
-import           Control.Lens
+import qualified Brick.Widgets.Edit as E
+import qualified Brick.Widgets.List as L
+import Control.Lens
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -100,6 +101,7 @@ data Compose = Compose
     , _cFrom    :: E.Editor T.Text Name
     , _cTo      :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
+    , _cFocusFields :: Brick.FocusRing Name
     }
 
 cTmpFile :: Lens' Compose (Maybe String)
@@ -114,6 +116,18 @@ cTo = lens _cTo (\c x -> c { _cTo = x })
 cSubject :: Lens' Compose (E.Editor T.Text Name)
 cSubject = lens _cSubject (\c x -> c { _cSubject = x })
 
+cFocusFields :: Lens' Compose (Brick.FocusRing Name)
+cFocusFields = lens _cFocusFields (\cv x -> cv { _cFocusFields = x })
+
+cFocusedEditorL
+    :: Functor f
+    => Name
+    -> (E.Editor T.Text Name -> f (E.Editor T.Text Name))
+    -> AppState
+    -> f AppState
+cFocusedEditorL ComposeTo = asCompose . cTo
+cFocusedEditorL ComposeFrom = asCompose . cFrom
+cFocusedEditorL _ = asCompose . cSubject
 
 data NotmuchSettings a = NotmuchSettings
     { _nmSearch :: T.Text

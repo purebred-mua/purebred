@@ -5,6 +5,7 @@ module UI.Keybindings where
 
 import qualified Brick.Types as Brick
 import qualified Brick.Main as Brick
+import qualified Brick.Focus as Brick
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Graphics.Vty (Event (..))
@@ -58,7 +59,10 @@ instance EventHandler 'ViewMail where
 
 instance EventHandler 'ComposeEditor where
   keybindingsL _ = asConfig . confComposeView . cvKeybindings
-  fallbackHandler _ s _ = Brick.continue s
+  fallbackHandler _ s e = Brick.continue
+                          =<< maybe (pure s)
+                          (\n -> Brick.handleEventLensed s (cFocusedEditorL n) E.handleEditorEvent e)
+                          (Brick.focusGetCurrent (view (asCompose . cFocusFields) s))
 
 instance EventHandler 'Help where
   keybindingsL _ = asConfig . confHelpView . hvKeybindings
