@@ -15,6 +15,8 @@ module UI.Actions (
   , displayMail
   , displayThreadMails
   , setUnread
+  , nextInput
+  , previousInput
   , listUp
   , listDown
   , switchComposeEditor
@@ -36,6 +38,7 @@ module UI.Actions (
 
 import qualified Brick.Main as Brick
        (suspendAndResume, continue, halt, vScrollPage, viewportScroll, ViewportScroll)
+import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -287,6 +290,18 @@ focus = Action ("switch mode to " <> show (mode (Proxy :: Proxy a))) (switchFocu
 -- mode switch is required
 noop :: Action ctx AppState
 noop = Action "" pure
+
+nextInput :: Action 'ComposeEditor AppState
+nextInput =
+    Action
+        "focus next input"
+        (pure . over (asCompose . cFocusFields) Brick.focusNext)
+
+previousInput :: Action 'ComposeEditor AppState
+previousInput =
+    Action
+        "focus previous input"
+        (pure . over (asCompose . cFocusFields) Brick.focusPrev)
 
 scrollUp :: forall ctx. (Scrollable ctx) => Action ctx AppState
 scrollUp = Action
@@ -540,6 +555,7 @@ initialCompose =
         (E.editorText ComposeFrom (Just 1) "")
         (E.editorText ComposeTo (Just 1) "")
         (E.editorText ComposeSubject (Just 1) "")
+        (Brick.focusRing [ComposeFrom, ComposeTo, ComposeSubject])
 
 
 invokeEditor' :: AppState -> IO AppState

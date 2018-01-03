@@ -266,6 +266,10 @@ testUserCanSwitchBackToIndex =
 
             liftIO $ step "switch back to the compose editor"
             sendKeys "Tab" (Literal "test subject")
+
+            liftIO $ step "cycle to next input field"
+            sendKeys "C-n" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "To:\\s+"
+                                   <> buildAnsiRegex [] ["37"] ["40"] <> "user@to.test"))
             pure ()
 
 type Env = (String, String, String)
