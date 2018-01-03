@@ -105,7 +105,11 @@ instance ModeTransition 'BrowseMail 'GatherHeadersFrom where
 
 instance ModeTransition 'GatherHeadersFrom 'BrowseThreads where
 
+instance ModeTransition 'GatherHeadersFrom 'GatherHeadersTo where
+
 instance ModeTransition 'GatherHeadersTo 'BrowseThreads where
+
+instance ModeTransition 'GatherHeadersTo 'GatherHeadersSubject where
 
 instance ModeTransition 'GatherHeadersSubject 'BrowseThreads where
 
@@ -139,12 +143,6 @@ instance Completable 'ManageMailTags where
 
 instance Completable 'ManageThreadTags where
   complete _ s = liftIO . selectedItemHelper (asMailIndex . miListOfThreads) s $ \m -> applyEditorMailTags m s
-
-instance Completable 'GatherHeadersFrom where
-  complete _ = pure . set asAppMode GatherHeadersTo
-
-instance Completable 'GatherHeadersTo where
-  complete _ = pure . set asAppMode GatherHeadersSubject
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
@@ -187,6 +185,9 @@ instance Focusable 'GatherHeadersFrom where
 instance Focusable 'GatherHeadersTo where
   switchFocus _ = pure . set asAppMode GatherHeadersTo
 
+instance Focusable 'GatherHeadersSubject where
+  switchFocus _ = pure . set asAppMode GatherHeadersSubject
+
 instance Focusable 'BrowseThreads where
   switchFocus _ = pure . set asAppMode BrowseThreads
 
@@ -222,6 +223,9 @@ instance HasMode 'GatherHeadersFrom where
 
 instance HasMode 'GatherHeadersTo where
   mode _ = GatherHeadersTo
+
+instance HasMode 'GatherHeadersSubject where
+  mode _ = GatherHeadersSubject
 
 instance HasMode 'ManageThreadTags where
   mode _ = ManageThreadTags
