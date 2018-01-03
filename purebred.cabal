@@ -15,6 +15,10 @@ extra-source-files:  README.md
 tested-with:
   GHC==8.0.2, GHC==8.2.1
 
+source-repository head
+  type: git
+  location: https://github.com/purebred-mua/purebred.git
+
 library
   hs-source-dirs:      src
   ghc-options:         -Wall
