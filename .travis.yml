@@ -51,3 +51,7 @@ matrix:
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.25
     compiler: ": #stack nightly - notmuch: 0.25"
+
+  allow_failures:
+  - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.24.2
+  - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.25
