@@ -46,6 +46,12 @@ matrix:
   - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.25
     compiler: ": #stackage lts-9 (ghc-8.0.2) - notmuch: 0.25"
 
+  - env: STACK_ARGS="--resolver lts-10" NOTMUCHVER=0.24.2
+    compiler: ": #stackage lts-10 (ghc-8.2.2) - notmuch: 0.24.2"
+
+  - env: STACK_ARGS="--resolver lts-10" NOTMUCHVER=0.25
+    compiler: ": #stackage lts-10 (ghc-8.2.2) - notmuch: 0.25"
+
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.24.2
     compiler: ": #stackage nightly - notmuch: 0.24.2"
 
