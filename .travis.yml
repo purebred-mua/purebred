@@ -22,28 +22,32 @@ script:
   - cat /tmp/test.log
   - stack $STACK_ARGS --no-terminal haddock
 
+addons:
+  apt:
+    packages:
+      - tmux
+      - g++
+      - libxapian-dev
+      - libgmime-2.6-dev
+      - libtalloc-dev
+      - zlib1g-dev
+
 matrix:
   include:
   - env: STACK_ARGS="--resolver lts-8" NOTMUCHVER=0.24.2
     compiler: ": #stack lts-8 - notmuch: 0.24.2"
-    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver lts-8" NOTMUCHVER=0.25
     compiler: ": #stack lts-8 - notmuch: 0.25"
-    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.24.2
     compiler: ": #stack lts-9 - notmuch: 0.24.2"
-    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver lts-9" NOTMUCHVER=0.25
     compiler: ": #stack lts-9 - notmuch: 0.25"
-    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.24.2
     compiler: ": #stack nightly - notmuch: 0.24.2"
-    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
 
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.25
     compiler: ": #stack nightly - notmuch: 0.25"
-    addons: {apt: {packages: [tmux, g++, libxapian-dev, libgmime-2.6-dev, libtalloc-dev, zlib1g-dev]}}
