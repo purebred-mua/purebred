@@ -21,5 +21,5 @@ interactiveGatherHeadersToKeybindings =
 interactiveGatherHeadersSubjectKeybindings :: [Keybinding 'GatherHeadersSubject (T.Next AppState)]
 interactiveGatherHeadersSubjectKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) invokeEditor
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'ComposeEditor AppState) `chain` invokeEditor)
     ]
