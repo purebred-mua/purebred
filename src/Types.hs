@@ -103,16 +103,16 @@ data Compose = Compose
     }
 
 cTmpFile :: Lens' Compose (Maybe String)
-cTmpFile f (Compose a b c d) = fmap (\a' -> Compose a' b c d) (f a)
+cTmpFile = lens _cTmpFile (\c x -> c { _cTmpFile = x })
 
 cFrom :: Lens' Compose (E.Editor T.Text Name)
-cFrom f (Compose a b c d) = fmap (\b' -> Compose a b' c d) (f b)
+cFrom = lens _cFrom (\c x -> c { _cFrom = x })
 
 cTo :: Lens' Compose (E.Editor T.Text Name)
-cTo f (Compose a b c d) = fmap (\c' -> Compose a b c' d) (f c)
+cTo = lens _cTo (\c x -> c { _cTo = x })
 
 cSubject :: Lens' Compose (E.Editor T.Text Name)
-cSubject f (Compose a b c d) = fmap (\d' -> Compose a b c d') (f d)
+cSubject = lens _cSubject (\c x -> c { _cSubject = x })
 
 
 data NotmuchSettings a = NotmuchSettings
