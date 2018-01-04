@@ -61,7 +61,9 @@ instance EventHandler 'ComposeEditor where
   keybindingsL _ = asConfig . confComposeView . cvKeybindings
   fallbackHandler _ s e = Brick.continue
                           =<< maybe (pure s)
-                          (\n -> Brick.handleEventLensed s (cFocusedEditorL n) E.handleEditorEvent e)
+                          (\n -> case n of
+                              ListOfAttachments -> Brick.handleEventLensed s (asCompose . cAttachments) L.handleListEvent e
+                              _ -> Brick.handleEventLensed s (cFocusedEditorL n) E.handleEditorEvent e)
                           (Brick.focusGetCurrent (view (asCompose . cFocusFields) s))
 
 instance EventHandler 'Help where
