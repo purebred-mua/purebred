@@ -6,12 +6,13 @@ module UI.ComposeEditor.Main where
 import Brick.Types (Padding(..), Widget)
 import qualified Brick.Focus as Brick
 import Brick.Widgets.Core
-       (fill, hLimit, padRight, padTop, str, txt, vLimit, withAttr, (<+>),
+       (fill, hLimit, padRight, padTop, txt, vLimit, withAttr, (<+>),
         (<=>))
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Control.Lens (Lens', view, traversed)
-import Data.Vector.Lens (toVectorOf)
+import Network.Mail.Mime (Part(..))
+import Control.Lens (Lens', view)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 
 import UI.Draw.Main (editorDrawContent)
@@ -34,21 +35,19 @@ drawTableRows s name w =
   in w
     <=> vLimit 1
     (hLimit 15 (padRight Max (getLabelForComposeState name))
-     <+> Brick.withFocusRing focusring (E.renderEditor  editorDrawContent) focusedInput)
+     <+> Brick.withFocusRing focusring (E.renderEditor editorDrawContent) focusedInput)
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
-    let attachmentsStatus =
-            withAttr "statusbar" $
-            txt "-- Attachments " <+> vLimit 1 (fill '-')
-        aList = L.list ListOfMails (toVectorOf (asCompose . cTmpFile . traversed) s) 1
-        attachmentsList =
-            L.renderList
-                (\_ i ->
-                      str $ show i)
-                False
-                aList
+    let attachmentsStatus = withAttr "statusbar" $ txt "-- Attachments " <+> vLimit 1 (fill '-')
+        hasFocus = Just ListOfAttachments == Brick.focusGetCurrent (view (asCompose . cFocusFields) s)
+        attachmentsList = L.renderList (\_ i -> renderPart i) hasFocus (view (asCompose . cAttachments) s)
     in padTop (Pad 1) attachmentsStatus <=> attachmentsList
+
+renderPart :: Part -> Widget Name
+renderPart p = let pType = partType p
+                   pFilename = fromMaybe "--" (partFilename p)
+               in padRight Max (txt pFilename) <+> txt pType
 
 getLabelForComposeState :: Name -> Widget Name
 getLabelForComposeState ComposeFrom = txt "From:"

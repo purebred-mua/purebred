@@ -401,7 +401,7 @@ testSendMail =
           sendKeys "Escape" (Literal "body")
 
           liftIO $ step "exit vim"
-          sendKeys ": x\r" (Literal "Attachments")
+          sendKeys ": x\r" (Literal "text/plain")
 
           liftIO $ step "send mail"
           sendKeys "y" (Literal "Purebred")

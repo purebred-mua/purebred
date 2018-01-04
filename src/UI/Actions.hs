@@ -42,11 +42,13 @@ import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Network.Mail.Mime (Address(..), simpleMail')
+import Network.Mail.Mime (Address(..), plainPart, emptyMail)
+import Network.Mail.Mime.Lens (lMailParts, lMailFrom, lMailTo, lMailHeaders)
 import Data.Proxy
 import Data.Semigroup ((<>))
 import Data.Text (unlines, Text)
 import Data.Text.Lazy.IO (readFile)
+import qualified Data.ByteString.Char8 as BC
 import Data.Vector.Lens (vector)
 import Data.Foldable (toList)
 import Data.Maybe (fromMaybe)
@@ -58,8 +60,8 @@ import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
 import Control.Lens
-       (itoList, set, over, view, _Just, (&), Getting, Lens')
-import Control.Lens.Fold ((^?!))
+       (toListOf, traversed, has, itoList, set, over, view, (&), Getting, Lens')
+import Control.Lens.Cons (cons)
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Exception (onException)
@@ -207,9 +209,10 @@ instance Focusable 'BrowseMail where
   switchFocus _ = pure
 
 instance Focusable 'GatherHeadersFrom where
-  switchFocus _ s = case view (asCompose . cTmpFile) s of
-                          Just _ -> pure $ set asAppMode ComposeEditor s
-                          Nothing -> pure $ set asAppMode GatherHeadersFrom s
+  switchFocus _ s = if has (asCompose . cMail . lMailParts . traversed) s
+                    then pure $ set asAppMode ComposeEditor s
+                    else pure $ s & set asAppMode GatherHeadersFrom
+                         . over (asCompose . cFrom . E.editContentsL) clearZipper
 
 instance Focusable 'GatherHeadersTo where
   switchFocus _ = pure . set asAppMode GatherHeadersTo
@@ -360,6 +363,7 @@ listUp =
     , _aAction = \s -> case view asAppMode s of
         BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
         ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
+        ComposeEditor -> pure $ over (asCompose . cAttachments) L.listMoveUp s
         _ -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
     }
 
@@ -370,6 +374,7 @@ listDown =
     , _aAction = \s -> case view asAppMode s of
         BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
         ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
+        ComposeEditor -> pure $ over (asCompose . cAttachments) L.listMoveDown s
         _ -> pure $ over (asMailIndex. miListOfThreads) L.listMoveDown s
     }
 
@@ -377,9 +382,9 @@ switchComposeEditor :: Action 'BrowseThreads AppState
 switchComposeEditor =
     Action
     { _aDescription = "switch to compose editor"
-    , _aAction = \s -> case view (asCompose . cTmpFile) s of
-                          Just _ -> pure $ set asAppMode ComposeEditor s
-                          Nothing -> pure s
+    , _aAction = \s -> if has (asCompose . cAttachments . traversed) s
+                          then pure $ set asAppMode ComposeEditor s
+                          else pure s
     }
 
 replyMail :: Action 'BrowseMail AppState
@@ -517,8 +522,6 @@ replyToMail s =
 
 sendMail :: AppState -> T.EventM Name AppState
 sendMail s = do
-    -- XXX if something has removed the tmpfile for whatever reason we go b00m :(
-    body <- liftIO $ readFile (view (asCompose . cTmpFile) s ^?! _Just)
     let to =
             Address
                 Nothing
@@ -527,23 +530,27 @@ sendMail s = do
             Address
                 Nothing
                 (unlines $ E.getEditContents $ view (asCompose . cFrom) s)
-    let m =
-            simpleMail'
-                to
-                from
-                (unlines $ E.getEditContents $ view (asCompose . cSubject) s)
-                body
-    liftIO $ view (asConfig . confComposeView . cvSendMailCmd) s m
-    pure $ set asCompose initialCompose s
+    let subject =
+            [ ( BC.pack "Subject"
+              , unlines $ E.getEditContents $ view (asCompose . cSubject) s)]
+    let s' =
+            s & set (asCompose . cMail . lMailTo) [to]
+            . set (asCompose . cMail . lMailFrom) from
+            . set (asCompose . cMail . lMailHeaders) subject
+            . set (asCompose . cMail . lMailParts) ([toListOf (asCompose . cAttachments . L.listElementsL . traversed) s])
+    liftIO $ view (asConfig . confComposeView . cvSendMailCmd) s' (view (asCompose . cMail) s')
+    pure $ set asCompose initialCompose s'
 
 initialCompose :: Compose
 initialCompose =
-    Compose
-        Nothing
+  let mail = emptyMail (Address Nothing "user@localhost")
+  in Compose
+        mail
         (E.editorText ComposeFrom (Just 1) "")
         (E.editorText ComposeTo (Just 1) "")
         (E.editorText ComposeSubject (Just 1) "")
-        (Brick.focusRing [ComposeFrom, ComposeTo, ComposeSubject])
+        (Brick.focusRing [ComposeFrom, ComposeTo, ComposeSubject, ListOfAttachments])
+        (L.list ListOfAttachments Vector.empty 1)
 
 
 invokeEditor' :: AppState -> IO AppState
@@ -554,7 +561,9 @@ invokeEditor' s = do
   status <- onException (system (editor <> " " <> tmpfile)) (pure $ setError editorError)
   case status of
     ExitFailure _ -> pure $ s & set asAppMode BrowseMail & setError editorError
-    ExitSuccess -> pure $ s & set (asCompose . cTmpFile) (Just tmpfile)
+    ExitSuccess -> do
+      body <- liftIO $ readFile tmpfile
+      pure $ over (asCompose . cAttachments . L.listElementsL) (cons $ plainPart body) s
 
 editorError :: Error
 editorError = GenericError ("Editor command exited with error code."

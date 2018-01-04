@@ -57,6 +57,7 @@ data Name =
     | ScrollingHelpView
     | ManageMailTagsEditor
     | ManageThreadTagsEditor
+    | ListOfAttachments
     deriving (Eq,Show,Ord)
 
 {- | main application interface
@@ -102,15 +103,16 @@ mvHeadersState :: Lens' MailView HeadersState
 mvHeadersState = lens _mvHeadersState (\mv hs -> mv { _mvHeadersState = hs })
 
 data Compose = Compose
-    { _cTmpFile :: Maybe String
-    , _cFrom    :: E.Editor T.Text Name
-    , _cTo      :: E.Editor T.Text Name
+    { _cMail :: Mail.Mail
+    , _cFrom :: E.Editor T.Text Name
+    , _cTo :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
     , _cFocusFields :: Brick.FocusRing Name
+    , _cAttachments :: L.List Name Mail.Part
     }
 
-cTmpFile :: Lens' Compose (Maybe String)
-cTmpFile = lens _cTmpFile (\c x -> c { _cTmpFile = x })
+cMail :: Lens' Compose Mail.Mail
+cMail = lens _cMail (\c x -> c { _cMail = x })
 
 cFrom :: Lens' Compose (E.Editor T.Text Name)
 cFrom = lens _cFrom (\c x -> c { _cFrom = x })
@@ -133,6 +135,9 @@ cFocusedEditorL
 cFocusedEditorL ComposeTo = asCompose . cTo
 cFocusedEditorL ComposeFrom = asCompose . cFrom
 cFocusedEditorL _ = asCompose . cSubject
+
+cAttachments :: Lens' Compose (L.List Name Mail.Part)
+cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
 
 data NotmuchSettings a = NotmuchSettings
     { _nmSearch :: T.Text
