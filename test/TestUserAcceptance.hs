@@ -8,6 +8,7 @@ module TestUserAcceptance where
 
 import qualified Data.Text as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
+import Data.Functor (($>))
 import Data.Ini (parseIni, writeIniFileWith, KeySeparator(..), WriteIniSettings(..))
 import Data.Semigroup ((<>))
 import Control.Concurrent (threadDelay)
@@ -19,7 +20,7 @@ import Data.Maybe (isJust)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT, ask, ReaderT)
 
-import Control.Lens (view, _3, _2)
+import Control.Lens (Lens', view)
 import Data.List (isInfixOf, intercalate)
 import System.Process (callProcess, readProcess)
 import System.Directory
@@ -37,20 +38,24 @@ data Condition
 systemTests ::
   TestTree
 systemTests =
-    testGroup
-        "user acceptance tests"
-        [ testUserViewsMailSuccessfully
-        , testUserCanManipulateNMQuery
-        , testUserCanSwitchBackToIndex
-        , testCanToggleHeaders
-        , testSetsMailToRead
-        , testErrorHandling
-        , testHelp
-        , testManageTagsOnMails
-        , testManageTagsOnThreads
-        ]
+  withResource pre post $ \_ ->
+    testGroup "user acceptance tests" $ zipWith ($) tests [0..]
+  where
+    pre = let n = "keepalive" in setUpTmuxSession n $> n
+    post = cleanUpTmuxSession
+    tests =
+      [ testUserViewsMailSuccessfully
+      , testUserCanManipulateNMQuery
+      , testUserCanSwitchBackToIndex
+      , testCanToggleHeaders
+      , testSetsMailToRead
+      , testErrorHandling
+      , testHelp
+      , testManageTagsOnMails
+      , testManageTagsOnThreads
+      ]
 
-testManageTagsOnMails :: TestTree
+testManageTagsOnMails :: Int -> TestTree
 testManageTagsOnMails = withTmuxSession "manage tags on mails" $
   \step -> do
     startApplication
@@ -95,7 +100,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
 
     pure ()
 
-testManageTagsOnThreads :: TestTree
+testManageTagsOnThreads :: Int -> TestTree
 testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
   \step -> do
     startApplication
@@ -117,7 +122,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
 
     pure ()
 
-testHelp :: TestTree
+testHelp :: Int -> TestTree
 testHelp = withTmuxSession "help view" $
   \step -> do
     startApplication
@@ -128,8 +133,7 @@ testHelp = withTmuxSession "help view" $
     sendKeys "Escape" (Literal "Purebred")
     pure ()
 
-testErrorHandling ::
-  TestTree
+testErrorHandling :: Int -> TestTree
 testErrorHandling = withTmuxSession "error handling" $
   \step -> do
     startApplication
@@ -149,8 +153,7 @@ testErrorHandling = withTmuxSession "error handling" $
 
     pure ()
 
-testSetsMailToRead ::
-  TestTree
+testSetsMailToRead :: Int -> TestTree
 testSetsMailToRead = withTmuxSession "user can toggle read tag" $
   \step -> do
     startApplication
@@ -166,8 +169,7 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
     sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
     pure ()
 
-testCanToggleHeaders ::
-  TestTree
+testCanToggleHeaders :: Int -> TestTree
 testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
   \step -> do
     startApplication
@@ -184,8 +186,7 @@ testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
     out <- sendKeys "h" (Literal "This is a test mail")
     assertRegex "Purebred.*\n.*[Ff]rom" out
 
-testUserViewsMailSuccessfully ::
-  TestTree
+testUserViewsMailSuccessfully :: Int -> TestTree
 testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
   \step -> do
     startApplication
@@ -200,8 +201,7 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
     sendKeys "Enter" (Literal "This is a test mail")
     pure ()
 
-testUserCanManipulateNMQuery ::
-  TestTree
+testUserCanManipulateNMQuery :: Int -> TestTree
 testUserCanManipulateNMQuery =
     withTmuxSession
         "manipulating notmuch search query results in empty index" $
@@ -234,8 +234,7 @@ testUserCanManipulateNMQuery =
           sendKeys "Enter" (Literal "HOLY PUREBRED")
           pure ()
 
-testUserCanSwitchBackToIndex ::
-  TestTree
+testUserCanSwitchBackToIndex :: Int -> TestTree
 testUserCanSwitchBackToIndex =
   withTmuxSession "user can switch back to mail index during composition" $
         \step -> do
@@ -268,8 +267,6 @@ testUserCanSwitchBackToIndex =
             sendKeys "Tab" (Literal "test subject")
             pure ()
 
-type Env = (String, String, String)
-
 assertSubstrInOutput :: String -> String -> ReaderT Env IO ()
 assertSubstrInOutput substr out = liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
 
@@ -282,16 +279,35 @@ assertRegex regex out = liftIO $ assertBool
 defaultSessionName :: String
 defaultSessionName = "purebredtest"
 
-tearDown :: (String, String, String) -> IO ()
-tearDown (testdir, _, _)= do
-  removeDirectoryRecursive testdir
-  cleanUpTmuxSession defaultSessionName
+data Env = Env
+  { _envDir :: FilePath
+  , _envMaildir :: FilePath
+  , _envSessionName :: String
+  }
 
-setUp :: IO (String, String, String)
-setUp = do
-  let sessionname = defaultSessionName
-  (testdir, testmdir) <- setUpTmuxSession sessionname >> setUpTempMaildir
-  pure (testdir, testmdir, sessionname)
+envDir :: Lens' Env FilePath
+envDir f (Env a b c) = fmap (\a' -> Env a' b c) (f a)
+
+envMaildir :: Lens' Env FilePath
+envMaildir f (Env a b c) = fmap (\b' -> Env a b' c) (f b)
+
+envSessionName :: Lens' Env String
+envSessionName f (Env a b c) = fmap (\c' -> Env a b c') (f c)
+{-# ANN envSessionName ("HLint: ignore Avoid lambda" :: String) #-}
+
+-- | Tear down a test session
+tearDown :: Env -> IO ()
+tearDown (Env testdir _ sessionName) = do
+  removeDirectoryRecursive testdir
+  cleanUpTmuxSession sessionName
+
+-- | Set up a test session.
+setUp :: Int -> IO Env
+setUp i = do
+  let sessionName = defaultSessionName <> show i
+  setUpTmuxSession sessionName
+  (testdir, maildir) <- setUpTempMaildir
+  pure $ Env testdir maildir sessionName
 
 setUpTempMaildir :: IO (String, String)
 setUpTempMaildir = do
@@ -358,9 +374,13 @@ cleanUpTmuxSession sessionname =
 
 
 -- | Run all application steps in a session defined by session name.
-withTmuxSession :: TestName -> ((String -> IO ()) -> ReaderT Env IO ()) -> TestTree
-withTmuxSession tcname testfx =
-    withResource setUp tearDown $
+withTmuxSession
+  :: TestName
+  -> ((String -> IO ()) -> ReaderT Env IO ())
+  -> Int  -- ^ session sequence number (will be appended to session name)
+  -> TestTree
+withTmuxSession tcname testfx i =
+  withResource (setUp i) tearDown $
       \env -> testCaseSteps tcname $ \stepfx -> env >>= runReaderT (testfx stepfx)
 
 -- | Send keys into the program and wait for the condition to be
@@ -368,12 +388,14 @@ withTmuxSession tcname testfx =
 -- time.
 sendKeys :: String -> Condition -> ReaderT Env IO String
 sendKeys keys expect = do
-    liftIO $ callProcess "tmux" $ communicateSessionArgs keys False
+    sessionName <- getSessionName
+    liftIO $ callProcess "tmux" $ communicateSessionArgs sessionName keys False
     waitForCondition expect defaultCountdown
 
 sendLiteralKeys :: String -> ReaderT Env IO String
 sendLiteralKeys keys = do
-    liftIO $ callProcess "tmux" $ communicateSessionArgs keys True
+    sessionName <- getSessionName
+    liftIO $ callProcess "tmux" $ communicateSessionArgs sessionName keys True
     waitForString keys defaultCountdown
 
 capture :: ReaderT Env IO String
@@ -382,10 +404,10 @@ capture = do
   liftIO $ readProcess "tmux" ["capture-pane", "-e", "-p", "-t", sessionname] []
 
 getSessionName :: ReaderT Env IO String
-getSessionName = view (_3 . ask)
+getSessionName = view (envSessionName . ask)
 
-getTestMaildir :: ReaderT Env IO String
-getTestMaildir = view (_2 . ask)
+getTestMaildir :: ReaderT Env IO FilePath
+getTestMaildir = view (envMaildir . ask)
 
 holdOffTime :: Int
 holdOffTime = 10^6
@@ -436,12 +458,18 @@ defaultCountdown = 5
 startApplication :: ReaderT Env IO ()
 startApplication = do
   testmdir <- getTestMaildir
-  liftIO $ callProcess "tmux" $ communicateSessionArgs ("purebred --database " <> testmdir <> "\r") False
+  sessionName <- getSessionName
+  liftIO $ callProcess "tmux" $
+    communicateSessionArgs sessionName ("purebred --database " <> testmdir <> "\r") False
   void $ waitForString "Purebred: Item" defaultCountdown
 
-communicateSessionArgs :: String -> Bool -> [String]
-communicateSessionArgs keys asLiteral =
-  ["send-keys", "-t", defaultSessionName] <> ["-l" | asLiteral] <> [keys]
+communicateSessionArgs
+  :: String -- ^ session name
+  -> String -- ^ keys
+  -> Bool   -- ^ send the keys literally
+  -> [String]
+communicateSessionArgs sessionName keys asLiteral =
+  ["send-keys", "-t", sessionName] <> ["-l" | asLiteral] <> [keys]
 
 
 type AnsiAttrParam = String
