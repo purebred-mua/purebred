@@ -406,7 +406,7 @@ getTestMaildir :: (Monad m) => ReaderT Env m FilePath
 getTestMaildir = view (envMaildir . ask)
 
 holdOffTime :: Int
-holdOffTime = 10^6
+holdOffTime = 10 ^ (6 :: Int)
 
 -- | convenience function to print captured output to STDERR
 debugOutput :: String -> IO ()
