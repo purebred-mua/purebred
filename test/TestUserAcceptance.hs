@@ -277,8 +277,8 @@ assertRegex regex out = liftIO $ assertBool
     <> "\n\n raw:\n\n" <> show out)
   (out =~ regex)
 
-defaultSessionName :: String
-defaultSessionName = "purebredtest"
+sessionNamePrefix :: String
+sessionNamePrefix = "purebredtest"
 
 data Env = Env
   { _envDir :: FilePath
@@ -306,7 +306,7 @@ tearDown (Env testdir _ sessionName) = do
 setUp :: Int -> String -> IO Env
 setUp i desc = do
   let
-    sessionName = intercalate "-" (defaultSessionName : show i : descWords)
+    sessionName = intercalate "-" (sessionNamePrefix : show i : descWords)
     descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
   setUpTmuxSession sessionName
   (testdir, maildir) <- setUpTempMaildir
@@ -315,7 +315,7 @@ setUp i desc = do
 setUpTempMaildir :: IO (String, String)
 setUpTempMaildir = do
   systmp <- getCanonicalTemporaryDirectory
-  testdir <- createTempDirectory systmp defaultSessionName
+  testdir <- createTempDirectory systmp sessionNamePrefix
   mdir <- setUpMaildir testdir
   setUpNotmuchCfg testdir mdir >>= setUpNotmuch >> pure (testdir, mdir)
 
