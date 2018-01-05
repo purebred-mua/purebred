@@ -4,6 +4,7 @@
 
 module TestUserAcceptance where
 
+import Data.Char (isAscii, isAlphaNum)
 import qualified Data.Text as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Data.Functor (($>))
@@ -302,9 +303,11 @@ tearDown (Env testdir _ sessionName) = do
   cleanUpTmuxSession sessionName
 
 -- | Set up a test session.
-setUp :: Int -> IO Env
-setUp i = do
-  let sessionName = defaultSessionName <> show i
+setUp :: Int -> String -> IO Env
+setUp i desc = do
+  let
+    sessionName = intercalate "-" (defaultSessionName : show i : descWords)
+    descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
   setUpTmuxSession sessionName
   (testdir, maildir) <- setUpTempMaildir
   pure $ Env testdir maildir sessionName
@@ -380,7 +383,7 @@ withTmuxSession
   -> Int  -- ^ session sequence number (will be appended to session name)
   -> TestTree
 withTmuxSession tcname testfx i =
-  withResource (setUp i) tearDown $
+  withResource (setUp i tcname) tearDown $
       \env -> testCaseSteps tcname $ \stepfx -> env >>= runReaderT (testfx stepfx)
 
 -- | Send keys into the program and wait for the condition to be
