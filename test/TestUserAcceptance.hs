@@ -27,6 +27,8 @@ import Test.Tasty (TestTree, TestName, testGroup, withResource)
 import Test.Tasty.HUnit (testCaseSteps, assertBool)
 import Text.Regex.Posix ((=~))
 
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+
 -- | A condition to check for in the output of the program
 data Condition
   = Literal String
