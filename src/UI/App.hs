@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 -- | The main application module
 module UI.App where
 
@@ -25,11 +26,15 @@ import UI.Index.Main
        (renderListOfThreads, renderListOfMails, renderSearchThreadsEditor,
         renderMailTagsEditor, renderThreadTagsEditor)
 import UI.Actions (initialCompose)
+import UI.FileBrowser.Main
+       (renderFileBrowser, renderFileBrowserSearchPathEditor)
 import UI.Mail.Main (renderMailView)
 import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
 import UI.Utils (focusedViewWidget, focusedViewWidgets, focusedViewName)
-import UI.Views (indexView, mailView, composeView, helpView, listOfMailsView)
+import UI.Views
+       (indexView, mailView, composeView, helpView, listOfMailsView,
+        filebrowserView)
 import UI.ComposeEditor.Main (attachmentsEditor)
 import Types
 
@@ -41,6 +46,8 @@ renderWidget s _ ListOfThreads = renderListOfThreads s
 renderWidget s ViewMail ListOfMails = vLimit (view (asConfig . confMailView . mvIndexRows) s) (renderListOfMails s)
 renderWidget s _ ListOfMails = renderListOfMails s
 renderWidget s _ ListOfAttachments = attachmentsEditor s
+renderWidget s _ ListOfFiles = renderFileBrowser s
+renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor s
 renderWidget s _ SearchThreadsEditor = renderSearchThreadsEditor s
 renderWidget s _ ManageMailTagsEditor = renderMailTagsEditor s
 renderWidget s _ ManageThreadTagsEditor = renderThreadTagsEditor s
@@ -68,6 +75,7 @@ handleViewEvent = f where
   f ViewMail ManageMailTagsEditor = dispatch eventHandlerViewMailManageMailTagsEditor
   f ViewMail _ = dispatch eventHandlerScrollingMailView
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
+  f _ ListOfFiles = dispatch eventHandlerComposeFileBrowser
   f _ _ = dispatch nullEventHandler
 
 
@@ -97,11 +105,15 @@ initialState conf = do
                           , (Mails, listOfMailsView)
                           , (ViewMail, mailView)
                           , (Help, helpView)
-                          , (ComposeView, composeView)]
-                    , _vsFocusedView = focusRing [Threads, Mails, ViewMail, Help, ComposeView]
+                          , (ComposeView, composeView)
+                          , (FileBrowser, filebrowserView)]
+                    , _vsFocusedView = focusRing [Threads, Mails, ViewMail, Help, ComposeView, FileBrowser]
                     }
+                bf = CreateFileBrowser
+                     (L.list ListOfFiles Vector.empty 1)
+                     (E.editor ManageFileBrowserSearchPath Nothing "")
             in pure $
-               AppState conf mi mv initialCompose Nothing viewsettings
+               AppState conf mi mv initialCompose Nothing viewsettings bf
 
 theApp :: AppState -> M.App AppState e Name
 theApp s =

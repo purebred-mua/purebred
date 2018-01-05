@@ -5,6 +5,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module UI.Actions (
   Scrollable(..)
@@ -36,6 +37,7 @@ module UI.Actions (
   , reloadList
   , selectNextUnread
   , focusNextWidget
+  , toggleListItem
   ) where
 
 import qualified Brick
@@ -61,8 +63,8 @@ import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
 import Control.Lens
-       (_Just, at, toListOf, traversed, has, itoList, set, over, view,
-        (&), Getting, Lens')
+       (_Just, at, ix, _1, toListOf, traversed, has, itoList, set, over,
+        view, (&), Getting, Lens')
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Exception (onException)
@@ -227,6 +229,9 @@ instance Focusable 'ComposeView 'ListOfAttachments where
   switchFocus _ _ s = pure $ s & over (asViews . vsViews . at ComposeView . _Just . vFocus) (Brick.focusSetCurrent ListOfAttachments)
                     . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
+instance Focusable 'FileBrowser 'ListOfFiles where
+  switchFocus _ _ = pure
+
 -- TODO: helper function to replace whatever editor we're displaying at the
 -- bottom with a new editor given by name. There is currently nothing which
 -- checks if we're actually replacing an editor.
@@ -274,6 +279,9 @@ instance HasName 'ManageThreadTagsEditor where
 instance HasName 'ListOfAttachments where
   name _ = ListOfAttachments
 
+instance HasName 'ListOfFiles where
+  name _ = ListOfFiles
+
 -- | Allow to change the view to a different view in order to put the focus on a widget there
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
   transitionHook :: Proxy v -> Proxy v' -> AppState -> AppState
@@ -296,11 +304,15 @@ instance ViewTransition v 'Help where
 
 instance ViewTransition 'ComposeView 'Threads where
 
+instance ViewTransition 'ComposeView 'FileBrowser where
+
 instance ViewTransition 'Mails 'ViewMail where
   transitionHook _ _ = set (asViews . vsViews . at ViewMail . _Just) mailView
 
 instance ViewTransition 'ViewMail 'Mails where
   transitionHook _ _ = set (asViews . vsViews . at Mails . _Just) listOfMailsView
+
+instance ViewTransition 'FileBrowser 'ComposeView where
 
 
 class HasViewName (a :: ViewName) where
@@ -320,6 +332,9 @@ instance HasViewName 'Help where
 
 instance HasViewName 'ComposeView where
   viewname _ = ComposeView
+
+instance HasViewName 'FileBrowser where
+  viewname _ = FileBrowser
 
 
 quit :: Action v ctx (T.Next AppState)
@@ -422,6 +437,7 @@ listUp =
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
         ListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveUp s
+        ListOfFiles -> pure $ over (asFileBrowser . fbEntries) L.listMoveUp s
         _ -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
     }
 
@@ -433,6 +449,7 @@ listDown =
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveDown s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
         ListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveDown s
+        ListOfFiles -> pure $ over (asFileBrowser . fbEntries) L.listMoveDown s
         _ -> pure $ over (asMailIndex. miListOfMails) L.listMoveDown s
     }
 
@@ -517,6 +534,17 @@ focusNextWidget =
     { _aDescription = ["moves input focus to the next widget"]
     , _aAction = \s -> pure $
                       over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) Brick.focusNext s
+    }
+
+toggleListItem :: Action v 'ListOfFiles AppState
+toggleListItem =
+    Action
+    { _aDescription = ["toggle selected state of a list item"]
+    , _aAction = \s ->
+                      maybe
+                          (pure s)
+                          (\i -> pure $ over (asFileBrowser . fbEntries . L.listElementsL . ix i . _1) not s)
+                          (view (asFileBrowser . fbEntries . L.listSelectedL) s)
     }
 
 -- Function definitions for actions

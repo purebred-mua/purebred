@@ -45,6 +45,8 @@ data Name =
     | ManageMailTagsEditor
     | ManageThreadTagsEditor
     | ListOfAttachments
+    | ListOfFiles
+    | ManageFileBrowserSearchPath
     | StatusBar
     deriving (Eq,Show,Ord)
 
@@ -138,6 +140,19 @@ nmDatabase f (NotmuchSettings a b c) = fmap (\b' -> NotmuchSettings a b' c) (f b
 nmNewTag :: Lens' (NotmuchSettings a) Tag
 nmNewTag f (NotmuchSettings a b c) = fmap (\c' -> NotmuchSettings a b c') (f c)
 
+
+data FileBrowserSettings = FileBrowserSettings
+  { _fbKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]
+  , _fbSearchPathKeybindings :: [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
+  }
+
+fbKeybindings :: Lens' FileBrowserSettings [Keybinding 'FileBrowser 'ListOfFiles]
+fbKeybindings = lens _fbKeybindings (\cv x -> cv { _fbKeybindings = x })
+
+fbSearchPathKeybindings :: Lens' FileBrowserSettings [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
+fbSearchPathKeybindings = lens _fbSearchPathKeybindings (\cv x -> cv { _fbSearchPathKeybindings = x})
+
+
 data Configuration a b = Configuration
     { _confTheme :: Theme
     , _confNotmuch :: NotmuchSettings a
@@ -147,6 +162,7 @@ data Configuration a b = Configuration
     , _confComposeView :: ComposeViewSettings
     , _confHelpView :: HelpViewSettings
     , _confDefaultView :: ViewName
+    , _confFileBrowserView :: FileBrowserSettings
     }
 
 type UserConfiguration = Configuration (IO FilePath) (IO String)
@@ -156,25 +172,28 @@ confTheme :: Lens' (Configuration a b) Theme
 confTheme = lens _confTheme (\c x -> c { _confTheme = x })
 
 confEditor :: Lens (Configuration a b) (Configuration a b') b b'
-confEditor f (Configuration a b c d e g h i) = fmap (\c' -> Configuration a b c' d e g h i) (f c)
+confEditor f (Configuration a b c d e g h i j) = fmap (\c' -> Configuration a b c' d e g h i j) (f c)
 
 confNotmuch :: Lens (Configuration a c) (Configuration b c) (NotmuchSettings a) (NotmuchSettings b)
-confNotmuch f (Configuration a b c d e g h i) = fmap (\b' -> Configuration a b' c d e g h i) (f b)
+confNotmuch f (Configuration a b c d e g h i j) = fmap (\b' -> Configuration a b' c d e g h i j) (f b)
 
 confMailView :: Lens' (Configuration a b) MailViewSettings
-confMailView f (Configuration a b c d e g h i) = fmap (\d' -> Configuration a b c d' e g h i) (f d)
+confMailView f (Configuration a b c d e g h i j) = fmap (\d' -> Configuration a b c d' e g h i j) (f d)
 
 confIndexView :: Lens' (Configuration a b) IndexViewSettings
-confIndexView f (Configuration a b c d e g h i) = fmap (\e' -> Configuration a b c d e' g h i) (f e)
+confIndexView f (Configuration a b c d e g h i j) = fmap (\e' -> Configuration a b c d e' g h i j) (f e)
 
 confComposeView :: Lens' (Configuration a b) ComposeViewSettings
-confComposeView f (Configuration a b c d e g h i) = fmap (\g' -> Configuration a b c d e g' h i) (f g)
+confComposeView f (Configuration a b c d e g h i j) = fmap (\g' -> Configuration a b c d e g' h i j) (f g)
 
 confHelpView :: Lens' (Configuration a b) HelpViewSettings
-confHelpView f (Configuration a b c d e g h i) = fmap (\h' -> Configuration a b c d e g h' i) (f h)
+confHelpView f (Configuration a b c d e g h i j) = fmap (\h' -> Configuration a b c d e g h' i j) (f h)
 
 confDefaultView :: Lens' (Configuration a b) ViewName
 confDefaultView = lens _confDefaultView (\conf x -> conf { _confDefaultView = x })
+
+confFileBrowserView :: Lens' (Configuration a b) FileBrowserSettings
+confFileBrowserView = lens _confFileBrowserView (\conf x -> conf { _confFileBrowserView = x })
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
@@ -271,6 +290,7 @@ data ViewName
     | ViewMail
     | ComposeView
     | Help
+    | FileBrowser
     deriving (Eq,Ord,Show)
 
 data View = View
@@ -295,14 +315,31 @@ vsViews = lens _vsViews (\settings x -> settings { _vsViews = x })
 vsFocusedView :: Lens' ViewSettings (Brick.FocusRing ViewName)
 vsFocusedView = lens _vsFocusedView (\settings x -> settings { _vsFocusedView = x})
 
+data FileSystemEntry
+    = Directory String
+    | File String
+    deriving (Show)
+
+data FileBrowser = CreateFileBrowser
+  { _fbEntries :: L.List Name (Bool, FileSystemEntry)
+  , _fbSearchPath :: E.Editor FilePath Name
+  }
+
+fbEntries :: Lens' FileBrowser (L.List Name (Bool, FileSystemEntry))
+fbEntries = lens _fbEntries (\cv x -> cv { _fbEntries = x })
+
+fbSearchPath :: Lens' FileBrowser (E.Editor FilePath Name)
+fbSearchPath = lens _fbSearchPath (\c x -> c { _fbSearchPath = x})
+
 -- | Overall application state
 data AppState = AppState
-    { _asConfig    :: InternalConfiguration
+    { _asConfig :: InternalConfiguration
     , _asMailIndex :: MailIndex
     , _asMailView  :: MailView
     , _asCompose   :: Compose  -- ^ state to keep when user creates a new mail
     , _asError     :: Maybe Error -- ^ in case of errors, show this error message
     , _asViews     :: ViewSettings -- ^ stores widget and focus information
+    , _asFileBrowser :: FileBrowser
     }
 
 asConfig :: Lens' AppState InternalConfiguration
@@ -321,7 +358,10 @@ asError :: Lens' AppState (Maybe Error)
 asError = lens _asError (\appstate x -> appstate { _asError = x })
 
 asViews :: Lens' AppState ViewSettings
-asViews f (AppState a b c d e g) = fmap (\g' -> AppState a b c d e g') (f g)
+asViews f (AppState a b c d e g h) = fmap (\g' -> AppState a b c d e g' h) (f g)
+
+asFileBrowser :: Lens' AppState FileBrowser
+asFileBrowser = lens _asFileBrowser (\as x -> as { _asFileBrowser = x })
 
 data Action (v :: ViewName) (ctx :: Name) a = Action
     { _aDescription :: [T.Text]

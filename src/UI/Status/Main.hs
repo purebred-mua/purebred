@@ -38,6 +38,7 @@ statusbar s =
                 ListOfMails -> renderStatusbar (view (asMailIndex . miListOfMails) s) s
                 ScrollingMailView -> renderStatusbar (view (asMailView . mvMail) s) s
                 ListOfAttachments -> renderStatusbar (view (asCompose . cAttachments) s) s
+                ListOfFiles -> renderStatusbar (view (asFileBrowser . fbEntries) s) s
                 ComposeTo -> renderStatusbar (view (asCompose . cTo) s) s
                 ComposeFrom -> renderStatusbar (view (asCompose . cFrom) s) s
                 ComposeSubject -> renderStatusbar (view (asCompose . cSubject) s) s
@@ -50,6 +51,9 @@ instance WithContext (L.List Name NotmuchThread) where
   renderContext _ = currentItemW
 
 instance WithContext (L.List Name NotmuchMail) where
+  renderContext _ = currentItemW
+
+instance WithContext (L.List Name (Bool, FileSystemEntry)) where
   renderContext _ = currentItemW
 
 instance WithContext (L.List Name Part) where

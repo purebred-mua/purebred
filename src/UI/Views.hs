@@ -1,5 +1,5 @@
 module UI.Views
-       (indexView, listOfMailsView, mailView, composeView, helpView) where
+       (indexView, listOfMailsView, mailView, composeView, helpView, filebrowserView) where
 
 import Brick.Focus (focusRing)
 import Types
@@ -43,4 +43,11 @@ helpView =
     View
     { _vFocus = focusRing [ScrollingHelpView]
     , _vWidgets = [ScrollingHelpView]
+    }
+
+filebrowserView :: View
+filebrowserView =
+    View
+    { _vFocus = focusRing [ListOfFiles, ManageFileBrowserSearchPath]
+    , _vWidgets = [ListOfFiles, StatusBar, ManageFileBrowserSearchPath]
     }

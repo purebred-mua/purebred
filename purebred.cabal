@@ -60,6 +60,8 @@ library
                      , UI.Utils
                      , UI.Views
                      , Purebred.Tags
+                     , UI.FileBrowser.Main
+                     , UI.FileBrowser.Keybindings
                      , Config.Main
                      , Storage.Notmuch
                      , Storage.ParsedMail

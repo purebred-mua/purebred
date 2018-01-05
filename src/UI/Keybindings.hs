@@ -110,3 +110,8 @@ eventHandlerComposeListOfAttachments :: EventHandler 'ComposeView 'ListOfAttachm
 eventHandlerComposeListOfAttachments = EventHandler
   (asConfig . confComposeView . cvListOfAttachmentsKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cAttachments) L.handleListEvent)
+
+eventHandlerComposeFileBrowser :: EventHandler 'FileBrowser 'ListOfFiles
+eventHandlerComposeFileBrowser = EventHandler
+  (asConfig . confFileBrowserView . fbKeybindings)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asFileBrowser . fbEntries) L.handleListEvent)

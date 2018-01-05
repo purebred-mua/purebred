@@ -15,6 +15,8 @@ import Network.Mail.Mime (renderSendMail)
 
 import Data.MIME (ContentType(..))
 
+import UI.FileBrowser.Keybindings
+       (fileBrowserKeybindings, manageSearchPathKeybindings)
 import UI.GatherHeaders.Keybindings
        (gatherFromKeybindings,
         gatherToKeybindings,
@@ -171,4 +173,8 @@ defaultConfig =
       { _hvKeybindings = helpKeybindings
       }
     , _confDefaultView = Threads
+    , _confFileBrowserView = FileBrowserSettings
+      { _fbKeybindings = fileBrowserKeybindings
+      , _fbSearchPathKeybindings = manageSearchPathKeybindings
+      }
     }
