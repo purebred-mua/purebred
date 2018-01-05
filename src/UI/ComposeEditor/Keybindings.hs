@@ -16,4 +16,5 @@ composeEditorKeybindings =
     , Keybinding (V.EvKey (V.KChar '\t') []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'y') []) (done `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'a') []) (noop `chain'` (focus :: Action 'AddAttachment AppState) `chain` continue)
     ]

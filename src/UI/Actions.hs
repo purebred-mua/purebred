@@ -126,6 +126,10 @@ instance ModeTransition 'ComposeEditor 'BrowseThreads where
 
 instance ModeTransition 'Help 'BrowseThreads where
 
+instance ModeTransition 'ComposeEditor 'AddAttachment where
+
+instance ModeTransition 'AddAttachment 'ComposeEditor where
+
 instance ModeTransition s 'Help where  -- help can be reached from any mode
 
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
@@ -217,13 +221,16 @@ instance Focusable 'GatherHeadersSubject where
   switchFocus _ = pure . set asAppMode GatherHeadersSubject
 
 instance Focusable 'ComposeEditor where
-  switchFocus _ = pure . set asAppMode ComposeEditor
+  switchFocus _ = pure
 
 instance Focusable 'BrowseThreads where
   switchFocus _ = pure . set asAppMode BrowseThreads
 
 instance Focusable 'Help where
   switchFocus _ = pure . set asAppMode Help
+
+instance Focusable 'AddAttachment where
+  switchFocus _ = pure
 
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
@@ -260,6 +267,9 @@ instance HasMode 'GatherHeadersSubject where
 
 instance HasMode 'ComposeEditor where
   mode _ = ComposeEditor
+
+instance HasMode 'AddAttachment where
+  mode _ = AddAttachment
 
 instance HasMode 'ManageThreadTags where
   mode _ = ManageThreadTags
@@ -356,6 +366,7 @@ listUp =
     , _aAction = \s -> case view asAppMode s of
         BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
         ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
+        AddAttachment -> pure $ over (asBrowseFiles . bfEntries) L.listMoveUp s
         _ -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
     }
 
@@ -366,6 +377,7 @@ listDown =
     , _aAction = \s -> case view asAppMode s of
         BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
         ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
+        AddAttachment -> pure $ over (asBrowseFiles . bfEntries) L.listMoveDown s
         _ -> pure $ over (asMailIndex. miListOfThreads) L.listMoveDown s
     }
 

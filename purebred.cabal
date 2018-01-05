@@ -59,6 +59,8 @@ library
                      , UI.Help.Keybindings
                      , UI.Utils
                      , Purebred.Tags
+                     , UI.FileBrowser.Main
+                     , UI.FileBrowser.Keybindings
                      , Config.Main
                      , Storage.Notmuch
                      , Storage.ParsedMail

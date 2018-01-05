@@ -42,6 +42,7 @@ data Mode
     | Help  -- ^ shows all keybindings
     | ManageMailTags -- ^ add/remove tags on mails
     | ManageThreadTags -- ^ add/remove tags on threads
+    | AddAttachment  -- ^ specify file path to include in mail
     deriving (Eq,Show,Ord)
 
 -- | Used to identify widgets in brick
@@ -56,6 +57,8 @@ data Name =
     | ScrollingHelpView
     | ManageMailTagsEditor
     | ManageThreadTagsEditor
+    | BrowseFilesEditor
+    | ListOfFiles
     deriving (Eq,Show,Ord)
 
 {- | main application interface
@@ -148,6 +151,15 @@ nmDatabase f (NotmuchSettings a b c) = fmap (\b' -> NotmuchSettings a b' c) (f b
 nmNewTag :: Getter (NotmuchSettings a) Tag
 nmNewTag = to (\(NotmuchSettings _ _ c) -> c)
 
+
+newtype BrowseFilesSettings = BrowseFilesSettings
+  { _bfKeybindings :: [Keybinding 'AddAttachment (Next AppState)]
+  }
+
+bfKeybindings :: Lens' BrowseFilesSettings [Keybinding 'AddAttachment (Next AppState)]
+bfKeybindings = lens _bfKeybindings (\cv x -> cv { _bfKeybindings = x })
+
+
 data Configuration a b = Configuration
     { _confColorMap :: Brick.AttrMap
     , _confNotmuch :: NotmuchSettings a
@@ -156,6 +168,7 @@ data Configuration a b = Configuration
     , _confIndexView :: IndexViewSettings
     , _confComposeView :: ComposeViewSettings
     , _confHelpView :: HelpViewSettings
+    , _confBrowseFilesView :: BrowseFilesSettings
     }
 
 type UserConfiguration = Configuration (IO FilePath) (IO String)
@@ -181,6 +194,9 @@ confComposeView = lens _confComposeView (\conf x -> conf { _confComposeView = x 
 
 confHelpView :: Lens' (Configuration a b) HelpViewSettings
 confHelpView = lens _confHelpView (\conf x -> conf { _confHelpView = x })
+
+confBrowseFilesView :: Lens' (Configuration a b) BrowseFilesSettings
+confBrowseFilesView = lens _confBrowseFilesView (\conf x -> conf { _confBrowseFilesView = x })
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvKeybindings :: [Keybinding 'ComposeEditor (Next AppState)]
@@ -254,14 +270,31 @@ mvKeybindings f (MailViewSettings a b c d e) = fmap (\d' -> MailViewSettings a b
 mvIndexKeybindings :: Lens' MailViewSettings [Keybinding 'BrowseMail (Next AppState)]
 mvIndexKeybindings f (MailViewSettings a b c d e) = fmap (\e' -> MailViewSettings a b c d e') (f e)
 
+data FileSystemEntry
+    = Directory String
+    | File String
+    deriving (Show)
+
+data BrowseFiles = BrowseFiles
+  { _bfEntries :: L.List Name FileSystemEntry
+  , _bfSearchPath :: FilePath
+  }
+
+bfEntries :: Lens' BrowseFiles (L.List Name FileSystemEntry)
+bfEntries = lens _bfEntries (\cv x -> cv { _bfEntries = x })
+
+bfSearchPath :: Lens' BrowseFiles FilePath
+bfSearchPath = lens _bfSearchPath (\c x -> c { _bfSearchPath = x})
+
 -- | Overall application state
 data AppState = AppState
-    { _asConfig    :: InternalConfiguration
+    { _asConfig :: InternalConfiguration
     , _asMailIndex :: MailIndex
-    , _asMailView  :: MailView
-    , _asCompose   :: Compose  -- ^ state to keep when user creates a new mail
-    , _asAppMode   :: Mode
-    , _asError     :: Maybe Error -- ^ in case of errors, show this error message
+    , _asMailView :: MailView
+    , _asCompose :: Compose  -- ^ state to keep when user creates a new mail
+    , _asAppMode :: Mode
+    , _asError :: Maybe Error -- ^ in case of errors, show this error message
+    , _asBrowseFiles :: BrowseFiles
     }
 
 asConfig :: Lens' AppState InternalConfiguration
@@ -281,6 +314,9 @@ asAppMode = lens _asAppMode (\as x -> as { _asAppMode = x })
 
 asError :: Lens' AppState (Maybe Error)
 asError = lens _asError (\as x -> as { _asError = x })
+
+asBrowseFiles :: Lens' AppState BrowseFiles
+asBrowseFiles = lens _asBrowseFiles (\as x -> as { _asBrowseFiles = x })
 
 data Action (ctx :: Mode) a = Action
     { _aDescription :: String
