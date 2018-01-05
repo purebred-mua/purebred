@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module TestUserAcceptance where
