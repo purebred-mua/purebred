@@ -162,25 +162,25 @@ type UserConfiguration = Configuration (IO FilePath) (IO String)
 type InternalConfiguration = Configuration FilePath String
 
 confColorMap :: Getter (Configuration a b) Brick.AttrMap
-confColorMap = to (\(Configuration a _ _ _ _ _ _) -> a)
+confColorMap = to (\(Configuration a _ _ _ _ _ _ _) -> a)
 
 confEditor :: Lens (Configuration a b) (Configuration a b') b b'
-confEditor f (Configuration a b c d e g h) = fmap (\c' -> Configuration a b c' d e g h) (f c)
+confEditor = lens _confEditor (\conf x -> conf { _confEditor = x })
 
 confNotmuch :: Lens (Configuration a c) (Configuration b c) (NotmuchSettings a) (NotmuchSettings b)
-confNotmuch f (Configuration a b c d e g h) = fmap (\b' -> Configuration a b' c d e g h) (f b)
+confNotmuch = lens _confNotmuch (\conf x -> conf { _confNotmuch = x })
 
 confMailView :: Lens' (Configuration a b) MailViewSettings
-confMailView f (Configuration a b c d e g h) = fmap (\d' -> Configuration a b c d' e g h) (f d)
+confMailView = lens _confMailView (\conf x -> conf { _confMailView = x })
 
 confIndexView :: Lens' (Configuration a b) IndexViewSettings
-confIndexView f (Configuration a b c d e g h) = fmap (\e' -> Configuration a b c d e' g h) (f e)
+confIndexView = lens _confIndexView (\conf x -> conf { _confIndexView = x })
 
 confComposeView :: Lens' (Configuration a b) ComposeViewSettings
-confComposeView f (Configuration a b c d e g h) = fmap (\g' -> Configuration a b c d e g' h) (f g)
+confComposeView = lens _confComposeView (\conf x -> conf { _confComposeView = x })
 
 confHelpView :: Lens' (Configuration a b) HelpViewSettings
-confHelpView f (Configuration a b c d e g h) = fmap (\h' -> Configuration a b c d e g h') (f h)
+confHelpView = lens _confHelpView (\conf x -> conf { _confHelpView = x })
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvKeybindings :: [Keybinding 'ComposeEditor (Next AppState)]
@@ -265,22 +265,22 @@ data AppState = AppState
     }
 
 asConfig :: Lens' AppState InternalConfiguration
-asConfig f (AppState a b c d e g) = fmap (\a' -> AppState a' b c d e g) (f a)
+asConfig = lens _asConfig (\as x -> as { _asConfig = x })
 
 asMailIndex :: Lens' AppState MailIndex
-asMailIndex f (AppState a b c d e g) = fmap (\b' -> AppState a b' c d e g) (f b)
+asMailIndex = lens _asMailIndex (\as x -> as { _asMailIndex = x })
 
 asMailView :: Lens' AppState MailView
-asMailView f (AppState a b c d e g) = fmap (\c' -> AppState a b c' d e g) (f c)
+asMailView  = lens _asMailView (\as x -> as { _asMailView = x })
 
 asCompose :: Lens' AppState Compose
-asCompose f (AppState a b c d e g) = fmap (\d' -> AppState a b c d' e g) (f d)
+asCompose = lens _asCompose (\as x -> as { _asCompose = x })
 
 asAppMode :: Lens' AppState Mode
-asAppMode f (AppState a b c d e g) = fmap (\e' -> AppState a b c d e' g) (f e)
+asAppMode = lens _asAppMode (\as x -> as { _asAppMode = x })
 
 asError :: Lens' AppState (Maybe Error)
-asError f (AppState a b c d e g) = fmap (\g' -> AppState a b c d e g') (f g)
+asError = lens _asError (\as x -> as { _asError = x })
 
 data Action (ctx :: Mode) a = Action
     { _aDescription :: String
