@@ -276,11 +276,11 @@ data FileSystemEntry
     deriving (Show)
 
 data BrowseFiles = BrowseFiles
-  { _bfEntries :: L.List Name FileSystemEntry
+  { _bfEntries :: L.List Name (Bool, FileSystemEntry)
   , _bfSearchPath :: FilePath
   }
 
-bfEntries :: Lens' BrowseFiles (L.List Name FileSystemEntry)
+bfEntries :: Lens' BrowseFiles (L.List Name (Bool, FileSystemEntry))
 bfEntries = lens _bfEntries (\cv x -> cv { _bfEntries = x })
 
 bfSearchPath :: Lens' BrowseFiles FilePath

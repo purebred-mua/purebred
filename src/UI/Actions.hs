@@ -5,6 +5,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module UI.Actions (
   Scrollable(..)
@@ -33,6 +34,7 @@ module UI.Actions (
   , invokeEditor
   , reloadList
   , selectNextUnread
+  , toggleListItem
   ) where
 
 import qualified Brick.Main as Brick
@@ -56,8 +58,7 @@ import System.Process (system)
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
-import Control.Lens
-       (itoList, set, over, view, _Just, (&), Getting, Lens')
+import Control.Lens (itoList, _1, ix, set, over, view, _Just, (&), Getting, Lens')
 import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
@@ -437,6 +438,17 @@ selectNextUnread =
                  (L.listMoveTo (maybe 0 (\i -> seekIndex i fx vec) cur))
                  s
          }
+
+toggleListItem :: Action 'AddAttachment AppState
+toggleListItem =
+    Action
+    { _aDescription = "toggle selected state of a list item"
+    , _aAction = \s ->
+                      maybe
+                          (pure s)
+                          (\i -> pure $ over (asBrowseFiles . bfEntries . L.listElementsL . ix i . _1) not s)
+                          (view (asBrowseFiles . bfEntries . L.listSelectedL) s)
+    }
 
 -- Function definitions for actions
 --

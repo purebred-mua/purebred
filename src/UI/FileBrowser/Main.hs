@@ -18,6 +18,6 @@ drawFileBrowser s = [ui]
 renderList :: AppState -> Widget Name
 renderList s = L.renderList drawListItem True $ view (asBrowseFiles . bfEntries) s
 
-drawListItem :: Bool -> FileSystemEntry -> Widget Name
-drawListItem sel x = let toggled2Widget = if sel then withAttr listSelectedAttr else id
-                     in toggled2Widget $ str (show x) <+> fillLine
+drawListItem :: Bool -> (Bool, FileSystemEntry) -> Widget Name
+drawListItem sel (toggled, x) = let toggled2Widget = if sel || toggled then withAttr listSelectedAttr else id
+                                in toggled2Widget $ str (show x) <+> fillLine
