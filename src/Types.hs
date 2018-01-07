@@ -152,15 +152,18 @@ nmNewTag :: Getter (NotmuchSettings a) Tag
 nmNewTag = to (\(NotmuchSettings _ _ c) -> c)
 
 
-newtype BrowseFilesSettings = BrowseFilesSettings
+data BrowseFilesSettings a = BrowseFilesSettings
   { _bfKeybindings :: [Keybinding 'AddAttachment (Next AppState)]
+  , _bfHomePath :: a
   }
 
-bfKeybindings :: Lens' BrowseFilesSettings [Keybinding 'AddAttachment (Next AppState)]
+bfKeybindings :: Lens' (BrowseFilesSettings a) [Keybinding 'AddAttachment (Next AppState)]
 bfKeybindings = lens _bfKeybindings (\cv x -> cv { _bfKeybindings = x })
 
+bfHomePath :: Lens (BrowseFilesSettings a) (BrowseFilesSettings a') a a'
+bfHomePath = lens _bfHomePath (\s a -> s { _bfHomePath = a })
 
-data Configuration a b = Configuration
+data Configuration a b c = Configuration
     { _confColorMap :: Brick.AttrMap
     , _confNotmuch :: NotmuchSettings a
     , _confEditor :: b
@@ -168,34 +171,34 @@ data Configuration a b = Configuration
     , _confIndexView :: IndexViewSettings
     , _confComposeView :: ComposeViewSettings
     , _confHelpView :: HelpViewSettings
-    , _confBrowseFilesView :: BrowseFilesSettings
+    , _confBrowseFilesView :: BrowseFilesSettings c
     }
 
-type UserConfiguration = Configuration (IO FilePath) (IO String)
-type InternalConfiguration = Configuration FilePath String
+type UserConfiguration = Configuration (IO FilePath) (IO String) (IO FilePath)
+type InternalConfiguration = Configuration FilePath String FilePath
 
-confColorMap :: Getter (Configuration a b) Brick.AttrMap
+confColorMap :: Getter (Configuration a b c) Brick.AttrMap
 confColorMap = to (\(Configuration a _ _ _ _ _ _ _) -> a)
 
-confEditor :: Lens (Configuration a b) (Configuration a b') b b'
+confEditor :: Lens (Configuration a b c) (Configuration a b' c) b b'
 confEditor = lens _confEditor (\conf x -> conf { _confEditor = x })
 
-confNotmuch :: Lens (Configuration a c) (Configuration b c) (NotmuchSettings a) (NotmuchSettings b)
+confNotmuch :: Lens (Configuration a b c) (Configuration a' b c) (NotmuchSettings a) (NotmuchSettings a')
 confNotmuch = lens _confNotmuch (\conf x -> conf { _confNotmuch = x })
 
-confMailView :: Lens' (Configuration a b) MailViewSettings
+confMailView :: Lens' (Configuration a b c) MailViewSettings
 confMailView = lens _confMailView (\conf x -> conf { _confMailView = x })
 
-confIndexView :: Lens' (Configuration a b) IndexViewSettings
+confIndexView :: Lens' (Configuration a b c) IndexViewSettings
 confIndexView = lens _confIndexView (\conf x -> conf { _confIndexView = x })
 
-confComposeView :: Lens' (Configuration a b) ComposeViewSettings
+confComposeView :: Lens' (Configuration a b c) ComposeViewSettings
 confComposeView = lens _confComposeView (\conf x -> conf { _confComposeView = x })
 
-confHelpView :: Lens' (Configuration a b) HelpViewSettings
+confHelpView :: Lens' (Configuration a b c) HelpViewSettings
 confHelpView = lens _confHelpView (\conf x -> conf { _confHelpView = x })
 
-confBrowseFilesView :: Lens' (Configuration a b) BrowseFilesSettings
+confBrowseFilesView :: Lens (Configuration a b c) (Configuration a b c') (BrowseFilesSettings c) (BrowseFilesSettings c')
 confBrowseFilesView = lens _confBrowseFilesView (\conf x -> conf { _confBrowseFilesView = x })
 
 data ComposeViewSettings = ComposeViewSettings

@@ -104,9 +104,11 @@ processConfig :: UserConfiguration -> IO InternalConfiguration
 processConfig cfg = do
     fp <- view (confNotmuch . nmDatabase) cfg
     ed <- view confEditor cfg
+    bfp <- view (confBrowseFilesView . bfHomePath) cfg
     pure $ cfg
       & set (confNotmuch . nmDatabase) fp
       & set confEditor ed
+      & set (confBrowseFilesView . bfHomePath) bfp
 
 -- | Recompile the config file if it has changed based on the modification timestamp
 -- Node: Mostly a XMonad.Main.hs rip-off.
