@@ -10,6 +10,7 @@ import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
 import System.Environment (lookupEnv)
+import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
 import Network.Mail.Mime (renderSendMail)
 
@@ -176,5 +177,6 @@ defaultConfig =
     , _confFileBrowserView = FileBrowserSettings
       { _fbKeybindings = fileBrowserKeybindings
       , _fbSearchPathKeybindings = manageSearchPathKeybindings
+      , _fbHomePath = getHomeDirectory
       }
     }

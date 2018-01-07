@@ -141,19 +141,22 @@ nmNewTag :: Lens' (NotmuchSettings a) Tag
 nmNewTag f (NotmuchSettings a b c) = fmap (\c' -> NotmuchSettings a b c') (f c)
 
 
-data FileBrowserSettings = FileBrowserSettings
+data FileBrowserSettings a = FileBrowserSettings
   { _fbKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]
   , _fbSearchPathKeybindings :: [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
+  , _fbHomePath :: a
   }
 
-fbKeybindings :: Lens' FileBrowserSettings [Keybinding 'FileBrowser 'ListOfFiles]
+fbKeybindings :: Lens' (FileBrowserSettings a) [Keybinding 'FileBrowser 'ListOfFiles]
 fbKeybindings = lens _fbKeybindings (\cv x -> cv { _fbKeybindings = x })
 
-fbSearchPathKeybindings :: Lens' FileBrowserSettings [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
+fbSearchPathKeybindings :: Lens' (FileBrowserSettings a) [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
 fbSearchPathKeybindings = lens _fbSearchPathKeybindings (\cv x -> cv { _fbSearchPathKeybindings = x})
 
+fbHomePath :: Lens (FileBrowserSettings a) (FileBrowserSettings a') a a'
+fbHomePath = lens _fbHomePath (\s a -> s { _fbHomePath = a })
 
-data Configuration a b = Configuration
+data Configuration a b c = Configuration
     { _confTheme :: Theme
     , _confNotmuch :: NotmuchSettings a
     , _confEditor :: b
@@ -162,37 +165,37 @@ data Configuration a b = Configuration
     , _confComposeView :: ComposeViewSettings
     , _confHelpView :: HelpViewSettings
     , _confDefaultView :: ViewName
-    , _confFileBrowserView :: FileBrowserSettings
+    , _confFileBrowserView :: FileBrowserSettings c
     }
 
-type UserConfiguration = Configuration (IO FilePath) (IO String)
-type InternalConfiguration = Configuration FilePath String
+type UserConfiguration = Configuration (IO FilePath) (IO String) (IO FilePath)
+type InternalConfiguration = Configuration FilePath String FilePath
 
-confTheme :: Lens' (Configuration a b) Theme
+confTheme :: Lens' (Configuration a b c) Theme
 confTheme = lens _confTheme (\c x -> c { _confTheme = x })
 
-confEditor :: Lens (Configuration a b) (Configuration a b') b b'
+confEditor :: Lens (Configuration a b c) (Configuration a b' c) b b'
 confEditor f (Configuration a b c d e g h i j) = fmap (\c' -> Configuration a b c' d e g h i j) (f c)
 
-confNotmuch :: Lens (Configuration a c) (Configuration b c) (NotmuchSettings a) (NotmuchSettings b)
+confNotmuch :: Lens (Configuration a b c) (Configuration a' b c) (NotmuchSettings a) (NotmuchSettings a')
 confNotmuch f (Configuration a b c d e g h i j) = fmap (\b' -> Configuration a b' c d e g h i j) (f b)
 
-confMailView :: Lens' (Configuration a b) MailViewSettings
+confMailView :: Lens' (Configuration a b c) MailViewSettings
 confMailView f (Configuration a b c d e g h i j) = fmap (\d' -> Configuration a b c d' e g h i j) (f d)
 
-confIndexView :: Lens' (Configuration a b) IndexViewSettings
+confIndexView :: Lens' (Configuration a b c) IndexViewSettings
 confIndexView f (Configuration a b c d e g h i j) = fmap (\e' -> Configuration a b c d e' g h i j) (f e)
 
-confComposeView :: Lens' (Configuration a b) ComposeViewSettings
+confComposeView :: Lens' (Configuration a b c) ComposeViewSettings
 confComposeView f (Configuration a b c d e g h i j) = fmap (\g' -> Configuration a b c d e g' h i j) (f g)
 
-confHelpView :: Lens' (Configuration a b) HelpViewSettings
+confHelpView :: Lens' (Configuration a b c) HelpViewSettings
 confHelpView f (Configuration a b c d e g h i j) = fmap (\h' -> Configuration a b c d e g h' i j) (f h)
 
-confDefaultView :: Lens' (Configuration a b) ViewName
+confDefaultView :: Lens' (Configuration a b c) ViewName
 confDefaultView = lens _confDefaultView (\conf x -> conf { _confDefaultView = x })
 
-confFileBrowserView :: Lens' (Configuration a b) FileBrowserSettings
+confFileBrowserView :: Lens (Configuration a b c) (Configuration a b c') (FileBrowserSettings c) (FileBrowserSettings c')
 confFileBrowserView = lens _confFileBrowserView (\conf x -> conf { _confFileBrowserView = x })
 
 data ComposeViewSettings = ComposeViewSettings
