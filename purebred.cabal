@@ -85,7 +85,7 @@ library
                      , mtl
                      , exceptions
                      , purebred-email
-                     , parsec
+                     , attoparsec
 
 executable purebred
   hs-source-dirs:      app
@@ -125,3 +125,4 @@ test-suite unittests
                      , regex-posix
                      , mtl
                      , lens
+                     , notmuch

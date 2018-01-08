@@ -6,13 +6,16 @@ import Brick.Types (Padding(..), Widget)
 import Brick.AttrMap (AttrName)
 import Brick.Widgets.Core
        (hLimit, padLeft, txt, vBox, vLimit, withAttr, (<+>))
-import Prelude hiding (unwords)
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
+import qualified Data.ByteString as B
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Semigroup ((<>))
-import Data.Text (Text, pack, unwords)
+import Data.Text as T (Text, pack, unwords)
+
+import Notmuch (getTag)
+
 import UI.Draw.Main (renderEditorWithLabel, fillLine)
 import UI.Status.Main (statusbar)
 import Storage.Notmuch (hasTag)
@@ -61,7 +64,7 @@ listDrawThread s sel a =
         widget = padLeft (Pad 1) (txt $ formatDate (view thDate a)) <+>
                  padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")") <+>
                  padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings)) <+>
-                 padLeft (Pad 1) (hLimit 15 (txt $ unwords $ view thAuthors a)) <+>
+                 padLeft (Pad 1) (hLimit 15 (txt $ T.unwords $ view thAuthors a)) <+>
                  padLeft (Pad 1) (txt (view thSubject a)) <+> fillLine
     in withAttr (getListAttr isNewMail sel) widget
 
@@ -76,7 +79,7 @@ getListAttr False False = listAttr  -- not selected and not new
 formatDate :: UTCTime -> Text
 formatDate t = pack $ formatTime defaultTimeLocale "%d/%b" (utctDay t)
 
-renderTagsWidget :: [Text] -> Text -> Widget Name
+renderTagsWidget :: [Tag] -> Tag -> Widget Name
 renderTagsWidget tgs ignored =
     let ts = filter (/= ignored) tgs
-    in withAttr mailTagsAttr $ vLimit 1 $ txt $ unwords ts
+    in withAttr mailTagsAttr $ vLimit 1 $ txt $ decodeLenient $ B.intercalate " " $ fmap getTag ts

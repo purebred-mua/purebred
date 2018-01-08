@@ -14,7 +14,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Vector as Vec
 import System.Process (readProcess)
 import qualified Data.Text as T
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import Data.Text.Encoding (decodeUtf8)
 import Types
 import Control.Lens (_2, view, over, set, firstOf, folded, Lens')
 
@@ -43,10 +43,11 @@ applyTags
     -> (a, NotmuchMail)
     -> m (a, NotmuchMail)
 applyTags ops db mail = do
-    let mail' = foldr (over _2 . applyTagOp) mail ops
+    let
+      mail' = foldr (over _2 . applyTagOp) mail ops
+      nmtags = view (_2 . mailTags) mail'
     if haveTagsChanged mail mail'
         then do
-            nmtags <- toNotmuchTags (view (_2 . mailTags) mail')
             tagsToMessage nmtags (view (_2 . mailId) mail') db
             pure mail'
         else pure mail'
@@ -60,21 +61,21 @@ applyTagOp (RemoveTag t) = removeTags [t]
 applyTagOp ResetTags = set tags []
 
 class ManageTags a  where
-    tags :: Lens' a [T.Text]
+    tags :: Lens' a [Tag]
 
-setTags :: (ManageTags a) => [T.Text] -> a -> a
+setTags :: (ManageTags a) => [Tag] -> a -> a
 setTags = set tags
 
-addTags :: (ManageTags a) => [T.Text] -> a -> a
+addTags :: (ManageTags a) => [Tag] -> a -> a
 addTags tgs = over tags (`union` tgs)
 
-removeTags :: (ManageTags a) => [T.Text] -> a -> a
+removeTags :: (ManageTags a) => [Tag] -> a -> a
 removeTags tgs = over tags (filter (`notElem` tgs))
 
-getTags :: (ManageTags a) => a -> [T.Text]
+getTags :: (ManageTags a) => a -> [Tag]
 getTags = view tags
 
-hasTag :: (ManageTags a) => T.Text -> a -> Bool
+hasTag :: (ManageTags a) => Tag -> a -> Bool
 hasTag t x = t `elem` view tags x
 
 instance ManageTags NotmuchMail where
@@ -138,21 +139,16 @@ getMessage db msgId =
   Notmuch.findMessage db msgId
   >>= maybe (throwError (MessageNotFound msgId)) pure
 
-toNotmuchTags :: MonadError Error m => [T.Text] -> m [Notmuch.Tag]
-toNotmuchTags = traverse (mkTag' . encodeUtf8)
-  where mkTag' s = maybe (throwError (InvalidTag s)) pure $ Notmuch.mkTag s
-
 messageToMail
     :: Notmuch.Message n a
     -> IO NotmuchMail
 messageToMail m = do
     tgs <- Notmuch.tags m
-    let tgs' = decodeUtf8 . Notmuch.getTag <$> tgs
     NotmuchMail
       <$> (decodeUtf8 . fromMaybe "" <$> Notmuch.messageHeader "Subject" m)
       <*> (decodeUtf8 . fromMaybe "" <$> Notmuch.messageHeader "From" m)
       <*> Notmuch.messageDate m
-      <*> pure tgs'
+      <*> pure tgs
       <*> Notmuch.messageId m
 
 getDatabasePath :: IO FilePath
@@ -212,11 +208,10 @@ threadToThread
 threadToThread m = do
     tgs <- Notmuch.tags m
     auth <- Notmuch.threadAuthors m
-    let tgs' = decodeUtf8 . Notmuch.getTag <$> tgs
     NotmuchThread
       <$> (decodeUtf8 <$> Notmuch.threadSubject m)
       <*> pure (view Notmuch.matchedAuthors auth)
       <*> Notmuch.threadNewestDate m
-      <*> pure tgs'
+      <*> pure tgs
       <*> Notmuch.threadTotalMessages m
       <*> Notmuch.threadId m

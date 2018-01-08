@@ -17,12 +17,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module TestTagParser where
 
+import Data.List (isInfixOf)
+import Data.Semigroup ((<>))
+
 import Purebred.Tags
 import Types (TagOp(..))
 import Error
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual)
+import Test.Tasty.HUnit ((@=?), testCase, assertBool, assertFailure)
 
 tagparserTests ::
   TestTree
@@ -31,17 +34,29 @@ tagparserTests = testParseTags
 testParseTags :: TestTree
 testParseTags =
     let tagops =
-            [ ("adding", Right [AddTag "foo"], "+foo")
-            , ("removing", Right [RemoveTag "foo"], "-foo")
-            , ("resetting", Right [ResetTags], "=")
-            , ("mixed", Right [ResetTags, AddTag "foo", RemoveTag "foo"], "= +foo -foo")
-            , ("whitespace is handled gracefully", Right [ResetTags, AddTag "foo", RemoveTag "foo"], "=+foo   -foo")
-            , ("wrong order"
-              , Left $ GenericError "(line 1, column 6):\nunexpected \"=\"\nexpecting space\
-                                      \, \"+\" or \"-\"", "+foo = -foo")
+            [ ("adding", (Right [AddTag "foo"] @=?), "+foo")
+            , ("removing", (Right [RemoveTag "foo"] @=?), "-foo")
+            , ("resetting", (Right [ResetTags] @=?), "=")
+            , ( "mixed"
+              , (Right [ResetTags, AddTag "foo", RemoveTag "foo"] @=?)
+              , "= +foo -foo"
+              )
+            , ( "whitespace is handled gracefully"
+              , (Right [ResetTags, AddTag "foo", RemoveTag "foo"] @=?)
+              , "=+foo   -foo"
+              )
+            , ( "wrong order"
+              , \r -> case r of
+                  Left (GenericError msg) ->
+                    assertBool "message indicates bad char"
+                    $ "unexpected '='" `isInfixOf` msg
+                  Left e ->
+                    assertFailure $ "parse failed with unexpected error: " <> show e
+                  Right _ ->
+                    assertFailure "parse succeeded but should have failed"
+              , "+foo = -foo"
+              )
             ]
     in testGroup "tag op parsing tests" $
-       (\(desc,expected,input) ->
-             testCase desc $
-             assertEqual "returns right" expected (parseTagOps input))
+       (\(desc, f, input) -> testCase desc $ f (parseTagOps input))
        <$> tagops

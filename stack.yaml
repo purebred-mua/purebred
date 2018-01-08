@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/purebred-mua/hs-notmuch.git
-    commit: ec2b6a4b1b3aa841369843792a50f7b4473e6c7c
+    commit: 441380c287df0d8fc08196148350c931f4b25a20
   extra-dep: true
 - location:
     git: https://github.com/purebred-mua/purebred-email.git

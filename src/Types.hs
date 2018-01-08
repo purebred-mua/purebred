@@ -2,7 +2,10 @@
 {-# LANGUAGE KindSignatures #-}
 
 -- | Basic types for the UI used by this library
-module Types where
+module Types
+  ( module Types
+  , Tag
+  ) where
 
 import qualified Brick.AttrMap as Brick
 import qualified Brick.Focus as Brick
@@ -18,6 +21,7 @@ import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
 
+import Notmuch (Tag)
 import Data.MIME
 
 import Error
@@ -132,7 +136,7 @@ cFocusedEditorL _ = asCompose . cSubject
 data NotmuchSettings a = NotmuchSettings
     { _nmSearch :: T.Text
     , _nmDatabase :: a
-    , _nmNewTag :: T.Text
+    , _nmNewTag :: Tag
     }
 
 nmSearch :: Lens' (NotmuchSettings a) T.Text
@@ -141,7 +145,7 @@ nmSearch f (NotmuchSettings a b c) = fmap (\a' -> NotmuchSettings a' b c) (f a)
 nmDatabase :: Lens (NotmuchSettings a) (NotmuchSettings b) a b
 nmDatabase f (NotmuchSettings a b c) = fmap (\b' -> NotmuchSettings a b' c) (f b)
 
-nmNewTag :: Getter (NotmuchSettings a) T.Text
+nmNewTag :: Getter (NotmuchSettings a) Tag
 nmNewTag = to (\(NotmuchSettings _ _ c) -> c)
 
 data Configuration a b = Configuration
@@ -311,7 +315,7 @@ data NotmuchMail = NotmuchMail
     { _mailSubject :: T.Text
     , _mailFrom :: T.Text
     , _mailDate :: UTCTime
-    , _mailTags :: [T.Text]
+    , _mailTags :: [Tag]
     , _mailId :: B.ByteString
     } deriving (Show, Eq)
 
@@ -324,7 +328,7 @@ mailFrom = lens _mailFrom (\m f -> m { _mailFrom = f })
 mailDate :: Lens' NotmuchMail UTCTime
 mailDate = lens _mailDate (\m d -> m { _mailDate = d })
 
-mailTags :: Lens' NotmuchMail [T.Text]
+mailTags :: Lens' NotmuchMail [Tag]
 mailTags = lens _mailTags (\m t -> m { _mailTags = t })
 
 mailId :: Lens' NotmuchMail B.ByteString
@@ -334,7 +338,7 @@ data NotmuchThread = NotmuchThread
     { _thSubject :: T.Text
     , _thAuthors :: [T.Text]
     , _thDate :: UTCTime
-    , _thTags :: [T.Text]
+    , _thTags :: [Tag]
     , _thReplies :: Int
     , _thId :: B.ByteString
     } deriving (Show, Eq)
@@ -348,7 +352,7 @@ thAuthors = lens _thAuthors (\m f -> m { _thAuthors = f })
 thDate :: Lens' NotmuchThread UTCTime
 thDate = lens _thDate (\m d -> m { _thDate = d })
 
-thTags :: Lens' NotmuchThread [T.Text]
+thTags :: Lens' NotmuchThread [Tag]
 thTags = lens _thTags (\m t -> m { _thTags = t })
 
 thReplies :: Lens' NotmuchThread Int
@@ -362,6 +366,5 @@ decodeLenient :: B.ByteString -> T.Text
 decodeLenient = T.decodeUtf8With T.lenientDecode
 
 -- | Tag operations
-type Tag = T.Text
 data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
   deriving (Show, Eq)

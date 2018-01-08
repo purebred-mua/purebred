@@ -16,36 +16,73 @@
 --
 module Purebred.Tags where
 
-import Text.Parsec
-       (runParser, spaces, char, sepBy, many1, spaces, letter)
-import Text.Parsec.Text (Parser)
-import Control.Applicative ((<|>))
+import Control.Applicative ((<|>), optional)
+import qualified Data.Attoparsec.Internal.Types as AT
+import Data.Attoparsec.ByteString.Char8
+  ( Parser, parseOnly, isSpace, space, char, sepBy
+  , skipMany1, takeWhile1, endOfInput, peekChar' )
+import qualified Data.ByteString as B
 import Data.Functor (($>))
-import Prelude hiding (take, takeWhile)
-import Types
+import Data.Semigroup ((<>))
 import Control.Lens (over, _Left)
-import Data.Text (Text, pack)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+
+import Notmuch (Tag, mkTag)
+
+import Types
 import Error
 
 
 tagOp :: Parser TagOp
 tagOp =
-  (char '+' *> (AddTag <$> (pack <$> many1 letter)))
-  <|> (char '-' *> (RemoveTag <$> (pack <$> many1 letter)))
+  (char '+' *> (AddTag <$> takeTag))
+  <|> (char '-' *> (RemoveTag <$> takeTag))
+  where
+  takeTag = takeWhile1 (not . isSpace) >>= parseTag
 
 resetOp :: Parser TagOp
 resetOp = char '=' $> ResetTags
 
+-- | skip whitespace.  fails on no whitespace
+skipSpaces :: Parser ()
+skipSpaces = skipMany1 space
+
 allTagOps :: Parser [TagOp]
-allTagOps = tagOp `sepBy` spaces
+allTagOps = tagOp `sepBy` skipSpaces
 
 tagOpsWithReset :: Parser [TagOp]
 tagOpsWithReset = do
   r <- resetOp
-  spaces
+  _ <- optional skipSpaces -- no space needed after '='
   ops <- allTagOps
   pure $ r : ops
 
-parseTagOps :: Text -> Either Error [TagOp]
-parseTagOps txt = let parsed = runParser (tagOpsWithReset <|> allTagOps) () "" txt
-                  in over _Left (GenericError . show) parsed
+parseTagOps :: T.Text -> Either Error [TagOp]
+parseTagOps = over _Left (GenericError . show) . parseOnly p . T.encodeUtf8
+  where
+  p =
+    (tagOpsWithReset <|> allTagOps)
+    <* optional skipSpaces  -- skip any trailing whitespace
+    <* niceEndOfInput       -- assert EOF
+
+parseTag :: B.ByteString -> Parser Tag
+parseTag s = maybe
+  (fail $ "not a valid tag: " <> show s)
+  pure
+  (mkTag s)
+
+-- | Assert end of input has been reached,
+-- or fail with a message that includes the
+-- problematic character and the offset.
+niceEndOfInput :: Parser ()
+niceEndOfInput = endOfInput <|> p
+  where
+  p = do
+    c <- peekChar'
+    off <- offset
+    fail $ "unexpected " <> show c <> " at offset " <> show off
+
+-- | Get the current position of the parser
+offset :: AT.Parser i Int
+offset = AT.Parser $ \t pos more _lose suc -> suc t pos more (AT.fromPos pos)

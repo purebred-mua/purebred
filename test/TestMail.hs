@@ -1,8 +1,11 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 module TestMail where
 
-import Data.Text (Text, pack)
-import Types (NotmuchMail(..))
+import qualified Data.ByteString as B
+import Data.Text (pack)
+import Types (NotmuchMail(..), Tag)
 import Storage.Notmuch (addTags, removeTags)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck
@@ -11,6 +14,8 @@ import Test.QuickCheck.Utf8 (utf8BS)
 import Data.Text.Arbitrary ()
 import Data.Time.Calendar (Day(..))
 import Data.Time.Clock (secondsToDiffTime, UTCTime(..), DiffTime)
+
+import Notmuch (mkTag, tagMaxLen)
 
 mailTests ::
   TestTree
@@ -22,14 +27,20 @@ mailTests =
 testAddingTags :: TestTree
 testAddingTags = testProperty "no duplicates when adding tags" propNoDuplicatesAdded
   where
-    propNoDuplicatesAdded :: NotmuchMail -> [Text] -> Bool
+    propNoDuplicatesAdded :: NotmuchMail -> [Tag] -> Bool
     propNoDuplicatesAdded m as = addTags as (addTags as m) == addTags as m
 
 testRemovingTags :: TestTree
 testRemovingTags = testProperty "remove tags" propRemoveTags
   where
-    propRemoveTags :: NotmuchMail -> [Text] -> Bool
+    propRemoveTags :: NotmuchMail -> [Tag] -> Bool
     propRemoveTags m as = removeTags as (removeTags as m) == removeTags as m
+
+instance Arbitrary Tag where
+  arbitrary = do
+    n <- choose (1, tagMaxLen)
+    bs <- fmap B.pack . sequenceA . replicate n $ choose (0x21, 0x7e)
+    maybe arbitrary{-try again-} pure (mkTag bs)
 
 instance Arbitrary NotmuchMail where
     arbitrary =
