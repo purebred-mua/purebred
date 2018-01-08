@@ -110,7 +110,7 @@ test-suite unittests
                      , brick
                      , tasty-hunit
                      , tasty-quickcheck
-                     , quickcheck-text
+                     , quickcheck-instances
                      , tasty
                      , directory
                      , process
@@ -121,7 +121,6 @@ test-suite unittests
                      , temporary
                      , text
                      , resourcet
-                     , time
                      , regex-posix
                      , mtl
                      , lens

@@ -4,16 +4,14 @@
 module TestMail where
 
 import qualified Data.ByteString as B
-import Data.Text (pack)
+import qualified Data.Text.Encoding as T
+
 import Types (NotmuchMail(..), Tag)
 import Storage.Notmuch (addTags, removeTags)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck
-       (testProperty, Arbitrary, arbitrary, choose, Gen)
-import Test.QuickCheck.Utf8 (utf8BS)
-import Data.Text.Arbitrary ()
-import Data.Time.Calendar (Day(..))
-import Data.Time.Clock (secondsToDiffTime, UTCTime(..), DiffTime)
+       (testProperty, Arbitrary, arbitrary, choose)
+import Test.QuickCheck.Instances ()
 
 import Notmuch (mkTag, tagMaxLen)
 
@@ -44,20 +42,9 @@ instance Arbitrary Tag where
 
 instance Arbitrary NotmuchMail where
     arbitrary =
-        NotmuchMail <$>
-        (pack <$> arbitrary) <*>
-        (pack <$> arbitrary) <*>
-        arbitrary <*>
-        arbitrary <*>
-        utf8BS
-
-instance Arbitrary UTCTime where
-  arbitrary = UTCTime <$> arbitrary <*> genDiffTime
-
-instance Arbitrary Day where
-  arbitrary = ModifiedJulianDay <$> arbitrary
-
-genDiffTime :: Gen DiffTime
-genDiffTime = do
-  i <- choose (0, 200000)
-  pure $ secondsToDiffTime i
+      NotmuchMail
+        <$> arbitrary
+        <*> arbitrary
+        <*> arbitrary
+        <*> arbitrary
+        <*> (T.encodeUtf8 <$> arbitrary)
