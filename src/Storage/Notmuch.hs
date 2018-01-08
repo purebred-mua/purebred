@@ -14,8 +14,6 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Vector as Vec
 import System.Process (readProcess)
 import qualified Data.Text as T
-import Data.Text.Encoding (decodeUtf8)
-import Types
 import Control.Lens (_2, view, over, set, firstOf, folded, Lens')
 
 import qualified Notmuch
@@ -23,6 +21,7 @@ import Notmuch.Search
 import Notmuch.Util (bracketT)
 
 import Error
+import Types
 
 
 -- | apply tag operations on all given mails and write the resulting tags to the
@@ -145,8 +144,8 @@ messageToMail
 messageToMail m = do
     tgs <- Notmuch.tags m
     NotmuchMail
-      <$> (decodeUtf8 . fromMaybe "" <$> Notmuch.messageHeader "Subject" m)
-      <*> (decodeUtf8 . fromMaybe "" <$> Notmuch.messageHeader "From" m)
+      <$> (decodeLenient . fromMaybe "" <$> Notmuch.messageHeader "Subject" m)
+      <*> (decodeLenient . fromMaybe "" <$> Notmuch.messageHeader "From" m)
       <*> Notmuch.messageDate m
       <*> pure tgs
       <*> Notmuch.messageId m
@@ -209,7 +208,7 @@ threadToThread m = do
     tgs <- Notmuch.tags m
     auth <- Notmuch.threadAuthors m
     NotmuchThread
-      <$> (decodeUtf8 <$> Notmuch.threadSubject m)
+      <$> (decodeLenient <$> Notmuch.threadSubject m)
       <*> pure (view Notmuch.matchedAuthors auth)
       <*> Notmuch.threadNewestDate m
       <*> pure tgs
