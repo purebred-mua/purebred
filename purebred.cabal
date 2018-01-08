@@ -73,7 +73,6 @@ library
                      , text
                      , process
                      , mime-mail
-                     , network
                      , directory
                      , bytestring
                      , time
@@ -81,7 +80,6 @@ library
                      , optparse-applicative >= 0.13
                      , xdg-basedir
                      , filepath
-                     , unix
                      , mtl
                      , exceptions
                      , purebred-email
@@ -107,20 +105,16 @@ test-suite unittests
   default-language:    Haskell2010
   build-depends:       base
                      , purebred
-                     , brick
+                     , tasty
                      , tasty-hunit
                      , tasty-quickcheck
                      , quickcheck-instances
-                     , tasty
                      , directory
                      , process
-                     , unbounded-delays
                      , bytestring
-                     , network
                      , ini
                      , temporary
                      , text
-                     , resourcet
                      , regex-posix
                      , mtl
                      , lens
