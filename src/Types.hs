@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | Basic types for the UI used by this library
 module Types
@@ -171,7 +172,9 @@ data Configuration a b c = Configuration
 type UserConfiguration = Configuration (IO FilePath) (IO String) (IO FilePath)
 type InternalConfiguration = Configuration FilePath String FilePath
 
-confTheme :: Lens' (Configuration a b c) Theme
+type ConfigurationLens v = forall a b c. Lens' (Configuration a b c) v
+
+confTheme :: ConfigurationLens Theme
 confTheme = lens _confTheme (\c x -> c { _confTheme = x })
 
 confEditor :: Lens (Configuration a b c) (Configuration a b' c) b b'
@@ -180,19 +183,19 @@ confEditor f (Configuration a b c d e g h i j) = fmap (\c' -> Configuration a b 
 confNotmuch :: Lens (Configuration a b c) (Configuration a' b c) (NotmuchSettings a) (NotmuchSettings a')
 confNotmuch f (Configuration a b c d e g h i j) = fmap (\b' -> Configuration a b' c d e g h i j) (f b)
 
-confMailView :: Lens' (Configuration a b c) MailViewSettings
+confMailView :: ConfigurationLens MailViewSettings
 confMailView f (Configuration a b c d e g h i j) = fmap (\d' -> Configuration a b c d' e g h i j) (f d)
 
-confIndexView :: Lens' (Configuration a b c) IndexViewSettings
+confIndexView :: ConfigurationLens IndexViewSettings
 confIndexView f (Configuration a b c d e g h i j) = fmap (\e' -> Configuration a b c d e' g h i j) (f e)
 
-confComposeView :: Lens' (Configuration a b c) ComposeViewSettings
+confComposeView :: ConfigurationLens ComposeViewSettings
 confComposeView f (Configuration a b c d e g h i j) = fmap (\g' -> Configuration a b c d e g' h i j) (f g)
 
-confHelpView :: Lens' (Configuration a b c) HelpViewSettings
+confHelpView :: ConfigurationLens HelpViewSettings
 confHelpView f (Configuration a b c d e g h i j) = fmap (\h' -> Configuration a b c d e g h' i j) (f h)
 
-confDefaultView :: Lens' (Configuration a b c) ViewName
+confDefaultView :: ConfigurationLens ViewName
 confDefaultView = lens _confDefaultView (\conf x -> conf { _confDefaultView = x })
 
 confFileBrowserView :: Lens (Configuration a b c) (Configuration a b c') (FileBrowserSettings c) (FileBrowserSettings c')
