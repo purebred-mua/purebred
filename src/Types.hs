@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | Basic types for the UI used by this library
 module Types
@@ -177,6 +178,9 @@ data Configuration a b c = Configuration
 type UserConfiguration = Configuration (IO FilePath) (IO String) (IO FilePath)
 type InternalConfiguration = Configuration FilePath String FilePath
 
+-- | Shorthand for optics to concrete fields
+type ConfigurationLens v = forall a b c. Lens' (Configuration a b c) v
+
 confColorMap :: Getter (Configuration a b c) Brick.AttrMap
 confColorMap = to (\(Configuration a _ _ _ _ _ _ _) -> a)
 
@@ -186,16 +190,16 @@ confEditor = lens _confEditor (\conf x -> conf { _confEditor = x })
 confNotmuch :: Lens (Configuration a b c) (Configuration a' b c) (NotmuchSettings a) (NotmuchSettings a')
 confNotmuch = lens _confNotmuch (\conf x -> conf { _confNotmuch = x })
 
-confMailView :: Lens' (Configuration a b c) MailViewSettings
+confMailView :: ConfigurationLens MailViewSettings
 confMailView = lens _confMailView (\conf x -> conf { _confMailView = x })
 
-confIndexView :: Lens' (Configuration a b c) IndexViewSettings
+confIndexView :: ConfigurationLens IndexViewSettings
 confIndexView = lens _confIndexView (\conf x -> conf { _confIndexView = x })
 
-confComposeView :: Lens' (Configuration a b c) ComposeViewSettings
+confComposeView :: ConfigurationLens ComposeViewSettings
 confComposeView = lens _confComposeView (\conf x -> conf { _confComposeView = x })
 
-confHelpView :: Lens' (Configuration a b c) HelpViewSettings
+confHelpView :: ConfigurationLens HelpViewSettings
 confHelpView = lens _confHelpView (\conf x -> conf { _confHelpView = x })
 
 confBrowseFilesView :: Lens (Configuration a b c) (Configuration a b c') (BrowseFilesSettings c) (BrowseFilesSettings c')
