@@ -324,7 +324,12 @@ vsFocusedView = lens _vsFocusedView (\settings x -> settings { _vsFocusedView = 
 data FileSystemEntry
     = Directory String
     | File String
-    deriving (Show)
+    deriving (Show,Ord,Eq)
+
+fsEntryName :: Getter FileSystemEntry String
+fsEntryName = let toName (Directory n) = n
+                  toName (File n) = n
+              in to toName
 
 data FileBrowser = CreateFileBrowser
   { _fbEntries :: L.List Name (Bool, FileSystemEntry)

@@ -38,6 +38,8 @@ module UI.Actions (
   , selectNextUnread
   , focusNextWidget
   , toggleListItem
+  , enterDirectory
+  , parentDirectory
   ) where
 
 import qualified Brick
@@ -59,18 +61,20 @@ import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
 import System.Directory (getTemporaryDirectory)
 import System.Process (system)
+import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
 import Control.Lens
-       (_Just, at, ix, _1, toListOf, traversed, has, itoList, set, over,
+       (_Just, to, at, ix, _1, _2, toListOf, traversed, has, itoList, set, over,
         view, (&), Getting, Lens')
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Exception (onException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Catch (bracket)
-import Data.Text.Zipper (currentLine, gotoEOL, clearZipper)
+import Data.Text.Zipper
+       (insertMany, currentLine, gotoEOL, clearZipper)
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
@@ -78,6 +82,7 @@ import Error
 import UI.Utils (safeUpdate, focusedViewWidget, focusedViewName)
 import UI.Views (listOfMailsView, mailView)
 import Purebred.Tags (parseTagOps)
+import Purebred.System.Directory (listDirectory')
 
 class Scrollable (n :: Name) where
   makeViewportScroller :: Proxy n -> Brick.ViewportScroll Name
@@ -132,6 +137,12 @@ instance Completable 'ManageThreadTagsEditor where
                         >>= pure
                         . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
+instance Completable 'ManageFileBrowserSearchPath where
+  complete _ s =
+    ($ s)
+    <$> (either setError updateBrowseFileContents
+         <$> runExceptT (listDirectory' (currentLine $ view (asFileBrowser . fbSearchPath . E.editContentsL) s)))
+
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
 --
@@ -163,6 +174,9 @@ instance Resetable 'ComposeTo where
 
 instance Resetable 'ListOfAttachments where
   reset _ = pure . resetThreadViewEditor
+
+instance Resetable 'ManageFileBrowserSearchPath where
+  reset _ = pure . over (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
 
 resetThreadViewEditor :: AppState -> AppState
 resetThreadViewEditor s = over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor) s
@@ -230,7 +244,16 @@ instance Focusable 'ComposeView 'ListOfAttachments where
                     . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 instance Focusable 'FileBrowser 'ListOfFiles where
+  switchFocus _ _ s = let path = view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine) s
+                      in ($ s)
+                         <$> (either setError (\x -> over (asFileBrowser . fbSearchPath . E.editContentsL)
+                                                     (insertMany path . clearZipper)
+                                                     . updateBrowseFileContents x)
+                              <$> runExceptT (listDirectory' path))
+
+instance Focusable 'FileBrowser 'ManageFileBrowserSearchPath where
   switchFocus _ _ = pure
+
 
 -- TODO: helper function to replace whatever editor we're displaying at the
 -- bottom with a new editor given by name. There is currently nothing which
@@ -238,7 +261,6 @@ instance Focusable 'FileBrowser 'ListOfFiles where
 -- uses ViewPatterns
 replaceEditor :: Name -> [Name] -> [Name]
 replaceEditor n xs = reverse (drop 1 (reverse xs)) ++ [n]
-
 
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
@@ -281,6 +303,9 @@ instance HasName 'ListOfAttachments where
 
 instance HasName 'ListOfFiles where
   name _ = ListOfFiles
+
+instance HasName 'ManageFileBrowserSearchPath where
+  name _ = ManageFileBrowserSearchPath
 
 -- | Allow to change the view to a different view in order to put the focus on a widget there
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
@@ -460,6 +485,7 @@ listJumpToEnd = Action
         ListOfThreads -> pure $ listSetSelectionEnd (asMailIndex . miListOfThreads) s
         ScrollingMailView -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
         ListOfAttachments -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
+        ListOfFiles -> pure $ listSetSelectionEnd (asFileBrowser . fbEntries) s
         _ -> pure $ listSetSelectionEnd (asMailIndex. miListOfMails) s
   }
 
@@ -470,6 +496,7 @@ listJumpToStart = Action
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) (L.listMoveTo 0) s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
         ListOfAttachments -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
+        ListOfFiles -> pure $ over (asFileBrowser . fbEntries) (L.listMoveTo 0) s
         _ -> pure $ over (asMailIndex. miListOfMails) (L.listMoveTo 0) s
   }
 
@@ -547,8 +574,42 @@ toggleListItem =
                           (view (asFileBrowser . fbEntries . L.listSelectedL) s)
     }
 
+parentDirectory :: Action 'FileBrowser 'ListOfFiles AppState
+parentDirectory = Action ["go to parent directory"]
+                      (\s ->
+                       let fp = view (asFileBrowser .fbSearchPath . E.editContentsL . to currentLine . to takeDirectory) s
+                           s' = over (asFileBrowser . fbSearchPath . E.editContentsL)
+                                (insertMany fp . clearZipper) s
+                       in ($ s')
+                          <$> (either setError updateBrowseFileContents
+                               <$> runExceptT (view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine . to listDirectory') s'))
+                      )
+
+enterDirectory :: Action 'FileBrowser 'ListOfFiles AppState
+enterDirectory =
+  Action
+  { _aDescription = ["enter directory"]
+  , _aAction = \s -> liftIO $ case view (asFileBrowser . fbEntries . to L.listSelectedElement) s of
+      Just (_, item) -> do
+        let fullpath = (currentLine $ view (asFileBrowser . fbSearchPath . E.editContentsL) s)
+                       </> view (_2 . fsEntryName) item
+        case view _2 item of
+          Directory _ ->
+            let s' = over (asFileBrowser . fbSearchPath . E.editContentsL) (insertMany fullpath . clearZipper) s
+            in ($ s') <$> (either setError updateBrowseFileContents
+                           <$> runExceptT (view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine . to listDirectory') s'))
+          _ -> pure s
+      Nothing -> pure s
+
+}
+
 -- Function definitions for actions
 --
+updateBrowseFileContents :: [FileSystemEntry] -> AppState -> AppState
+updateBrowseFileContents contents s =
+  let contents' = view vector ((False, ) <$> contents)
+  in over (asFileBrowser . fbEntries) (L.listReplace contents' (Just 0)) s
+
 findIndexWithOffset :: Int -> (a -> Bool) -> Vector.Vector a -> Maybe Int
 findIndexWithOffset i fx = fmap (i+) . Vector.findIndex fx . Vector.drop i
 
@@ -646,7 +707,7 @@ replyToMail s =
 
 sendMail :: AppState -> T.EventM Name AppState
 sendMail s = do
-    let to =
+    let mTo =
             Address
                 Nothing
                 (unlines $ E.getEditContents $ view (asCompose . cTo) s)
@@ -658,7 +719,7 @@ sendMail s = do
             [ ( BC.pack "Subject"
               , unlines $ E.getEditContents $ view (asCompose . cSubject) s)]
     let s' =
-            s & set (asCompose . cMail . lMailTo) [to]
+            s & set (asCompose . cMail . lMailTo) [mTo]
             . set (asCompose . cMail . lMailFrom) from
             . set (asCompose . cMail . lMailHeaders) subject
             . set (asCompose . cMail . lMailParts) [toListOf (asCompose . cAttachments . L.listElementsL . traversed) s]

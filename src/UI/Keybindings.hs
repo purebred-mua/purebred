@@ -115,3 +115,8 @@ eventHandlerComposeFileBrowser :: EventHandler 'FileBrowser 'ListOfFiles
 eventHandlerComposeFileBrowser = EventHandler
   (asConfig . confFileBrowserView . fbKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asFileBrowser . fbEntries) L.handleListEvent)
+
+eventHandlerManageFileBrowserSearchPath :: EventHandler 'FileBrowser 'ManageFileBrowserSearchPath
+eventHandlerManageFileBrowserSearchPath = EventHandler
+  (asConfig . confFileBrowserView . fbSearchPathKeybindings)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asFileBrowser . fbSearchPath) E.handleEditorEvent)

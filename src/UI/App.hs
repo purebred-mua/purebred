@@ -76,6 +76,7 @@ handleViewEvent = f where
   f ViewMail _ = dispatch eventHandlerScrollingMailView
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
   f _ ListOfFiles = dispatch eventHandlerComposeFileBrowser
+  f _ ManageFileBrowserSearchPath = dispatch eventHandlerManageFileBrowserSearchPath
   f _ _ = dispatch nullEventHandler
 
 
@@ -109,11 +110,12 @@ initialState conf = do
                           , (FileBrowser, filebrowserView)]
                     , _vsFocusedView = focusRing [Threads, Mails, ViewMail, Help, ComposeView, FileBrowser]
                     }
-                bf = CreateFileBrowser
+                path = view (confFileBrowserView . fbHomePath) conf
+                fb = CreateFileBrowser
                      (L.list ListOfFiles Vector.empty 1)
-                     (E.editor ManageFileBrowserSearchPath Nothing "")
+                     (E.editor ManageFileBrowserSearchPath Nothing path)
             in pure $
-               AppState conf mi mv initialCompose Nothing viewsettings bf
+               AppState conf mi mv initialCompose Nothing viewsettings fb
 
 theApp :: AppState -> M.App AppState e Name
 theApp s =

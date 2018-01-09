@@ -4,12 +4,12 @@ module UI.FileBrowser.Main
 
 import Brick.Types (Widget, Padding(..))
 import Brick.Widgets.Core
-       (str, txt, withAttr, (<+>), vLimit, padRight)
+       (str, txt, withAttr, (<+>), vLimit, padRight, padLeft)
 import qualified Brick.Widgets.Edit as E
 
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
-import Config.Main (listSelectedAttr)
+import Config.Main (listSelectedAttr, listAttr)
 import UI.Draw.Main (fillLine)
 import UI.Utils (focusedViewWidget)
 import Types
@@ -19,8 +19,11 @@ renderFileBrowser s = L.renderList drawListItem (ListOfFiles == focusedViewWidge
                       $ view (asFileBrowser . fbEntries) s
 
 drawListItem :: Bool -> (Bool, FileSystemEntry) -> Widget Name
-drawListItem sel (toggled, x) = let toggled2Widget = if sel || toggled then withAttr listSelectedAttr else id
-                                in toggled2Widget $ str (show x) <+> fillLine
+drawListItem sel (toggled, x) = let attr = if sel then withAttr listSelectedAttr else withAttr listAttr
+                                    toggledWidget = if toggled then txt "☑" else txt "☐"
+                                in attr $ padLeft (Pad 1) $ toggledWidget
+                                   <+> padLeft (Pad 1) (renderFileSystemEntry x)
+                                   <+> fillLine
 
 renderFileBrowserSearchPathEditor :: AppState -> Widget Name
 renderFileBrowserSearchPathEditor s =
@@ -29,3 +32,7 @@ renderFileBrowserSearchPathEditor s =
       inputW = E.renderEditor editorDrawContent hasFocus (view (asFileBrowser . fbSearchPath) s)
       labelW = padRight (Pad 1) $ txt "Path:"
   in labelW <+> vLimit 1 inputW
+
+renderFileSystemEntry :: FileSystemEntry -> Widget Name
+renderFileSystemEntry (Directory name) = txt "📂" <+> padLeft (Pad 1) (str name)
+renderFileSystemEntry (File name) = txt "-" <+> padLeft (Pad 1) (str name)

@@ -60,6 +60,7 @@ library
                      , UI.Utils
                      , UI.Views
                      , Purebred.Tags
+                     , Purebred.System.Directory
                      , UI.FileBrowser.Main
                      , UI.FileBrowser.Keybindings
                      , Config.Main
