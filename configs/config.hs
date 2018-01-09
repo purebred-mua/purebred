@@ -58,3 +58,4 @@ main = purebred $ tweak defaultConfig where
     . over (confIndexView . ivBrowseMailsKeybindings) (`union` myBrowseMailKeybindings)
     . over (confMailView . mvKeybindings) (`union` myMailKeybindings)
     . set (confComposeView . cvSendMailCmd) writeMailtoFile
+    . set (confFileBrowserView . bfHomePath) getCurrentDirectory
