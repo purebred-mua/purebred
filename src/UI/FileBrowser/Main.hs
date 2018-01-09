@@ -1,7 +1,7 @@
 module UI.FileBrowser.Main where
 
-import Brick.Types (Widget)
-import Brick.Widgets.Core (str, vBox, withAttr, (<+>))
+import Brick.Types (Padding(..), Widget)
+import Brick.Widgets.Core (str, vBox, withAttr, (<+>), padLeft)
 
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
@@ -20,4 +20,8 @@ renderList s = L.renderList drawListItem True $ view (asBrowseFiles . bfEntries)
 
 drawListItem :: Bool -> (Bool, FileSystemEntry) -> Widget Name
 drawListItem sel (toggled, x) = let toggled2Widget = if sel || toggled then withAttr listSelectedAttr else id
-                                in toggled2Widget $ str (show x) <+> fillLine
+                                in toggled2Widget $ padLeft (Pad 1) $ renderFileSystemEntry x <+> fillLine
+
+renderFileSystemEntry :: FileSystemEntry -> Widget Name
+renderFileSystemEntry (Directory name) = str "📂" <+> padLeft (Pad 1) (str name)
+renderFileSystemEntry (File name) = str "-" <+> padLeft (Pad 1) (str name)

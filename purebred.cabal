@@ -59,6 +59,7 @@ library
                      , UI.Help.Keybindings
                      , UI.Utils
                      , Purebred.Tags
+                     , Purebred.System.Directory
                      , UI.FileBrowser.Main
                      , UI.FileBrowser.Keybindings
                      , Config.Main

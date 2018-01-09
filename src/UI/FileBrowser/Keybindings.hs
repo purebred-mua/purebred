@@ -15,5 +15,7 @@ fileBrowserKeybindings =
     , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
-    -- Enter
+    , Keybinding (V.EvKey (V.KChar ' ') []) (toggleListItem `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'c') []) (gotoDirectory `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (changeDirectory `chain` continue)
     ]

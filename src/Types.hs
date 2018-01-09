@@ -282,6 +282,11 @@ data FileSystemEntry
     | File String
     deriving (Show)
 
+fsEntryName :: Getter FileSystemEntry String
+fsEntryName = let toName (Directory n) = n
+                  toName (File n) = n
+              in to toName
+
 data BrowseFiles = BrowseFiles
   { _bfEntries :: L.List Name (Bool, FileSystemEntry)
   , _bfSearchPath :: FilePath
