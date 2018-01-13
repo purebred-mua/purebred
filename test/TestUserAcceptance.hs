@@ -26,6 +26,7 @@ import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Data.Functor (($>))
 import Data.Ini (parseIni, writeIniFileWith, KeySeparator(..), WriteIniSettings(..))
 import Data.Semigroup ((<>))
+import Data.Either (isRight)
 import Control.Concurrent (threadDelay)
 import Control.Exception (catch, IOException)
 import System.IO (hPutStr, hPutStrLn, stderr)
@@ -45,6 +46,8 @@ import System.Directory
 import Test.Tasty (TestTree, TestName, testGroup, withResource)
 import Test.Tasty.HUnit (testCaseSteps, assertBool)
 import Text.Regex.Posix ((=~))
+
+import Data.MIME (parse, message, mime, MIMEMessage)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 
@@ -76,6 +79,7 @@ systemTests =
       , testConfig
       , testUpdatesReadState
       , testCanJumpToFirstListItem
+      , testAddAttachments
       ]
 
 testCanJumpToFirstListItem :: Int -> TestTree
@@ -132,6 +136,116 @@ testConfig = withTmuxSession "test custom config" $
 
     liftIO $ step "quit"
     sendKeys "q" (Literal "purebred")
+
+    pure ()
+
+testAddAttachments :: Int -> TestTree
+testAddAttachments = withTmuxSession "use file browser to add attachments" $
+  \step -> do
+    testdir <- view (envDir . ask)
+    setEnvVarInSession "GHC" "stack"
+    setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
+    setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
+
+    startApplication
+
+    liftIO $ step "start composition"
+    sendKeys "m" (Literal "From")
+
+    liftIO $ step "enter from email"
+    sendKeys "testuser@foo.test\r" (Literal "To")
+
+    liftIO $ step "enter to: email"
+    sendKeys "user@to.test\r" (Literal "Subject")
+
+    liftIO $ step "enter subject"
+    sendKeys "test subject\r" (Literal "~")
+
+    liftIO $ step "enter mail body"
+    sendKeys "iThis is a test body" (Literal "body")
+
+    liftIO $ step "exit insert mode in vim"
+    sendKeys "Escape" (Literal "body")
+
+    liftIO $ step "exit vim"
+    sendKeys ": x\r" (Literal "Attachments")
+
+    liftIO $ step "start file browser"
+    cwd <- liftIO getCurrentDirectory
+    sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
+
+    liftIO $ step "jump to the end of the list"
+    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - stack.yaml")
+
+    liftIO $ step "add first selected file"
+    sendKeys "Enter" (Literal $ cwd </> "stack.yaml")
+
+    liftIO $ step "up to select mail body"
+    sendKeys "Up" (Literal "Item 1 of 2")
+
+    -- edit the mail body a few times to check if the code not mistakenly adds
+    -- the same mail body as an attachment
+    liftIO $ step "edit mail body text"
+    sendKeys "e" (Literal "test body")
+
+    liftIO $ step "append to mail body"
+    sendKeys "i. foo" (Literal "foo")
+
+    liftIO $ step "exit insert mode in vim"
+    sendKeys "Escape" (Literal "foo")
+
+    liftIO $ step "exit vim"
+    sendKeys ": x\r" (Literal "Attachments")
+
+    liftIO $ step "edit mail body text"
+    sendKeys "e" (Literal "test body")
+
+    liftIO $ step "append to mail body"
+    sendKeys "i. foo" (Literal "foo")
+
+    liftIO $ step "exit insert mode in vim"
+    sendKeys "Escape" (Literal "foo")
+
+    liftIO $ step "exit vim"
+    sendKeys ": x\r" (Literal "Item 1 of 2")
+
+    -- try removing attachments
+    liftIO $ step "select the attachment"
+    sendKeys "Down" (Literal "Item 2 of 2")
+
+    liftIO $ step "remove the attachment"
+    sendKeys "D" (Literal "Item 1 of 1")
+
+    liftIO $ step "try to remove the last attachment"
+    sendKeys "D" (Literal "You may not remove the only attachment")
+
+    -- add the attachment again and send it
+    liftIO $ step "start file browser"
+    sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
+
+    liftIO $ step "jump to the end of the list"
+    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - stack.yaml")
+
+    liftIO $ step "select the file"
+    sendKeys "Space" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9745 - stack.yaml")
+
+    liftIO $ step "move one item up"
+    sendKeys "Up" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - screenshot.png")
+
+    liftIO $ step "add selected files"
+    out <- sendKeys "Enter" (Literal "Item 3 of 3")
+    assertSubstrInOutput "screenshot.png" out
+
+    liftIO $ step "send mail"
+    sendKeys "y" (Literal "Query")
+
+    let fpath = testdir </> "sentMail"
+    contents <- liftIO $ B.readFile fpath
+    let decoded = (chr . fromEnum <$> B.unpack contents)
+    assertSubstrInOutput "attachment; filename" decoded
+    assertSubstrInOutput "screenshot.png" decoded
+    assertSubstrInOutput "stack.yaml" decoded
+    assertSubstrInOutput "This is a test body" decoded
 
     pure ()
 
@@ -253,7 +367,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "Escape" (Literal "List of Threads")
 
     liftIO $ step "open thread tag editor"
-    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     liftIO $ step "abort editing"
     sendKeys "Escape" (Literal "Query")
@@ -420,7 +534,7 @@ testUserCanSwitchBackToIndex =
             sendKeys "Escape" (Literal "body")
 
             liftIO $ step "exit vim"
-            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["37"] [] <> "testuser@foo.test"))
+            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["34"] [] <> "testuser@foo.test"))
 
             liftIO $ step "switch back to index"
             sendKeys "Tab" (Literal "Testmail")
@@ -429,8 +543,8 @@ testUserCanSwitchBackToIndex =
             sendKeys "Tab" (Literal "test subject")
 
             liftIO $ step "cycle to next input field"
-            sendKeys "C-n" (Regex (buildAnsiRegex [] ["33"] [] <> "To:\\s+"
-                                   <> buildAnsiRegex [] ["37"] [] <> "user@to.test"))
+            sendKeys "C-n" (Regex (buildAnsiRegex [] ["33"] ["40"] <> "From:\\s+"
+                                   <> buildAnsiRegex [] ["37"] [] <> "testuser@foo.test"))
             pure ()
 
 testSendMail :: Int -> TestTree
@@ -476,17 +590,24 @@ testSendMail =
           sendKeys "Escape" (Literal "body")
 
           liftIO $ step "exit vim"
-          sendKeys ": x\r" (Regex ("text/plain; charset=utf-8\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
+          sendKeys ": x\r" (Regex ("text/plain\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
 
           liftIO $ step "send mail and go back to threads"
           sendKeys "y" (Regex ("Query:\\s" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
 
-          let fpath = testdir </> "sentMail"
-          contents <- liftIO $ B.readFile fpath
-          assertSubstrInOutput subj (chr . fromEnum <$> B.unpack contents)
+          liftIO $ step "parse mail with purebred-email"
+          assertMailSuccessfullyParsed (testdir </> "sentMail")
 
           pure ()
 
+parseMail :: B.ByteString -> Either String MIMEMessage
+parseMail = parse (message mime)
+
+assertMailSuccessfullyParsed :: String -> ReaderT a IO ()
+assertMailSuccessfullyParsed fp = do
+  contents <- liftIO $ B.readFile fp
+  let result = parseMail contents
+  liftIO $ assertBool "expected successful MIMEMessage" (isRight result)
 
 assertSubstrInOutput :: String -> String -> ReaderT a IO ()
 assertSubstrInOutput substr out = liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
