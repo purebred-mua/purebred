@@ -8,7 +8,7 @@
 
 Name:           %{pkg_name}
 Version:        0.1.0.0
-Release:        0.20171210%{?dist}
+Release:        0.20180113%{?dist}
 Summary:        An mail user agent built around notmuch
 
 License:        AGPLv3
@@ -19,36 +19,34 @@ BuildRequires:  ghc-Cabal-devel
 BuildRequires:  ghc-rpm-macros
 # Begin cabal-rpm deps:
 BuildRequires:  chrpath
+BuildRequires:  ghc-attoparsec-devel
 BuildRequires:  ghc-brick-devel
 BuildRequires:  ghc-bytestring-devel
 BuildRequires:  ghc-case-insensitive-devel
 BuildRequires:  ghc-directory-devel
 BuildRequires:  ghc-filepath-devel
 BuildRequires:  ghc-lens-devel
-BuildRequires:  ghc-mime-devel
 BuildRequires:  ghc-mime-mail-devel
 BuildRequires:  ghc-mtl-devel
 BuildRequires:  ghc-network-devel
 BuildRequires:  ghc-notmuch-devel
 BuildRequires:  ghc-optparse-applicative-devel
 BuildRequires:  ghc-process-devel
-BuildRequires:  ghc-temporary-devel
+BuildRequires:  ghc-purebred-email-devel
 BuildRequires:  ghc-text-devel
 BuildRequires:  ghc-text-zipper-devel
 BuildRequires:  ghc-time-devel
-BuildRequires:  ghc-unix-devel
 BuildRequires:  ghc-vector-devel
 BuildRequires:  ghc-vty-devel
 BuildRequires:  ghc-xdg-basedir-devel
 %if %{with tests}
 BuildRequires:  ghc-ini-devel
-BuildRequires:  ghc-quickcheck-text-devel
+BuildRequires:  ghc-quickcheck-instances-devel
 BuildRequires:  ghc-regex-posix-devel
-BuildRequires:  ghc-resourcet-devel
 BuildRequires:  ghc-tasty-devel
 BuildRequires:  ghc-tasty-hunit-devel
 BuildRequires:  ghc-tasty-quickcheck-devel
-BuildRequires:  ghc-unbounded-delays-devel
+BuildRequires:  ghc-temporary-devel
 %endif
 Requires: purebred-basic = %{version}-%{release}
 Requires: purebred-config = %{version}-%{release}
