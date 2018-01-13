@@ -54,7 +54,45 @@ systemTests =
       , testHelp
       , testManageTagsOnMails
       , testManageTagsOnThreads
+      , testAddAttachments
       ]
+
+testAddAttachments :: Int -> TestTree
+testAddAttachments = withTmuxSession "use file browser to add attachments" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "start composition"
+    sendKeys "m" (Literal "From")
+
+    liftIO $ step "enter from email"
+    sendKeys "testuser@foo.test\r" (Literal "To")
+
+    liftIO $ step "enter to: email"
+    sendKeys "user@to.test\r" (Literal "Subject")
+
+    liftIO $ step "enter subject"
+    sendKeys "test subject\r" (Literal "~")
+
+    liftIO $ step "enter mail body"
+    sendKeys "iThis is a test body" (Literal "body")
+
+    liftIO $ step "exit insert mode in vim"
+    sendKeys "Escape" (Literal "body")
+
+    liftIO $ step "exit vim"
+    sendKeys ": x\r" (Literal "Attachments")
+
+    liftIO $ step "start file browser"
+    sendKeys "a" (Literal "AddAttachment")
+
+    liftIO $ step "go to file system root"
+    sendKeys "c c" (Literal "📂 tmp")
+
+    -- TODO: enter tmp directory if we can reliably select the directory (see: #148)
+    -- TODO: actually end up attaching a file
+
+    pure ()
 
 testManageTagsOnMails :: Int -> TestTree
 testManageTagsOnMails = withTmuxSession "manage tags on mails" $
