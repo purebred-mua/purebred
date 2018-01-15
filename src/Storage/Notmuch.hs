@@ -144,7 +144,7 @@ messageToMail
 messageToMail m = do
     tgs <- Notmuch.tags m
     NotmuchMail
-      <$> (decodeLenient . fromMaybe "" <$> Notmuch.messageHeader "Subject" m)
+      <$> (fixupWhitespace . decodeLenient . fromMaybe "" <$> Notmuch.messageHeader "Subject" m)
       <*> (decodeLenient . fromMaybe "" <$> Notmuch.messageHeader "From" m)
       <*> Notmuch.messageDate m
       <*> pure tgs
@@ -208,9 +208,14 @@ threadToThread m = do
     tgs <- Notmuch.tags m
     auth <- Notmuch.threadAuthors m
     NotmuchThread
-      <$> (decodeLenient <$> Notmuch.threadSubject m)
+      <$> (fixupWhitespace . decodeLenient <$> Notmuch.threadSubject m)
       <*> pure (view Notmuch.matchedAuthors auth)
       <*> Notmuch.threadNewestDate m
       <*> pure tgs
       <*> Notmuch.threadTotalMessages m
       <*> Notmuch.threadId m
+
+fixupWhitespace :: T.Text -> T.Text
+fixupWhitespace = T.map f . T.filter (not . (== '\n'))
+  where f '\t' = ' '
+        f c = c
