@@ -229,9 +229,11 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
     liftIO $ step "shows tag"
     out <- capture
     assertSubstrInOutput "inbox" out
+    -- Should have white space removed (see: #152)
+    assertSubstrInOutput "Testmail with whitespace in the subject" out
 
     liftIO $ step "open thread"
-    sendKeys "Enter" (Literal "Testmail")
+    sendKeys "Enter" (Regex "url.user\\s+Testmail with whitespace in the subject")
 
     liftIO $ step "view mail"
     sendKeys "Enter" (Literal "This is a test mail")
