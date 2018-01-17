@@ -43,7 +43,7 @@ applyTags
     -> m (a, NotmuchMail)
 applyTags ops db mail = do
     let
-      mail' = foldr (over _2 . applyTagOp) mail ops
+      mail' = over _2 (tagItem ops) mail
       nmtags = view (_2 . mailTags) mail'
     if haveTagsChanged mail mail'
         then do
@@ -51,13 +51,16 @@ applyTags ops db mail = do
             pure mail'
         else pure mail'
 
+tagItem :: ManageTags a => [TagOp] -> a -> a
+tagItem ops mail = foldl (flip applyTagOp) mail ops
+
 haveTagsChanged :: (a, NotmuchMail) -> (a, NotmuchMail) -> Bool
 haveTagsChanged m1 m2 = sort (nub (view (_2 . mailTags) m1)) /= sort (nub (view (_2 . mailTags) m2))
 
 applyTagOp :: (ManageTags a) => TagOp -> a -> a
 applyTagOp (AddTag t) = addTags [t]
 applyTagOp (RemoveTag t) = removeTags [t]
-applyTagOp ResetTags = set tags []
+applyTagOp ResetTags = setTags []
 
 class ManageTags a  where
     tags :: Lens' a [Tag]

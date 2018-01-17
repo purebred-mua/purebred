@@ -562,18 +562,6 @@ emptyTempFile targetDir template = bracket
   (\(_, handle) -> hClose handle)
   (\(filePath, _) -> pure filePath)
 
--- | Utility function to set tags on the notmuch thread.
--- Note, that the tags are not persisted since notmuch does not support writing
--- tags to the thread itself. It is currently only used to avoid reloaded the
--- thread from the database after tags have been written to each mail in the
--- thread.
---
-tagThread
-  :: [TagOp]
-  -> NotmuchThread
-  -> NotmuchThread
-tagThread ops thread = foldr Notmuch.applyTagOp thread ops
-
 manageThreadTags
     :: MonadIO m
     => AppState
@@ -581,7 +569,7 @@ manageThreadTags
     -> (t, NotmuchThread)
     -> m (AppState -> AppState)
 manageThreadTags s ops t =
-  let update ops' _ = over (asMailIndex . miListOfThreads) (L.listModify (tagThread ops'))
+  let update ops' _ = over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
   in getMailsForThread t s
      >>= \ms -> applyTagOps ops ms s
      >>= either (pure . setError) (pure . update ops)

@@ -71,7 +71,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     _ <- sendLiteralKeys "+inbox +foo +bar"
 
     liftIO $ step "apply"
-    sendKeys "Enter" (Literal "bar foo")
+    sendKeys "Enter" (Literal "foo bar")
 
     liftIO $ step "go back to list of threads"
     sendKeys "Escape" (Literal "Testmail")
