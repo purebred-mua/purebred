@@ -11,15 +11,13 @@ module Purebred (
   getDatabasePath,
   defaultConfig,
   defaultColorMap,
-  over,
-  set,
-  (&),
+  module Control.Lens,
   purebred) where
 
 import UI.App (theApp, initialState)
 
 import Control.Exception.Base (SomeException(..), IOException, catch)
-import Control.Monad (unless, void)
+import Control.Monad ((>=>), unless, void)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import Data.Semigroup ((<>))
@@ -46,9 +44,7 @@ import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.Main (defaultMain)
 import Brick.Types (Next)
 import Brick.Widgets.List (List(..))
-import Control.Lens.Lens ((&))
-import Control.Lens.Setter (over, set)
-import Control.Lens.Getter (view)
+import Control.Lens ((&), over, set)
 
 newtype AppConfig = AppConfig
     { databaseFilepath :: Maybe String
@@ -101,12 +97,10 @@ launch cfg = do
     void $ defaultMain (theApp s) s
 
 processConfig :: UserConfiguration -> IO InternalConfiguration
-processConfig cfg = do
-    fp <- view (confNotmuch . nmDatabase) cfg
-    ed <- view confEditor cfg
-    pure $ cfg
-      & set (confNotmuch . nmDatabase) fp
-      & set confEditor ed
+processConfig =
+  (confNotmuch . nmDatabase) id
+  >=> confEditor id
+  >=> (confBrowseFilesView . bfHomePath) id
 
 -- | Recompile the config file if it has changed based on the modification timestamp
 -- Node: Mostly a XMonad.Main.hs rip-off.

@@ -80,6 +80,10 @@ instance EventHandler 'GatherHeadersSubject where
   keybindingsL _ = asConfig . confComposeView . cvSubjectKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cSubject) E.handleEditorEvent e
 
+instance EventHandler 'AddAttachment where
+  keybindingsL _ = asConfig . confBrowseFilesView . bfKeybindings
+  fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asBrowseFiles . bfEntries) L.handleListEvent e
+
 dispatch :: EventHandler m => Proxy m -> AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
 dispatch m s e = let kbs = view (keybindingsL m) s
                  in case lookupKeybinding e kbs of

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 -- | The main application module
 module UI.App where
 
@@ -22,6 +23,7 @@ import UI.Index.Main (drawMain)
 import UI.Actions (initialCompose)
 import UI.Mail.Main (drawMail)
 import UI.Help.Main (drawHelp)
+import UI.FileBrowser.Main (drawFileBrowser)
 import Types
 
 drawUI :: AppState -> [Widget Name]
@@ -38,6 +40,7 @@ drawUI s =
         GatherHeadersSubject -> drawInteractiveHeaders s
         ComposeEditor -> drawComposeEditor s
         Help -> drawHelp s
+        AddAttachment -> drawFileBrowser s
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) =
@@ -53,6 +56,7 @@ appEvent s (T.VtyEvent ev) =
     GatherHeadersSubject -> dispatch (Proxy :: Proxy 'GatherHeadersSubject) s ev
     ComposeEditor -> dispatch (Proxy :: Proxy 'ComposeEditor) s ev
     Help -> dispatch (Proxy :: Proxy 'Help) s ev
+    AddAttachment -> dispatch (Proxy :: Proxy 'AddAttachment) s ev
 appEvent s _ = M.continue s
 
 initialState :: InternalConfiguration -> IO AppState
@@ -70,7 +74,8 @@ initialState conf = do
                 (E.editorText ManageMailTagsEditor Nothing "")
                 (E.editorText ManageThreadTagsEditor Nothing "")
           mv = MailView Nothing Filtered
-        in pure $ AppState conf mi mv initialCompose BrowseThreads Nothing
+          bf = BrowseFiles (L.list ListOfFiles Vector.empty 1) ""
+        in pure $ AppState conf mi mv initialCompose BrowseThreads Nothing bf
 
 theApp :: AppState -> M.App AppState e Name
 theApp s =

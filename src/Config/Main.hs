@@ -9,7 +9,9 @@ import Brick.Util (fg, on)
 import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
 import System.Environment (lookupEnv)
+import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
+import UI.FileBrowser.Keybindings (fileBrowserKeybindings)
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
 import UI.GatherHeaders.Keybindings
        (interactiveGatherHeadersKeybindings,
@@ -118,5 +120,9 @@ defaultConfig =
       }
     , _confHelpView = HelpViewSettings
       { _hvKeybindings = helpKeybindings
+      }
+    , _confBrowseFilesView = BrowseFilesSettings
+      { _bfKeybindings = fileBrowserKeybindings
+      , _bfHomePath = getHomeDirectory
       }
     }

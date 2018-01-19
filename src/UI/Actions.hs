@@ -5,6 +5,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module UI.Actions (
   Scrollable(..)
@@ -33,6 +34,9 @@ module UI.Actions (
   , invokeEditor
   , reloadList
   , selectNextUnread
+  , toggleListItem
+  , changeDirectory
+  , gotoDirectory
   ) where
 
 import qualified Brick.Main as Brick
@@ -53,11 +57,11 @@ import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
 import System.Directory (getTemporaryDirectory)
 import System.Process (system)
+import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
-import Control.Lens
-       (itoList, set, over, view, _Just, (&), Getting, Lens')
+import Control.Lens (itoList, _1, _2, ix, set, over, view, _Just, (&), Getting, Lens')
 import Control.Lens.Fold ((^?!))
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
@@ -71,6 +75,7 @@ import Types
 import Error
 import UI.Utils (safeUpdate)
 import Purebred.Tags (parseTagOps)
+import Purebred.System.Directory (listDirectory')
 
 class Scrollable (n :: Mode) where
   makeViewportScroller :: Proxy n -> Brick.ViewportScroll Name
@@ -125,6 +130,10 @@ instance ModeTransition 'GatherHeadersSubject 'ComposeEditor where
 instance ModeTransition 'ComposeEditor 'BrowseThreads where
 
 instance ModeTransition 'Help 'BrowseThreads where
+
+instance ModeTransition 'ComposeEditor 'AddAttachment where
+
+instance ModeTransition 'AddAttachment 'ComposeEditor where
 
 instance ModeTransition s 'Help where  -- help can be reached from any mode
 
@@ -217,13 +226,19 @@ instance Focusable 'GatherHeadersSubject where
   switchFocus _ = pure . set asAppMode GatherHeadersSubject
 
 instance Focusable 'ComposeEditor where
-  switchFocus _ = pure . set asAppMode ComposeEditor
+  switchFocus _ = pure
 
 instance Focusable 'BrowseThreads where
   switchFocus _ = pure . set asAppMode BrowseThreads
 
 instance Focusable 'Help where
   switchFocus _ = pure . set asAppMode Help
+
+instance Focusable 'AddAttachment where
+  switchFocus _ s = let path = view (asConfig . confBrowseFilesView . bfHomePath) s
+                    in ($ s)
+                       <$> (either setError (\x -> set (asBrowseFiles . bfSearchPath) path . updateBrowseFileContents x)
+                            <$> runExceptT (listDirectory' path))
 
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
@@ -260,6 +275,9 @@ instance HasMode 'GatherHeadersSubject where
 
 instance HasMode 'ComposeEditor where
   mode _ = ComposeEditor
+
+instance HasMode 'AddAttachment where
+  mode _ = AddAttachment
 
 instance HasMode 'ManageThreadTags where
   mode _ = ManageThreadTags
@@ -356,6 +374,7 @@ listUp =
     , _aAction = \s -> case view asAppMode s of
         BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
         ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
+        AddAttachment -> pure $ over (asBrowseFiles . bfEntries) L.listMoveUp s
         _ -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
     }
 
@@ -366,6 +385,7 @@ listDown =
     , _aAction = \s -> case view asAppMode s of
         BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
         ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
+        AddAttachment -> pure $ over (asBrowseFiles . bfEntries) L.listMoveDown s
         _ -> pure $ over (asMailIndex. miListOfThreads) L.listMoveDown s
     }
 
@@ -425,6 +445,47 @@ selectNextUnread =
                  (L.listMoveTo (maybe 0 (\i -> seekIndex i fx vec) cur))
                  s
          }
+
+toggleListItem :: Action 'AddAttachment AppState
+toggleListItem =
+    Action
+    { _aDescription = "toggle selected state of a list item"
+    , _aAction = \s ->
+                      maybe
+                          (pure s)
+                          (\i -> pure $ over (asBrowseFiles . bfEntries . L.listElementsL . ix i . _1) not s)
+                          (view (asBrowseFiles . bfEntries . L.listSelectedL) s)
+    }
+
+gotoDirectory :: Action 'AddAttachment AppState
+gotoDirectory = Action "go to parent directory"
+                      (\s ->
+                       let s' = over (asBrowseFiles . bfSearchPath) takeDirectory s
+                       in ($ s')
+                          <$> (either setError updateBrowseFileContents
+                               <$> runExceptT (listDirectory' (view (asBrowseFiles . bfSearchPath) s')))
+                      )
+
+changeDirectory :: Action 'AddAttachment AppState
+changeDirectory = Action "enter directory" (liftIO . enterDirectory')
+
+enterDirectory' :: AppState -> IO AppState
+enterDirectory' s = case L.listSelectedElement $ view (asBrowseFiles . bfEntries) s of
+  Just (_, item) -> do
+    let fullpath = view (asBrowseFiles . bfSearchPath) s </> view (_2 . fsEntryName) item
+    case view _2 item of
+      Directory _ ->
+        let s' = set (asBrowseFiles . bfSearchPath) fullpath s
+        in ($ s')
+           <$> (either setError updateBrowseFileContents
+                <$> runExceptT (listDirectory' (view (asBrowseFiles . bfSearchPath) s')))
+      _ -> pure s
+  Nothing -> pure s
+
+updateBrowseFileContents :: [FileSystemEntry] -> AppState -> AppState
+updateBrowseFileContents contents s =
+  let contents' = view vector ((False, ) <$> contents)
+  in over (asBrowseFiles . bfEntries) (L.listReplace contents' (Just 0)) s
 
 -- Function definitions for actions
 --
