@@ -40,6 +40,7 @@ module UI.Actions (
   , toggleListItem
   , enterDirectory
   , parentDirectory
+  , createAttachments
   ) where
 
 import qualified Brick
@@ -49,6 +50,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Network.Mail.Mime (Part(..), Address(..), emptyMail, Encoding(..))
 import Network.Mail.Mime.Lens (lMailParts, lMailFrom, lMailTo, lMailHeaders)
+import Network.Mime (defaultMimeLookup)
 import Data.Proxy
 import Data.Semigroup ((<>))
 import Data.Text (unlines, unpack, pack, Text)
@@ -66,8 +68,8 @@ import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
 import Control.Lens
-       (_Just, to, at, ix, _1, _2, toListOf, traversed, has, itoList, set, over,
-        view, (&), Getting, Lens')
+       (_Just, to, at, ix, _1, _2, toListOf, traversed, has, itoList, set,
+        over, preview, view, (&), Getting, Lens')
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Exception (onException)
@@ -79,7 +81,8 @@ import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
-import UI.Utils (safeUpdate, focusedViewWidget, focusedViewName)
+import UI.Utils
+       (safeUpdate, focusedViewWidget, focusedViewName, toggledItems)
 import UI.Views (listOfMailsView, mailView)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
@@ -590,21 +593,53 @@ enterDirectory =
   Action
   { _aDescription = ["enter directory"]
   , _aAction = \s -> liftIO $ case view (asFileBrowser . fbEntries . to L.listSelectedElement) s of
-      Just (_, item) -> do
-        let fullpath = (currentLine $ view (asFileBrowser . fbSearchPath . E.editContentsL) s)
-                       </> view (_2 . fsEntryName) item
+      Just (_, item) ->
         case view _2 item of
           Directory _ ->
-            let s' = over (asFileBrowser . fbSearchPath . E.editContentsL) (insertMany fullpath . clearZipper) s
+            let fp = fullpath s item
+                s' = over (asFileBrowser . fbSearchPath . E.editContentsL) (insertMany fp. clearZipper) s
             in ($ s') <$> (either setError updateBrowseFileContents
                            <$> runExceptT (view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine . to listDirectory') s'))
           _ -> pure s
       Nothing -> pure s
+  }
 
-}
+createAttachments :: Action 'FileBrowser 'ListOfFiles AppState
+createAttachments =
+    Action
+        ["adds selected files as attachments"]
+        (\s ->
+              if isFileUnderCursor $ L.listSelectedElement $ view (asFileBrowser . fbEntries) s
+              then liftIO $ makeAttachmentsFromSelected s
+              else pure s)
 
 -- Function definitions for actions
 --
+makeAttachmentsFromSelected :: AppState -> IO AppState
+makeAttachmentsFromSelected s = do
+  parts <- traverse makePlainPart (selectedFiles s)
+  pure $ s & over (asCompose . cAttachments) (go parts)
+    . over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
+    . over (asViews . vsViews . at ComposeView . _Just . vFocus) (Brick.focusSetCurrent ListOfFiles)
+  where
+    go :: [Part] -> L.List Name Part -> L.List Name Part
+    go parts list = foldl (flip upsertPart) list parts
+
+selectedFiles :: AppState -> [FilePath]
+selectedFiles s = let cur = case L.listSelectedElement $ view (asFileBrowser . fbEntries) s of
+                        Just (_, (_, File fsname)) -> [(False, File fsname)]
+                        _ -> []
+                      toggled = toggledItems s (asFileBrowser . fbEntries)
+                  in fullpath s <$> cur <> toggled
+
+isFileUnderCursor :: Maybe (a, (b, FileSystemEntry)) -> Bool
+isFileUnderCursor i = maybe False isFile (preview (_Just . _2 . _2) i)
+  where isFile (File _) = True
+        isFile _ = False
+
+fullpath :: AppState -> (a, FileSystemEntry) -> FilePath
+fullpath s i = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> view (_2 . fsEntryName) i
+
 updateBrowseFileContents :: [FileSystemEntry] -> AppState -> AppState
 updateBrowseFileContents contents s =
   let contents' = view vector ((False, ) <$> contents)
@@ -761,7 +796,7 @@ upsertPart newPart list =
         L.listInsert 0 newPart list
 
 attachmentFilename :: AppState -> IO String
-attachmentFilename s = let tempfile = getTemporaryDirectory >>= \tdir -> emptyTempFile tdir "purebred.tmp"
+attachmentFilename s = let tempfile = getTemporaryDirectory >>= \tdir -> emptyTempFile tdir "purebred.txt"
                        in case L.listSelectedElement $ view (asCompose . cAttachments) s of
                             Nothing -> tempfile
                             Just (_, p) -> maybe tempfile (pure . unpack) $ partFilename p
@@ -769,7 +804,10 @@ attachmentFilename s = let tempfile = getTemporaryDirectory >>= \tdir -> emptyTe
 makePlainPart :: String -> IO Part
 makePlainPart filename = do
   content <- BL.readFile filename
-  pure $ Part "text/plain; charset=utf-8" Base64 (Just $ pack filename) [] content
+  pure $ Part (mimeType filename) Base64 (Just $ pack filename) [] content
+
+mimeType :: String -> Text
+mimeType = decodeLenient . defaultMimeLookup . pack
 
 editorError :: Error
 editorError = GenericError ("Editor command exited with error code."

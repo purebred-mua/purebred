@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 -- This file is part of purebred
 -- Copyright (C) 2017 Fraser Tweedale and Róman Joost
 --
@@ -17,16 +18,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Utils
        (safeUpdate, focusedViewWidget, focusedViewWidgets,
-        focusedViewName, focusedView, titleize, Titleize)
+        focusedViewName, focusedView, titleize, Titleize, toggledItems)
        where
 import qualified Data.Vector as Vector
 import Data.Foldable (toList)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
-import Control.Lens (view, at, _Just)
+import Control.Lens (folded, filtered, toListOf, Lens', view, at, _Just)
 import Brick.Focus (focusGetCurrent)
+import qualified Brick.Widgets.List as L
 
 import UI.Views (indexView)
+
+
 import Types
 
 safeUpdate :: Foldable t => Vector.Vector a -> t (Int, a) -> Vector.Vector a
@@ -51,6 +55,9 @@ focusedViewName s =
 focusedView :: AppState -> View
 focusedView s = let focused = view (asViews . vsViews . at (focusedViewName s)) s
                 in fromMaybe indexView focused
+
+toggledItems :: AppState -> Lens' AppState (L.List Name (Bool, a)) -> [(Bool, a)]
+toggledItems s l = toListOf (l . L.listElementsL . folded . filtered fst) s
 
 class Titleize a where
   titleize :: a -> Text

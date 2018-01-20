@@ -16,7 +16,7 @@ fileBrowserKeybindings =
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar ' ') []) (toggleListItem `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'u') [V.MCtrl]) (parentDirectory `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (enterDirectory `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (enterDirectory `chain` createAttachments `chain` continue)
     , Keybinding (V.EvKey (V.KChar ':') []) (noop `chain'` (focus :: Action 'FileBrowser 'ManageFileBrowserSearchPath AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
     , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)

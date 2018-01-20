@@ -90,6 +90,7 @@ library
                      , purebred-email
                      , attoparsec
                      , containers
+                     , mime-types
 
 executable purebred
   hs-source-dirs:      app
