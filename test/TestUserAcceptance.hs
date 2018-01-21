@@ -23,7 +23,7 @@ import Control.Lens (Lens', view)
 import Data.List (isInfixOf, intercalate)
 import System.Process (callProcess, readProcess)
 import System.Directory
-       (getCurrentDirectory, removeDirectoryRecursive, removeFile)
+       (getCurrentDirectory, removeDirectoryRecursive, removeFile, copyFile)
 import Test.Tasty (TestTree, TestName, testGroup, withResource)
 import Test.Tasty.HUnit (testCaseSteps, assertBool)
 import Text.Regex.Posix ((=~))
@@ -54,7 +54,26 @@ systemTests =
       , testHelp
       , testManageTagsOnMails
       , testManageTagsOnThreads
+      , testConfig
       ]
+
+testConfig :: Int -> TestTree
+testConfig = withTmuxSession "test custom config" $
+  \step -> do
+    testdir <- view (envDir . ask)
+    setEnvVarInSession "GHC" "stack"
+    setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
+    setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
+
+    startApplication
+
+    liftIO $ step "archive thread"
+    sendKeys "a" (Literal "archive")
+
+    liftIO $ step "quit"
+    sendKeys "q" (Literal "purebred")
+
+    pure ()
 
 testManageTagsOnMails :: Int -> TestTree
 testManageTagsOnMails = withTmuxSession "manage tags on mails" $
@@ -351,7 +370,13 @@ setUp i desc = do
     descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
   setUpTmuxSession sessionName
   (testdir, maildir) <- setUpTempMaildir
+  setUpPurebredConfig testdir
   pure $ Env testdir maildir sessionName
+
+setUpPurebredConfig :: FilePath -> IO ()
+setUpPurebredConfig testdir = do
+  c <- getCurrentDirectory
+  copyFile (c <> "/configs/config.hs") (testdir <> "/config.hs")
 
 setUpTempMaildir :: IO (String, String)
 setUpTempMaildir = do
@@ -506,6 +531,14 @@ startApplication = do
   liftIO $ callProcess "tmux" $
     communicateSessionArgs sessionName ("purebred --database " <> testmdir <> "\r") False
   void $ waitForString "Purebred: Item" defaultCountdown
+
+-- | Sets a shell environment variable
+-- Note: The tmux program provides a command to set environment variables for
+-- running sessions, yet they seem to be not inherited by the shell.
+setEnvVarInSession :: String -> String -> ReaderT Env IO ()
+setEnvVarInSession name value = do
+  void $ sendLiteralKeys ("export " <> name <> "=" <> value)
+  void $ sendKeys "Enter" (Literal name)
 
 communicateSessionArgs
   :: String -- ^ session name
