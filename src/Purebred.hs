@@ -32,7 +32,7 @@ import System.Environment.XDG.BaseDir (getUserConfigDir)
 import System.Directory (getModificationTime, getCurrentDirectory)
 import System.FilePath.Posix ((</>))
 import System.IO (hPrint, stderr, hFlush)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe)
 
 import UI.Index.Keybindings
 import UI.Mail.Keybindings
@@ -136,46 +136,29 @@ recompile force = do
 -- testing could otherwise become a nuisance.
 compileGHC :: String -> FilePath -> FilePath -> IO ProcessHandle
 compileGHC bin cfgdir sourcePath = do
-    withStack <- lookupEnv "WITHSTACK"
-    if isJust withStack
-        then runProcess
-                 "stack"
-                 [ "ghc"
-                 , "--"
-                 , "-threaded"
-                 , "--make"
-                 , sourcePath
-                 , "-i"
-                 , "-ilib"
-                 , "-fforce-recomp"
-                 , "-main-is"
-                 , "main"
-                 , "-v0"
-                 , "-o"
-                 , bin]
-                 (Just cfgdir)
-                 Nothing
-                 Nothing
-                 Nothing
-                 Nothing
-        else runProcess
-                 "ghc"
-                 [ "-threaded"
-                 , "--make"
-                 , sourcePath
-                 , "-i"
-                 , "-ilib"
-                 , "-fforce-recomp"
-                 , "-main-is"
-                 , "main"
-                 , "-v0"
-                 , "-o"
-                 , bin]
-                 (Just cfgdir)
-                 Nothing
-                 Nothing
-                 Nothing
-                 Nothing
+    compiler <- lookupEnv "GHC"
+    compiler_opts <- lookupEnv "GHC_ARGS"
+    let ghc = fromMaybe "ghc" compiler
+    let ghcopts = fromMaybe [] compiler_opts
+    runProcess
+        ghc
+        (words ghcopts <>
+         [ "-threaded"
+         , "--make"
+         , sourcePath
+         , "-i"
+         , "-ilib"
+         , "-fforce-recomp"
+         , "-main-is"
+         , "main"
+         , "-v0"
+         , "-o"
+         , bin])
+        (Just cfgdir)
+        Nothing
+        Nothing
+        Nothing
+        Nothing
 
 getPurebredConfigDir :: IO FilePath
 getPurebredConfigDir = do

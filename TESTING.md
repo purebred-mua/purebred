@@ -29,3 +29,11 @@ example:
 
     # would only run a user acceptance test with an "error" substring
     stack test --test-arguments='-p "tests/user*/*error*"'
+
+## Running purebred with a custom config and stack
+
+Purebred accepts environment variables which are also used in the acceptance
+tests. To run purebred with stack and a custom config, here is an example:
+
+    # Purebred invokes: "stack ghc --" + additional compile arguments
+    GHC="stack" GHC_ARGS="ghc --" PUREBRED_CONFIG_DIR=configs stack exec purebred
