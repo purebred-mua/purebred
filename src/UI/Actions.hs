@@ -41,7 +41,7 @@ import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Network.Mail.Mime (Address(..), renderSendMail, simpleMail')
+import Network.Mail.Mime (Address(..), simpleMail')
 import Data.Proxy
 import Data.Semigroup ((<>))
 import Data.Text (unlines, Text)
@@ -529,7 +529,7 @@ sendMail s = do
                 from
                 (unlines $ E.getEditContents $ view (asCompose . cSubject) s)
                 body
-    liftIO $ renderSendMail m
+    liftIO $ view (asConfig . confComposeView . cvSendMailCmd) s m
     pure $ set asCompose initialCompose s
 
 initialCompose :: Compose

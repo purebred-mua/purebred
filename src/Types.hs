@@ -20,6 +20,7 @@ import qualified Data.Text.Encoding.Error as T
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
+import qualified Network.Mail.Mime as Mail
 
 import Notmuch (Tag)
 import Data.MIME
@@ -187,6 +188,7 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvFromKeybindings :: [Keybinding 'GatherHeadersFrom (Next AppState)]
     , _cvToKeybindings :: [Keybinding 'GatherHeadersTo (Next AppState)]
     , _cvSubjectKeybindings :: [Keybinding 'GatherHeadersSubject (Next AppState)]
+    , _cvSendMailCmd :: Mail.Mail -> IO ()
     }
 
 cvKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeEditor (Next AppState)]
@@ -200,6 +202,9 @@ cvToKeybindings = lens _cvToKeybindings (\cv x -> cv { _cvToKeybindings = x })
 
 cvSubjectKeybindings :: Lens' ComposeViewSettings [Keybinding 'GatherHeadersSubject (Next AppState)]
 cvSubjectKeybindings = lens _cvSubjectKeybindings (\cv x -> cv { _cvSubjectKeybindings = x })
+
+cvSendMailCmd :: Lens' ComposeViewSettings (Mail.Mail -> IO ())
+cvSendMailCmd = lens _cvSendMailCmd (\cv x -> cv { _cvSendMailCmd = x })
 
 newtype HelpViewSettings = HelpViewSettings
   { _hvKeybindings :: [Keybinding 'Help (Next AppState)]
