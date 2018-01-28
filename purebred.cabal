@@ -120,3 +120,4 @@ test-suite unittests
                      , lens
                      , notmuch
                      , time
+                     , filepath

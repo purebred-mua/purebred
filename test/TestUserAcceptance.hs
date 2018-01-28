@@ -1,3 +1,19 @@
+-- This file is part of purebred
+-- Copyright (C) 2017 Róman Joost
+--
+-- purebred is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU Affero General Public License for more details.
+--
+-- You should have received a copy of the GNU Affero General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 
 {-# LANGUAGE OverloadedStrings #-}
@@ -14,8 +30,11 @@ import Control.Concurrent (threadDelay)
 import Control.Exception (catch, IOException)
 import System.IO (hPutStr, hPutStrLn, stderr)
 import System.Environment (lookupEnv)
+import System.FilePath.Posix ((</>))
 import Control.Monad (void, when)
 import Data.Maybe (isJust)
+import Data.Char (chr)
+import qualified Data.ByteString as B
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT, ask, ReaderT)
 
@@ -48,6 +67,7 @@ systemTests =
       [ testUserViewsMailSuccessfully
       , testUserCanManipulateNMQuery
       , testUserCanSwitchBackToIndex
+      , testSendMail
       , testCanToggleHeaders
       , testSetsMailToRead
       , testErrorHandling
@@ -327,6 +347,49 @@ testUserCanSwitchBackToIndex =
             sendKeys "C-n" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "To:\\s+"
                                    <> buildAnsiRegex [] ["37"] ["40"] <> "user@to.test"))
             pure ()
+
+testSendMail :: Int -> TestTree
+testSendMail =
+  withTmuxSession "sending mail successfully" $
+        \step -> do
+          testdir <- view (envDir . ask)
+          setEnvVarInSession "GHC" "stack"
+          setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
+          setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
+
+          startApplication
+
+          liftIO $ step "start composition"
+          sendKeys "m" (Literal "From")
+
+          liftIO $ step "enter from email"
+          sendKeys "testuser@foo.test\r" (Literal "To")
+
+          liftIO $ step "enter to: email"
+          sendKeys "user@to.test\r" (Literal "Subject")
+
+          liftIO $ step "enter subject"
+          let subj = ("test subject from directory " <> testdir)
+          sendKeys (subj <> "\r") (Literal "~")
+
+          liftIO $ step "enter mail body"
+          sendKeys "iThis is a test body" (Literal "body")
+
+          liftIO $ step "exit insert mode in vim"
+          sendKeys "Escape" (Literal "body")
+
+          liftIO $ step "exit vim"
+          sendKeys ": x\r" (Literal "Attachments")
+
+          liftIO $ step "send mail"
+          sendKeys "y" (Literal "Purebred")
+
+          let fpath = testdir </> "sentMail"
+          contents <- liftIO $ B.readFile fpath
+          assertSubstrInOutput subj (chr . fromEnum <$> B.unpack contents)
+
+          pure ()
+
 
 assertSubstrInOutput :: String -> String -> ReaderT a IO ()
 assertSubstrInOutput substr out = liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out

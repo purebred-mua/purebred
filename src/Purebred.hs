@@ -8,12 +8,15 @@ module Purebred (
   Modifier(..),
   List(..),
   Next,
+  Mail,
+  renderMail',
   getDatabasePath,
   defaultConfig,
   defaultColorMap,
   over,
   set,
   (&),
+  (</>),
   purebred) where
 
 import UI.App (theApp, initialState)
@@ -49,6 +52,7 @@ import Brick.Widgets.List (List(..))
 import Control.Lens.Lens ((&))
 import Control.Lens.Setter (over, set)
 import Control.Lens.Getter (view)
+import Network.Mail.Mime (Mail, renderMail')
 
 newtype AppConfig = AppConfig
     { databaseFilepath :: Maybe String

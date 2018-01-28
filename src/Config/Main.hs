@@ -10,6 +10,10 @@ import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
 import System.Environment (lookupEnv)
 import Data.Maybe (fromMaybe)
+import Network.Mail.Mime (renderSendMail)
+
+import Data.MIME (ContentType(..))
+
 import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
 import UI.GatherHeaders.Keybindings
        (interactiveGatherHeadersKeybindings,
@@ -21,8 +25,6 @@ import UI.Index.Keybindings
         manageMailTagsKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings, displayIndexKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
-
-import Data.MIME (ContentType(..))
 
 import Types
 import Storage.Notmuch (getDatabasePath)
@@ -115,6 +117,7 @@ defaultConfig =
       , _cvFromKeybindings = interactiveGatherHeadersKeybindings
       , _cvToKeybindings = interactiveGatherHeadersToKeybindings
       , _cvSubjectKeybindings = interactiveGatherHeadersSubjectKeybindings
+      , _cvSendMailCmd = renderSendMail
       }
     , _confHelpView = HelpViewSettings
       { _hvKeybindings = helpKeybindings
