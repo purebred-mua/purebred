@@ -8,10 +8,11 @@ import Brick.Widgets.Core
         withAttr)
 
 import Control.Applicative ((<|>))
-import Control.Lens (filtered, firstOf, folded, toListOf, view)
+import Control.Lens (filtered, firstOf, folded, preview, toListOf, view)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import Data.Maybe (fromMaybe)
+import Data.Semigroup ((<>))
 
 import Data.MIME
 
@@ -76,7 +77,15 @@ chooseEntity s msg =
     fromMaybe mempty ent
 
 entityToView :: Entity -> Widget Name
-entityToView (_, b) = txtWrap $ decodeLenient b
+entityToView ent@(h, b) =
+  txtWrap $ decodeLenient $ fromMaybe
+    ("NOTE: transfer decoding failed (" <> cte <> "). Showing raw body.\n\n" <> b)
+      -- Note: when we have an AST for content display, we can make
+      -- the above an "alert" instead of prepending to actual message
+    (preview contentTransferDecoded ent)
+  where
+    cte = fromMaybe "" (preview (header "content-transfer-encoding") h)
+
 
 -- | The size limit of the index list
 indexViewRows :: AppState -> Int
