@@ -193,7 +193,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
 
     liftIO $ step "navigate to second mail and assert shows old tag"
     sendKeys "Down" (Literal "Item 2 of 2")
-    sendKeys "Escape" (Regex ("Refactor." <> buildAnsiRegex [] ["36"] [] <> "replied thread$"))
+    sendKeys "Escape" (Regex ("Refactor\\s+" <> buildAnsiRegex [] ["36"] [] <> "replied thread$"))
 
     pure ()
 
@@ -276,6 +276,28 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
 
     liftIO $ step "view mail"
     sendKeys "Enter" (Literal "This is a test mail")
+
+    liftIO $ step "go back to thread list"
+    sendKeys "q q" (Literal "WIP Refactor")
+
+    liftIO $ step "Move down to threaded mails"
+    sendKeys "Down" (Literal "Purebred: Item 2 of 3")
+    sendKeys "Down" (Literal "Purebred: Item 3 of 3")
+    sendKeys "Enter" (Literal "Re: WIP Refactor")
+
+    liftIO $ step "Scroll down"
+    sendKeys "Enter" (Literal "Beginning of large text")
+    sendKeys "Space Space Space Space" (Literal "de Finibus Bonorum")
+
+    liftIO $ step "go to next unread mail"
+    sendKeys "j" (Literal "Re: WIP Refactor")
+
+    liftIO $ step "Scroll down (again)"
+    sendKeys "Space Space Space" (Literal "But I must explain")
+
+    liftIO $ step "go to previous mail with reset scroll state"
+    sendKeys "k" (Regex "Subject\\s.*WIP Refactor")
+
     pure ()
 
 testUserCanManipulateNMQuery :: Int -> TestTree

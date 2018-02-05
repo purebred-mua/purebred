@@ -36,7 +36,8 @@ module UI.Actions (
   ) where
 
 import qualified Brick.Main as Brick
-       (suspendAndResume, continue, halt, vScrollPage, viewportScroll, ViewportScroll)
+       (suspendAndResume, continue, halt, vScrollToBeginning, vScrollPage,
+        viewportScroll, ViewportScroll)
 import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
@@ -331,9 +332,12 @@ displayMail :: Action ctx AppState
 displayMail =
     Action
     { _aDescription = "display an e-mail"
-    , _aAction = \s -> liftIO $ updateStateWithParsedMail s
-                       >>= updateReadState (RemoveTag $ view (asConfig . confNotmuch . nmNewTag) s)
+    , _aAction = \s -> do
+        resetScrollState
+        liftIO $ updateStateWithParsedMail s
+          >>= updateReadState (RemoveTag $ view (asConfig . confNotmuch . nmNewTag) s)
     }
+  where resetScrollState = Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy 'ViewMail))
 
 displayThreadMails :: Action 'BrowseThreads AppState
 displayThreadMails =
