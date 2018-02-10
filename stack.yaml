@@ -43,7 +43,7 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/purebred-mua/purebred-email.git
-    commit: 6c53328ded07404132ac962791202fe5c08c6a10
+    commit: a1e16b68701baa9ec8e805ef1376fb30487f2089
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
@@ -54,6 +54,7 @@ extra-deps:
 - data-clist-0.1.2.0
 - word-wrap-0.2
 - vty-5.18.1
+- concise-0.1.0.1
 
 # Override default flag values for local packages and extra-deps
 flags: {}
