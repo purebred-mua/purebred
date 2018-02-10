@@ -10,7 +10,6 @@ import Control.Lens (firstOf)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as L
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text as T
 
@@ -25,7 +24,7 @@ parseMail
   => NotmuchMail -> FilePath -> m (Message MIME)
 parseMail m dbpath = do
   filePath <- mailFilepath m dbpath
-  liftIO (try (L.readFile filePath))
+  liftIO (try (B.readFile filePath))
     >>= either (throwError . FileReadError filePath) pure
     >>= either (throwError . FileParseError filePath) pure
         . parse (message mime)
