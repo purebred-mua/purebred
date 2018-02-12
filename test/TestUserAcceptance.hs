@@ -296,7 +296,7 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
     sendKeys "Space Space Space" (Literal "But I must explain")
 
     liftIO $ step "go to previous mail with reset scroll state"
-    sendKeys "k" (Regex "Subject\\s.*WIP Refactor")
+    sendKeys "k" (Regex "Subject:\\s.*WIP Refactor")
 
     pure ()
 
