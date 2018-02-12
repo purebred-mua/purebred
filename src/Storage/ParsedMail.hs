@@ -21,7 +21,7 @@ import Types (NotmuchMail, decodeLenient)
 
 parseMail
   :: (MonadError Error m, MonadIO m)
-  => NotmuchMail -> FilePath -> m (Message MIME)
+  => NotmuchMail -> FilePath -> m MIMEMessage
 parseMail m dbpath = do
   filePath <- mailFilepath m dbpath
   liftIO (try (B.readFile filePath))
@@ -29,16 +29,16 @@ parseMail m dbpath = do
     >>= either (throwError . FileParseError filePath) pure
         . parse (message mime)
 
-getHeader :: CI.CI B.ByteString -> Message a -> T.Text
+getHeader :: CI.CI B.ByteString -> Message s a -> T.Text
 getHeader k =
   maybe "header not found" decodeLenient
-  . firstOf (messageHeaders . header k)
+  . firstOf (headers . header k)
 
-getFrom :: Message MIME -> T.Text
+getFrom :: Message s a -> T.Text
 getFrom = getHeader "from"
 
-getSubject :: Message MIME -> T.Text
+getSubject :: Message s a -> T.Text
 getSubject = getHeader "subject"
 
-getTo :: Message MIME -> T.Text
+getTo :: Message s a -> T.Text
 getTo = getHeader "to"

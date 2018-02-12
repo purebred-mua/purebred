@@ -92,11 +92,11 @@ miThreadTagsEditor = lens _miThreadTagsEditor (\m v -> m { _miThreadTagsEditor =
 data HeadersState = ShowAll | Filtered
 
 data MailView = MailView
-    { _mvMail :: Maybe (Message MIME)
+    { _mvMail :: Maybe MIMEMessage
     , _mvHeadersState :: HeadersState
     }
 
-mvMail :: Lens' MailView (Maybe (Message MIME))
+mvMail :: Lens' MailView (Maybe MIMEMessage)
 mvMail = lens _mvMail (\mv pm -> mv { _mvMail = pm })
 
 mvHeadersState :: Lens' MailView HeadersState
