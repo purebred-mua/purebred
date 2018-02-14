@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -217,6 +218,13 @@ threadToThread m = do
       <*> pure tgs
       <*> Notmuch.threadTotalMessages m
       <*> Notmuch.threadId m
+
+reloadThreadTags
+    :: (MonadError Error m, MonadIO m)
+    => FilePath -> NotmuchThread -> m NotmuchThread
+reloadThreadTags fp item = withDatabaseReadOnly fp go
+  where
+    go db = fmap (`setTags` item) . Notmuch.tags =<< getThread db (view thId item)
 
 fixupWhitespace :: T.Text -> T.Text
 fixupWhitespace = T.map f . T.filter (not . (== '\n'))

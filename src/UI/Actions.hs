@@ -220,7 +220,11 @@ instance Focusable 'ComposeEditor where
   switchFocus _ = pure . set asAppMode ComposeEditor
 
 instance Focusable 'BrowseThreads where
-  switchFocus _ = pure . set asAppMode BrowseThreads
+  -- Reload the threads tags when returning to the list of threads, since they
+  -- could have changed. If no thread is selected (e.g. invalid search leading
+  -- no results) then there is nothing to update.
+  switchFocus _ s = let selected = L.listSelectedElement $ view (asMailIndex . miListOfThreads) s
+                    in ($ s) <$> maybe (pure id) (reloadThreadTags s) selected
 
 instance Focusable 'Help where
   switchFocus _ = pure . set asAppMode Help
@@ -597,3 +601,13 @@ getMailsForThread
 getMailsForThread (_, ts) s =
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
   in either (const mempty)(view vector . itoList) <$> runExceptT (Notmuch.getThreadMessages dbpath ts)
+
+reloadThreadTags
+  :: MonadIO m
+  => AppState
+  -> (a, NotmuchThread)
+  -> m (AppState -> AppState)
+reloadThreadTags s (_, thread) =
+  let dbpath = view (asConfig. confNotmuch . nmDatabase) s
+      updateList t' = over (asMailIndex . miListOfThreads) (L.listModify $ const t')
+  in either setError updateList <$> runExceptT (Notmuch.reloadThreadTags dbpath thread)
