@@ -10,8 +10,8 @@ import Types
 -- | Default Keybindings
 browseMailKeybindings :: [Keybinding 'BrowseMail (Brick.Next AppState)]
 browseMailKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain'` (reloadList :: Action 'BrowseThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'q') []) (focus `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (displayMail `chain` continue)
     , Keybinding (V.EvKey V.KDown []) (listDown `chain` continue)
     , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)

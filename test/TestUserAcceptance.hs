@@ -75,7 +75,35 @@ systemTests =
       , testManageTagsOnMails
       , testManageTagsOnThreads
       , testConfig
+      , testUpdatesReadState
       ]
+
+testUpdatesReadState :: Int -> TestTree
+testUpdatesReadState = withTmuxSession "updates read state for mail and thread" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "navigate to thread mails"
+    sendKeys "Down" (Literal "2 of 3")
+    sendKeys "Down" (Literal "3 of 3")
+
+    liftIO $ step "view unread mail in thread"
+    sendKeys "Enter" (Literal "WIP Refactor")
+
+    liftIO $ step "view next unread in thread"
+    sendKeys "Down" (Literal "2 of 2")
+
+    liftIO $ step "go back to thread list which is read"
+    sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> " 08/Feb \\(2\\)"))
+
+    liftIO $ step "set one mail to unread"
+    sendKeys "Enter" (Literal "Beginning of large text")
+    sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> " 08/Feb Róman Joost <ro\\s+WIP Refactor"))
+
+    liftIO $ step "returning to thread list shows thread unread"
+    sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> " 08/Feb \\(2\\)"))
+
+    pure ()
 
 testConfig :: Int -> TestTree
 testConfig = withTmuxSession "test custom config" $
