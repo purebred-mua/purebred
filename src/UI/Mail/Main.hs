@@ -7,11 +7,12 @@ import Brick.Widgets.Core
   (padTop, txt, txtWrap, vLimit, viewport, (<+>), (<=>), withAttr)
 
 import Control.Applicative ((<|>))
-import Control.Lens (filtered, firstOf, folded, preview, to, toListOf, view)
+import Control.Lens (filtered, firstOf, folded, to, toListOf, view)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import Data.Semigroup ((<>))
 import Data.Text.Lens (packed)
+import qualified Data.Text as T
 
 import Data.MIME
 
@@ -71,21 +72,13 @@ chooseEntity s msg =
   in firstOf (entities . filtered match) msg <|> firstOf entities msg
 
 entityToView :: WireEntity -> Widget Name
-entityToView msg = txtWrap . either err id $ do
-  msg' <- maybe
-    (Left $ "transfer decoding failed (" <> cte <> ")")
-    Right
-    (preview contentTransferDecoded msg)
-  maybe
-    (Left $ "unrecognised charset (" <> ct <> ")")
-    Right
-    (preview (charsetDecoded . body) msg')
+entityToView msg = txtWrap . either err (view body) $
+  view transferDecoded msg >>= view charsetDecoded
   where
-    err emsg =
-      "ERROR: " <> emsg <> ". Showing raw body.\n\n"
+    err :: EncodingError -> T.Text
+    err e =
+      "ERROR: " <> view (to show . packed) e <> ". Showing raw body.\n\n"
       <> decodeLenient (view body msg)
-    cte = maybe "" decodeLenient (preview (headers . header "content-transfer-encoding") msg)
-    ct = view (headers . contentType . to show . packed) msg
 
 
 -- | The size limit of the index list
