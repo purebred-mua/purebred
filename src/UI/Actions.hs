@@ -50,7 +50,6 @@ import Data.Text (unlines, Text)
 import Data.Text.Lazy.IO (readFile)
 import qualified Data.ByteString.Char8 as BC
 import Data.Vector.Lens (vector)
-import Data.Foldable (toList)
 import Data.Maybe (fromMaybe)
 import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
@@ -155,12 +154,9 @@ instance Completable 'ManageMailTags where
 
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
-    let selected = toList $ L.listSelectedElement $ view (asMailIndex . miListOfMails) s
-    in case getEditorTagOps (asMailIndex . miMailTagsEditor) s of
+    case getEditorTagOps (asMailIndex . miMailTagsEditor) s of
         Left err -> pure $ setError err s
-        Right ops' -> ($ s)
-          <$> (applyTagOps ops' (view vector selected) s
-               >>= either (pure . setError) (pure . updateMails))
+        Right ops' -> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops')
 
 -- | Applying tag operations on threads
 -- Note: notmuch does not support adding tags to threads themselves, instead we'll
@@ -412,8 +408,7 @@ setTags ops =
     , _aAction = \s ->
         case view asAppMode s of
           BrowseThreads -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
-          _ -> liftIO . selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
-               either setError updateMails <$> applyTagOps ops (view vector [m]) s
+          _ -> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops)
     }
 
 reloadList :: Action 'BrowseThreads AppState
@@ -494,9 +489,16 @@ updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s
             <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
 
 updateReadState :: TagOp -> AppState -> IO AppState
-updateReadState op s =
-  selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
-  either setError updateMails <$> applyTagOps [op] (Vector.singleton m) s
+updateReadState op s = selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s [op])
+
+manageMailTags
+    :: MonadIO m
+    => AppState
+    -> [TagOp]
+    -> (Int, NotmuchMail)
+    -> m (AppState -> AppState)
+manageMailTags s tagop m =
+  either setError updateMails <$> applyTagOps tagop (Vector.singleton m) s
 
 updateMails :: Foldable t => t (Int, NotmuchMail) -> AppState -> AppState
 updateMails mails = over (asMailIndex . miListOfMails . L.listElementsL) (`safeUpdate` mails)
