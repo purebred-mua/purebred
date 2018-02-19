@@ -38,6 +38,7 @@ defaultColorMap =
         , (listNewMailAttr, fg V.white `V.withStyle` V.bold)
         , (listNewMailSelectedAttr, V.white `on` V.yellow `V.withStyle` V.bold)
         , (mailTagsAttr, fg V.cyan)
+        , (mailAuthorsAttr, fg V.white)
         , (E.editFocusedAttr, V.white `on` V.black)
         , (E.editAttr, V.brightBlue `on` V.black)
         , (statusbarErrorAttr, fg V.red)
@@ -69,6 +70,9 @@ mailAttr = "mail"
 
 mailTagsAttr :: A.AttrName
 mailTagsAttr = mailAttr <> "tags"
+
+mailAuthorsAttr :: A.AttrName
+mailAuthorsAttr = mailAttr <> "authors"
 
 headerAttr :: A.AttrName
 headerAttr = "header"

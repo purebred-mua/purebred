@@ -98,7 +98,7 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 
     liftIO $ step "set one mail to unread"
     sendKeys "Enter" (Literal "Beginning of large text")
-    sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> " 08/Feb Róman Joost <ro\\s+WIP Refactor"))
+    sendKeys "q t" (Regex (buildAnsiRegex ["1"] [] [] <> "\\sWIP Refactor\\s" <> buildAnsiRegex ["0"] ["34"] ["40"]))
 
     liftIO $ step "returning to thread list shows thread unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> " 08/Feb \\(2\\)"))
@@ -221,7 +221,10 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
 
     liftIO $ step "navigate to second mail and assert shows old tag"
     sendKeys "Down" (Literal "Item 2 of 2")
-    sendKeys "Escape" (Regex ("Refactor\\s+" <> buildAnsiRegex [] ["36"] [] <> "replied thread$"))
+    sendKeys "Escape" (Regex (buildAnsiRegex [] ["36"] []
+                              <> "replied thread"
+                              <> buildAnsiRegex [] ["37"] []
+                              <> "\\sRóman Joost\\s<\\w+\\sRe: WIP Refactor"))
 
     pure ()
 
