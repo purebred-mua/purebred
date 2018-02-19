@@ -22,7 +22,7 @@ import Storage.Notmuch (hasTag)
 import Types
 import Config.Main
        (listNewMailAttr, listNewMailSelectedAttr, mailTagsAttr,
-        listSelectedAttr, listAttr)
+        listSelectedAttr, listAttr, mailAuthorsAttr)
 
 drawMain :: AppState -> [Widget Name]
 drawMain s = [ui]
@@ -52,9 +52,9 @@ listDrawMail s sel a =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
         widget = padLeft (Pad 1) (txt $ formatDate (view mailDate a)) <+>
-                 padLeft (Pad 1) (hLimit 15 (txt $ view mailFrom a)) <+>
-                 padLeft (Pad 2) (txt (view mailSubject a)) <+>
-                 padLeft Max (renderTagsWidget (view mailTags a) (view nmNewTag settings))
+                 padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings)) <+>
+                 padLeft (Pad 1) (renderAuthors $ view mailFrom a) <+>
+                 padLeft (Pad 1) (txt (view mailSubject a)) <+> fillLine
     in withAttr (getListAttr isNewMail sel) widget
 
 listDrawThread :: AppState -> Bool -> NotmuchThread -> Widget Name
@@ -64,7 +64,7 @@ listDrawThread s sel a =
         widget = padLeft (Pad 1) (txt $ formatDate (view thDate a)) <+>
                  padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")") <+>
                  padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings)) <+>
-                 padLeft (Pad 1) (hLimit 15 (txt $ T.unwords $ view thAuthors a)) <+>
+                 padLeft (Pad 1) (renderAuthors $ T.unwords $ view thAuthors a) <+>
                  padLeft (Pad 1) (txt (view thSubject a)) <+> fillLine
     in withAttr (getListAttr isNewMail sel) widget
 
@@ -78,6 +78,9 @@ getListAttr False False = listAttr  -- not selected and not new
 
 formatDate :: UTCTime -> Text
 formatDate t = pack $ formatTime defaultTimeLocale "%d/%b" (utctDay t)
+
+renderAuthors :: Text -> Widget Name
+renderAuthors authors = withAttr mailAuthorsAttr $ hLimit 15 (txt authors)
 
 renderTagsWidget :: [Tag] -> Tag -> Widget Name
 renderTagsWidget tgs ignored =
