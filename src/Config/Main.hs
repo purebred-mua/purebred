@@ -105,7 +105,7 @@ defaultConfig =
     , _confMailView = MailViewSettings
       { _mvIndexRows = 10
       , _mvPreferedContentType = ContentType "text" "plain" []
-      , _mvHeadersToShow = (`elem` ["subject", "to", "from"])
+      , _mvHeadersToShow = (`elem` ["subject", "to", "from", "cc"])
       , _mvKeybindings = displayMailKeybindings
       , _mvIndexKeybindings = displayIndexKeybindings
       }
