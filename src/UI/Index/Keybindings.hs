@@ -17,6 +17,8 @@ browseMailKeybindings =
     , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help AppState) `chain` continue)
@@ -36,6 +38,8 @@ browseThreadsKeybindings =
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
     ]
 
 searchThreadsKeybindings :: [Keybinding 'SearchThreads (Brick.Next AppState)]

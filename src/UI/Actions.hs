@@ -20,6 +20,8 @@ module UI.Actions (
   , previousInput
   , listUp
   , listDown
+  , listJumpToEnd
+  , listJumpToStart
   , switchComposeEditor
   , replyMail
   , scrollUp
@@ -378,6 +380,26 @@ listDown =
         _ -> pure $ over (asMailIndex. miListOfThreads) L.listMoveDown s
     }
 
+listJumpToEnd :: Action m AppState
+listJumpToEnd = Action
+  { _aDescription = "move selection to last element"
+    , _aAction = \s -> case view asAppMode s of
+        BrowseMail -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
+        ViewMail -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
+        ComposeEditor -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
+        _ -> pure $ listSetSelectionEnd (asMailIndex. miListOfThreads) s
+  }
+
+listJumpToStart :: Action m AppState
+listJumpToStart = Action
+  { _aDescription = "move selection to last element"
+    , _aAction = \s -> case view asAppMode s of
+        BrowseMail -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
+        ViewMail -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
+        ComposeEditor -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
+        _ -> pure $ over (asMailIndex. miListOfThreads) (L.listMoveTo 0) s
+  }
+
 switchComposeEditor :: Action 'BrowseThreads AppState
 switchComposeEditor =
     Action
@@ -438,6 +460,11 @@ selectNextUnread =
 --
 findIndexWithOffset :: Int -> (a -> Bool) -> Vector.Vector a -> Maybe Int
 findIndexWithOffset i fx = fmap (i+) . Vector.findIndex fx . Vector.drop i
+
+listSetSelectionEnd :: Lens' AppState (L.List Name a) -> AppState -> AppState
+listSetSelectionEnd list s =
+  let index = Vector.length $ view (list . L.listElementsL) s
+  in over list (L.listMoveTo index) s
 
 -- | Seek forward from an offset, returning the offset if
 -- nothing after it matches the predicate.
