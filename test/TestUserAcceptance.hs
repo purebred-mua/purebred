@@ -76,7 +76,21 @@ systemTests =
       , testManageTagsOnThreads
       , testConfig
       , testUpdatesReadState
+      , testCanJumpToFirstListItem
       ]
+
+testCanJumpToFirstListItem :: Int -> TestTree
+testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and thread" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "Jump to last mail"
+    sendKeys "G" (Literal "3 of 3")
+
+    liftIO $ step "Jump to first mail"
+    sendKeys "1" (Literal "1 of 3")
+
+    pure ()
 
 testUpdatesReadState :: Int -> TestTree
 testUpdatesReadState = withTmuxSession "updates read state for mail and thread" $
@@ -84,8 +98,7 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
     startApplication
 
     liftIO $ step "navigate to thread mails"
-    sendKeys "Down" (Literal "2 of 3")
-    sendKeys "Down" (Literal "3 of 3")
+    sendKeys "G" (Literal "3 of 3")
 
     liftIO $ step "view unread mail in thread"
     sendKeys "Enter" (Literal "WIP Refactor")
