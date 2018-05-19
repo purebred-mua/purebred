@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module UI.Mail.Main where
+module UI.Mail.Main (renderMailView) where
 
 import Brick.Types (Padding(..), ViewportType(..), Widget)
 import Brick.Widgets.Core
-  (padTop, txt, txtWrap, vLimit, viewport, (<+>), (<=>), withAttr)
+  (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr)
 
 import Control.Applicative ((<|>))
 import Control.Lens (filtered, firstOf, folded, to, toListOf, view)
@@ -16,8 +16,6 @@ import qualified Data.Text as T
 
 import Data.MIME
 
-import UI.Index.Main (renderMailList, renderEditor)
-import UI.Status.Main (statusbar)
 import Types
 import Config.Main (headerKeyAttr, headerValueAttr)
 
@@ -26,13 +24,17 @@ import Config.Main (headerKeyAttr, headerValueAttr)
 --
 -- Implementation detail: Currently we're creating the sub list of mails we show
 -- for each key press. This might have to change in the future.
+{-
 drawMail :: AppState -> [Widget Name]
 drawMail s =
-    [ vLimit (indexViewRows s) (renderMailList s) <=>
-      statusbar s <=>
+    [vLimit (indexViewRows s) (renderMailList s) <=>
+     statusbar s <=>
       viewport ScrollingMailView Vertical (mailView s (view (asMailView . mvMail) s)) <=>
-      vLimit 1 (renderEditor s)
     ]
+-}
+
+renderMailView :: AppState -> Widget Name
+renderMailView s = viewport ScrollingMailView Vertical (mailView s (view (asMailView . mvMail) s))
 
 mailView :: AppState -> Maybe MIMEMessage -> Widget Name
 mailView s (Just msg) = messageToMailView s msg
@@ -79,8 +81,3 @@ entityToView msg = txtWrap . either err (view body) $
     err e =
       "ERROR: " <> view (to show . packed) e <> ". Showing raw body.\n\n"
       <> decodeLenient (view body msg)
-
-
--- | The size limit of the index list
-indexViewRows :: AppState -> Int
-indexViewRows = view (asConfig . confMailView . mvIndexRows)

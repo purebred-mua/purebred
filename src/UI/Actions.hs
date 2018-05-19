@@ -73,64 +73,60 @@ import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
-import UI.Utils (safeUpdate)
+import UI.Utils (safeUpdate, getFocusedWidget)
 import Purebred.Tags (parseTagOps)
 
-class Scrollable (n :: Mode) where
+class Scrollable (n :: Name) where
   makeViewportScroller :: Proxy n -> Brick.ViewportScroll Name
 
-instance Scrollable 'ViewMail where
+instance Scrollable 'ScrollingMailView where
   makeViewportScroller _ = Brick.viewportScroll ScrollingMailView
 
-instance Scrollable 'Help where
+instance Scrollable 'ScrollingHelpView where
   makeViewportScroller _ = Brick.viewportScroll ScrollingHelpView
 
 
-class ModeTransition (s :: Mode) (d :: Mode) where
+class ModeTransition (s :: Name) (d :: Name) where
 
 instance ModeTransition s s where
 
-instance ModeTransition 'ManageMailTags 'BrowseMail where
+instance ModeTransition 'ManageMailTagsEditor 'ListOfMails where
 
-instance ModeTransition 'BrowseThreads 'SearchThreads where
+instance ModeTransition 'ListOfThreads 'SearchThreadsEditor where
 
-instance ModeTransition 'BrowseMail 'ManageMailTags where
+instance ModeTransition 'ListOfMails 'ManageMailTagsEditor where
 
-instance ModeTransition 'BrowseThreads 'ManageThreadTags where
+instance ModeTransition 'ListOfThreads 'ManageThreadTagsEditor where
 
-instance ModeTransition 'ViewMail 'BrowseMail where
+instance ModeTransition 'ScrollingMailView 'ListOfMails where
 
-instance ModeTransition 'ViewMail 'ManageMailTags where
+instance ModeTransition 'ScrollingMailView 'ManageMailTagsEditor where
 
-instance ModeTransition 'BrowseThreads 'BrowseMail where
+instance ModeTransition 'ListOfThreads 'ListOfMails where
 
-instance ModeTransition 'ManageThreadTags 'BrowseThreads where
+instance ModeTransition 'ManageThreadTagsEditor 'ListOfThreads where
 
-instance ModeTransition 'BrowseMail 'BrowseThreads  where
+instance ModeTransition 'ListOfMails 'ListOfThreads  where
 
-instance ModeTransition 'SearchThreads 'BrowseThreads  where
+instance ModeTransition 'SearchThreadsEditor 'ListOfThreads  where
 
-instance ModeTransition 'BrowseThreads 'GatherHeadersFrom where
+instance ModeTransition 'ListOfThreads 'ComposeFrom where
 
-instance ModeTransition 'BrowseMail 'GatherHeadersFrom where
+instance ModeTransition 'ListOfMails 'ComposeFrom where
 
-instance ModeTransition 'GatherHeadersFrom 'BrowseThreads where
+instance ModeTransition 'ComposeFrom 'ListOfThreads where
 
-instance ModeTransition 'GatherHeadersFrom 'GatherHeadersTo where
+instance ModeTransition 'ComposeFrom 'ComposeTo where
 
-instance ModeTransition 'GatherHeadersTo 'BrowseThreads where
+instance ModeTransition 'ComposeTo 'ListOfThreads where
 
-instance ModeTransition 'GatherHeadersTo 'GatherHeadersSubject where
+instance ModeTransition 'ComposeTo 'ComposeSubject where
 
-instance ModeTransition 'GatherHeadersSubject 'BrowseThreads where
+instance ModeTransition 'ComposeSubject 'ListOfThreads where
 
-instance ModeTransition 'GatherHeadersSubject 'ComposeEditor where
+instance ModeTransition 'ScrollingHelpView 'ListOfThreads where
 
-instance ModeTransition 'ComposeEditor 'BrowseThreads where
-
-instance ModeTransition 'Help 'BrowseThreads where
-
-instance ModeTransition s 'Help where  -- help can be reached from any mode
+instance ModeTransition s 'ScrollingHelpView where  -- help can be reached from any mode
 
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
 -- contents are used to be applied to an action.
@@ -142,16 +138,13 @@ instance ModeTransition s 'Help where  -- help can be reached from any mode
 -- Another example is sending e-mail. So the complete action for the
 -- ComposeEditor is sent, since that's at the end of the composition process.
 --
-class Completable (m :: Mode) where
+class Completable (m :: Name) where
   complete :: Proxy m -> AppState -> T.EventM Name AppState
 
-instance Completable 'SearchThreads where
+instance Completable 'SearchThreadsEditor where
   complete _ = applySearch
 
-instance Completable 'ComposeEditor where
-  complete _ = sendMail
-
-instance Completable 'ManageMailTags where
+instance Completable 'ManageMailTagsEditor where
   complete _ = liftIO . completeMailTags
 
 completeMailTags :: AppState -> IO AppState
@@ -168,7 +161,7 @@ completeMailTags s =
 -- any database access above tagging mails, but it could pose a problem if tags
 -- don't show up in the UI.
 --
-instance Completable 'ManageThreadTags where
+instance Completable 'ManageThreadTagsEditor where
   complete _ s = case getEditorTagOps (asMailIndex . miThreadTagsEditor) s of
                       Left err -> pure $ setError err s
                       Right ops -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
@@ -176,99 +169,90 @@ instance Completable 'ManageThreadTags where
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
 --
-class Resetable (m :: Mode) where
+class Resetable (m :: Name) where
   reset :: Proxy m -> AppState -> T.EventM Name AppState
 
-instance Resetable 'ComposeEditor where
-  reset _ = pure . set asCompose initialCompose
-
-instance Resetable 'ManageMailTags where
+instance Resetable 'ManageMailTagsEditor where
   reset _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
-instance Resetable 'ManageThreadTags where
+instance Resetable 'ManageThreadTagsEditor where
   reset _ = pure . over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
 
 -- | Generalisation of focus changes between widgets on the same "view"
 -- expressed with the mode in the application state.
 --
-class Focusable (m :: Mode) where
+class Focusable (m :: Name) where
   switchFocus :: Proxy m -> AppState -> T.EventM Name AppState
 
-instance Focusable 'SearchThreads where
+instance Focusable 'SearchThreadsEditor where
   switchFocus _ = pure . over (asMailIndex . miSearchThreadsEditor) (E.applyEdit gotoEOL)
 
-instance Focusable 'ManageMailTags where
+instance Focusable 'ManageMailTagsEditor where
   switchFocus _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
-instance Focusable 'ManageThreadTags where
+instance Focusable 'ManageThreadTagsEditor where
   switchFocus _ = pure . over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
 
-instance Focusable 'BrowseMail where
+instance Focusable 'ListOfMails where
   switchFocus _ = pure
 
-instance Focusable 'GatherHeadersFrom where
+instance Focusable 'ComposeFrom where
   switchFocus _ s = if has (asCompose . cMail . lMailParts . traversed) s
                     then pure $ set asAppMode ComposeEditor s
                     else pure $ s & set asAppMode GatherHeadersFrom
                          . over (asCompose . cFrom . E.editContentsL) clearZipper
 
-instance Focusable 'GatherHeadersTo where
-  switchFocus _ = pure . set asAppMode GatherHeadersTo
+instance Focusable 'ComposeTo where
+  switchFocus _ = pure . over (asViews . vsWidgets) (Vector.// [(0, ComposeTo)])
 
-instance Focusable 'GatherHeadersSubject where
-  switchFocus _ = pure . set asAppMode GatherHeadersSubject
+instance Focusable 'ComposeSubject where
+  switchFocus _ = pure . over (asViews. vsWidgets) (Vector.// [(0, ComposeSubject)])
 
-instance Focusable 'ComposeEditor where
-  switchFocus _ = pure . set asAppMode ComposeEditor
-
-instance Focusable 'BrowseThreads where
+instance Focusable 'ListOfThreads where
   -- Reload the threads tags when returning to the list of threads, since they
   -- could have changed. If no thread is selected (e.g. invalid search leading
   -- no results) then there is nothing to update.
   switchFocus _ s = let selected = L.listSelectedElement $ view (asMailIndex . miListOfThreads) s
                     in ($ s) <$> maybe (pure id) (reloadThreadTags s) selected
 
-instance Focusable 'Help where
-  switchFocus _ = pure . set asAppMode Help
+instance Focusable 'ScrollingHelpView where
+  switchFocus _ = pure . set (asViews . vsWidgets) (Vector.fromList [ScrollingHelpView])
 
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
-class HasMode (a :: Mode) where
-  mode :: Proxy a -> Mode
+class HasName (a :: Name) where
+  name :: Proxy a -> Name
 
 -- promote the type to a value we can use for chaining actions
-instance HasMode 'BrowseMail where
-  mode _ = BrowseMail
+instance HasName 'ListOfMails where
+  name _ = ListOfMails
 
-instance HasMode 'SearchThreads where
-  mode _ = SearchThreads
+instance HasName 'SearchThreadsEditor where
+  name _ = SearchThreadsEditor
 
-instance HasMode 'ViewMail where
-  mode _ = ViewMail
+instance HasName 'ScrollingMailView where
+  name _ = ScrollingMailView
 
-instance HasMode 'ManageMailTags where
-  mode _ = ManageMailTags
+instance HasName 'ManageMailTagsEditor where
+  name _ = ManageMailTagsEditor
 
-instance HasMode 'BrowseThreads where
-  mode _ = BrowseThreads
+instance HasName 'ListOfThreads where
+  name _ = ListOfThreads
 
-instance HasMode 'Help where
-  mode _ = Help
+instance HasName 'ScrollingHelpView where
+  name _ = ScrollingHelpView
 
-instance HasMode 'GatherHeadersFrom where
-  mode _ = GatherHeadersFrom
+instance HasName 'ComposeFrom where
+  name _ = ComposeFrom
 
-instance HasMode 'GatherHeadersTo where
-  mode _ = GatherHeadersTo
+instance HasName 'ComposeTo where
+  name _ = ComposeTo
 
-instance HasMode 'GatherHeadersSubject where
-  mode _ = GatherHeadersSubject
+instance HasName 'ComposeSubject where
+  name _ = ComposeSubject
 
-instance HasMode 'ComposeEditor where
-  mode _ = ComposeEditor
-
-instance HasMode 'ManageThreadTags where
-  mode _ = ManageThreadTags
+instance HasName 'ManageThreadTagsEditor where
+  name _ = ManageThreadTagsEditor
 
 quit :: Action ctx (T.Next AppState)
 quit = Action "quit the application" Brick.halt
@@ -285,14 +269,14 @@ chain (Action d1 f1) (Action d2 f2) =
 
 chain'
     :: forall ctx ctx' a.
-       (HasMode ctx', ModeTransition ctx ctx')
+       (HasName ctx', ModeTransition ctx ctx')
     => Action ctx AppState
     -> Action ctx' a
     -> Action ctx a
 chain' (Action d1 f1) (Action d2 f2) =
   Action (if null d2 then d1 else d1 <> " and then " <> d2) (f1 >=> switchMode >=> f2)
   where
-    switchMode = pure . set asAppMode (mode (Proxy :: Proxy ctx'))
+    switchMode = pure . over (asViews . vsFocus) (Brick.focusSetCurrent $ name (Proxy :: Proxy ctx'))
 
 done :: forall a. Completable a => Action a AppState
 done = Action "apply" (complete (Proxy :: Proxy a))
@@ -300,26 +284,14 @@ done = Action "apply" (complete (Proxy :: Proxy a))
 abort :: forall a. Resetable a => Action a AppState
 abort = Action "cancel" (reset (Proxy :: Proxy a))
 
-focus :: forall a. (HasMode a, Focusable a) => Action a AppState
-focus = Action ("switch mode to " <> show (mode (Proxy :: Proxy a))) (switchFocus (Proxy :: Proxy a))
+focus :: forall a. (HasName a, Focusable a) => Action a AppState
+focus = Action ("switch mode to " <> show (name (Proxy :: Proxy a))) (switchFocus (Proxy :: Proxy a))
 
 -- | A no-op action which just returns the current AppState
 -- This action can be used at the start of an Action chain where an immediate
 -- mode switch is required
 noop :: Action ctx AppState
 noop = Action "" pure
-
-nextInput :: Action 'ComposeEditor AppState
-nextInput =
-    Action
-        "focus next input"
-        (pure . over (asCompose . cFocusFields) Brick.focusNext)
-
-previousInput :: Action 'ComposeEditor AppState
-previousInput =
-    Action
-        "focus previous input"
-        (pure . over (asCompose . cFocusFields) Brick.focusPrev)
 
 scrollUp :: forall ctx. (Scrollable ctx) => Action ctx AppState
 scrollUp = Action
@@ -342,16 +314,16 @@ displayMail =
         liftIO $ updateStateWithParsedMail s
           >>= updateReadState (RemoveTag $ view (asConfig . confNotmuch . nmNewTag) s)
     }
-  where resetScrollState = Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy 'ViewMail))
+  where resetScrollState = Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy 'ScrollingMailView))
 
-displayThreadMails :: Action 'BrowseThreads AppState
+displayThreadMails :: Action 'ListOfThreads AppState
 displayThreadMails =
     Action
     { _aDescription = "display an e-mail for threads"
     , _aAction = liftIO . setMailsForThread
     }
 
-setUnread :: Action 'BrowseMail AppState
+setUnread :: Action 'ListOfMails AppState
 setUnread =
     Action
     { _aDescription = "toggle unread"
@@ -362,10 +334,10 @@ listUp :: Action m AppState
 listUp =
     Action
     { _aDescription = "mail index up one e-mail"
-    , _aAction = \s -> case view asAppMode s of
-        BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
-        ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
-        ComposeEditor -> pure $ over (asCompose . cAttachments) L.listMoveUp s
+    , _aAction = \s -> case getFocusedWidget s ListOfThreads of
+        ListOfThreads -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
+        ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
+        ListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveUp s
         _ -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
     }
 
@@ -373,34 +345,34 @@ listDown :: Action m AppState
 listDown =
     Action
     { _aDescription = "mail index down one e-mail"
-    , _aAction = \s -> case view asAppMode s of
-        BrowseMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
-        ViewMail -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
-        ComposeEditor -> pure $ over (asCompose . cAttachments) L.listMoveDown s
+    , _aAction = \s -> case getFocusedWidget s ListOfThreads of
+        ListOfThreads -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
+        ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
+        ListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveDown s
         _ -> pure $ over (asMailIndex. miListOfThreads) L.listMoveDown s
     }
 
 listJumpToEnd :: Action m AppState
 listJumpToEnd = Action
   { _aDescription = "move selection to last element"
-    , _aAction = \s -> case view asAppMode s of
-        BrowseMail -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
-        ViewMail -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
-        ComposeEditor -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
+    , _aAction = \s -> case getFocusedWidget s ListOfThreads of
+        ListOfThreads -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
+        ScrollingMailView -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
+        ListOfAttachments -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
         _ -> pure $ listSetSelectionEnd (asMailIndex. miListOfThreads) s
   }
 
 listJumpToStart :: Action m AppState
 listJumpToStart = Action
   { _aDescription = "move selection to last element"
-    , _aAction = \s -> case view asAppMode s of
-        BrowseMail -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
-        ViewMail -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
-        ComposeEditor -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
+    , _aAction = \s -> case getFocusedWidget s ListOfThreads of
+        ListOfThreads -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
+        ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
+        ListOfAttachments -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
         _ -> pure $ over (asMailIndex. miListOfThreads) (L.listMoveTo 0) s
   }
 
-switchComposeEditor :: Action 'BrowseThreads AppState
+switchComposeEditor :: Action 'ListOfThreads AppState
 switchComposeEditor =
     Action
     { _aDescription = "switch to compose editor"
@@ -409,14 +381,14 @@ switchComposeEditor =
                           else pure s
     }
 
-replyMail :: Action 'BrowseMail AppState
+replyMail :: Action 'ListOfMails AppState
 replyMail =
     Action
     { _aDescription = "reply to an e-mail"
     , _aAction = replyToMail
     }
 
-toggleHeaders :: Action 'ViewMail AppState
+toggleHeaders :: Action 'ScrollingMailView AppState
 toggleHeaders = Action
   { _aDescription = "toggle mail headers"
   , _aAction = pure . go
@@ -431,16 +403,15 @@ setTags :: [TagOp] -> Action ctx AppState
 setTags ops =
     Action
     { _aDescription = "apply given tags"
-    , _aAction = \s ->
-        case view asAppMode s of
-          BrowseThreads -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
-          _ -> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops)
+    , _aAction = \s -> case getFocusedWidget s ListOfThreads of
+          ListOfMails -> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops)
+          _ -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
     }
 
-reloadList :: Action 'BrowseThreads AppState
+reloadList :: Action 'ListOfThreads AppState
 reloadList = Action "reload list of threads" applySearch
 
-selectNextUnread :: Action 'BrowseMail AppState
+selectNextUnread :: Action 'ListOfMails AppState
 selectNextUnread =
   Action { _aDescription = "select next unread"
          , _aAction = \s ->

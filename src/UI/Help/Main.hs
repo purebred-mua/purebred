@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module UI.Help.Main where
+module UI.Help.Main (renderHelp) where
 
 import Brick.Types (Padding(..), Widget)
 import qualified Brick.Types as T
@@ -13,8 +13,8 @@ import Data.Text (Text, singleton, intercalate, pack)
 import Config.Main (helpTitleAttr, helpKeybindingAttr)
 import Types
 
-drawHelp :: AppState -> [Widget Name]
-drawHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybindings) (renderKbGroup BrowseMail) s
+renderHelp :: AppState -> Widget Name
+renderHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybindings) (renderKbGroup BrowseMail) s
                          <=> views (asConfig . confIndexView . ivBrowseThreadsKeybindings) (renderKbGroup BrowseThreads) s
                          <=> views (asConfig . confIndexView . ivSearchThreadsKeybindings) (renderKbGroup SearchThreads) s
                          <=> views (asConfig . confIndexView . ivManageMailTagsKeybindings) (renderKbGroup ManageMailTags) s
@@ -23,7 +23,7 @@ drawHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybindi
                          <=> views (asConfig . confMailView . mvKeybindings) (renderKbGroup ViewMail) s
                          <=> views (asConfig . confComposeView . cvKeybindings) (renderKbGroup ComposeEditor) s
                          <=> views (asConfig . confHelpView . hvKeybindings) (renderKbGroup Help) s
-             in [viewport ScrollingHelpView T.Vertical tweak]
+             in viewport ScrollingHelpView T.Vertical tweak
 
 renderKbGroup :: Mode -> [Keybinding ctx a] -> Widget Name
 renderKbGroup m kbs = emptyWidget

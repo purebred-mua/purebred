@@ -5,6 +5,7 @@ module UI.App where
 
 import qualified Brick.Main as M
 import Brick.Types (Widget)
+import Brick.Focus (focusRing)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -18,26 +19,25 @@ import Storage.Notmuch (getThreads)
 import UI.Keybindings (dispatch)
 import UI.ComposeEditor.Main (drawComposeEditor)
 import UI.GatherHeaders.Main (drawInteractiveHeaders)
-import UI.Index.Main (drawMain)
+import UI.Index.Main
+       (renderListOfThreads, renderListOfMails, renderSearchThreadsEditor,
+        renderMailTagsEditor)
 import UI.Actions (initialCompose)
-import UI.Mail.Main (drawMail)
-import UI.Help.Main (drawHelp)
+import UI.Mail.Main (renderMailView)
+import UI.Help.Main (renderHelp)
 import Types
 
 drawUI :: AppState -> [Widget Name]
-drawUI s =
-    case view asAppMode s of
-        BrowseMail -> drawMain s
-        BrowseThreads -> drawMain s
-        SearchThreads -> drawMain s
-        ManageMailTags -> drawMain s
-        ManageThreadTags -> drawMain s
-        ViewMail -> drawMail s
-        GatherHeadersFrom -> drawInteractiveHeaders s
-        GatherHeadersTo -> drawInteractiveHeaders s
-        GatherHeadersSubject -> drawInteractiveHeaders s
-        ComposeEditor -> drawComposeEditor s
-        Help -> drawHelp s
+drawUI s = [unVBox $ foldMap (VBox . renderWidget s) (view (asViews . vsWidgets) s)]
+
+renderWidget :: AppState -> Name -> Widget Name
+renderWidget s ListOfThreads = renderListOfThreads s
+renderWidget s ListOfMails = renderListOfMails s
+renderWidget s SearchThreadsEditor = renderSearchThreadsEditor s
+renderWidget s ManageMailTagsEditor = renderMailTagsEditor s
+renderWidget s ScrollingMailView = renderMailView s
+renderWidget s ScrollingHelpView = renderHelp s
+renderWidget s ComposeFrom = drawInteractiveHeaders s
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) =
@@ -70,7 +70,10 @@ initialState conf = do
                 (E.editorText ManageMailTagsEditor Nothing "")
                 (E.editorText ManageThreadTagsEditor Nothing "")
           mv = MailView Nothing Filtered
-        in pure $ AppState conf mi mv initialCompose BrowseThreads Nothing
+          vs = ViewSettings
+               (Vector.fromList [ListOfThreads, StatusBar, SearchThreadsEditor])
+               (focusRing [ListOfThreads, SearchThreadsEditor])
+        in pure $ AppState conf mi mv initialCompose BrowseThreads Nothing vs
 
 theApp :: AppState -> M.App AppState e Name
 theApp s =

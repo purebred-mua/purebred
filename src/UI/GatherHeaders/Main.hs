@@ -1,34 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module UI.GatherHeaders.Main where
+module UI.GatherHeaders.Main (drawInteractiveHeaders) where
 
 import Control.Lens (view)
 import qualified Data.Text as T
+import Data.Maybe (fromMaybe)
 
 import Brick.Types (Widget)
-import Brick.Widgets.Core (vBox, txt)
 import qualified Brick.Widgets.Edit as E
 
 import Types
 import UI.Draw.Main (renderEditorWithLabel)
-import UI.Index.Main (renderMailList)
-import UI.Status.Main (statusbar)
+import UI.Utils (getFocusedWidget)
 
-drawInteractiveHeaders :: AppState -> [Widget Name]
-drawInteractiveHeaders s = [ui]
-  where
-    inputBox = renderEditorWithLabel s True (focusedEditor s)
-    ui = vBox [renderMailList s, statusbar s, inputBox]
+drawInteractiveHeaders :: AppState -> Widget Name
+drawInteractiveHeaders s = renderEditorWithLabel s True (focusedEditor s)
 
 focusedEditor :: AppState -> E.Editor T.Text Name
 focusedEditor s =
-    case view asAppMode s of
-        GatherHeadersFrom -> view (asCompose . cFrom) s
-        GatherHeadersTo -> view (asCompose . cTo) s
-        _ -> view (asCompose . cSubject) s
-
-getLabelForComposeState :: Mode -> Widget Name
-getLabelForComposeState GatherHeadersFrom = txt "From:"
-getLabelForComposeState GatherHeadersTo = txt "To:"
-getLabelForComposeState _ = txt "Subject:"
+    let focused = getFocusedWidget s ComposeFrom
+    in case focused of
+           ComposeFrom -> view (asCompose . cFrom) s
+           ComposeTo -> view (asCompose . cTo) s
+           _ -> view (asCompose . cSubject) s

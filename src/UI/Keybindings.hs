@@ -18,7 +18,7 @@ import Types
 lookupKeybinding :: Event -> [Keybinding ctx a] -> Maybe (Keybinding ctx a)
 lookupKeybinding e = find (\x -> view kbEvent x == e)
 
-class EventHandler (m :: Mode)  where
+class EventHandler (m :: Name)  where
     keybindingsL
         :: Functor f
         => Proxy m
@@ -30,55 +30,46 @@ class EventHandler (m :: Mode)  where
                     -> Event
                     -> Brick.EventM Name (Brick.Next AppState)
 
-instance EventHandler 'BrowseMail where
+instance EventHandler 'ListOfMails where
   keybindingsL _ = asConfig . confIndexView . ivBrowseMailsKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miListOfMails) L.handleListEvent e
 
-instance EventHandler 'BrowseThreads where
+instance EventHandler 'ListOfThreads where
   keybindingsL _ = asConfig . confIndexView . ivBrowseThreadsKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miListOfThreads) L.handleListEvent e
 
-instance EventHandler 'SearchThreads where
+instance EventHandler 'SearchThreadsEditor where
   keybindingsL _ = asConfig . confIndexView . ivSearchThreadsKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miSearchThreadsEditor) E.handleEditorEvent e
 
-instance EventHandler 'ManageMailTags where
+instance EventHandler 'ManageMailTagsEditor where
   keybindingsL _ = asConfig . confIndexView . ivManageMailTagsKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miMailTagsEditor) E.handleEditorEvent e
 
-instance EventHandler 'ManageThreadTags where
+instance EventHandler 'ManageThreadTagsEditor where
   keybindingsL _ = asConfig . confIndexView . ivManageThreadTagsKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miThreadTagsEditor) E.handleEditorEvent e
 
-instance EventHandler 'ViewMail where
+instance EventHandler 'ScrollingMailView where
   keybindingsL _ = asConfig . confMailView . mvKeybindings
   fallbackHandler _ s e = maybe
                           (Brick.continue s)
                           (\kb -> view (kbAction . aAction) kb s)
-                          (lookupKeybinding e $ view (asConfig . confMailView . mvIndexKeybindings) s)
+                          (lookupKeybinding e $ view (asConfig . confIndexView . ivBrowseMailsKeybindings) s)
 
-instance EventHandler 'ComposeEditor where
-  keybindingsL _ = asConfig . confComposeView . cvKeybindings
-  fallbackHandler _ s e = Brick.continue
-                          =<< maybe (pure s)
-                          (\n -> case n of
-                              ListOfAttachments -> Brick.handleEventLensed s (asCompose . cAttachments) L.handleListEvent e
-                              _ -> Brick.handleEventLensed s (cFocusedEditorL n) E.handleEditorEvent e)
-                          (Brick.focusGetCurrent (view (asCompose . cFocusFields) s))
-
-instance EventHandler 'Help where
+instance EventHandler 'ScrollingHelpView where
   keybindingsL _ = asConfig . confHelpView . hvKeybindings
   fallbackHandler _ s _ = Brick.continue s
 
-instance EventHandler 'GatherHeadersFrom where
+instance EventHandler 'ComposeFrom where
   keybindingsL _ = asConfig . confComposeView . cvFromKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cFrom) E.handleEditorEvent e
 
-instance EventHandler 'GatherHeadersTo where
+instance EventHandler 'ComposeTo where
   keybindingsL _ = asConfig . confComposeView . cvToKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cTo) E.handleEditorEvent e
 
-instance EventHandler 'GatherHeadersSubject where
+instance EventHandler 'ComposeSubject where
   keybindingsL _ = asConfig . confComposeView . cvSubjectKeybindings
   fallbackHandler _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cSubject) E.handleEditorEvent e
 

@@ -5,9 +5,9 @@ module UI.Draw.Main where
 import Brick.Types (Padding(..), Widget)
 import Brick.Widgets.Core (fill, txt, vLimit, emptyWidget, padRight, (<+>))
 import qualified Brick.Widgets.Edit as E
-import Control.Lens (view)
 import qualified Data.Text as T
 import Types
+import UI.Utils (getFocusedWidget)
 
 fillLine :: Widget Name
 fillLine = vLimit 1 (fill ' ')
@@ -15,14 +15,14 @@ fillLine = vLimit 1 (fill ' ')
 editorDrawContent :: [T.Text] -> Widget Name
 editorDrawContent st = txt $ T.unlines st
 
-getModeTitle :: Mode -> Widget Name
-getModeTitle GatherHeadersFrom = txt "From:"
-getModeTitle GatherHeadersTo = txt "To:"
-getModeTitle GatherHeadersSubject = txt "Subject:"
-getModeTitle ManageThreadTags = txt "+Add -Remove Labels:"
-getModeTitle ManageMailTags = txt "+Add -Remove Labels:"
-getModeTitle SearchThreads = txt "Query:"
-getModeTitle _ = emptyWidget
+getTitle :: Name -> Widget Name
+getTitle ComposeFrom = txt "From:"
+getTitle ComposeTo = txt "To:"
+getTitle ComposeSubject = txt "Subject:"
+getTitle ManageThreadTagsEditor = txt "+Add -Remove Labels:"
+getTitle ManageMailTagsEditor = txt "+Add -Remove Labels:"
+getTitle SearchThreadsEditor = txt "Query:"
+getTitle _ = emptyWidget
 
 -- | Renders editor with a label on the left restricted to one line
 renderEditorWithLabel :: AppState
@@ -31,5 +31,6 @@ renderEditorWithLabel :: AppState
                       -> Widget Name
 renderEditorWithLabel s hasFocus e =
   let inputW = E.renderEditor editorDrawContent hasFocus e
-      labelW = padRight (Pad 1) (getModeTitle (view asAppMode s))
+      focused = getFocusedWidget s ListOfThreads
+      labelW = padRight (Pad 1) (getTitle focused)
   in labelW <+> vLimit 1 inputW

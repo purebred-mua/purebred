@@ -1,11 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module UI.Index.Main where
+module UI.Index.Main (
+    renderListOfThreads
+  , renderListOfMails
+  , renderSearchThreadsEditor
+  , renderMailTagsEditor) where
 
+import Brick.Focus (focusGetCurrent)
 import Brick.Types (Padding(..), Widget)
 import Brick.AttrMap (AttrName)
 import Brick.Widgets.Core
-       (hLimit, padLeft, txt, vBox, vLimit, withAttr, (<+>))
+       (hLimit, padLeft, txt, vLimit, withAttr, (<+>))
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import qualified Data.ByteString as B
@@ -17,35 +22,31 @@ import Data.Text as T (Text, pack, unwords)
 import Notmuch (getTag)
 
 import UI.Draw.Main (renderEditorWithLabel, fillLine)
-import UI.Status.Main (statusbar)
 import Storage.Notmuch (hasTag)
 import Types
 import Config.Main
        (listNewMailAttr, listNewMailSelectedAttr, mailTagsAttr,
         listSelectedAttr, listAttr, mailAuthorsAttr)
 
-drawMain :: AppState -> [Widget Name]
-drawMain s = [ui]
-  where
-    inputBox = renderEditor s
-    ui = vBox [renderMailList s, statusbar s, vLimit 1 inputBox]
+renderListOfThreads :: AppState -> Widget Name
+renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex . miListOfThreads) s
 
-renderEditor :: AppState -> Widget Name
-renderEditor s = let editorFocus = view asAppMode s `elem` [SearchThreads, ManageThreadTags, ManageMailTags]
-                     render = renderEditorWithLabel s editorFocus
-                 in case view asAppMode s of
-                      ManageThreadTags -> render (view (asMailIndex . miThreadTagsEditor) s)
-                      ManageMailTags -> render (view (asMailIndex . miMailTagsEditor) s)
-                      _ -> render (view (asMailIndex . miSearchThreadsEditor) s)
+renderListOfMails :: AppState -> Widget Name
+renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . miListOfMails) s
 
-renderMailList :: AppState -> Widget Name
-renderMailList s =
-    let listOfThreads = L.renderList (listDrawThread s) True $ view (asMailIndex . miListOfThreads) s
-        listOfMails = L.renderList (listDrawMail s) True $ view (asMailIndex . miListOfMails) s
-    in if view asAppMode s `elem`
-          [ManageThreadTags, BrowseThreads, SearchThreads]
-           then listOfThreads
-           else listOfMails
+renderSearchThreadsEditor :: AppState -> Widget Name
+renderSearchThreadsEditor s =
+    let hasFocus =
+            Just SearchThreadsEditor ==
+            focusGetCurrent (view (asViews . vsFocus) s)
+    in renderEditorWithLabel s hasFocus (view (asMailIndex . miThreadTagsEditor) s)
+
+renderMailTagsEditor :: AppState -> Widget Name
+renderMailTagsEditor s =
+    let hasFocus =
+            Just ManageMailTagsEditor ==
+            focusGetCurrent (view (asViews . vsFocus) s)
+    in renderEditorWithLabel s hasFocus (view (asMailIndex . miMailTagsEditor) s)
 
 listDrawMail :: AppState -> Bool -> NotmuchMail -> Widget Name
 listDrawMail s sel a =

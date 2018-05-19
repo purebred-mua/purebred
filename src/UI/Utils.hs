@@ -17,6 +17,14 @@
 module UI.Utils where
 import qualified Data.Vector as Vector
 import Data.Foldable (toList)
+import Data.Maybe (fromMaybe)
+import Control.Lens (view)
+import Brick.Focus (focusGetCurrent)
+
+import Types
 
 safeUpdate :: Foldable t => Vector.Vector a -> t (Int, a) -> Vector.Vector a
 safeUpdate v = (Vector.//) v  . filter ((\i -> i >= 0 && i < length v) . fst) . toList
+
+getFocusedWidget :: AppState -> Name -> Name
+getFocusedWidget s def = fromMaybe def $ focusGetCurrent $ view (asViews . vsFocus) s

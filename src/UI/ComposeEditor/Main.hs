@@ -54,7 +54,7 @@ getLabelForComposeState ComposeFrom = txt "From:"
 getLabelForComposeState ComposeTo = txt "To:"
 getLabelForComposeState _ = txt "Subject:"
 
-focusedLens :: Mode -> Lens' Compose (E.Editor T.Text Name)
-focusedLens GatherHeadersFrom = cFrom
-focusedLens GatherHeadersTo = cTo
+focusedLens :: Name -> Lens' Compose (E.Editor T.Text Name)
+focusedLens ComposeFrom = cFrom
+focusedLens ComposeTo = cTo
 focusedLens _ = cSubject
