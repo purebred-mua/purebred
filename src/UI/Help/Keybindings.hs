@@ -8,9 +8,9 @@ import UI.Actions
 import Types
 
 -- | Default Keybindings
-helpKeybindings :: [Keybinding 'Help (Brick.Next AppState)]
+helpKeybindings :: [Keybinding 'Help 'ScrollingHelpView (Brick.Next AppState)]
 helpKeybindings =
-    [ Keybinding (EvKey KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
+    [ Keybinding (EvKey KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (EvKey KBS []) (scrollUp `chain` continue)
     , Keybinding (EvKey (KChar ' ') []) (scrollDown `chain` continue)
     ]

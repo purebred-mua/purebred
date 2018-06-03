@@ -12,39 +12,28 @@ import Data.Semigroup ((<>))
 import Data.Text (Text, singleton, intercalate, pack)
 import Config.Main (helpTitleAttr, helpKeybindingAttr)
 import Types
+import UI.Utils (titleize, Titleize)
 
 renderHelp :: AppState -> Widget Name
-renderHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybindings) (renderKbGroup BrowseMail) s
-                         <=> views (asConfig . confIndexView . ivBrowseThreadsKeybindings) (renderKbGroup BrowseThreads) s
-                         <=> views (asConfig . confIndexView . ivSearchThreadsKeybindings) (renderKbGroup SearchThreads) s
-                         <=> views (asConfig . confIndexView . ivManageMailTagsKeybindings) (renderKbGroup ManageMailTags) s
-                         <=> views (asConfig . confIndexView . ivManageThreadTagsKeybindings) (renderKbGroup ManageThreadTags) s
-                         <=> views (asConfig . confMailView . mvIndexKeybindings) (renderKbGroup ViewMail) s
-                         <=> views (asConfig . confMailView . mvKeybindings) (renderKbGroup ViewMail) s
-                         <=> views (asConfig . confComposeView . cvKeybindings) (renderKbGroup ComposeEditor) s
-                         <=> views (asConfig . confHelpView . hvKeybindings) (renderKbGroup Help) s
+renderHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybindings) (renderKbGroup ListOfMails) s
+                         <=> views (asConfig . confIndexView . ivBrowseThreadsKeybindings) (renderKbGroup ListOfThreads) s
+                         <=> views (asConfig . confIndexView . ivSearchThreadsKeybindings) (renderKbGroup SearchThreadsEditor) s
+                         <=> views (asConfig . confIndexView . ivManageMailTagsKeybindings) (renderKbGroup ManageMailTagsEditor) s
+                         <=> views (asConfig . confIndexView . ivManageThreadTagsKeybindings) (renderKbGroup ManageThreadTagsEditor) s
+                         <=> views (asConfig . confMailView . mvKeybindings) (renderKbGroup ScrollingMailView) s
+                         <=> views (asConfig . confHelpView . hvKeybindings) (renderKbGroup ScrollingHelpView) s
              in viewport ScrollingHelpView T.Vertical tweak
 
-renderKbGroup :: Mode -> [Keybinding ctx a] -> Widget Name
-renderKbGroup m kbs = emptyWidget
-                      <=> withAttr helpTitleAttr (padBottom (Pad 1) $ txt (modeTitle m))
+renderKbGroup :: Titleize a => a -> [Keybinding v ctx (T.Next AppState)] -> Widget Name
+renderKbGroup name kbs = emptyWidget
+                      <=> withAttr helpTitleAttr (padBottom (Pad 1) $ txt (titleize name))
                       <=> padBottom (Pad 1) (foldl (\a x -> a <=> renderKeybinding x) emptyWidget kbs)
 
-renderKeybinding :: Keybinding ctx a-> Widget Name
+renderKeybinding :: Keybinding v ctx a-> Widget Name
 renderKeybinding kb = let keys = view kbEvent kb
                           actions = view (kbAction . aDescription) kb
                       in withAttr helpKeybindingAttr (hLimit 30 (padRight Max $ txt $ ppKbEvent keys))
                          <+> padLeft (Pad 3) (str actions)
-
-modeTitle :: Mode -> Text
-modeTitle BrowseMail = "List of Mails"
-modeTitle BrowseThreads = "List of Threads"
-modeTitle ManageThreadTags = "Edit Labels of Threads"
-modeTitle ManageMailTags = "Edit Labels of Mails"
-modeTitle SearchThreads = "Search Editor"
-modeTitle ViewMail = "Mail Viewer"
-modeTitle ComposeEditor = "Editor to Compose a new Mail"
-modeTitle m = pack $ show m
 
 ppKbEvent :: Event -> Text
 ppKbEvent (EvKey k modifiers) = intercalate " + " $ (ppMod <$> modifiers) <> [ppKey k]

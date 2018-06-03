@@ -6,20 +6,38 @@ import qualified Graphics.Vty as V
 import Types
 import UI.Actions
 
-interactiveGatherHeadersKeybindings :: [Keybinding 'GatherHeadersFrom (T.Next AppState)]
+interactiveGatherHeadersKeybindings :: [Keybinding 'Threads 'ComposeFrom (T.Next AppState)]
 interactiveGatherHeadersKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'GatherHeadersTo AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'Threads 'ComposeTo AppState) `chain` continue)
     ]
 
-interactiveGatherHeadersToKeybindings :: [Keybinding 'GatherHeadersTo (T.Next AppState)]
+composeFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom (T.Next AppState)]
+composeFromKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'Threads 'ComposeTo AppState) `chain` continue)
+    ]
+
+interactiveGatherHeadersToKeybindings :: [Keybinding 'Threads 'ComposeTo (T.Next AppState)]
 interactiveGatherHeadersToKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'GatherHeadersSubject AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'Threads 'ComposeSubject AppState) `chain` continue)
     ]
 
-interactiveGatherHeadersSubjectKeybindings :: [Keybinding 'GatherHeadersSubject (T.Next AppState)]
+composeToKeybindings :: [Keybinding 'ComposeView 'ComposeTo (T.Next AppState)]
+composeToKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'Threads 'ComposeSubject AppState) `chain` continue)
+    ]
+
+interactiveGatherHeadersSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject (T.Next AppState)]
 interactiveGatherHeadersSubjectKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'BrowseThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'ComposeEditor AppState) `chain` invokeEditor)
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'ComposeView 'ComposeFrom AppState) `chain` invokeEditor)
+    ]
+
+composeSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject (T.Next AppState)]
+composeSubjectKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'ComposeView 'ComposeFrom AppState) `chain` invokeEditor)
     ]

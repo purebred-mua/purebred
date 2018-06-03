@@ -58,6 +58,7 @@ library
                      , UI.Help.Main
                      , UI.Help.Keybindings
                      , UI.Utils
+                     , UI.Views
                      , Purebred.Tags
                      , Config.Main
                      , Storage.Notmuch
@@ -85,6 +86,7 @@ library
                      , exceptions
                      , purebred-email
                      , attoparsec
+                     , containers
 
 executable purebred
   hs-source-dirs:      app

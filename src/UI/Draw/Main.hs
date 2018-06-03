@@ -7,7 +7,7 @@ import Brick.Widgets.Core (fill, txt, vLimit, emptyWidget, padRight, (<+>))
 import qualified Brick.Widgets.Edit as E
 import qualified Data.Text as T
 import Types
-import UI.Utils (getFocusedWidget)
+import UI.Utils (focusedViewWidget)
 
 fillLine :: Widget Name
 fillLine = vLimit 1 (fill ' ')
@@ -31,6 +31,6 @@ renderEditorWithLabel :: AppState
                       -> Widget Name
 renderEditorWithLabel s hasFocus e =
   let inputW = E.renderEditor editorDrawContent hasFocus e
-      focused = getFocusedWidget s ListOfThreads
+      focused = focusedViewWidget s ListOfThreads
       labelW = padRight (Pad 1) (getTitle focused)
   in labelW <+> vLimit 1 inputW

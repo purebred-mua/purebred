@@ -5,21 +5,20 @@ module UI.GatherHeaders.Main (drawInteractiveHeaders) where
 
 import Control.Lens (view)
 import qualified Data.Text as T
-import Data.Maybe (fromMaybe)
 
 import Brick.Types (Widget)
 import qualified Brick.Widgets.Edit as E
 
 import Types
 import UI.Draw.Main (renderEditorWithLabel)
-import UI.Utils (getFocusedWidget)
+import UI.Utils (focusedViewWidget)
 
 drawInteractiveHeaders :: AppState -> Widget Name
 drawInteractiveHeaders s = renderEditorWithLabel s True (focusedEditor s)
 
 focusedEditor :: AppState -> E.Editor T.Text Name
 focusedEditor s =
-    let focused = getFocusedWidget s ComposeFrom
+    let focused = focusedViewWidget s ComposeFrom
     in case focused of
            ComposeFrom -> view (asCompose . cFrom) s
            ComposeTo -> view (asCompose . cTo) s

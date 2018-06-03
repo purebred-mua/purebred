@@ -14,16 +14,15 @@ import Network.Mail.Mime (renderSendMail)
 
 import Data.MIME (ContentType(..))
 
-import UI.ComposeEditor.Keybindings (composeEditorKeybindings)
 import UI.GatherHeaders.Keybindings
-       (interactiveGatherHeadersKeybindings,
-        interactiveGatherHeadersToKeybindings,
-        interactiveGatherHeadersSubjectKeybindings)
+       (composeFromKeybindings,
+        composeToKeybindings,
+        composeSubjectKeybindings)
 import UI.Index.Keybindings
        (browseMailKeybindings, browseThreadsKeybindings,
         searchThreadsKeybindings, manageThreadTagsKeybindings,
         manageMailTagsKeybindings)
-import UI.Mail.Keybindings (displayMailKeybindings, displayIndexKeybindings)
+import UI.Mail.Keybindings (displayMailKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
 
 import Types
@@ -107,7 +106,6 @@ defaultConfig =
       , _mvPreferedContentType = ContentType "text" "plain" []
       , _mvHeadersToShow = (`elem` ["subject", "to", "from", "cc"])
       , _mvKeybindings = displayMailKeybindings
-      , _mvIndexKeybindings = displayIndexKeybindings
       }
     , _confIndexView = IndexViewSettings
       { _ivBrowseThreadsKeybindings = browseThreadsKeybindings
@@ -117,13 +115,13 @@ defaultConfig =
       , _ivManageThreadTagsKeybindings = manageThreadTagsKeybindings
       }
     , _confComposeView = ComposeViewSettings
-      { _cvKeybindings = composeEditorKeybindings
-      , _cvFromKeybindings = interactiveGatherHeadersKeybindings
-      , _cvToKeybindings = interactiveGatherHeadersToKeybindings
-      , _cvSubjectKeybindings = interactiveGatherHeadersSubjectKeybindings
+      { _cvFromKeybindings = composeFromKeybindings
+      , _cvToKeybindings = composeToKeybindings
+      , _cvSubjectKeybindings = composeSubjectKeybindings
       , _cvSendMailCmd = renderSendMail
       }
     , _confHelpView = HelpViewSettings
       { _hvKeybindings = helpKeybindings
       }
+    , _confDefaultView = Threads
     }
