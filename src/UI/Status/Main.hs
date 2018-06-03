@@ -28,16 +28,19 @@ statusbar :: AppState -> Widget Name
 statusbar s =
     case view asError s of
         Just e -> renderStatusbar e s
-        Nothing -> case focusedViewWidget s ListOfThreads of
-          SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s) s
-          ManageMailTagsEditor -> renderStatusbar (view (asMailIndex . miMailTagsEditor) s) s
-          ListOfThreads -> renderStatusbar (view (asMailIndex . miListOfThreads) s) s
-          ListOfMails -> renderStatusbar (view (asMailIndex . miListOfMails) s) s
-          ScrollingMailView -> renderStatusbar (view (asMailView . mvMail) s) s
-          ComposeTo -> renderStatusbar (view (asCompose . cTo) s) s
-          ComposeFrom -> renderStatusbar (view (asCompose . cFrom) s) s
-          ComposeSubject -> renderStatusbar (view (asCompose . cSubject) s) s
-          _ -> withAttr statusbarAttr $ str "Purebred: " <+> fillLine
+        Nothing ->
+            case focusedViewWidget s ListOfThreads of
+                SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s)
+                        s
+                ManageMailTagsEditor -> renderStatusbar (view (asMailIndex . miMailTagsEditor) s) s
+                ManageThreadTagsEditor -> renderStatusbar (view (asMailIndex . miThreadTagsEditor) s) s
+                ListOfThreads -> renderStatusbar (view (asMailIndex . miListOfThreads) s) s
+                ListOfMails -> renderStatusbar (view (asMailIndex . miListOfMails) s) s
+                ScrollingMailView -> renderStatusbar (view (asMailView . mvMail) s) s
+                ComposeTo -> renderStatusbar (view (asCompose . cTo) s) s
+                ComposeFrom -> renderStatusbar (view (asCompose . cFrom) s) s
+                ComposeSubject -> renderStatusbar (view (asCompose . cSubject) s) s
+                _ -> withAttr statusbarAttr $ str "Purebred: " <+> fillLine
 
 class WithContext a where
   renderContext :: a -> Widget Name

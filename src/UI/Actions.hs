@@ -181,7 +181,8 @@ class Resetable (m :: Name) where
   reset :: Proxy m -> AppState -> T.EventM Name AppState
 
 instance Resetable 'ManageMailTagsEditor where
-  reset _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+  reset _ s = pure $ s & over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+              . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 instance Resetable 'ManageThreadTagsEditor where
   reset _ = pure . over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
@@ -202,7 +203,10 @@ instance Focusable 'ManageMailTagsEditor where
   switchFocus _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Focusable 'ManageThreadTagsEditor where
-  switchFocus _ = pure . over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+  switchFocus _ s = pure $ s &
+                    over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+                  . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ManageThreadTagsEditor)
+                  . over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) (Brick.focusSetCurrent ManageThreadTagsEditor)
 
 instance Focusable 'ListOfMails where
   switchFocus _ = pure
@@ -294,6 +298,8 @@ instance ViewTransition 'Help 'Threads where
 instance ViewTransition 'ComposeView 'Threads where
 
 instance ViewTransition 'Mails 'ViewMail where
+
+instance ViewTransition 'ViewMail 'Mails where
 
 
 class HasViewName (a :: ViewName) where

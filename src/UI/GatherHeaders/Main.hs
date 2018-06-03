@@ -11,10 +11,10 @@ import qualified Brick.Widgets.Edit as E
 
 import Types
 import UI.Draw.Main (renderEditorWithLabel)
-import UI.Utils (focusedViewWidget)
+import UI.Utils (focusedViewWidget, titleize)
 
 drawInteractiveHeaders :: AppState -> Widget Name
-drawInteractiveHeaders s = renderEditorWithLabel s True (focusedEditor s)
+drawInteractiveHeaders s = renderEditorWithLabel (titleize $ focusedViewWidget s ComposeFrom) True (focusedEditor s)
 
 focusedEditor :: AppState -> E.Editor T.Text Name
 focusedEditor s =

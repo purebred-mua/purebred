@@ -21,7 +21,7 @@ import UI.Keybindings (dispatch)
 import UI.GatherHeaders.Main (drawInteractiveHeaders)
 import UI.Index.Main
        (renderListOfThreads, renderListOfMails, renderSearchThreadsEditor,
-        renderMailTagsEditor)
+        renderMailTagsEditor, renderThreadTagsEditor)
 import UI.Actions (initialCompose)
 import UI.Mail.Main (renderMailView)
 import UI.Help.Main (renderHelp)
@@ -38,6 +38,7 @@ renderWidget s ListOfThreads = renderListOfThreads s
 renderWidget s ListOfMails = renderListOfMails s
 renderWidget s SearchThreadsEditor = renderSearchThreadsEditor s
 renderWidget s ManageMailTagsEditor = renderMailTagsEditor s
+renderWidget s ManageThreadTagsEditor = renderThreadTagsEditor s
 renderWidget s ScrollingMailView = renderMailView s
 renderWidget s ScrollingHelpView = renderHelp s
 renderWidget s ComposeFrom = drawInteractiveHeaders s

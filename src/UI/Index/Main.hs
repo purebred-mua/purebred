@@ -4,7 +4,8 @@ module UI.Index.Main (
     renderListOfThreads
   , renderListOfMails
   , renderSearchThreadsEditor
-  , renderMailTagsEditor) where
+  , renderMailTagsEditor
+  , renderThreadTagsEditor) where
 
 import Brick.Types (Padding(..), Widget)
 import Brick.AttrMap (AttrName)
@@ -37,12 +38,17 @@ renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . m
 renderSearchThreadsEditor :: AppState -> Widget Name
 renderSearchThreadsEditor s =
     let hasFocus = SearchThreadsEditor == focusedViewWidget s ListOfThreads
-    in renderEditorWithLabel s hasFocus (view (asMailIndex . miThreadTagsEditor) s)
+    in renderEditorWithLabel "Query:" hasFocus (view (asMailIndex . miThreadTagsEditor) s)
 
 renderMailTagsEditor :: AppState -> Widget Name
 renderMailTagsEditor s =
     let hasFocus = ManageMailTagsEditor == focusedViewWidget s ListOfThreads
-    in renderEditorWithLabel s hasFocus (view (asMailIndex . miMailTagsEditor) s)
+    in renderEditorWithLabel "Add/Remove Tags:" hasFocus (view (asMailIndex . miMailTagsEditor) s)
+
+renderThreadTagsEditor :: AppState -> Widget Name
+renderThreadTagsEditor s =
+    let hasFocus = ManageThreadTagsEditor == focusedViewWidget s ListOfThreads
+    in renderEditorWithLabel "Add/Remove Tags:" True (view (asMailIndex . miThreadTagsEditor) s)
 
 listDrawMail :: AppState -> Bool -> NotmuchMail -> Widget Name
 listDrawMail s sel a =

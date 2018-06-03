@@ -54,10 +54,7 @@ instance EventHandler 'Threads 'ManageThreadTagsEditor where
 
 instance EventHandler 'ViewMail 'ScrollingMailView where
   keybindingsL _ _ = asConfig . confMailView . mvKeybindings
-  fallbackHandler _ _ s e = maybe
-                          (Brick.continue s)
-                          (\kb -> view (kbAction . aAction) kb s)
-                          (lookupKeybinding e $ view (asConfig . confIndexView . ivBrowseMailsKeybindings) s)
+  fallbackHandler _ _ s _ = Brick.continue s
 
 instance EventHandler 'Help 'ScrollingHelpView where
   keybindingsL _ _ = asConfig . confHelpView . hvKeybindings
