@@ -4,10 +4,11 @@
 module UI.Status.Main where
 
 import Brick.Types (Widget)
-import Brick.Widgets.Core (txt, str, withAttr, (<+>), strWrap, emptyWidget)
+import Brick.Widgets.Core
+       (txt, str, withAttr, (<+>), strWrap)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
-import Control.Lens.Getter (view)
+import Control.Lens (view)
 import Data.MIME (MIMEMessage)
 import Data.Semigroup ((<>))
 import Data.Text (Text)
@@ -43,28 +44,28 @@ statusbar s =
                 _ -> withAttr statusbarAttr $ str "Purebred: " <+> fillLine
 
 class WithContext a where
-  renderContext :: a -> Widget Name
+  renderContext :: AppState -> a -> Widget Name
 
 instance WithContext (L.List Name NotmuchThread) where
-  renderContext = currentItemW
+  renderContext _ = currentItemW
 
 instance WithContext (L.List Name NotmuchMail) where
-  renderContext = currentItemW
+  renderContext _ = currentItemW
 
 instance WithContext (E.Editor Text Name) where
-  renderContext = str . show . cursorPosition . view E.editContentsL
+  renderContext _ = str . show . cursorPosition . view E.editContentsL
 
 instance WithContext (Maybe MIMEMessage) where
-  renderContext _ = emptyWidget
+  renderContext s _ = currentItemW (view (asMailIndex . miListOfMails) s)
 
 instance WithContext Error where
-  renderContext e = withAttr statusbarErrorAttr $ strWrap (show e)
+  renderContext _ e = withAttr statusbarErrorAttr $ strWrap (show e)
 
 renderStatusbar :: WithContext w => w -> AppState -> Widget Name
 renderStatusbar w s =
     withAttr statusbarAttr
     $ str "Purebred: "
-    <+> renderContext w
+    <+> renderContext s w
     <+> txt (titleize $ focusedViewName s)
     <+> txt " "
     <+> txt (titleize $ focusedViewWidget s ListOfThreads)
