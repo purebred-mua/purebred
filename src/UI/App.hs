@@ -59,6 +59,7 @@ appEvent s (T.VtyEvent ev) =
     ComposeTo -> dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeTo) s ev
     ComposeSubject -> dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeSubject) s ev
     ScrollingHelpView -> dispatch (Proxy :: Proxy 'Help) (Proxy :: Proxy 'ScrollingHelpView) s ev
+    StatusBar -> M.continue s -- can not be focused for input
 appEvent s _ = M.continue s
 
 initialState :: InternalConfiguration -> IO AppState

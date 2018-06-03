@@ -11,7 +11,7 @@ import Types
 
 displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView (Brick.Next AppState)]
 displayMailKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'ViewMail 'ListOfMails AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
     , Keybinding (V.EvKey V.KBS []) (scrollUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar ' ') []) (scrollDown `chain` continue)

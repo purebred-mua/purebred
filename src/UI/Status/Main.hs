@@ -52,7 +52,7 @@ instance WithContext (L.List Name NotmuchMail) where
   renderContext = currentItemW
 
 instance WithContext (E.Editor Text Name) where
-  renderContext e = str $ show $ cursorPosition $ view E.editContentsL e
+  renderContext = str . show . cursorPosition . view E.editContentsL
 
 instance WithContext (Maybe MIMEMessage) where
   renderContext _ = emptyWidget
