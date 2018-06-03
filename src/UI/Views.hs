@@ -8,7 +8,7 @@ import Types
 indexView :: View
 indexView =
     View
-    { _vFocus = focusRing [ListOfThreads, SearchThreadsEditor, ManageThreadTagsEditor]
+    { _vFocus = focusRing [ListOfThreads, SearchThreadsEditor, ManageThreadTagsEditor, ComposeFrom, ComposeTo, ComposeSubject]
     , _vWidgets = [ListOfThreads, StatusBar, SearchThreadsEditor]
     }
 

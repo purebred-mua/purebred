@@ -24,6 +24,7 @@ import UI.Index.Keybindings
         manageMailTagsKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
+import UI.ComposeEditor.Keybindings (listOfAttachmentsKeybindings)
 
 import Types
 import Storage.Notmuch (getDatabasePath)
@@ -119,6 +120,7 @@ defaultConfig =
       , _cvToKeybindings = composeToKeybindings
       , _cvSubjectKeybindings = composeSubjectKeybindings
       , _cvSendMailCmd = renderSendMail
+      , _cvListOfAttachmentsKeybindings = listOfAttachmentsKeybindings
       }
     , _confHelpView = HelpViewSettings
       { _hvKeybindings = helpKeybindings

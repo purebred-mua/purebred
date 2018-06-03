@@ -18,7 +18,7 @@ import qualified Data.Map as Map
 
 import Storage.Notmuch (getThreads)
 import UI.Keybindings (dispatch)
-import UI.GatherHeaders.Main (drawInteractiveHeaders)
+import UI.GatherHeaders.Main (drawSubject, drawFrom, drawTo)
 import UI.Index.Main
        (renderListOfThreads, renderListOfMails, renderSearchThreadsEditor,
         renderMailTagsEditor, renderThreadTagsEditor)
@@ -28,6 +28,7 @@ import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
 import UI.Utils (focusedViewWidget, focusedViewWidgets)
 import UI.Views (indexView, mailView, composeView, helpView, listOfMailsView)
+import UI.ComposeEditor.Main (attachmentsEditor)
 import Types
 
 drawUI :: AppState -> [Widget Name]
@@ -36,14 +37,15 @@ drawUI s = [unVBox $ foldMap (VBox . renderWidget s) (focusedViewWidgets s)]
 renderWidget :: AppState -> Name -> Widget Name
 renderWidget s ListOfThreads = renderListOfThreads s
 renderWidget s ListOfMails = renderListOfMails s
+renderWidget s ListOfAttachments = attachmentsEditor s
 renderWidget s SearchThreadsEditor = renderSearchThreadsEditor s
 renderWidget s ManageMailTagsEditor = renderMailTagsEditor s
 renderWidget s ManageThreadTagsEditor = renderThreadTagsEditor s
 renderWidget s ScrollingMailView = renderMailView s
 renderWidget s ScrollingHelpView = renderHelp s
-renderWidget s ComposeFrom = drawInteractiveHeaders s
-renderWidget s ComposeTo = drawInteractiveHeaders s
-renderWidget s ComposeSubject = drawInteractiveHeaders s
+renderWidget s ComposeFrom = drawFrom s
+renderWidget s ComposeTo = drawTo s
+renderWidget s ComposeSubject = drawSubject s
 renderWidget s StatusBar = statusbar s
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
@@ -51,6 +53,7 @@ appEvent s (T.VtyEvent ev) =
   case focusedViewWidget s ListOfThreads of
     ListOfMails -> dispatch (Proxy :: Proxy 'Mails) (Proxy :: Proxy 'ListOfMails) s ev
     ListOfThreads -> dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ListOfThreads) s ev
+    ListOfAttachments -> dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ListOfAttachments) s ev
     SearchThreadsEditor -> dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'SearchThreadsEditor) s ev
     ManageMailTagsEditor -> dispatch (Proxy :: Proxy 'Mails) (Proxy :: Proxy 'ManageMailTagsEditor) s ev
     ManageThreadTagsEditor -> dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ManageThreadTagsEditor) s ev

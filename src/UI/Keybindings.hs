@@ -72,6 +72,10 @@ instance EventHandler 'ComposeView 'ComposeSubject where
   keybindingsL _ _ = asConfig . confComposeView . cvSubjectKeybindings
   fallbackHandler _ _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cSubject) E.handleEditorEvent e
 
+instance EventHandler 'ComposeView 'ListOfAttachments where
+  keybindingsL _ _ = asConfig . confComposeView . cvListOfAttachmentsKeybindings
+  fallbackHandler _ _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cAttachments) L.handleListEvent e
+
 dispatch
     :: EventHandler v m
     => Proxy v

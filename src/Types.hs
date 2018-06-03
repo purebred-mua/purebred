@@ -105,7 +105,6 @@ data Compose = Compose
     , _cFrom :: E.Editor T.Text Name
     , _cTo :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
-    , _cFocusFields :: Brick.FocusRing Name
     , _cAttachments :: L.List Name Mail.Part
     }
 
@@ -120,19 +119,6 @@ cTo = lens _cTo (\c x -> c { _cTo = x })
 
 cSubject :: Lens' Compose (E.Editor T.Text Name)
 cSubject = lens _cSubject (\c x -> c { _cSubject = x })
-
-cFocusFields :: Lens' Compose (Brick.FocusRing Name)
-cFocusFields = lens _cFocusFields (\cv x -> cv { _cFocusFields = x })
-
-cFocusedEditorL
-    :: Functor f
-    => Name
-    -> (E.Editor T.Text Name -> f (E.Editor T.Text Name))
-    -> AppState
-    -> f AppState
-cFocusedEditorL ComposeTo = asCompose . cTo
-cFocusedEditorL ComposeFrom = asCompose . cFrom
-cFocusedEditorL _ = asCompose . cSubject
 
 cAttachments :: Lens' Compose (L.List Name Mail.Part)
 cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
@@ -195,6 +181,7 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvToKeybindings :: [Keybinding 'ComposeView 'ComposeTo (Next AppState)]
     , _cvSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject (Next AppState)]
     , _cvSendMailCmd :: Mail.Mail -> IO ()
+    , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ListOfAttachments (Next AppState)]
     }
 
 cvFromKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeFrom (Next AppState)]
@@ -208,6 +195,9 @@ cvSubjectKeybindings = lens _cvSubjectKeybindings (\cv x -> cv { _cvSubjectKeybi
 
 cvSendMailCmd :: Lens' ComposeViewSettings (Mail.Mail -> IO ())
 cvSendMailCmd = lens _cvSendMailCmd (\cv x -> cv { _cvSendMailCmd = x })
+
+cvListOfAttachmentsKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ListOfAttachments (Next AppState)]
+cvListOfAttachmentsKeybindings = lens _cvListOfAttachmentsKeybindings (\cv x -> cv { _cvListOfAttachmentsKeybindings = x })
 
 newtype HelpViewSettings = HelpViewSettings
   { _hvKeybindings :: [Keybinding 'Help 'ScrollingHelpView (Next AppState)]

@@ -131,6 +131,8 @@ instance ModeTransition 'ComposeSubject 'ListOfThreads where
 
 instance ModeTransition 'ScrollingHelpView 'ListOfThreads where
 
+instance ModeTransition 'ListOfAttachments 'ListOfThreads where
+
 instance ModeTransition s 'ScrollingHelpView where  -- help can be reached from any mode
 
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
@@ -625,7 +627,6 @@ initialCompose =
         (E.editorText ComposeFrom (Just 1) "")
         (E.editorText ComposeTo (Just 1) "")
         (E.editorText ComposeSubject (Just 1) "")
-        (Brick.focusRing [ComposeFrom, ComposeTo, ComposeSubject, ListOfAttachments])
         (L.list ListOfAttachments Vector.empty 1)
 
 
@@ -640,7 +641,8 @@ invokeEditor' s = do
                               & setError editorError
     ExitSuccess -> do
       body <- liftIO $ readFile tmpfile
-      pure $ over (asCompose . cAttachments . L.listElementsL) (cons $ plainPart body) s
+      pure $ s & over (asCompose . cAttachments . L.listElementsL) (cons $ plainPart body)
+        . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 editorError :: Error
 editorError = GenericError ("Editor command exited with error code."

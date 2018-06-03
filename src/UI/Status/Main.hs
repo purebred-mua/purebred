@@ -5,11 +5,12 @@ module UI.Status.Main where
 
 import Brick.Types (Widget)
 import Brick.Widgets.Core
-       (txt, str, withAttr, (<+>), strWrap)
+       (txt, str, withAttr, (<+>), strWrap, vLimit, fill)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
 import Control.Lens (view)
 import Data.MIME (MIMEMessage)
+import Network.Mail.Mime (Part)
 import Data.Semigroup ((<>))
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
@@ -31,13 +32,13 @@ statusbar s =
         Just e -> renderStatusbar e s
         Nothing ->
             case focusedViewWidget s ListOfThreads of
-                SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s)
-                        s
+                SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s) s
                 ManageMailTagsEditor -> renderStatusbar (view (asMailIndex . miMailTagsEditor) s) s
                 ManageThreadTagsEditor -> renderStatusbar (view (asMailIndex . miThreadTagsEditor) s) s
                 ListOfThreads -> renderStatusbar (view (asMailIndex . miListOfThreads) s) s
                 ListOfMails -> renderStatusbar (view (asMailIndex . miListOfMails) s) s
                 ScrollingMailView -> renderStatusbar (view (asMailView . mvMail) s) s
+                ListOfAttachments -> renderStatusbar (view (asCompose . cAttachments) s) s
                 ComposeTo -> renderStatusbar (view (asCompose . cTo) s) s
                 ComposeFrom -> renderStatusbar (view (asCompose . cFrom) s) s
                 ComposeSubject -> renderStatusbar (view (asCompose . cSubject) s) s
@@ -51,6 +52,9 @@ instance WithContext (L.List Name NotmuchThread) where
 
 instance WithContext (L.List Name NotmuchMail) where
   renderContext _ = currentItemW
+
+instance WithContext (L.List Name Part) where
+  renderContext _ _ = txt "-- Attachments " <+> vLimit 1 (fill '-')
 
 instance WithContext (E.Editor Text Name) where
   renderContext _ = str . show . cursorPosition . view E.editContentsL
