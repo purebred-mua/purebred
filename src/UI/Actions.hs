@@ -172,7 +172,10 @@ completeMailTags s =
 instance Completable 'ManageThreadTagsEditor where
   complete _ s = case getEditorTagOps (asMailIndex . miThreadTagsEditor) s of
                       Left err -> pure $ setError err s
-                      Right ops -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
+                      Right ops ->
+                        selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
+                        >>= pure
+                        . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
@@ -185,7 +188,8 @@ instance Resetable 'ManageMailTagsEditor where
               . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ManageMailTagsEditor)
 
 instance Resetable 'ManageThreadTagsEditor where
-  reset _ = pure . over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+  reset _ s = pure $ s & over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+            . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 instance Resetable 'ComposeSubject where
   reset _ = pure
@@ -206,7 +210,6 @@ instance Focusable 'ManageThreadTagsEditor where
   switchFocus _ s = pure $ s &
                     over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
                   . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ManageThreadTagsEditor)
-                  . over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) (Brick.focusSetCurrent ManageThreadTagsEditor)
 
 instance Focusable 'ListOfMails where
   switchFocus _ = pure
@@ -610,7 +613,7 @@ sendMail s = do
             s & set (asCompose . cMail . lMailTo) [to]
             . set (asCompose . cMail . lMailFrom) from
             . set (asCompose . cMail . lMailHeaders) subject
-            . set (asCompose . cMail . lMailParts) ([toListOf (asCompose . cAttachments . L.listElementsL . traversed) s])
+            . set (asCompose . cMail . lMailParts) [toListOf (asCompose . cAttachments . L.listElementsL . traversed) s]
     liftIO $ view (asConfig . confComposeView . cvSendMailCmd) s' (view (asCompose . cMail) s')
     pure $ set asCompose initialCompose s'
 
