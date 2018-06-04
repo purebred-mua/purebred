@@ -3,9 +3,9 @@
 
 module UI.Status.Main where
 
-import Brick.Types (Widget)
+import Brick.Types (Widget, Padding(..))
 import Brick.Widgets.Core
-       (txt, str, withAttr, (<+>), strWrap, vLimit, fill)
+       (txt, str, withAttr, (<+>), strWrap, vLimit, fill, padRight)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
 import Control.Lens (view)
@@ -69,10 +69,8 @@ renderStatusbar :: WithContext w => w -> AppState -> Widget Name
 renderStatusbar w s =
     withAttr statusbarAttr
     $ str "Purebred: "
-    <+> renderContext s w
-    <+> txt (titleize $ focusedViewName s)
-    <+> txt " "
-    <+> txt (titleize $ focusedViewWidget s ListOfThreads)
+    <+> padRight (Pad 1) (renderContext s w)
+    <+> padRight (Pad 1) (txt (titleize (focusedViewName s) <> "-" <> titleize (focusedViewWidget s ListOfThreads)))
     <+> fillLine
 
 currentItemW :: Show e => L.List Name e -> Widget Name
