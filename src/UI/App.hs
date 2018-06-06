@@ -9,6 +9,7 @@ import Brick.Focus (focusRing)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import qualified Graphics.Vty.Input.Events as Vty
 import Control.Lens.Getter (view)
 import Control.Monad.Except (runExceptT)
 import qualified Data.Vector as Vector
@@ -26,7 +27,7 @@ import UI.Actions (initialCompose)
 import UI.Mail.Main (renderMailView)
 import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
-import UI.Utils (focusedViewWidget, focusedViewWidgets)
+import UI.Utils (focusedViewWidget, focusedViewWidgets, focusedViewName)
 import UI.Views (indexView, mailView, composeView, helpView, listOfMailsView)
 import UI.ComposeEditor.Main (attachmentsEditor)
 import Types
@@ -48,6 +49,16 @@ renderWidget s ComposeTo = drawTo s
 renderWidget s ComposeSubject = drawSubject s
 renderWidget s StatusBar = statusbar s
 
+handleComposeEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
+handleComposeEvent ComposeView ComposeFrom s ev =  dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeFrom) s ev
+handleComposeEvent ComposeView ComposeTo s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeTo) s ev
+handleComposeEvent ComposeView ComposeSubject s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeSubject) s ev
+handleComposeEvent Threads ComposeFrom s ev =  dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeFrom) s ev
+handleComposeEvent Threads ComposeTo s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeTo) s ev
+handleComposeEvent Threads ComposeSubject s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeSubject) s ev
+handleComposeEvent _ _ s _ = M.continue s
+
+
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) =
   case focusedViewWidget s ListOfThreads of
@@ -58,9 +69,9 @@ appEvent s (T.VtyEvent ev) =
     ManageMailTagsEditor -> dispatch (Proxy :: Proxy 'Mails) (Proxy :: Proxy 'ManageMailTagsEditor) s ev
     ManageThreadTagsEditor -> dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ManageThreadTagsEditor) s ev
     ScrollingMailView -> dispatch (Proxy :: Proxy 'ViewMail) (Proxy :: Proxy 'ScrollingMailView) s ev
-    ComposeFrom -> dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeFrom) s ev
-    ComposeTo -> dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeTo) s ev
-    ComposeSubject -> dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeSubject) s ev
+    ComposeFrom -> handleComposeEvent (focusedViewName s) ComposeFrom s ev
+    ComposeTo -> handleComposeEvent (focusedViewName s) ComposeTo s ev
+    ComposeSubject -> handleComposeEvent (focusedViewName s) ComposeSubject s ev
     ScrollingHelpView -> dispatch (Proxy :: Proxy 'Help) (Proxy :: Proxy 'ScrollingHelpView) s ev
     StatusBar -> M.continue s -- can not be focused for input
 appEvent s _ = M.continue s

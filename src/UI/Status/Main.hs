@@ -70,8 +70,8 @@ renderStatusbar w s =
     withAttr statusbarAttr
     $ str "Purebred: "
     <+> padRight (Pad 1) (renderContext s w)
-    <+> padRight (Pad 1) (txt (titleize (focusedViewName s) <> "-" <> titleize (focusedViewWidget s ListOfThreads)))
     <+> fillLine
+    <+> padRight (Pad 1) (txt (titleize (focusedViewName s) <> "-" <> titleize (focusedViewWidget s ListOfThreads)))
 
 currentItemW :: Show e => L.List Name e -> Widget Name
 currentItemW l = str $

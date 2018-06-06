@@ -18,7 +18,7 @@ import Types
 lookupKeybinding :: Event -> [Keybinding v ctx a] -> Maybe (Keybinding v ctx a)
 lookupKeybinding e = find (\x -> view kbEvent x == e)
 
-class EventHandler (v :: ViewName) (m :: Name)  where
+class EventHandler (v :: ViewName) (m :: Name) where
     keybindingsL
         :: Functor f
         => Proxy v
@@ -59,6 +59,18 @@ instance EventHandler 'ViewMail 'ScrollingMailView where
 instance EventHandler 'Help 'ScrollingHelpView where
   keybindingsL _ _ = asConfig . confHelpView . hvKeybindings
   fallbackHandler _ _ s _ = Brick.continue s
+
+instance EventHandler 'Threads 'ComposeFrom where
+  keybindingsL _ _ = asConfig . confIndexView . ivFromKeybindings
+  fallbackHandler _ _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cFrom) E.handleEditorEvent e
+
+instance EventHandler 'Threads 'ComposeTo where
+  keybindingsL _ _ = asConfig . confIndexView . ivToKeybindings
+  fallbackHandler _ _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cTo) E.handleEditorEvent e
+
+instance EventHandler 'Threads 'ComposeSubject where
+  keybindingsL _ _ = asConfig . confIndexView . ivSubjectKeybindings
+  fallbackHandler _ _ s e = Brick.continue =<< Brick.handleEventLensed s (asCompose . cSubject) E.handleEditorEvent e
 
 instance EventHandler 'ComposeView 'ComposeFrom where
   keybindingsL _ _ = asConfig . confComposeView . cvFromKeybindings

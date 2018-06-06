@@ -401,7 +401,7 @@ testUserCanSwitchBackToIndex =
             sendKeys "Escape" (Literal "body")
 
             liftIO $ step "exit vim"
-            sendKeys ": x\r" (Literal "Attachments")
+            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["37"] ["40"] <> "testuser@foo.test"))
 
             liftIO $ step "switch back to index"
             sendKeys "Tab" (Literal "Testmail")

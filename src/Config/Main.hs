@@ -15,16 +15,18 @@ import Network.Mail.Mime (renderSendMail)
 import Data.MIME (ContentType(..))
 
 import UI.GatherHeaders.Keybindings
-       (composeFromKeybindings,
-        composeToKeybindings,
-        composeSubjectKeybindings)
+       (gatherFromKeybindings,
+        gatherToKeybindings,
+        gatherSubjectKeybindings)
 import UI.Index.Keybindings
        (browseMailKeybindings, browseThreadsKeybindings,
         searchThreadsKeybindings, manageThreadTagsKeybindings,
         manageMailTagsKeybindings)
 import UI.Mail.Keybindings (displayMailKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
-import UI.ComposeEditor.Keybindings (listOfAttachmentsKeybindings)
+import UI.ComposeEditor.Keybindings
+       (listOfAttachmentsKeybindings, composeFromKeybindings,
+        composeToKeybindings, composeSubjectKeybindings)
 
 import Types
 import Storage.Notmuch (getDatabasePath)
@@ -114,6 +116,9 @@ defaultConfig =
       , _ivSearchThreadsKeybindings = searchThreadsKeybindings
       , _ivManageMailTagsKeybindings = manageMailTagsKeybindings
       , _ivManageThreadTagsKeybindings = manageThreadTagsKeybindings
+      , _ivFromKeybindings = gatherFromKeybindings
+      , _ivToKeybindings = gatherToKeybindings
+      , _ivSubjectKeybindings = gatherSubjectKeybindings
       }
     , _confComposeView = ComposeViewSettings
       { _cvFromKeybindings = composeFromKeybindings

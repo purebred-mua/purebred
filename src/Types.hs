@@ -212,22 +212,35 @@ data IndexViewSettings = IndexViewSettings
     , _ivSearchThreadsKeybindings :: [Keybinding 'Threads 'SearchThreadsEditor (Next AppState)]
     , _ivManageMailTagsKeybindings :: [Keybinding 'Mails 'ManageMailTagsEditor (Next AppState)]
     , _ivManageThreadTagsKeybindings :: [Keybinding 'Threads 'ManageThreadTagsEditor (Next AppState)]
+    , _ivFromKeybindings :: [Keybinding 'Threads 'ComposeFrom (Next AppState)]
+    , _ivToKeybindings :: [Keybinding 'Threads 'ComposeTo (Next AppState)]
+    , _ivSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject (Next AppState)]
     }
 
 ivBrowseThreadsKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ListOfThreads (Next AppState)]
-ivBrowseThreadsKeybindings f (IndexViewSettings a b c d e) = fmap (\a' -> IndexViewSettings a' b c d e) (f a)
+ivBrowseThreadsKeybindings = lens _ivBrowseThreadsKeybindings (\s x -> s { _ivBrowseThreadsKeybindings = x })
 
 ivBrowseMailsKeybindings :: Lens' IndexViewSettings [Keybinding 'Mails 'ListOfMails (Next AppState)]
-ivBrowseMailsKeybindings f (IndexViewSettings a b c d e) = fmap (\b' -> IndexViewSettings a b' c d e) (f b)
+ivBrowseMailsKeybindings = lens _ivBrowseMailsKeybindings (\s x -> s { _ivBrowseMailsKeybindings = x })
 
 ivSearchThreadsKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'SearchThreadsEditor (Next AppState)]
-ivSearchThreadsKeybindings f (IndexViewSettings a b c d e) = fmap (\c' -> IndexViewSettings a b c' d e) (f c)
+ivSearchThreadsKeybindings = lens _ivSearchThreadsKeybindings (\s x -> s { _ivSearchThreadsKeybindings = x })
 
 ivManageMailTagsKeybindings :: Lens' IndexViewSettings [Keybinding 'Mails 'ManageMailTagsEditor (Next AppState)]
-ivManageMailTagsKeybindings f (IndexViewSettings a b c d e) = fmap (\d' -> IndexViewSettings a b c d' e) (f d)
+ivManageMailTagsKeybindings = lens _ivManageMailTagsKeybindings (\s x -> s { _ivManageMailTagsKeybindings = x })
 
 ivManageThreadTagsKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ManageThreadTagsEditor (Next AppState)]
-ivManageThreadTagsKeybindings f (IndexViewSettings a b c d e) = fmap (\e' -> IndexViewSettings a b c d e') (f e)
+ivManageThreadTagsKeybindings = lens _ivManageThreadTagsKeybindings (\s x -> s { _ivManageThreadTagsKeybindings = x })
+
+ivFromKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ComposeFrom (Next AppState)]
+ivFromKeybindings = lens _ivFromKeybindings (\s x -> s { _ivFromKeybindings = x })
+
+ivToKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ComposeTo (Next AppState)]
+ivToKeybindings = lens _ivToKeybindings (\s x -> s { _ivToKeybindings = x })
+
+ivSubjectKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ComposeSubject (Next AppState)]
+ivSubjectKeybindings = lens _ivSubjectKeybindings (\s x -> s { _ivSubjectKeybindings = x })
+
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int

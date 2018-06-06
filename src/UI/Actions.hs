@@ -33,6 +33,7 @@ module UI.Actions (
   , invokeEditor
   , reloadList
   , selectNextUnread
+  , focusNextWidget
   ) where
 
 import qualified Brick.Main as Brick
@@ -157,6 +158,12 @@ instance Completable 'ManageMailTagsEditor where
 instance Completable 'ComposeSubject where
   complete _ = sendMail
 
+instance Completable 'ComposeFrom where
+  complete _ = sendMail
+
+instance Completable 'ComposeTo where
+  complete _ = sendMail
+
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
     case getEditorTagOps (asMailIndex . miMailTagsEditor) s of
@@ -191,10 +198,21 @@ instance Resetable 'ManageMailTagsEditor where
 
 instance Resetable 'ManageThreadTagsEditor where
   reset _ s = pure $ s & over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
-            . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
+
+instance Resetable 'ComposeFrom where
+  reset _ s = pure $ s & over (asCompose . cFrom . E.editContentsL) clearZipper
+              . resetThreadViewEditor
 
 instance Resetable 'ComposeSubject where
-  reset _ = pure
+  reset _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) clearZipper
+              . resetThreadViewEditor
+
+instance Resetable 'ComposeTo where
+  reset _ s = pure $ s & over (asCompose . cTo . E.editContentsL) clearZipper
+              . resetThreadViewEditor
+
+resetThreadViewEditor :: AppState -> AppState
+resetThreadViewEditor s = over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor) s
 
 -- | Generalisation of focus changes between widgets on the same "view"
 -- expressed with the mode in the application state.
@@ -220,7 +238,6 @@ instance Focusable 'ComposeFrom where
   switchFocus _ s = if has (asCompose . cMail . lMailParts . traversed) s
                     then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
                     else pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeFrom)
-                         . over (asCompose . cFrom . E.editContentsL) clearZipper
 
 -- TODO: helper function to replace whatever editor we're displaying at the
 -- bottom with a new editor given by name. There is currently nothing which
@@ -500,6 +517,14 @@ selectNextUnread =
                  (L.listMoveTo (maybe 0 (\i -> seekIndex i fx vec) cur))
                  s
          }
+
+focusNextWidget :: Action v w AppState
+focusNextWidget =
+    Action
+    { _aDescription = "moves input focus to the next widget"
+    , _aAction = \s -> pure $
+                      over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) Brick.focusNext s
+    }
 
 -- Function definitions for actions
 --
