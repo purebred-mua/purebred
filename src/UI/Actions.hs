@@ -85,59 +85,6 @@ instance Scrollable 'ScrollingMailView where
 instance Scrollable 'ScrollingHelpView where
   makeViewportScroller _ = Brick.viewportScroll ScrollingHelpView
 
-
-class ModeTransition (s :: Name) (d :: Name) where
-
-instance ModeTransition s s where
-
-instance ModeTransition 'ManageMailTagsEditor 'ListOfMails where
-
-instance ModeTransition 'ListOfThreads 'SearchThreadsEditor where
-
-instance ModeTransition 'ListOfMails 'ManageMailTagsEditor where
-
-instance ModeTransition 'ListOfMails 'ScrollingMailView where
-
-instance ModeTransition 'ListOfThreads 'ManageThreadTagsEditor where
-
-instance ModeTransition 'ListOfThreads 'ScrollingMailView where
-
-instance ModeTransition 'ScrollingMailView 'ListOfMails where
-
-instance ModeTransition 'ScrollingMailView 'ManageMailTagsEditor where
-
-instance ModeTransition 'ListOfThreads 'ListOfMails where
-
-instance ModeTransition 'ManageThreadTagsEditor 'ListOfThreads where
-
-instance ModeTransition 'ListOfMails 'ListOfThreads  where
-
-instance ModeTransition 'SearchThreadsEditor 'ListOfThreads  where
-
-instance ModeTransition 'ListOfThreads 'ComposeFrom where
-
-instance ModeTransition 'ListOfMails 'ComposeFrom where
-
-instance ModeTransition 'ComposeFrom 'ListOfThreads where
-
-instance ModeTransition 'ComposeFrom 'ComposeTo where
-
-instance ModeTransition 'ComposeTo 'ListOfThreads where
-
-instance ModeTransition 'ComposeTo 'ComposeSubject where
-
-instance ModeTransition 'ComposeSubject 'ComposeFrom where
-
-instance ModeTransition 'ComposeSubject 'ListOfThreads where
-
-instance ModeTransition 'ScrollingHelpView 'ListOfThreads where
-
-instance ModeTransition 'ListOfAttachments 'ListOfThreads where
-
-instance ModeTransition 'ComposeSubject 'ListOfAttachments where
-
-instance ModeTransition s 'ScrollingHelpView where  -- help can be reached from any mode
-
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
 -- contents are used to be applied to an action.
 --
@@ -364,7 +311,7 @@ chain (Action d1 f1) (Action d2 f2) =
 
 chain'
     :: forall ctx ctx' a v v'.
-       (HasName ctx', HasViewName v', ViewTransition v v', ModeTransition ctx ctx')
+       (HasName ctx', HasViewName v', ViewTransition v v')
     => Action v ctx AppState
     -> Action v' ctx' a
     -> Action v ctx a
