@@ -22,7 +22,8 @@ import UI.Index.Keybindings
        (browseMailKeybindings, browseThreadsKeybindings,
         searchThreadsKeybindings, manageThreadTagsKeybindings,
         manageMailTagsKeybindings)
-import UI.Mail.Keybindings (displayMailKeybindings)
+import UI.Mail.Keybindings
+       (displayMailKeybindings, mailViewManageMailTagsKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
 import UI.ComposeEditor.Keybindings
        (listOfAttachmentsKeybindings, composeFromKeybindings,
@@ -106,9 +107,10 @@ defaultConfig =
     , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
     , _confMailView = MailViewSettings
       { _mvIndexRows = 10
-      , _mvPreferedContentType = ContentType "text" "plain" []
+      , _mvPreferredContentType = ContentType "text" "plain" []
       , _mvHeadersToShow = (`elem` ["subject", "to", "from", "cc"])
       , _mvKeybindings = displayMailKeybindings
+      , _mvManageMailTagsKeybindings = mailViewManageMailTagsKeybindings
       }
     , _confIndexView = IndexViewSettings
       { _ivBrowseThreadsKeybindings = browseThreadsKeybindings

@@ -163,27 +163,58 @@ resetThreadViewEditor s = over (asViews . vsViews . at (focusedViewName s) . _Ju
 -- | Generalisation of focus changes between widgets on the same "view"
 -- expressed with the mode in the application state.
 --
-class Focusable (m :: Name) where
-  switchFocus :: Proxy m -> AppState -> T.EventM Name AppState
+class Focusable (v :: ViewName) (m :: Name) where
+  switchFocus :: Proxy v -> Proxy m -> AppState -> T.EventM Name AppState
 
-instance Focusable 'SearchThreadsEditor where
-  switchFocus _ = pure . over (asMailIndex . miSearchThreadsEditor) (E.applyEdit gotoEOL)
+instance Focusable 'Threads 'SearchThreadsEditor where
+  switchFocus _ _ = pure . over (asMailIndex . miSearchThreadsEditor) (E.applyEdit gotoEOL)
 
-instance Focusable 'ManageMailTagsEditor where
-  switchFocus _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
-
-instance Focusable 'ManageThreadTagsEditor where
-  switchFocus _ s = pure $ s &
+instance Focusable 'Threads 'ManageThreadTagsEditor where
+  switchFocus _ _ s = pure $ s &
                     over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
                   . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ManageThreadTagsEditor)
 
-instance Focusable 'ListOfMails where
-  switchFocus _ = pure
-
-instance Focusable 'ComposeFrom where
-  switchFocus _ s = if has (asCompose . cMail . lMailParts . traversed) s
+instance Focusable 'Threads 'ComposeFrom where
+  switchFocus _ _ s = if has (asCompose . cMail . lMailParts . traversed) s
                     then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
                     else pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeFrom)
+
+instance Focusable 'Threads 'ComposeTo where
+  switchFocus _ _ s = pure $ over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeTo) s
+
+instance Focusable 'Threads 'ComposeSubject where
+  switchFocus _ _ s = pure $ over (asViews. vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeSubject) s
+
+instance Focusable 'Threads 'ListOfThreads where
+  -- Reload the threads tags when returning to the list of threads, since they
+  -- could have changed. If no thread is selected (e.g. invalid search leading
+  -- no results) then there is nothing to update.
+  switchFocus _ _ s = let selected = L.listSelectedElement $ view (asMailIndex . miListOfThreads) s
+                    in ($ s) <$> maybe (pure id) (reloadThreadTags s) selected
+
+instance Focusable 'Mails 'ManageMailTagsEditor where
+  switchFocus _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+
+instance Focusable 'ViewMail 'ManageMailTagsEditor where
+  switchFocus _ _ s = pure $ over (asViews. vsViews . at ViewMail . _Just . vWidgets) (\l -> l ++ [ManageMailTagsEditor]) s
+
+instance Focusable 'Mails 'ListOfMails where
+  switchFocus _ _ = pure
+
+instance Focusable 'Mails 'ComposeFrom where
+  switchFocus _ _ s = if has (asCompose . cMail . lMailParts . traversed) s
+                    then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
+                    else pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeFrom)
+
+instance Focusable 'ViewMail 'ListOfMails where
+  switchFocus _ _ = pure . over (asViews . vsViews . at ViewMail . _Just . vFocus) (Brick.focusSetCurrent ListOfMails)
+
+instance Focusable 'Help 'ScrollingHelpView where
+  switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
+
+instance Focusable 'ComposeView 'ListOfAttachments where
+  switchFocus _ _ s = pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) (Brick.focusSetCurrent ListOfAttachments)
+                    . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 -- TODO: helper function to replace whatever editor we're displaying at the
 -- bottom with a new editor given by name. There is currently nothing which
@@ -192,25 +223,6 @@ instance Focusable 'ComposeFrom where
 replaceEditor :: Name -> [Name] -> [Name]
 replaceEditor n xs = reverse (drop 1 (reverse xs)) ++ [n]
 
-instance Focusable 'ComposeTo where
-  switchFocus _ s = pure $ over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeTo) s
-
-instance Focusable 'ComposeSubject where
-  switchFocus _ s = pure $ over (asViews. vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeSubject) s
-
-instance Focusable 'ListOfThreads where
-  -- Reload the threads tags when returning to the list of threads, since they
-  -- could have changed. If no thread is selected (e.g. invalid search leading
-  -- no results) then there is nothing to update.
-  switchFocus _ s = let selected = L.listSelectedElement $ view (asMailIndex . miListOfThreads) s
-                    in ($ s) <$> maybe (pure id) (reloadThreadTags s) selected
-
-instance Focusable 'ScrollingHelpView where
-  switchFocus _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
-
-instance Focusable 'ListOfAttachments where
-  switchFocus _ s = pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) (Brick.focusSetCurrent ListOfAttachments)
-                    . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
@@ -328,8 +340,8 @@ done = Action "apply" (complete (Proxy :: Proxy a))
 abort :: forall a v. (HasViewName v, Resetable a) => Action v a AppState
 abort = Action "cancel" (reset (Proxy :: Proxy a))
 
-focus :: forall a v. (HasViewName v, HasName a, Focusable a) => Action v a AppState
-focus = Action ("switch mode to " <> show (name (Proxy :: Proxy a))) (switchFocus (Proxy :: Proxy a))
+focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState
+focus = Action ("switch mode to " <> show (name (Proxy :: Proxy a))) (switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a))
 
 -- | A no-op action which just returns the current AppState
 -- This action can be used at the start of an Action chain where an immediate

@@ -244,22 +244,23 @@ ivSubjectKeybindings = lens _ivSubjectKeybindings (\s x -> s { _ivSubjectKeybind
 
 data MailViewSettings = MailViewSettings
     { _mvIndexRows           :: Int
-    , _mvPreferedContentType :: ContentType
+    , _mvPreferredContentType :: ContentType
     , _mvHeadersToShow       :: CI.CI B.ByteString -> Bool
     , _mvKeybindings         :: [Keybinding 'ViewMail 'ScrollingMailView (Next AppState)]
+    , _mvManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor (Next AppState)]
     }
 
 mvIndexRows :: Lens' MailViewSettings Int
-mvIndexRows f (MailViewSettings a b c d) = fmap (\a' -> MailViewSettings a' b c d) (f a)
+mvIndexRows = lens _mvIndexRows (\mv x -> mv { _mvIndexRows = x })
 
 mvPreferredContentType :: Lens' MailViewSettings ContentType
-mvPreferredContentType f (MailViewSettings a b c d) = fmap (\b' -> MailViewSettings a b' c d) (f b)
+mvPreferredContentType = lens _mvPreferredContentType (\mv x -> mv { _mvPreferredContentType = x })
 
 mvHeadersToShow :: Getter MailViewSettings (CI.CI B.ByteString -> Bool)
-mvHeadersToShow = to (\(MailViewSettings _ _ h _) -> h)
+mvHeadersToShow = lens _mvHeadersToShow (\mv x -> mv { _mvHeadersToShow = x })
 
 mvKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'ScrollingMailView (Next AppState)]
-mvKeybindings f (MailViewSettings a b c d) = fmap (\d' -> MailViewSettings a b c d') (f d)
+mvKeybindings = lens _mvKeybindings (\mv x -> mv { _mvKeybindings = x })
 
 data ViewName
     = Threads

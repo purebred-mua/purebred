@@ -23,3 +23,9 @@ displayMailKeybindings =
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain'` displayMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain'` displayMail `chain` continue)
     ]
+
+mailViewManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor (Brick.Next AppState)]
+mailViewManageMailTagsKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
+    ]

@@ -56,6 +56,10 @@ instance EventHandler 'ViewMail 'ScrollingMailView where
   keybindingsL _ _ = asConfig . confMailView . mvKeybindings
   fallbackHandler _ _ s _ = Brick.continue s
 
+instance EventHandler 'ViewMail 'ManageMailTagsEditor where
+  keybindingsL _ _ = asConfig . confMailView . mvKeybindings
+  fallbackHandler _ _ s _ = Brick.continue s
+
 instance EventHandler 'Help 'ScrollingHelpView where
   keybindingsL _ _ = asConfig . confHelpView . hvKeybindings
   fallbackHandler _ _ s _ = Brick.continue s
