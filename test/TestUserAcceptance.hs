@@ -111,7 +111,7 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 
     liftIO $ step "set one mail to unread"
     sendKeys "Enter" (Literal "Beginning of large text")
-    sendKeys "q t" (Regex (buildAnsiRegex ["1"] [] [] <> "\\sWIP Refactor\\s" <> buildAnsiRegex ["0"] ["34"] ["40"]))
+    sendKeys "q t" (Regex (buildAnsiRegex ["1"] [] [] <> "\\sWIP Refactor\\s" <> buildAnsiRegex ["0"] ["94"] ["40"]))
 
     liftIO $ step "returning to thread list shows thread unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> " 08/Feb \\(2\\)"))
