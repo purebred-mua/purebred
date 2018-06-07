@@ -27,17 +27,17 @@ import System.Directory (getCurrentDirectory)
 import Data.Maybe (fromMaybe)
 import Data.List (union)
 
-myBrowseThreadsKbs :: [Keybinding 'BrowseThreads (Next AppState)]
+myBrowseThreadsKbs :: [Keybinding 'Threads 'ListOfThreads (Next AppState)]
 myBrowseThreadsKbs =
   [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
   ]
 
-myBrowseMailKeybindings :: [Keybinding 'BrowseMail (Next AppState)]
+myBrowseMailKeybindings :: [Keybinding 'Mails 'ListOfMails (Next AppState)]
 myBrowseMailKeybindings =
     [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]
 
-myMailKeybindings :: [Keybinding 'ViewMail (Next AppState)]
+myMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView (Next AppState)]
 myMailKeybindings =
     [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]
@@ -47,7 +47,7 @@ writeMailtoFile m = do
   m' <- renderMail' m
   confdir <- lookupEnv "PUREBRED_CONFIG_DIR"
   currentdir <- getCurrentDirectory
-  let fname = (fromMaybe currentdir confdir) </> "sentMail"
+  let fname = fromMaybe currentdir confdir </> "sentMail"
   L.writeFile fname m'
 
 

@@ -134,6 +134,8 @@ instance ModeTransition 'ScrollingHelpView 'ListOfThreads where
 
 instance ModeTransition 'ListOfAttachments 'ListOfThreads where
 
+instance ModeTransition 'ComposeSubject 'ListOfAttachments where
+
 instance ModeTransition s 'ScrollingHelpView where  -- help can be reached from any mode
 
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
@@ -155,13 +157,7 @@ instance Completable 'SearchThreadsEditor where
 instance Completable 'ManageMailTagsEditor where
   complete _ = liftIO . completeMailTags
 
-instance Completable 'ComposeSubject where
-  complete _ = sendMail
-
-instance Completable 'ComposeFrom where
-  complete _ = sendMail
-
-instance Completable 'ComposeTo where
+instance Completable 'ListOfAttachments where
   complete _ = sendMail
 
 completeMailTags :: AppState -> IO AppState
@@ -210,6 +206,9 @@ instance Resetable 'ComposeSubject where
 instance Resetable 'ComposeTo where
   reset _ s = pure $ s & over (asCompose . cTo . E.editContentsL) clearZipper
               . resetThreadViewEditor
+
+instance Resetable 'ListOfAttachments where
+  reset _ = pure . resetThreadViewEditor
 
 resetThreadViewEditor :: AppState -> AppState
 resetThreadViewEditor s = over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor) s
@@ -262,6 +261,10 @@ instance Focusable 'ListOfThreads where
 instance Focusable 'ScrollingHelpView where
   switchFocus _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
 
+instance Focusable 'ListOfAttachments where
+  switchFocus _ s = pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) (Brick.focusSetCurrent ListOfAttachments)
+                    . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
+
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
 class HasName (a :: Name) where
@@ -297,6 +300,9 @@ instance HasName 'ComposeSubject where
 
 instance HasName 'ManageThreadTagsEditor where
   name _ = ManageThreadTagsEditor
+
+instance HasName 'ListOfAttachments where
+  name _ = ListOfAttachments
 
 -- | Allow to change the view to a different view in order to put the focus on a widget there
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
@@ -667,7 +673,6 @@ invokeEditor' s = do
     ExitSuccess -> do
       body <- liftIO $ readFile tmpfile
       pure $ s & over (asCompose . cAttachments . L.listElementsL) (cons $ plainPart body)
-        . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 editorError :: Error
 editorError = GenericError ("Editor command exited with error code."

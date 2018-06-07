@@ -281,7 +281,7 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
     sendKeys "Enter" (Literal "This is a test mail for purebred")
 
     liftIO $ step "first unread mail is opened"
-    sendKeys "Escape" (Literal "BrowseMail")
+    sendKeys "Escape" (Literal "List of Mails")
       >>= assertRegex (buildAnsiRegex [] ["37"] ["43"] <> ".*Testmail")
 
     liftIO $ step "toggle it back to unread (bold again)"
@@ -447,8 +447,8 @@ testSendMail =
           liftIO $ step "exit vim"
           sendKeys ": x\r" (Literal "text/plain")
 
-          liftIO $ step "send mail"
-          sendKeys "y" (Literal "Purebred")
+          liftIO $ step "send mail and go back to threads"
+          sendKeys "y" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "Query"))
 
           let fpath = testdir </> "sentMail"
           contents <- liftIO $ B.readFile fpath
