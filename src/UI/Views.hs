@@ -16,13 +16,13 @@ listOfMailsView :: View
 listOfMailsView =
     View
     { _vFocus = focusRing [ListOfMails, ManageMailTagsEditor]
-    , _vWidgets = [ListOfMails, StatusBar, ManageMailTagsEditor]
+    , _vWidgets = [ListOfMails, StatusBar]
     }
 
 mailView :: View
 mailView =
     View
-    { _vFocus = focusRing [ListOfMails, ScrollingMailView]
+    { _vFocus = focusRing [ListOfMails, ScrollingMailView, ManageMailTagsEditor]
     , _vWidgets = [ListOfMails, StatusBar, ScrollingMailView]
     }
 

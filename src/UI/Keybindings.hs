@@ -57,8 +57,8 @@ instance EventHandler 'ViewMail 'ScrollingMailView where
   fallbackHandler _ _ s _ = Brick.continue s
 
 instance EventHandler 'ViewMail 'ManageMailTagsEditor where
-  keybindingsL _ _ = asConfig . confMailView . mvKeybindings
-  fallbackHandler _ _ s _ = Brick.continue s
+  keybindingsL _ _ = asConfig . confMailView . mvManageMailTagsKeybindings
+  fallbackHandler _ _ s e = Brick.continue =<< Brick.handleEventLensed s (asMailIndex . miMailTagsEditor) E.handleEditorEvent e
 
 instance EventHandler 'Help 'ScrollingHelpView where
   keybindingsL _ _ = asConfig . confHelpView . hvKeybindings

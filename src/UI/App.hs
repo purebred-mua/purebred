@@ -49,14 +49,16 @@ renderWidget s ComposeTo = drawTo s
 renderWidget s ComposeSubject = drawSubject s
 renderWidget s StatusBar = statusbar s
 
-handleComposeEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
-handleComposeEvent ComposeView ComposeFrom s ev =  dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeFrom) s ev
-handleComposeEvent ComposeView ComposeTo s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeTo) s ev
-handleComposeEvent ComposeView ComposeSubject s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeSubject) s ev
-handleComposeEvent Threads ComposeFrom s ev =  dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeFrom) s ev
-handleComposeEvent Threads ComposeTo s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeTo) s ev
-handleComposeEvent Threads ComposeSubject s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeSubject) s ev
-handleComposeEvent _ _ s _ = M.continue s
+handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
+handleViewEvent ComposeView ComposeFrom s ev =  dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeFrom) s ev
+handleViewEvent ComposeView ComposeTo s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeTo) s ev
+handleViewEvent ComposeView ComposeSubject s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeSubject) s ev
+handleViewEvent Threads ComposeFrom s ev =  dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeFrom) s ev
+handleViewEvent Threads ComposeTo s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeTo) s ev
+handleViewEvent Threads ComposeSubject s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeSubject) s ev
+handleViewEvent ViewMail ScrollingMailView s ev =  dispatch (Proxy :: Proxy 'ViewMail) (Proxy :: Proxy 'ScrollingMailView) s ev
+handleViewEvent ViewMail ManageMailTagsEditor s ev =  dispatch (Proxy :: Proxy 'ViewMail) (Proxy :: Proxy 'ManageMailTagsEditor) s ev
+handleViewEvent _ _ s _ = M.continue s
 
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
@@ -69,9 +71,9 @@ appEvent s (T.VtyEvent ev) =
     ManageMailTagsEditor -> dispatch (Proxy :: Proxy 'Mails) (Proxy :: Proxy 'ManageMailTagsEditor) s ev
     ManageThreadTagsEditor -> dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ManageThreadTagsEditor) s ev
     ScrollingMailView -> dispatch (Proxy :: Proxy 'ViewMail) (Proxy :: Proxy 'ScrollingMailView) s ev
-    ComposeFrom -> handleComposeEvent (focusedViewName s) ComposeFrom s ev
-    ComposeTo -> handleComposeEvent (focusedViewName s) ComposeTo s ev
-    ComposeSubject -> handleComposeEvent (focusedViewName s) ComposeSubject s ev
+    ComposeFrom -> handleViewEvent (focusedViewName s) ComposeFrom s ev
+    ComposeTo -> handleViewEvent (focusedViewName s) ComposeTo s ev
+    ComposeSubject -> handleViewEvent (focusedViewName s) ComposeSubject s ev
     ScrollingHelpView -> dispatch (Proxy :: Proxy 'Help) (Proxy :: Proxy 'ScrollingHelpView) s ev
     StatusBar -> M.continue s -- can not be focused for input
 appEvent s _ = M.continue s

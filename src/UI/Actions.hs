@@ -52,6 +52,7 @@ import Data.Text.Lazy.IO (readFile)
 import qualified Data.ByteString.Char8 as BC
 import Data.Vector.Lens (vector)
 import Data.Maybe (fromMaybe)
+import Data.List (union)
 import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
 import System.Directory (getTemporaryDirectory)
@@ -74,6 +75,7 @@ import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
 import UI.Utils (safeUpdate, focusedViewWidget, focusedViewName)
+import UI.Views (listOfMailsView, mailView)
 import Purebred.Tags (parseTagOps)
 
 class Scrollable (n :: Name) where
@@ -137,7 +139,6 @@ class Resetable (m :: Name) where
 
 instance Resetable 'ManageMailTagsEditor where
   reset _ s = pure $ s & over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
-              . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ManageMailTagsEditor)
 
 instance Resetable 'ManageThreadTagsEditor where
   reset _ s = pure $ s & over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
@@ -194,9 +195,15 @@ instance Focusable 'Threads 'ListOfThreads where
 
 instance Focusable 'Mails 'ManageMailTagsEditor where
   switchFocus _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+                    . over (asViews . vsViews . at Mails . _Just . vWidgets) (\l -> l `union` [ManageMailTagsEditor])
 
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
-  switchFocus _ _ s = pure $ over (asViews. vsViews . at ViewMail . _Just . vWidgets) (\l -> l ++ [ManageMailTagsEditor]) s
+  switchFocus _ _ s = pure $ s & over (asViews. vsViews . at ViewMail . _Just . vWidgets) (\l -> l `union` [ManageMailTagsEditor])
+                      . over (asViews . vsViews . at ViewMail . _Just . vFocus) (Brick.focusSetCurrent ManageMailTagsEditor)
+
+instance Focusable 'ViewMail 'ScrollingMailView where
+  -- TODO would drop whatever widget is at the end of the widgets
+  switchFocus _ _ s = pure $ over (asViews. vsViews . at ViewMail . _Just . vWidgets) (reverse . drop 1 . reverse) s
 
 instance Focusable 'Mails 'ListOfMails where
   switchFocus _ _ = pure
@@ -265,10 +272,13 @@ instance HasName 'ListOfAttachments where
 
 -- | Allow to change the view to a different view in order to put the focus on a widget there
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
+  transitionHook :: Proxy v -> Proxy v' -> AppState -> AppState
+  transitionHook _ _ = id
 
 instance ViewTransition v v where
 
 instance ViewTransition 'Mails 'Threads where
+  transitionHook _ _ = set (asViews . vsViews . at Mails . _Just) listOfMailsView
 
 instance ViewTransition 'Mails 'Help where
 
@@ -285,8 +295,10 @@ instance ViewTransition 'Help 'Threads where
 instance ViewTransition 'ComposeView 'Threads where
 
 instance ViewTransition 'Mails 'ViewMail where
+  transitionHook _ _ = set (asViews . vsViews . at ViewMail . _Just) mailView
 
 instance ViewTransition 'ViewMail 'Mails where
+  transitionHook _ _ = set (asViews . vsViews . at Mails . _Just) listOfMailsView
 
 
 class HasViewName (a :: ViewName) where
@@ -331,7 +343,8 @@ chain' (Action d1 f1) (Action d2 f2) =
   Action (if null d2 then d1 else d1 <> " and then " <> d2) (f1 >=> switchMode >=> f2)
   where
     switchMode s = pure $ s &
-      over (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy :: Proxy v')))
+      transitionHook (Proxy :: Proxy v) (Proxy :: Proxy v')
+      . over (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy :: Proxy v')))
       . over (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (Brick.focusSetCurrent $ name (Proxy :: Proxy ctx'))
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a AppState

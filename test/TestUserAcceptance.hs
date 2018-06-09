@@ -173,8 +173,8 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     liftIO $ step "attempt to add a new tag"
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
-    liftIO $ step "cancel tagging and expect old search restored"
-    sendKeys "Escape" (Literal "tag:foo and tag:bar")
+    liftIO $ step "cancel tagging and expect old UI"
+    sendKeys "Escape" (Regex "List of Mails\n$")
 
     pure ()
 
@@ -227,7 +227,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     _ <- sendLiteralKeys "+thread"
 
     liftIO $ step "apply"
-    sendKeys "Enter" (Literal "BrowseThreads")
+    sendKeys "Enter" (Literal "List of Threads")
 
     liftIO $ step "show thread mails"
     sendKeys "Enter" (Literal "ViewMail")

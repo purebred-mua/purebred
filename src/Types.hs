@@ -262,6 +262,9 @@ mvHeadersToShow = lens _mvHeadersToShow (\mv x -> mv { _mvHeadersToShow = x })
 mvKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'ScrollingMailView (Next AppState)]
 mvKeybindings = lens _mvKeybindings (\mv x -> mv { _mvKeybindings = x })
 
+mvManageMailTagsKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'ManageMailTagsEditor (Next AppState)]
+mvManageMailTagsKeybindings = lens _mvManageMailTagsKeybindings (\mv x -> mv { _mvManageMailTagsKeybindings = x })
+
 data ViewName
     = Threads
     | Mails

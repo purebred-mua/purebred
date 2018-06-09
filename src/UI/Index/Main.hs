@@ -43,12 +43,12 @@ renderSearchThreadsEditor s =
 renderMailTagsEditor :: AppState -> Widget Name
 renderMailTagsEditor s =
     let hasFocus = ManageMailTagsEditor == focusedViewWidget s ListOfThreads
-    in renderEditorWithLabel "Add/Remove Tags:" hasFocus (view (asMailIndex . miMailTagsEditor) s)
+    in renderEditorWithLabel "Labels:" hasFocus (view (asMailIndex . miMailTagsEditor) s)
 
 renderThreadTagsEditor :: AppState -> Widget Name
 renderThreadTagsEditor s =
     let hasFocus = ManageThreadTagsEditor == focusedViewWidget s ListOfThreads
-    in renderEditorWithLabel "Add/Remove Tags:" hasFocus (view (asMailIndex . miThreadTagsEditor) s)
+    in renderEditorWithLabel "Labels:" hasFocus (view (asMailIndex . miThreadTagsEditor) s)
 
 listDrawMail :: AppState -> Bool -> NotmuchMail -> Widget Name
 listDrawMail s sel a =
