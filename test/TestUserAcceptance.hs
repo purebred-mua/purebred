@@ -268,7 +268,7 @@ testErrorHandling = withTmuxSession "error handling" $
       >>= assertRegex "open(Binary)?File:.*does not exist"
 
     liftIO $ step "error is cleared with next registered keybinding"
-    sendKeys "Up" (Literal "Purebred: Item 1 of 1")
+    sendKeys "Up" (Literal "Purebred: Item 1 of 3")
 
     pure ()
 

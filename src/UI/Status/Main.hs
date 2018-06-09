@@ -29,7 +29,7 @@ data StatusbarContext a
 statusbar :: AppState -> Widget Name
 statusbar s =
     case view asError s of
-        Just e -> renderStatusbar e s
+        Just e -> withAttr statusbarErrorAttr $ strWrap (show e)
         Nothing ->
             case focusedViewWidget s ListOfThreads of
                 SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s) s
@@ -61,9 +61,6 @@ instance WithContext (E.Editor Text Name) where
 
 instance WithContext (Maybe MIMEMessage) where
   renderContext s _ = currentItemW (view (asMailIndex . miListOfMails) s)
-
-instance WithContext Error where
-  renderContext _ e = withAttr statusbarErrorAttr $ strWrap (show e)
 
 renderStatusbar :: WithContext w => w -> AppState -> Widget Name
 renderStatusbar w s =
