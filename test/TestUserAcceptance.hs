@@ -345,13 +345,13 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
 
     liftIO $ step "Scroll down"
     sendKeys "Enter" (Literal "Beginning of large text")
-    sendKeys "Space Space Space Space" (Literal "de Finibus Bonorum")
+    sendKeys "Space" (Literal "Sed ut perspiciatis")
 
     liftIO $ step "go to next unread mail"
     sendKeys "j" (Literal "Re: WIP Refactor")
 
     liftIO $ step "Scroll down (again)"
-    sendKeys "Space Space Space" (Literal "But I must explain")
+    sendKeys "Space" (Literal "Sed ut perspiciatis")
 
     liftIO $ step "go to previous mail with reset scroll state"
     sendKeys "k" (Regex "Subject:\\s.*WIP Refactor")
