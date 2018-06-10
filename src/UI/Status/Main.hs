@@ -18,7 +18,6 @@ import UI.Draw.Main (fillLine)
 import UI.Utils (focusedViewWidget, focusedViewName, titleize)
 import Types
 import Config.Main (statusbarAttr, statusbarErrorAttr)
-import Error (Error)
 
 data StatusbarContext a
     = ListContext a

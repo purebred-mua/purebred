@@ -104,7 +104,7 @@ instance Completable 'SearchThreadsEditor where
   complete _ = applySearch
 
 instance Completable 'ManageMailTagsEditor where
-  complete _ = liftIO . completeMailTags
+  complete _ s = liftIO $ completeMailTags s >>= pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Completable 'ListOfAttachments where
   complete _ = sendMail

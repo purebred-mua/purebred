@@ -20,7 +20,7 @@
 
 module TestUserAcceptance where
 
-import Data.Char (isAscii, isAlphaNum)
+import Data.Char (isAscii, isAlphaNum, chr)
 import qualified Data.Text as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Data.Functor (($>))
@@ -33,7 +33,6 @@ import System.Environment (lookupEnv)
 import System.FilePath.Posix ((</>))
 import Control.Monad (void, when)
 import Data.Maybe (isJust)
-import Data.Char (chr)
 import qualified Data.ByteString as B
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT, ask, ReaderT)
@@ -152,6 +151,10 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
 
     liftIO $ step "apply"
     sendKeys "Enter" (Literal "foo bar")
+      >>= assertSubstrInOutput "This is a test mail"
+
+    liftIO $ step "go back to list of mails"
+    sendKeys "Escape" (Literal "Item 1 of 1")
 
     liftIO $ step "go back to list of threads"
     sendKeys "Escape" (Literal "Testmail")
@@ -174,7 +177,11 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"]))
 
     liftIO $ step "cancel tagging and expect old UI"
-    sendKeys "Escape" (Regex "List of Mails\n$")
+    -- instead of asserting the absence of the tagging editor, we assert the
+    -- last visible "item" in the UI followed by whitespace. Give it an
+    -- estimated upper range, since there could be some variable amount of
+    -- whitespace.
+    sendKeys "Escape" (Regex "This is a test mail for purebred\\s{4,8}$")
 
     pure ()
 
@@ -213,6 +220,9 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
 
     liftIO $ step "apply"
     sendKeys "Enter" (Literal "replied")
+
+    liftIO $ step "go back to list of mails"
+    sendKeys "Escape" (Literal "Item 2 of 2")
 
     liftIO $ step "thread tags shows new tags"
     sendKeys "Escape" (Literal "archive inbox replied")
