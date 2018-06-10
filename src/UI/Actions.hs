@@ -280,17 +280,15 @@ instance ViewTransition v v where
 instance ViewTransition 'Mails 'Threads where
   transitionHook _ _ = set (asViews . vsViews . at Mails . _Just) listOfMailsView
 
-instance ViewTransition 'Mails 'Help where
-
 instance ViewTransition 'Threads 'Mails where
-
-instance ViewTransition 'Threads 'Help where
 
 instance ViewTransition 'Threads 'ComposeView where
 
 instance ViewTransition 'Threads 'ViewMail where
 
-instance ViewTransition 'Help 'Threads where
+instance ViewTransition 'Help v where
+
+instance ViewTransition v 'Help where
 
 instance ViewTransition 'ComposeView 'Threads where
 

@@ -64,6 +64,7 @@ handleViewEvent Threads ManageThreadTagsEditor s ev = dispatch (Proxy :: Proxy '
 handleViewEvent Threads SearchThreadsEditor s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'SearchThreadsEditor) s ev
 handleViewEvent ViewMail ManageMailTagsEditor s ev = dispatch (Proxy :: Proxy 'ViewMail) (Proxy :: Proxy 'ManageMailTagsEditor) s ev
 handleViewEvent ViewMail ScrollingMailView s ev = dispatch (Proxy :: Proxy 'ViewMail) (Proxy :: Proxy 'ScrollingMailView) s ev
+handleViewEvent _ ScrollingHelpView s ev = dispatch (Proxy :: Proxy 'Help) (Proxy :: Proxy 'ScrollingHelpView) s ev
 handleViewEvent _ _ s _ = M.continue s
 
 
