@@ -94,6 +94,10 @@ testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and th
 testUpdatesReadState :: Int -> TestTree
 testUpdatesReadState = withTmuxSession "updates read state for mail and thread" $
   \step -> do
+    -- Make the regex less color code dependent. This can happen if different
+    -- environments support more than 16 colours (e.g. background values > 37),
+    -- while our CI environment only supports 16 colours.
+    setEnvVarInSession "TERM" "ansi"
     startApplication
 
     liftIO $ step "navigate to thread mails"
@@ -110,7 +114,7 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 
     liftIO $ step "set one mail to unread"
     sendKeys "Enter" (Literal "Beginning of large text")
-    sendKeys "q t" (Regex (buildAnsiRegex ["1"] [] [] <> "\\sWIP Refactor\\s" <> buildAnsiRegex ["0"] ["94"] ["40"]))
+    sendKeys "q t" (Regex (buildAnsiRegex ["1"] [] [] <> "\\sWIP Refactor\\s" <> buildAnsiRegex ["0"] ["34"] ["40"]))
 
     liftIO $ step "returning to thread list shows thread unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> " 08/Feb \\(2\\)"))
