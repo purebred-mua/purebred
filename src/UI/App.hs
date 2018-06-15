@@ -6,6 +6,7 @@ module UI.App where
 import qualified Brick.Main as M
 import Brick.Types (Widget)
 import Brick.Focus (focusRing)
+import Brick.Widgets.Core (vLimit)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -33,21 +34,22 @@ import UI.ComposeEditor.Main (attachmentsEditor)
 import Types
 
 drawUI :: AppState -> [Widget Name]
-drawUI s = [unVBox $ foldMap (VBox . renderWidget s) (focusedViewWidgets s)]
+drawUI s = [unVBox $ foldMap (VBox . renderWidget s (focusedViewName s)) (focusedViewWidgets s)]
 
-renderWidget :: AppState -> Name -> Widget Name
-renderWidget s ListOfThreads = renderListOfThreads s
-renderWidget s ListOfMails = renderListOfMails s
-renderWidget s ListOfAttachments = attachmentsEditor s
-renderWidget s SearchThreadsEditor = renderSearchThreadsEditor s
-renderWidget s ManageMailTagsEditor = renderMailTagsEditor s
-renderWidget s ManageThreadTagsEditor = renderThreadTagsEditor s
-renderWidget s ScrollingMailView = renderMailView s
-renderWidget s ScrollingHelpView = renderHelp s
-renderWidget s ComposeFrom = drawFrom s
-renderWidget s ComposeTo = drawTo s
-renderWidget s ComposeSubject = drawSubject s
-renderWidget s StatusBar = statusbar s
+renderWidget :: AppState -> ViewName -> Name -> Widget Name
+renderWidget s _ ListOfThreads = renderListOfThreads s
+renderWidget s ViewMail ListOfMails = vLimit (view (asConfig . confMailView . mvIndexRows) s) (renderListOfMails s)
+renderWidget s _ ListOfMails = renderListOfMails s
+renderWidget s _ ListOfAttachments = attachmentsEditor s
+renderWidget s _ SearchThreadsEditor = renderSearchThreadsEditor s
+renderWidget s _ ManageMailTagsEditor = renderMailTagsEditor s
+renderWidget s _ ManageThreadTagsEditor = renderThreadTagsEditor s
+renderWidget s _ ScrollingMailView = renderMailView s
+renderWidget s _ ScrollingHelpView = renderHelp s
+renderWidget s _ ComposeFrom = drawFrom s
+renderWidget s _ ComposeTo = drawTo s
+renderWidget s _ ComposeSubject = drawSubject s
+renderWidget s _ StatusBar = statusbar s
 
 handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
 handleViewEvent ComposeView ComposeFrom s ev =  dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeFrom) s ev

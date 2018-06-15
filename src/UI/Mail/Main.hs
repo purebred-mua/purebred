@@ -24,15 +24,6 @@ import Config.Main (headerKeyAttr, headerValueAttr)
 --
 -- Implementation detail: Currently we're creating the sub list of mails we show
 -- for each key press. This might have to change in the future.
-{-
-drawMail :: AppState -> [Widget Name]
-drawMail s =
-    [vLimit (indexViewRows s) (renderMailList s) <=>
-     statusbar s <=>
-      viewport ScrollingMailView Vertical (mailView s (view (asMailView . mvMail) s)) <=>
-    ]
--}
-
 renderMailView :: AppState -> Widget Name
 renderMailView s = viewport ScrollingMailView Vertical (mailView s (view (asMailView . mvMail) s))
 
