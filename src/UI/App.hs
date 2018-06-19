@@ -15,11 +15,10 @@ import Control.Lens.Getter (view)
 import Control.Monad.Except (runExceptT)
 import qualified Data.Vector as Vector
 import System.Exit (die)
-import Data.Proxy
 import qualified Data.Map as Map
 
 import Storage.Notmuch (getThreads)
-import UI.Keybindings (dispatch)
+import UI.Keybindings
 import UI.GatherHeaders.Main (drawSubject, drawFrom, drawTo)
 import UI.Index.Main
        (renderListOfThreads, renderListOfMails, renderSearchThreadsEditor,
@@ -52,22 +51,23 @@ renderWidget s _ ComposeSubject = drawSubject s
 renderWidget s _ StatusBar = statusbar s
 
 handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
-handleViewEvent ComposeView ComposeFrom s ev =  dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeFrom) s ev
-handleViewEvent ComposeView ComposeSubject s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeSubject) s ev
-handleViewEvent ComposeView ComposeTo s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ComposeTo) s ev
-handleViewEvent ComposeView ListOfAttachments s ev = dispatch (Proxy :: Proxy 'ComposeView) (Proxy :: Proxy 'ListOfAttachments) s ev
-handleViewEvent Mails ListOfMails s ev = dispatch (Proxy :: Proxy 'Mails) (Proxy :: Proxy 'ListOfMails) s ev
-handleViewEvent Mails ManageMailTagsEditor s ev = dispatch (Proxy :: Proxy 'Mails) (Proxy :: Proxy 'ManageMailTagsEditor) s ev
-handleViewEvent Threads ComposeFrom s ev =  dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeFrom) s ev
-handleViewEvent Threads ComposeSubject s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeSubject) s ev
-handleViewEvent Threads ComposeTo s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ComposeTo) s ev
-handleViewEvent Threads ListOfThreads s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ListOfThreads) s ev
-handleViewEvent Threads ManageThreadTagsEditor s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'ManageThreadTagsEditor) s ev
-handleViewEvent Threads SearchThreadsEditor s ev = dispatch (Proxy :: Proxy 'Threads) (Proxy :: Proxy 'SearchThreadsEditor) s ev
-handleViewEvent ViewMail ManageMailTagsEditor s ev = dispatch (Proxy :: Proxy 'ViewMail) (Proxy :: Proxy 'ManageMailTagsEditor) s ev
-handleViewEvent ViewMail ScrollingMailView s ev = dispatch (Proxy :: Proxy 'ViewMail) (Proxy :: Proxy 'ScrollingMailView) s ev
-handleViewEvent _ ScrollingHelpView s ev = dispatch (Proxy :: Proxy 'Help) (Proxy :: Proxy 'ScrollingHelpView) s ev
-handleViewEvent _ _ s _ = M.continue s
+handleViewEvent = f where
+  f ComposeView ComposeFrom = dispatch eventHandlerComposeFrom
+  f ComposeView ComposeSubject = dispatch eventHandlerComposeSubject
+  f ComposeView ComposeTo = dispatch eventHandlerComposeTo
+  f ComposeView ListOfAttachments = dispatch eventHandlerComposeListOfAttachments
+  f Mails ListOfMails = dispatch eventHandlerListOfMails
+  f Mails ManageMailTagsEditor = dispatch eventHandlerManageMailTagsEditor
+  f Threads ComposeFrom =  dispatch eventHandlerThreadComposeFrom
+  f Threads ComposeSubject = dispatch eventHandlerThreadComposeSubject
+  f Threads ComposeTo = dispatch eventHandlerThreadComposeTo
+  f Threads ListOfThreads = dispatch eventHandlerListOfThreads
+  f Threads ManageThreadTagsEditor = dispatch eventHandlerManageThreadTagsEditor
+  f Threads SearchThreadsEditor = dispatch eventHandlerSearchThreadsEditor
+  f ViewMail ManageMailTagsEditor = dispatch eventHandlerViewMailManageMailTagsEditor
+  f ViewMail ScrollingMailView = dispatch eventHandlerScrollingMailView
+  f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
+  f _ _ = dispatch nullEventHandler
 
 
 appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
