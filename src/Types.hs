@@ -324,7 +324,8 @@ asViews :: Lens' AppState ViewSettings
 asViews f (AppState a b c d e g) = fmap (\g' -> AppState a b c d e g') (f g)
 
 data Action (v :: ViewName) (ctx :: Name) a = Action
-    { _aDescription :: String
+    { _aDescription :: [T.Text]
+    -- ^ sequential list of things that the action does
     , _aAction :: AppState -> EventM Name a
     }
 
@@ -345,7 +346,7 @@ kbEvent = to (\(Keybinding b _) -> b)
 kbAction :: Getter (Keybinding v ctx a) (Action v ctx a)
 kbAction = to (\(Keybinding _ c) -> c)
 
-aDescription :: Getter (Action v ctx a) String
+aDescription :: Getter (Action v ctx a) [T.Text]
 aDescription = to (\(Action a _ ) -> a)
 
 type Body = T.Text

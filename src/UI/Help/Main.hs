@@ -4,7 +4,7 @@ module UI.Help.Main (renderHelp) where
 import Brick.Types (Padding(..), Widget)
 import qualified Brick.Types as T
 import Brick.Widgets.Core
-       (viewport, hLimit, padLeft, padBottom, padRight, str, txt, (<=>),
+       (viewport, hLimit, padLeft, padBottom, padRight, txt, (<=>),
         (<+>), emptyWidget, withAttr)
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Control.Lens (view, views)
@@ -33,7 +33,7 @@ renderKeybinding :: Keybinding v ctx a-> Widget Name
 renderKeybinding kb = let keys = view kbEvent kb
                           actions = view (kbAction . aDescription) kb
                       in withAttr helpKeybindingAttr (hLimit 30 (padRight Max $ txt $ ppKbEvent keys))
-                         <+> padLeft (Pad 3) (str actions)
+                         <+> padLeft (Pad 3) (txt (intercalate " > " actions))
 
 ppKbEvent :: Event -> Text
 ppKbEvent (EvKey k modifiers) = intercalate " + " $ (ppMod <$> modifiers) <> [ppKey k]
