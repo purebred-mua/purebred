@@ -65,7 +65,7 @@ handleViewEvent = f where
   f Threads ManageThreadTagsEditor = dispatch eventHandlerManageThreadTagsEditor
   f Threads SearchThreadsEditor = dispatch eventHandlerSearchThreadsEditor
   f ViewMail ManageMailTagsEditor = dispatch eventHandlerViewMailManageMailTagsEditor
-  f ViewMail ScrollingMailView = dispatch eventHandlerScrollingMailView
+  f ViewMail _ = dispatch eventHandlerScrollingMailView
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
   f _ _ = dispatch nullEventHandler
 
