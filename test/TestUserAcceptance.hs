@@ -461,6 +461,18 @@ testSendMail =
           liftIO $ step "exit vim"
           sendKeys ": x\r" (Literal "text/plain")
 
+          liftIO $ step "user can re-edit body"
+          sendKeys "e" (Literal "This is a test body")
+
+          liftIO $ step "Writes more text"
+          sendKeys "i. More text" (Literal "text")
+
+          liftIO $ step "exit insert mode in vim"
+          sendKeys "Escape" (Literal "body")
+
+          liftIO $ step "exit vim"
+          sendKeys ": x\r" (Regex ("text/plain; charset=utf-8\\s" <> buildAnsiRegex [] ["94"] ["40"] <> "\\s+"))
+
           liftIO $ step "send mail and go back to threads"
           sendKeys "y" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "Query"))
 
