@@ -431,7 +431,7 @@ listJumpToEnd = Action
 
 listJumpToStart :: Action v m AppState
 listJumpToStart = Action
-  { _aDescription = "move selection to last element"
+  { _aDescription = "move selection to first element"
     , _aAction = \s -> case focusedViewWidget s ListOfThreads of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) (L.listMoveTo 0) s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
