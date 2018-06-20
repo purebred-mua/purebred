@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Help.Main (renderHelp) where
 
+import Data.Function (on)
+import Data.List (nubBy)
 import Brick.Types (Padding(..), Widget)
 import qualified Brick.Types as T
 import Brick.Widgets.Core
        (viewport, hLimit, padLeft, padBottom, padRight, txt, (<=>),
-        (<+>), emptyWidget, withAttr)
+        (<+>), vBox, withAttr)
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Control.Lens (view, views)
 import Data.Semigroup ((<>))
@@ -24,10 +26,12 @@ renderHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybin
                          <=> views (asConfig . confHelpView . hvKeybindings) (renderKbGroup ScrollingHelpView) s
              in viewport ScrollingHelpView T.Vertical tweak
 
-renderKbGroup :: Titleize a => a -> [Keybinding v ctx (T.Next AppState)] -> Widget Name
-renderKbGroup name kbs = emptyWidget
-                      <=> withAttr helpTitleAttr (padBottom (Pad 1) $ txt (titleize name))
-                      <=> padBottom (Pad 1) (foldl (\a x -> a <=> renderKeybinding x) emptyWidget kbs)
+renderKbGroup :: Titleize a => a -> [Keybinding v ctx s] -> Widget Name
+renderKbGroup name kbs =
+  withAttr helpTitleAttr (padBottom (Pad 1) $ txt (titleize name))
+  <=> padBottom (Pad 1) (vBox (renderKeybinding <$> uniqKBs))
+  where
+    uniqKBs = nubBy ((==) `on` view kbEvent) kbs
 
 renderKeybinding :: Keybinding v ctx a-> Widget Name
 renderKeybinding kb = let keys = view kbEvent kb
