@@ -27,17 +27,17 @@ import System.Directory (getCurrentDirectory)
 import Data.Maybe (fromMaybe)
 import Data.List (union)
 
-myBrowseThreadsKbs :: [Keybinding 'Threads 'ListOfThreads (Next AppState)]
+myBrowseThreadsKbs :: [Keybinding 'Threads 'ListOfThreads]
 myBrowseThreadsKbs =
   [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
   ]
 
-myBrowseMailKeybindings :: [Keybinding 'Mails 'ListOfMails (Next AppState)]
+myBrowseMailKeybindings :: [Keybinding 'Mails 'ListOfMails]
 myBrowseMailKeybindings =
     [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]
 
-myMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView (Next AppState)]
+myMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 myMailKeybindings =
     [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]

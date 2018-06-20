@@ -14,12 +14,12 @@ import Data.List (find)
 import Prelude hiding (readFile, unlines)
 import Types
 
-lookupKeybinding :: Event -> [Keybinding v ctx a] -> Maybe (Keybinding v ctx a)
+lookupKeybinding :: Event -> [Keybinding v ctx] -> Maybe (Keybinding v ctx)
 lookupKeybinding e = find (\x -> view kbEvent x == e)
 
 data EventHandler v m = EventHandler
   (forall f. Functor f
-    => ([Keybinding v m (Brick.Next AppState)] -> f [Keybinding v m (Brick.Next AppState)])
+    => ([Keybinding v m] -> f [Keybinding v m])
     -> AppState -> f AppState) -- lens to keybindings
   (AppState -> Event -> Brick.EventM Name (Brick.Next AppState)) -- fallback handler
 

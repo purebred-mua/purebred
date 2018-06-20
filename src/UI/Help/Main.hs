@@ -26,14 +26,14 @@ renderHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybin
                          <=> views (asConfig . confHelpView . hvKeybindings) (renderKbGroup ScrollingHelpView) s
              in viewport ScrollingHelpView T.Vertical tweak
 
-renderKbGroup :: Titleize a => a -> [Keybinding v ctx s] -> Widget Name
+renderKbGroup :: Titleize a => a -> [Keybinding v ctx] -> Widget Name
 renderKbGroup name kbs =
   withAttr helpTitleAttr (padBottom (Pad 1) $ txt (titleize name))
   <=> padBottom (Pad 1) (vBox (renderKeybinding <$> uniqKBs))
   where
     uniqKBs = nubBy ((==) `on` view kbEvent) kbs
 
-renderKeybinding :: Keybinding v ctx a-> Widget Name
+renderKeybinding :: Keybinding v ctx -> Widget Name
 renderKeybinding kb = let keys = view kbEvent kb
                           actions = view (kbAction . aDescription) kb
                       in withAttr helpKeybindingAttr (hLimit 30 (padRight Max $ txt $ ppKbEvent keys))

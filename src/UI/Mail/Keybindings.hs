@@ -2,14 +2,11 @@
 
 module UI.Mail.Keybindings where
 
-import qualified Brick.Types as Brick
 import qualified Graphics.Vty as V
 import UI.Actions
 import Types
 
-{-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
-
-displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView (Brick.Next AppState)]
+displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 displayMailKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
@@ -25,7 +22,7 @@ displayMailKeybindings =
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help 'ScrollingHelpView AppState) `chain` continue)
     ]
 
-mailViewManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor (Brick.Next AppState)]
+mailViewManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor]
 mailViewManageMailTagsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
