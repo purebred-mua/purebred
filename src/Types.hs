@@ -349,9 +349,6 @@ kbAction = to (\(Keybinding _ c) -> c)
 aDescription :: Getter (Action v ctx a) [T.Text]
 aDescription = to (\(Action a _ ) -> a)
 
-type Body = T.Text
-type Header = T.Text
-
 -- | an email from the notmuch database
 data NotmuchMail = NotmuchMail
     { _mailSubject :: T.Text
