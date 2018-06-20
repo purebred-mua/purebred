@@ -2,13 +2,12 @@
 
 module UI.Index.Keybindings where
 
-import qualified Brick.Types as Brick
 import qualified Graphics.Vty as V
 import UI.Actions
 import Types
 
 -- | Default Keybindings
-browseMailKeybindings :: [Keybinding 'Mails 'ListOfMails (Brick.Next AppState)]
+browseMailKeybindings :: [Keybinding 'Mails 'ListOfMails]
 browseMailKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
@@ -28,7 +27,7 @@ browseMailKeybindings =
     , Keybinding (V.EvKey (V.KChar 'm') []) (noop `chain'` (focus :: Action 'Mails 'ComposeFrom AppState) `chain` continue)
     ]
 
-browseThreadsKeybindings :: [Keybinding 'Threads 'ListOfThreads (Brick.Next AppState)]
+browseThreadsKeybindings :: [Keybinding 'Threads 'ListOfThreads]
 browseThreadsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) quit
     , Keybinding (V.EvKey (V.KChar 'q') []) quit
@@ -46,19 +45,19 @@ browseThreadsKeybindings =
     , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
     ]
 
-searchThreadsKeybindings :: [Keybinding 'Threads 'SearchThreadsEditor (Brick.Next AppState)]
+searchThreadsKeybindings :: [Keybinding 'Threads 'SearchThreadsEditor]
 searchThreadsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     ]
 
-manageMailTagsKeybindings :: [Keybinding 'Mails 'ManageMailTagsEditor (Brick.Next AppState)]
+manageMailTagsKeybindings :: [Keybinding 'Mails 'ManageMailTagsEditor]
 manageMailTagsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
     ]
 
-manageThreadTagsKeybindings :: [Keybinding 'Threads 'ManageThreadTagsEditor (Brick.Next AppState)]
+manageThreadTagsKeybindings :: [Keybinding 'Threads 'ManageThreadTagsEditor]
 manageThreadTagsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
