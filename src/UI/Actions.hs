@@ -24,6 +24,8 @@ module UI.Actions (
   , replyMail
   , scrollUp
   , scrollDown
+  , scrollPageUp
+  , scrollPageDown
   , toggleHeaders
   , initialCompose
   , continue
@@ -36,9 +38,7 @@ module UI.Actions (
   , focusNextWidget
   ) where
 
-import qualified Brick.Main as Brick
-       (suspendAndResume, continue, halt, vScrollToBeginning, vScrollPage,
-        viewportScroll, ViewportScroll)
+import qualified Brick
 import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
@@ -360,15 +360,27 @@ focus = Action ("switch mode to " <> show (name (Proxy :: Proxy a))) (switchFocu
 noop :: Action v ctx AppState
 noop = Action "" pure
 
-scrollUp :: forall ctx v. (HasViewName v, Scrollable ctx) => Action v ctx AppState
+scrollUp :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
 scrollUp = Action
-  { _aDescription = "scrolling up"
+  { _aDescription = "scroll up"
+  , _aAction = (<$ Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) (-1))
+  }
+
+scrollDown :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollDown = Action
+  { _aDescription = "scroll down"
+  , _aAction = \s -> s <$ Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) 1
+  }
+
+scrollPageUp :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollPageUp = Action
+  { _aDescription = "page up"
   , _aAction = \s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Up >> pure s
   }
 
-scrollDown :: forall ctx v. (HasViewName v, Scrollable ctx) => Action v ctx AppState
-scrollDown = Action
-  { _aDescription = "scrolling down"
+scrollPageDown :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollPageDown = Action
+  { _aDescription = "page down"
   , _aAction = \s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s
   }
 

@@ -11,6 +11,6 @@ import Types
 helpKeybindings :: [Keybinding 'Help 'ScrollingHelpView (Brick.Next AppState)]
 helpKeybindings =
     [ Keybinding (EvKey KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (EvKey KBS []) (scrollUp `chain` continue)
-    , Keybinding (EvKey (KChar ' ') []) (scrollDown `chain` continue)
+    , Keybinding (EvKey KBS []) (scrollPageUp `chain` continue)
+    , Keybinding (EvKey (KChar ' ') []) (scrollPageDown `chain` continue)
     ]
