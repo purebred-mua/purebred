@@ -47,7 +47,7 @@ import Network.Mail.Mime (Address(..), plainPart, emptyMail)
 import Network.Mail.Mime.Lens (lMailParts, lMailFrom, lMailTo, lMailHeaders)
 import Data.Proxy
 import Data.Semigroup ((<>))
-import Data.Text (unlines, Text)
+import Data.Text (unlines, Text, pack)
 import Data.Text.Lazy.IO (readFile)
 import qualified Data.ByteString.Char8 as BC
 import Data.Vector.Lens (vector)
@@ -319,17 +319,16 @@ instance HasViewName 'ComposeView where
 
 
 quit :: Action v ctx (T.Next AppState)
-quit = Action "quit the application" Brick.halt
+quit = Action ["quit the application"] Brick.halt
 
 continue :: Action v ctx (T.Next AppState)
-continue = Action "" Brick.continue
+continue = Action mempty Brick.continue
 
 invokeEditor :: Action v ctx (T.Next AppState)
-invokeEditor = Action "invoke external editor" (Brick.suspendAndResume . liftIO . invokeEditor')
+invokeEditor = Action ["invoke external editor"] (Brick.suspendAndResume . liftIO . invokeEditor')
 
 chain :: Action v ctx AppState -> Action v ctx a -> Action v ctx a
-chain (Action d1 f1) (Action d2 f2) =
-  Action (if null d2 then d1 else d1 <> " and then " <> d2) (f1 >=> f2)
+chain (Action d1 f1) (Action d2 f2) = Action (d1 <> d2) (f1 >=> f2)
 
 chain'
     :: forall ctx ctx' a v v'.
@@ -338,7 +337,7 @@ chain'
     -> Action v' ctx' a
     -> Action v ctx a
 chain' (Action d1 f1) (Action d2 f2) =
-  Action (if null d2 then d1 else d1 <> " and then " <> d2) (f1 >=> switchMode >=> f2)
+  Action (d1 <> d2) (f1 >=> switchMode >=> f2)
   where
     switchMode s = pure $ s &
       transitionHook (Proxy :: Proxy v) (Proxy :: Proxy v')
@@ -346,48 +345,50 @@ chain' (Action d1 f1) (Action d2 f2) =
       . over (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (Brick.focusSetCurrent $ name (Proxy :: Proxy ctx'))
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a AppState
-done = Action "apply" (complete (Proxy :: Proxy a))
+done = Action ["apply"] (complete (Proxy :: Proxy a))
 
 abort :: forall a v. (HasViewName v, Resetable a) => Action v a AppState
-abort = Action "cancel" (reset (Proxy :: Proxy a))
+abort = Action ["cancel"] (reset (Proxy :: Proxy a))
 
 focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState
-focus = Action ("switch mode to " <> show (name (Proxy :: Proxy a))) (switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a))
+focus = Action
+  ["switch mode to " <> pack (show (name (Proxy :: Proxy a)))]
+  (switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a))
 
 -- | A no-op action which just returns the current AppState
 -- This action can be used at the start of an Action chain where an immediate
 -- mode switch is required
 noop :: Action v ctx AppState
-noop = Action "" pure
+noop = Action mempty pure
 
 scrollUp :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
 scrollUp = Action
-  { _aDescription = "scroll up"
+  { _aDescription = ["scroll up"]
   , _aAction = (<$ Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) (-1))
   }
 
 scrollDown :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
 scrollDown = Action
-  { _aDescription = "scroll down"
+  { _aDescription = ["scroll down"]
   , _aAction = \s -> s <$ Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) 1
   }
 
 scrollPageUp :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
 scrollPageUp = Action
-  { _aDescription = "page up"
+  { _aDescription = ["page up"]
   , _aAction = \s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Up >> pure s
   }
 
 scrollPageDown :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
 scrollPageDown = Action
-  { _aDescription = "page down"
+  { _aDescription = ["page down"]
   , _aAction = \s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s
   }
 
 displayMail :: Action 'ViewMail 'ScrollingMailView AppState
 displayMail =
     Action
-    { _aDescription = "display an e-mail"
+    { _aDescription = ["display an e-mail"]
     , _aAction = \s -> do
         resetScrollState
         liftIO $ updateStateWithParsedMail s
@@ -398,21 +399,21 @@ displayMail =
 displayThreadMails :: Action 'Threads 'ListOfThreads AppState
 displayThreadMails =
     Action
-    { _aDescription = "display an e-mail for threads"
+    { _aDescription = ["display an e-mail for threads"]
     , _aAction = liftIO . setMailsForThread
     }
 
 setUnread :: Action 'Mails 'ListOfMails AppState
 setUnread =
     Action
-    { _aDescription = "toggle unread"
+    { _aDescription = ["toggle unread"]
     , _aAction = \s -> liftIO $ updateReadState (AddTag $ view (asConfig . confNotmuch . nmNewTag) s) s
     }
 
 listUp :: Action v m AppState
 listUp =
     Action
-    { _aDescription = "mail index up one e-mail"
+    { _aDescription = ["mail index up one e-mail"]
     , _aAction = \s -> case focusedViewWidget s ListOfThreads of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
@@ -423,7 +424,7 @@ listUp =
 listDown :: Action v m AppState
 listDown =
     Action
-    { _aDescription = "mail index down one e-mail"
+    { _aDescription = ["mail index down one e-mail"]
     , _aAction = \s -> case focusedViewWidget s ListOfThreads of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveDown s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
@@ -433,7 +434,7 @@ listDown =
 
 listJumpToEnd :: Action v m AppState
 listJumpToEnd = Action
-  { _aDescription = "move selection to last element"
+  { _aDescription = ["move selection to last element"]
     , _aAction = \s -> case focusedViewWidget s ListOfThreads of
         ListOfThreads -> pure $ listSetSelectionEnd (asMailIndex . miListOfThreads) s
         ScrollingMailView -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
@@ -443,7 +444,7 @@ listJumpToEnd = Action
 
 listJumpToStart :: Action v m AppState
 listJumpToStart = Action
-  { _aDescription = "move selection to first element"
+  { _aDescription = ["move selection to first element"]
     , _aAction = \s -> case focusedViewWidget s ListOfThreads of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) (L.listMoveTo 0) s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
@@ -454,7 +455,7 @@ listJumpToStart = Action
 switchComposeEditor :: Action 'Threads 'ListOfThreads AppState
 switchComposeEditor =
     Action
-    { _aDescription = "switch to compose editor"
+    { _aDescription = ["switch to compose editor"]
     , _aAction = \s -> if has (asCompose . cAttachments . traversed) s
                           then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
                           else pure s
@@ -463,13 +464,13 @@ switchComposeEditor =
 replyMail :: Action 'Mails 'ListOfMails AppState
 replyMail =
     Action
-    { _aDescription = "reply to an e-mail"
+    { _aDescription = ["reply to an e-mail"]
     , _aAction = replyToMail
     }
 
 toggleHeaders :: Action 'ViewMail 'ScrollingMailView AppState
 toggleHeaders = Action
-  { _aDescription = "toggle mail headers"
+  { _aDescription = ["toggle mail headers"]
   , _aAction = pure . go
   }
   where
@@ -481,18 +482,18 @@ toggleHeaders = Action
 setTags :: [TagOp] -> Action v ctx AppState
 setTags ops =
     Action
-    { _aDescription = "apply given tags"
+    { _aDescription = ["apply given tags"]
     , _aAction = \s -> case focusedViewWidget s ListOfThreads of
           ListOfMails -> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops)
           _ -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
     }
 
 reloadList :: Action 'Threads 'ListOfThreads AppState
-reloadList = Action "reload list of threads" applySearch
+reloadList = Action ["reload list of threads"] applySearch
 
 selectNextUnread :: Action 'Mails 'ListOfMails AppState
 selectNextUnread =
-  Action { _aDescription = "select next unread"
+  Action { _aDescription = ["select next unread"]
          , _aAction = \s ->
            let
              vec = view (asMailIndex . miListOfMails . L.listElementsL) s
@@ -509,7 +510,7 @@ selectNextUnread =
 focusNextWidget :: Action v w AppState
 focusNextWidget =
     Action
-    { _aDescription = "moves input focus to the next widget"
+    { _aDescription = ["moves input focus to the next widget"]
     , _aAction = \s -> pure $
                       over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) Brick.focusNext s
     }
