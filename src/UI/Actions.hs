@@ -43,13 +43,13 @@ import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Network.Mail.Mime (Address(..), plainPart, emptyMail)
+import Network.Mail.Mime (Part(..), Address(..), emptyMail, Encoding(..))
 import Network.Mail.Mime.Lens (lMailParts, lMailFrom, lMailTo, lMailHeaders)
 import Data.Proxy
 import Data.Semigroup ((<>))
-import Data.Text (unlines, Text, pack)
-import Data.Text.Lazy.IO (readFile)
+import Data.Text (unlines, unpack, pack, Text)
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Lazy as BL
 import Data.Vector.Lens (vector)
 import Data.Maybe (fromMaybe)
 import Data.List (union)
@@ -63,7 +63,6 @@ import Control.Applicative ((<|>))
 import Control.Lens
        (_Just, at, toListOf, traversed, has, itoList, set, over, view,
         (&), Getting, Lens')
-import Control.Lens.Cons (cons)
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Exception (onException)
@@ -225,7 +224,7 @@ instance Focusable 'Help 'ScrollingHelpView where
   switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
 
 instance Focusable 'ComposeView 'ListOfAttachments where
-  switchFocus _ _ s = pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) (Brick.focusSetCurrent ListOfAttachments)
+  switchFocus _ _ s = pure $ s & over (asViews . vsViews . at ComposeView . _Just . vFocus) (Brick.focusSetCurrent ListOfAttachments)
                     . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 -- TODO: helper function to replace whatever editor we're displaying at the
@@ -652,15 +651,36 @@ initialCompose =
 invokeEditor' :: AppState -> IO AppState
 invokeEditor' s = do
   let editor = view (asConfig . confEditor) s
-  tmpdir <- getTemporaryDirectory
-  tmpfile <- emptyTempFile tmpdir "purebred.tmp"
+  tmpfile <- attachmentFilename s
   status <- onException (system (editor <> " " <> tmpfile)) (pure $ setError editorError)
   case status of
     ExitFailure _ -> pure $ s & over (asViews . vsFocusedView) (Brick.focusSetCurrent Mails)
                               & setError editorError
     ExitSuccess -> do
-      body <- liftIO $ readFile tmpfile
-      pure $ s & over (asCompose . cAttachments . L.listElementsL) (cons $ plainPart body)
+      body <- liftIO $ makePlainPart tmpfile
+      pure $ s & over (asCompose . cAttachments) (upsertPart body)
+
+upsertPart :: Part -> L.List Name Part -> L.List Name Part
+upsertPart newPart list =
+  case L.listSelectedElement list of
+    Nothing -> L.listInsert 0 newPart list
+    Just (_, part) ->
+      if partFilename part == partFilename newPart then
+        -- replace
+        L.listModify (const newPart) list
+      else
+        L.listInsert 0 newPart list
+
+attachmentFilename :: AppState -> IO String
+attachmentFilename s = let tempfile = getTemporaryDirectory >>= \tdir -> emptyTempFile tdir "purebred.tmp"
+                       in case L.listSelectedElement $ view (asCompose . cAttachments) s of
+                            Nothing -> tempfile
+                            Just (_, p) -> maybe tempfile (pure . unpack) $ partFilename p
+
+makePlainPart :: String -> IO Part
+makePlainPart filename = do
+  content <- BL.readFile filename
+  pure $ Part "text/plain; charset=utf-8" Base64 (Just $ pack filename) [] content
 
 editorError :: Error
 editorError = GenericError ("Editor command exited with error code."
