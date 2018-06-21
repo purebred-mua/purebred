@@ -411,7 +411,7 @@ testUserCanSwitchBackToIndex =
             sendKeys "Escape" (Literal "body")
 
             liftIO $ step "exit vim"
-            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["37"] ["40"] <> "testuser@foo.test"))
+            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["34"] ["40"] <> "testuser@foo.test"))
 
             liftIO $ step "switch back to index"
             sendKeys "Tab" (Literal "Testmail")
@@ -421,7 +421,7 @@ testUserCanSwitchBackToIndex =
 
             liftIO $ step "cycle to next input field"
             sendKeys "C-n" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "To:\\s+"
-                                   <> buildAnsiRegex [] ["37"] ["40"] <> "user@to.test"))
+                                   <> buildAnsiRegex [] ["34"] ["40"] <> "user@to.test"))
             pure ()
 
 testSendMail :: Int -> TestTree
