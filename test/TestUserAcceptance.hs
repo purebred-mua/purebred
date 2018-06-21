@@ -94,10 +94,6 @@ testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and th
 testUpdatesReadState :: Int -> TestTree
 testUpdatesReadState = withTmuxSession "updates read state for mail and thread" $
   \step -> do
-    -- Make the regex less color code dependent. This can happen if different
-    -- environments support more than 16 colours (e.g. background values > 37),
-    -- while our CI environment only supports 16 colours.
-    setEnvVarInSession "TERM" "ansi"
     startApplication
 
     liftIO $ step "navigate to thread mails"
@@ -512,6 +508,7 @@ setUp i desc = do
     sessionName = intercalate "-" (sessionNamePrefix : show i : descWords)
     descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
   setUpTmuxSession sessionName
+  prepareEnvironment sessionName
   (testdir, maildir) <- setUpTempMaildir
   setUpPurebredConfig testdir
   pure $ Env testdir maildir sessionName
@@ -674,6 +671,18 @@ startApplication = do
   liftIO $ callProcess "tmux" $
     communicateSessionArgs sessionName ("purebred --database " <> testmdir <> "\r") False
   void $ waitForString "Purebred: Item" defaultCountdown
+
+
+-- | Prepare the environment
+-- Here we're setting up the environment to run in a more predictable fasion.
+--
+-- a) Make the regex less color code dependent by setting the TERM to 'ansi'.
+-- This can happen if different environments support more than 16 colours (e.g.
+-- background values > 37), while our CI environment only supports 16 colours.
+prepareEnvironment :: String -> IO ()
+prepareEnvironment sessionName =
+  liftIO $ callProcess "tmux" $
+    communicateSessionArgs sessionName "export TERM=ansi\r" False
 
 -- | Sets a shell environment variable
 -- Note: The tmux program provides a command to set environment variables for
