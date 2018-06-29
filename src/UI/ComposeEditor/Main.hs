@@ -4,7 +4,7 @@
 module UI.ComposeEditor.Main (attachmentsEditor) where
 
 import Brick.Types (Padding(..), Widget)
-import Brick.Widgets.Core (padRight, txt, (<+>), withAttr)
+import Brick.Widgets.Core (padLeft, padRight, txt, (<+>), withAttr)
 import qualified Brick.Widgets.List as L
 import Network.Mail.Mime (Part(..))
 import Control.Lens (view)
@@ -20,10 +20,12 @@ attachmentsEditor s =
         attachmentsList = L.renderList renderPart hasFocus (view (asCompose . cAttachments) s)
     in attachmentsList
 
-renderPart :: Bool -> Part -> Widget Name
-renderPart selected p =
+renderPart :: Bool -> MailPart -> Widget Name
+renderPart selected (MailPart aType p) =
   let pType = partType p
       pFilename = fromMaybe "--" (partFilename p)
       listItemAttr = if selected then listSelectedAttr else listAttr
-      widget = padRight Max (txt pFilename) <+> txt pType
+      attachmentType Inline = txt "I"
+      attachmentType _ = txt "A"
+      widget = padRight (Pad 1) (padLeft (Pad 1) $ attachmentType aType) <+> padRight Max (txt pFilename) <+> txt pType
   in withAttr listItemAttr widget

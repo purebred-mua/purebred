@@ -5,12 +5,11 @@ module UI.Status.Main where
 
 import Brick.Types (Widget, Padding(..))
 import Brick.Widgets.Core
-       (txt, str, withAttr, (<+>), strWrap, vLimit, fill, padRight)
+       (txt, str, withAttr, (<+>), strWrap, padRight)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
 import Control.Lens (view)
 import Data.MIME (MIMEMessage)
-import Network.Mail.Mime (Part)
 import Data.Semigroup ((<>))
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
@@ -56,8 +55,8 @@ instance WithContext (L.List Name NotmuchMail) where
 instance WithContext (L.List Name (Bool, FileSystemEntry)) where
   renderContext _ = currentItemW
 
-instance WithContext (L.List Name Part) where
-  renderContext _ _ = txt "-- Attachments " <+> vLimit 1 (fill '-')
+instance WithContext (L.List Name MailPart) where
+  renderContext _ = currentItemW
 
 instance WithContext (E.Editor Text Name) where
   renderContext _ = str . show . cursorPosition . view E.editContentsL

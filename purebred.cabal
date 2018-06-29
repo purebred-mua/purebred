@@ -128,3 +128,5 @@ test-suite unittests
                      , notmuch
                      , time
                      , filepath
+                     , brick >= 0.34
+                     , vector

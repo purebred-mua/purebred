@@ -18,13 +18,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Utils
        (safeUpdate, focusedViewWidget, focusedViewWidgets,
-        focusedViewName, focusedView, titleize, Titleize, toggledItems)
+        focusedViewName, focusedView, titleize, Titleize, toggledItems, selectedFiles)
        where
 import qualified Data.Vector as Vector
 import Data.Foldable (toList)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
-import Control.Lens (folded, filtered, toListOf, Lens', view, at, _Just)
+import Data.List (union)
+import Control.Lens
+       (folded, traversed, filtered, toListOf, view, at, _Just, _2)
 import Brick.Focus (focusGetCurrent)
 import qualified Brick.Widgets.List as L
 
@@ -56,8 +58,15 @@ focusedView :: AppState -> View
 focusedView s = let focused = view (asViews . vsViews . at (focusedViewName s)) s
                 in fromMaybe indexView focused
 
-toggledItems :: AppState -> Lens' AppState (L.List Name (Bool, a)) -> [(Bool, a)]
-toggledItems s l = toListOf (l . L.listElementsL . folded . filtered fst) s
+toggledItems :: L.List Name (Bool, a) -> [(Bool, a)]
+toggledItems = toListOf (L.listElementsL . folded . filtered fst)
+
+selectedFiles :: L.List Name (Bool, FileSystemEntry) -> [FilePath]
+selectedFiles l = let cur = case L.listSelectedElement l of
+                        Just (_, (_, File fsname)) -> [(False, File fsname)]
+                        _ -> []
+                      toggled = view (_2 . fsEntryName) <$> toggledItems l
+                  in toggled `union` toListOf (traversed . _2 . fsEntryName) cur
 
 class Titleize a where
   titleize :: a -> Text

@@ -17,7 +17,9 @@
 module Network.Mail.Mime.Lens where
 
 import Control.Lens (Lens')
-import Network.Mail.Mime (Mail(..), Alternatives, Address, Headers)
+import Data.ByteString.Lazy (ByteString)
+import Network.Mail.Mime
+       (Mail(..), Alternatives, Address, Headers, Part(..))
 
 
 lMailParts :: Lens' Mail [Alternatives]
@@ -31,3 +33,6 @@ lMailFrom f (Mail a b c d e g) = fmap (\a' -> Mail a' b c d e g) (f a)
 
 lMailHeaders :: Lens' Mail Headers
 lMailHeaders f (Mail a b c d e g) = fmap (\e' -> Mail a b c d e' g) (f e)
+
+lpartContent :: Lens' Part ByteString
+lpartContent f (Part a b c d e) = fmap (\e' -> Part a b c d e') (f e)

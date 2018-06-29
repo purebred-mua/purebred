@@ -108,7 +108,7 @@ data Compose = Compose
     , _cFrom :: E.Editor T.Text Name
     , _cTo :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
-    , _cAttachments :: L.List Name Mail.Part
+    , _cAttachments :: L.List Name MailPart
     }
 
 cMail :: Lens' Compose Mail.Mail
@@ -123,8 +123,21 @@ cTo = lens _cTo (\c x -> c { _cTo = x })
 cSubject :: Lens' Compose (E.Editor T.Text Name)
 cSubject = lens _cSubject (\c x -> c { _cSubject = x })
 
-cAttachments :: Lens' Compose (L.List Name Mail.Part)
+cAttachments :: Lens' Compose (L.List Name MailPart)
 cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
+
+data AttachmentType
+    = Inline
+    | Attachment
+    deriving (Eq,Show)
+
+data MailPart =
+    MailPart AttachmentType
+             Mail.Part
+    deriving (Eq,Show)
+
+mailPart :: Lens' MailPart Mail.Part
+mailPart f (MailPart a b) = fmap (\b' -> MailPart a b') (f b)
 
 data NotmuchSettings a = NotmuchSettings
     { _nmSearch :: T.Text

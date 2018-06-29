@@ -43,6 +43,6 @@ listOfAttachmentsKeybindings =
     , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'y') []) (done `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar '\t') []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'e') []) invokeEditor
+    , Keybinding (V.EvKey (V.KChar 'e') []) edit
     , Keybinding (V.EvKey (V.KChar 'a') []) (noop `chain'` (focus :: Action 'FileBrowser 'ListOfFiles AppState) `chain` continue)
     ] <> commonKeybindings
