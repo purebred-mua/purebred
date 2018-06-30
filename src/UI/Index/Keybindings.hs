@@ -24,7 +24,6 @@ browseMailKeybindings =
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help 'ScrollingHelpView AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar '`') []) (noop `chain'` (focus :: Action 'Mails 'ManageMailTagsEditor AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'm') []) (noop `chain'` (focus :: Action 'Mails 'ComposeFrom AppState) `chain` continue)
     ]
 
 browseThreadsKeybindings :: [Keybinding 'Threads 'ListOfThreads]

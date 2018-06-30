@@ -411,7 +411,7 @@ testUserCanSwitchBackToIndex =
             sendKeys "Escape" (Literal "body")
 
             liftIO $ step "exit vim"
-            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["37"] ["40"] <> "testuser@foo.test"))
+            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["34"] ["40"] <> "testuser@foo.test"))
 
             liftIO $ step "switch back to index"
             sendKeys "Tab" (Literal "Testmail")
@@ -421,7 +421,7 @@ testUserCanSwitchBackToIndex =
 
             liftIO $ step "cycle to next input field"
             sendKeys "C-n" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "To:\\s+"
-                                   <> buildAnsiRegex [] ["37"] ["40"] <> "user@to.test"))
+                                   <> buildAnsiRegex [] ["34"] ["40"] <> "user@to.test"))
             pure ()
 
 testSendMail :: Int -> TestTree
@@ -456,6 +456,18 @@ testSendMail =
 
           liftIO $ step "exit vim"
           sendKeys ": x\r" (Literal "text/plain")
+
+          liftIO $ step "user can re-edit body"
+          sendKeys "e" (Literal "This is a test body")
+
+          liftIO $ step "Writes more text"
+          sendKeys "i. More text" (Literal "text")
+
+          liftIO $ step "exit insert mode in vim"
+          sendKeys "Escape" (Literal "body")
+
+          liftIO $ step "exit vim"
+          sendKeys ": x\r" (Regex ("text/plain; charset=utf-8\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
 
           liftIO $ step "send mail and go back to threads"
           sendKeys "y" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "Query"))
