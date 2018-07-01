@@ -135,8 +135,8 @@ nmSearch f (NotmuchSettings a b c) = fmap (\a' -> NotmuchSettings a' b c) (f a)
 nmDatabase :: Lens (NotmuchSettings a) (NotmuchSettings b) a b
 nmDatabase f (NotmuchSettings a b c) = fmap (\b' -> NotmuchSettings a b' c) (f b)
 
-nmNewTag :: Getter (NotmuchSettings a) Tag
-nmNewTag = to (\(NotmuchSettings _ _ c) -> c)
+nmNewTag :: Lens' (NotmuchSettings a) Tag
+nmNewTag f (NotmuchSettings a b c) = fmap (\c' -> NotmuchSettings a b c') (f c)
 
 data Configuration a b = Configuration
     { _confColorMap :: Brick.AttrMap
