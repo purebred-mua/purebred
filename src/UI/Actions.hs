@@ -42,6 +42,7 @@ module UI.Actions (
   , enterDirectory
   , parentDirectory
   , createAttachments
+  , delete
   ) where
 
 import qualified Brick
@@ -586,6 +587,17 @@ toggleListItem =
                           (view (asFileBrowser . fbEntries . L.listSelectedL) s)
     }
 
+delete :: Action 'ComposeView 'ListOfAttachments AppState
+delete =
+    Action
+    { _aDescription = ["delete entry"]
+    , _aAction = \s ->
+                      if view (asCompose . cAttachments . L.listElementsL . to Vector.length) s < 2
+                          then pure $ setError (GenericError "You may not remove the only attachment") s
+                          else let sel = view (asCompose . cAttachments . L.listSelectedL) s
+                               in pure $ over (asCompose . cAttachments) (\l -> maybe l (`L.listRemove` l) sel) s
+    }
+
 parentDirectory :: Action 'FileBrowser 'ListOfFiles AppState
 parentDirectory = Action ["go to parent directory"]
                       (\s ->
@@ -632,7 +644,7 @@ makeAttachmentsFromSelected s = do
     . over (asViews . vsViews . at ComposeView . _Just . vFocus) (Brick.focusSetCurrent ListOfFiles)
   where
     go :: [MailPart] -> L.List Name MailPart -> L.List Name MailPart
-    go parts list = foldl (flip upsertPart) list parts
+    go parts list = foldr upsertPart list parts
     makeFullPath path = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> path
 
 isFileUnderCursor :: Maybe (a, (b, FileSystemEntry)) -> Bool
@@ -816,7 +828,9 @@ upsertPart newPart list =
         -- replace
         L.listModify (const newPart) list
       else
-        L.listInsert 0 newPart list
+        -- append
+        list & over L.listElementsL (`Vector.snoc` newPart)
+             . set L.listSelectedL (Just (view (L.listElementsL . to Vector.length) list))
 
 attachmentFilename :: AppState -> IO String
 attachmentFilename s = let tempfile = getTemporaryDirectory >>= \tdir -> emptyTempFile tdir "purebred.txt"
