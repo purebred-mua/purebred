@@ -7,11 +7,12 @@ import qualified Brick.Main as M
 import Brick.Types (Widget)
 import Brick.Focus (focusRing)
 import Brick.Widgets.Core (vLimit)
+import Brick.Themes (themeToAttrMap)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty.Input.Events as Vty
-import Control.Lens.Getter (view)
+import Control.Lens (to, view)
 import Control.Monad.Except (runExceptT)
 import qualified Data.Vector as Vector
 import System.Exit (die)
@@ -109,5 +110,5 @@ theApp s =
     , M.appChooseCursor = M.showFirstCursor
     , M.appHandleEvent = appEvent
     , M.appStartEvent = return
-    , M.appAttrMap = const (view (asConfig . confColorMap) s)
+    , M.appAttrMap = const (view (asConfig . confTheme . to themeToAttrMap) s)
     }

@@ -17,7 +17,7 @@ import qualified Data.Text as T
 import Data.MIME
 
 import Types
-import Config.Main (headerKeyAttr, headerValueAttr)
+import Config.Main (headerKeyAttr, headerValueAttr, mailViewAttr)
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.
@@ -28,7 +28,7 @@ renderMailView :: AppState -> Widget Name
 renderMailView s = viewport ScrollingMailView Vertical (mailView s (view (asMailView . mvMail) s))
 
 mailView :: AppState -> Maybe MIMEMessage -> Widget Name
-mailView s (Just msg) = messageToMailView s msg
+mailView s (Just msg) = withAttr mailViewAttr $ messageToMailView s msg
 mailView _ Nothing = txt "Eeek: this is not supposed to happen"
 
 messageToMailView :: AppState -> MIMEMessage -> Widget Name

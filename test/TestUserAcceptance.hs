@@ -144,7 +144,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "Enter" (Literal "Testmail")
 
     liftIO $ step "focus command to show mail tags"
-    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] []))
 
     liftIO $ step "enter new tag"
     _ <- sendLiteralKeys "+inbox +foo +bar"
@@ -161,8 +161,8 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
 
     -- find newly tagged mail
     liftIO $ step "focus tag search"
-    sendKeys ":" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "tag"))
-    sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
+    sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
 
     liftIO $ step "enter tag to search `foo and bar`"
     _ <- sendLiteralKeys "tag:foo and tag:bar"
@@ -174,7 +174,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "Enter" (Literal "Testmail")
 
     liftIO $ step "attempt to add a new tag"
-    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys "`" (Regex (buildAnsiRegex [] ["37"] []))
 
     liftIO $ step "cancel tagging and expect old UI"
     -- instead of asserting the absence of the tagging editor, we assert the
@@ -201,7 +201,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "Enter" (Literal "ViewMail")
 
     liftIO $ step "open mail tag editor"
-    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     liftIO $ step "add new tag"
     _ <- sendLiteralKeys "+archive"
@@ -213,7 +213,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "Down" (Literal "Item 2 of 2")
 
     liftIO $ step "open mail tag editor"
-    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     liftIO $ step "add new tag"
     _ <- sendLiteralKeys "+replied -inbox"
@@ -228,7 +228,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "Escape" (Literal "archive inbox replied")
 
     liftIO $ step "open thread tag editor"
-    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] ["40"]))
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     liftIO $ step "remove tag"
     -- "cheating" here a bit, since just invoking tmux with sending literally
@@ -361,18 +361,18 @@ testUserCanManipulateNMQuery =
         \step -> do
           startApplication
           liftIO $ step "focus command"
-          sendKeys ":" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "tag"))
+          sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
 
           liftIO $ step "delete all input"
-          sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+          sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
 
           liftIO $ step "search for non existing tags yielding no results"
           _ <- sendLiteralKeys "does not match anything"
           sendKeys "Enter" (Literal "No items")
 
           liftIO $ step "search for mail correctly tagged"
-          sendKeys ":" (Regex (buildAnsiRegex [] ["37"] ["40"] <> "does"))
-          sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] ["40"]))
+          sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "does"))
+          sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
 
           liftIO $ step "enter new tag"
           _ <- sendLiteralKeys "tag:replied"
@@ -411,7 +411,7 @@ testUserCanSwitchBackToIndex =
             sendKeys "Escape" (Literal "body")
 
             liftIO $ step "exit vim"
-            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["37"] ["40"] <> "testuser@foo.test"))
+            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["37"] [] <> "testuser@foo.test"))
 
             liftIO $ step "switch back to index"
             sendKeys "Tab" (Literal "Testmail")
@@ -420,8 +420,8 @@ testUserCanSwitchBackToIndex =
             sendKeys "Tab" (Literal "test subject")
 
             liftIO $ step "cycle to next input field"
-            sendKeys "C-n" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "To:\\s+"
-                                   <> buildAnsiRegex [] ["37"] ["40"] <> "user@to.test"))
+            sendKeys "C-n" (Regex (buildAnsiRegex [] ["33"] [] <> "To:\\s+"
+                                   <> buildAnsiRegex [] ["37"] [] <> "user@to.test"))
             pure ()
 
 testSendMail :: Int -> TestTree
@@ -458,7 +458,7 @@ testSendMail =
           sendKeys ": x\r" (Literal "text/plain")
 
           liftIO $ step "send mail and go back to threads"
-          sendKeys "y" (Regex (buildAnsiRegex [] ["39"] ["49"] <> "Query"))
+          sendKeys "y" (Regex ("Query:\\s" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
 
           let fpath = testdir </> "sentMail"
           contents <- liftIO $ B.readFile fpath

@@ -27,7 +27,8 @@ import Storage.Notmuch (hasTag)
 import Types
 import Config.Main
        (listNewMailAttr, listNewMailSelectedAttr, mailTagsAttr,
-        listSelectedAttr, listAttr, mailAuthorsAttr)
+        listSelectedAttr, listAttr, mailAuthorsAttr,
+        mailSelectedAuthorsAttr)
 
 renderListOfThreads :: AppState -> Widget Name
 renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex . miListOfThreads) s
@@ -56,7 +57,7 @@ listDrawMail s sel a =
         isNewMail = hasTag (view nmNewTag settings) a
         widget = padLeft (Pad 1) (txt $ formatDate (view mailDate a)) <+>
                  padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings)) <+>
-                 padLeft (Pad 1) (renderAuthors $ view mailFrom a) <+>
+                 padLeft (Pad 1) (renderAuthors sel $ view mailFrom a) <+>
                  padLeft (Pad 1) (txt (view mailSubject a)) <+> fillLine
     in withAttr (getListAttr isNewMail sel) widget
 
@@ -67,7 +68,7 @@ listDrawThread s sel a =
         widget = padLeft (Pad 1) (txt $ formatDate (view thDate a)) <+>
                  padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")") <+>
                  padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings)) <+>
-                 padLeft (Pad 1) (renderAuthors $ T.unwords $ view thAuthors a) <+>
+                 padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a) <+>
                  padLeft (Pad 1) (txt (view thSubject a)) <+> fillLine
     in withAttr (getListAttr isNewMail sel) widget
 
@@ -82,8 +83,13 @@ getListAttr False False = listAttr  -- not selected and not new
 formatDate :: UTCTime -> Text
 formatDate t = pack $ formatTime defaultTimeLocale "%d/%b" (utctDay t)
 
-renderAuthors :: Text -> Widget Name
-renderAuthors authors = withAttr mailAuthorsAttr $ hLimit 15 (txt authors)
+renderAuthors :: Bool -> Text -> Widget Name
+renderAuthors isSelected authors =
+    let attribute =
+            if isSelected
+                then mailSelectedAuthorsAttr
+                else mailAuthorsAttr
+    in withAttr attribute $ hLimit 15 (txt authors)
 
 renderTagsWidget :: [Tag] -> Tag -> Widget Name
 renderTagsWidget tgs ignored =
