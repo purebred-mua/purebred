@@ -8,8 +8,8 @@ module Types
   ) where
 
 import Data.Semigroup (Semigroup, (<>))
-import qualified Brick.AttrMap as Brick
 import qualified Brick.Focus as Brick
+import Brick.Themes (Theme)
 import Brick.Widgets.Core ((<=>), emptyWidget)
 import Brick.Types (EventM, Next, Widget)
 import qualified Brick.Widgets.Edit as E
@@ -139,7 +139,7 @@ nmNewTag :: Lens' (NotmuchSettings a) Tag
 nmNewTag f (NotmuchSettings a b c) = fmap (\c' -> NotmuchSettings a b c') (f c)
 
 data Configuration a b = Configuration
-    { _confColorMap :: Brick.AttrMap
+    { _confTheme :: Theme
     , _confNotmuch :: NotmuchSettings a
     , _confEditor :: b
     , _confMailView :: MailViewSettings
@@ -152,8 +152,8 @@ data Configuration a b = Configuration
 type UserConfiguration = Configuration (IO FilePath) (IO String)
 type InternalConfiguration = Configuration FilePath String
 
-confColorMap :: Getter (Configuration a b) Brick.AttrMap
-confColorMap = to (\(Configuration a _ _ _ _ _ _ _) -> a)
+confTheme :: Lens' (Configuration a b) Theme
+confTheme = lens _confTheme (\c x -> c { _confTheme = x })
 
 confEditor :: Lens (Configuration a b) (Configuration a b') b b'
 confEditor f (Configuration a b c d e g h i) = fmap (\c' -> Configuration a b c' d e g h i) (f c)

@@ -4,8 +4,9 @@ module Config.Main where
 
 import qualified Brick.AttrMap as A
 import qualified Brick.Widgets.List as L
+import Brick.Themes (Theme, newTheme)
 import Data.Monoid ((<>))
-import Brick.Util (fg, on)
+import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
 import System.Environment (lookupEnv)
@@ -32,29 +33,63 @@ import UI.ComposeEditor.Keybindings
 import Types
 import Storage.Notmuch (getDatabasePath)
 
-defaultColorMap :: A.AttrMap
-defaultColorMap =
-    A.attrMap
+solarizedDark :: Theme
+solarizedDark =
+    newTheme
         V.defAttr
-        [ (listAttr, V.brightBlue `on` V.black)
+        [ (listAttr, V.brightBlue `on` V.brightBlack)
         , (listSelectedAttr, V.white `on` V.yellow)
         , (listNewMailAttr, fg V.white `V.withStyle` V.bold)
         , (listNewMailSelectedAttr, V.white `on` V.yellow `V.withStyle` V.bold)
         , (mailTagsAttr, fg V.cyan)
         , (mailAuthorsAttr, fg V.white)
-        , (E.editFocusedAttr, V.white `on` V.black)
-        , (E.editAttr, V.brightBlue `on` V.black)
+        , (E.editFocusedAttr, V.white `on` V.brightBlack)
+        , (editorAttr, V.brightBlue `on` V.brightBlack)
+        , (editorLabelAttr, V.brightYellow `on` V.brightBlack)
         , (statusbarErrorAttr, fg V.red)
-        , (statusbarAttr, V.black `on` V.brightWhite)
+        , (statusbarAttr, V.brightYellow `on` V.black)
         , (headerKeyAttr, fg V.cyan)
         , (headerValueAttr, fg V.brightCyan)
         , (helpTitleAttr, fg V.cyan `V.withStyle` V.bold)]
+
+solarizedLight :: Theme
+solarizedLight =
+    newTheme
+        V.defAttr
+        [ (listAttr, V.brightCyan `on` V.brightWhite)
+        , (listSelectedAttr, V.white `on` V.yellow)
+        , (listNewMailAttr, fg V.brightGreen `V.withStyle` V.bold)
+        , (listNewMailSelectedAttr, V.white `on` V.yellow `V.withStyle` V.bold)
+        , (mailTagsAttr, fg V.magenta)
+        , (mailAuthorsAttr, fg V.brightCyan)
+        , (mailSelectedAuthorsAttr, fg V.brightWhite)
+        , (E.editFocusedAttr, V.brightBlack `on` V.brightWhite)
+        , (editorAttr, V.brightBlue `on` V.brightWhite)
+        , (editorLabelAttr, V.brightYellow `on` V.brightWhite)
+        , (statusbarErrorAttr, fg V.red)
+        , (statusbarAttr, V.brightYellow `on` V.white)
+        , (mailViewAttr, bg V.brightWhite)
+        , (headerKeyAttr, V.cyan `on` V.brightWhite)
+        , (headerValueAttr, V.brightCyan `on` V.brightWhite)
+        , (helpTitleAttr, fg V.cyan `V.withStyle` V.bold)]
+
+mailViewAttr :: A.AttrName
+mailViewAttr = "mailview"
 
 statusbarAttr :: A.AttrName
 statusbarAttr = "statusbar"
 
 statusbarErrorAttr :: A.AttrName
 statusbarErrorAttr = statusbarAttr <> "error"
+
+editorAttr :: A.AttrName
+editorAttr = E.editAttr
+
+editorFocusedAttr :: A.AttrName
+editorFocusedAttr = E.editFocusedAttr
+
+editorLabelAttr :: A.AttrName
+editorLabelAttr = editorAttr <> "label"
 
 listAttr :: A.AttrName
 listAttr = L.listAttr
@@ -77,6 +112,9 @@ mailTagsAttr = mailAttr <> "tags"
 mailAuthorsAttr :: A.AttrName
 mailAuthorsAttr = mailAttr <> "authors"
 
+mailSelectedAuthorsAttr :: A.AttrName
+mailSelectedAuthorsAttr = mailAuthorsAttr <> "selected"
+
 headerAttr :: A.AttrName
 headerAttr = "header"
 
@@ -98,7 +136,7 @@ helpKeybindingAttr = helpAttr <> "keybinding"
 defaultConfig :: UserConfiguration
 defaultConfig =
     Configuration
-    { _confColorMap = defaultColorMap
+    { _confTheme = solarizedDark
     , _confNotmuch = NotmuchSettings
       { _nmSearch = "tag:inbox"
       , _nmDatabase = getDatabasePath

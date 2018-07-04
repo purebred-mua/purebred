@@ -12,7 +12,8 @@ module Purebred (
   renderMail',
   getDatabasePath,
   defaultConfig,
-  defaultColorMap,
+  solarizedDark,
+  solarizedLight,
   over,
   set,
   (&),
@@ -41,7 +42,7 @@ import UI.Index.Keybindings
 import UI.Mail.Keybindings
 import UI.Actions
 import Storage.Notmuch (getDatabasePath)
-import Config.Main (defaultConfig, defaultColorMap)
+import Config.Main (defaultConfig, solarizedDark, solarizedLight)
 import Types
 
 -- re-exports for configuration
