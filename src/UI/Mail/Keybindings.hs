@@ -26,4 +26,5 @@ mailViewManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor
 mailViewManageMailTagsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
     ]
