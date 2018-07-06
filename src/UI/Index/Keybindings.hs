@@ -47,18 +47,21 @@ browseThreadsKeybindings =
 
 searchThreadsKeybindings :: [Keybinding 'Threads 'SearchThreadsEditor]
 searchThreadsKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     ]
 
 manageMailTagsKeybindings :: [Keybinding 'Mails 'ManageMailTagsEditor]
 manageMailTagsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
     ]
 
 manageThreadTagsKeybindings :: [Keybinding 'Threads 'ManageThreadTagsEditor]
 manageThreadTagsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     ]

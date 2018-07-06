@@ -137,6 +137,9 @@ instance Completable 'ManageThreadTagsEditor where
 class Resetable (m :: Name) where
   reset :: Proxy m -> AppState -> T.EventM Name AppState
 
+instance Resetable 'SearchThreadsEditor where
+  reset _ = pure
+
 instance Resetable 'ManageMailTagsEditor where
   reset _ s = pure $ s & over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
