@@ -141,7 +141,9 @@ instance Resetable 'ManageMailTagsEditor where
   reset _ s = pure $ s & over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Resetable 'ManageThreadTagsEditor where
-  reset _ s = pure $ s & over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+  reset _ s = pure $ s
+              & over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+              . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 instance Resetable 'ComposeFrom where
   reset _ s = pure $ s & over (asCompose . cFrom . E.editContentsL) clearZipper
