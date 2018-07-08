@@ -249,6 +249,15 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
                               <> buildAnsiRegex [] ["37"] []
                               <> "\\sRóman Joost\\s<\\w+\\sRe: WIP Refactor"))
 
+    liftIO $ step "go back to list of threads"
+    sendKeys "Escape" (Literal "List of Threads")
+
+    liftIO $ step "open thread tag editor"
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] ["40"]))
+
+    liftIO $ step "abort editing"
+    sendKeys "Escape" (Literal "Query")
+
     pure ()
 
 testHelp :: Int -> TestTree
