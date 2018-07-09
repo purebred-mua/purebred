@@ -24,6 +24,9 @@ renderHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybin
                          <=> views (asConfig . confIndexView . ivManageThreadTagsKeybindings) (renderKbGroup ManageThreadTagsEditor) s
                          <=> views (asConfig . confMailView . mvKeybindings) (renderKbGroup ScrollingMailView) s
                          <=> views (asConfig . confHelpView . hvKeybindings) (renderKbGroup ScrollingHelpView) s
+                         <=> views (asConfig . confComposeView . cvListOfAttachmentsKeybindings) (renderKbGroup ListOfAttachments) s
+                         <=> views (asConfig . confFileBrowserView . fbKeybindings) (renderKbGroup ListOfFiles) s
+                         <=> views (asConfig . confFileBrowserView . fbSearchPathKeybindings) (renderKbGroup ManageFileBrowserSearchPath) s
              in viewport ScrollingHelpView T.Vertical tweak
 
 renderKbGroup :: Titleize a => a -> [Keybinding v ctx] -> Widget Name

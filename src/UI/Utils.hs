@@ -81,6 +81,9 @@ instance Titleize Name where
   titleize ComposeTo = "Editor to Compose a new Mail"
   titleize ComposeFrom = "Editor to Compose a new Mail"
   titleize ComposeSubject = "Editor to Compose a new Mail"
+  titleize ListOfFiles = "Directory Listing"
+  titleize ListOfAttachments = "Attachments"
+  titleize ManageFileBrowserSearchPath = "Filepath for Directory Listing"
   titleize m = pack $ show m
 
 instance Titleize ViewName where
