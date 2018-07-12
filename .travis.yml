@@ -1,4 +1,4 @@
-sudo: false
+sudo: required
 language: c
 
 # http://docs.haskellstack.org/en/stable/travis_ci/#container-infrastructure
