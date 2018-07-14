@@ -75,8 +75,9 @@ import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Control.Applicative ((<|>))
 import Control.Lens
-       (_Just, to, at, ix, _1, _2, toListOf, filtered, traversed, has,
-        itoList, set, over, preview, view, (&), Getting, Lens')
+  ( _Just, to, at, ix, _1, _2, toListOf, filtered, traversed, has, snoc
+  , itoList, set, over, preview, view, (&), Getting, Lens'
+  )
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Exception (onException)
@@ -592,7 +593,7 @@ delete =
     Action
     { _aDescription = ["delete entry"]
     , _aAction = \s ->
-                      if view (asCompose . cAttachments . L.listElementsL . to Vector.length) s < 2
+                      if view (asCompose . cAttachments . L.listElementsL . to length) s < 2
                           then pure $ setError (GenericError "You may not remove the only attachment") s
                           else let sel = view (asCompose . cAttachments . L.listSelectedL) s
                                in pure $ over (asCompose . cAttachments) (\l -> maybe l (`L.listRemove` l) sel) s
@@ -665,7 +666,7 @@ findIndexWithOffset i fx = fmap (i+) . Vector.findIndex fx . Vector.drop i
 
 listSetSelectionEnd :: Lens' AppState (L.List Name a) -> AppState -> AppState
 listSetSelectionEnd list s =
-  let index = Vector.length $ view (list . L.listElementsL) s
+  let index = view (list . L.listElementsL . to length) s
   in over list (L.listMoveTo index) s
 
 -- | Seek forward from an offset, returning the offset if
@@ -731,7 +732,7 @@ manageMailTags
     -> (Int, NotmuchMail)
     -> m (AppState -> AppState)
 manageMailTags s tagop m =
-  either setError updateMails <$> applyTagOps tagop (Vector.singleton m) s
+  either setError updateMails <$> applyTagOps tagop [m] s
 
 updateMails :: Foldable t => t (Int, NotmuchMail) -> AppState -> AppState
 updateMails mails = over (asMailIndex . miListOfMails . L.listElementsL) (`safeUpdate` mails)
@@ -797,7 +798,7 @@ initialCompose =
         (E.editorText ComposeFrom (Just 1) "")
         (E.editorText ComposeTo (Just 1) "")
         (E.editorText ComposeSubject (Just 1) "")
-        (L.list ListOfAttachments Vector.empty 1)
+        (L.list ListOfAttachments mempty 1)
 
 
 invokeEditor' :: AppState -> IO AppState
@@ -829,8 +830,8 @@ upsertPart newPart list =
         L.listModify (const newPart) list
       else
         -- append
-        list & over L.listElementsL (`Vector.snoc` newPart)
-             . set L.listSelectedL (Just (view (L.listElementsL . to Vector.length) list))
+        list & over L.listElementsL (`snoc` newPart)
+             . set L.listSelectedL (Just (view (L.listElementsL . to length) list))
 
 attachmentFilename :: AppState -> IO String
 attachmentFilename s = let tempfile = getTemporaryDirectory >>= \tdir -> emptyTempFile tdir "purebred.txt"
