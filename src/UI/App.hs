@@ -31,18 +31,14 @@ import Control.Lens (set, view)
 import qualified Data.Map as Map
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
+import Data.Proxy
 
 import UI.Keybindings
-import UI.GatherHeaders.Main (drawSubject, drawFrom, drawTo)
 import UI.Index.Main
-       (renderListOfThreads, renderListOfMails, renderSearchThreadsEditor,
-        renderMailTagsEditor, renderThreadTagsEditor)
 import UI.Actions (applySearch, initialCompose)
 import UI.FileBrowser.Main
        (renderFileBrowser, renderFileBrowserSearchPathEditor)
-import UI.Mail.Main
-  ( renderAttachmentsList, renderMailAttachmentOpenWithEditor
-  , renderMailAttachmentPipeToEditor, renderMailView)
+import UI.Mail.Main (renderAttachmentsList, renderMailView)
 import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
 import UI.Views
@@ -50,6 +46,7 @@ import UI.Views
         filebrowserView, focusedViewWidget, focusedViewWidgets,
         focusedViewName)
 import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders)
+import UI.Draw.Main (renderEditorWithLabel)
 import Types
 
 drawUI :: AppState -> [Widget Name]
@@ -58,21 +55,26 @@ drawUI s = [vBox (renderWidget s (focusedViewName s) <$> focusedViewWidgets s)]
 renderWidget :: AppState -> ViewName -> Name -> Widget Name
 renderWidget s _ ListOfThreads = renderListOfThreads s
 renderWidget s ViewMail ListOfMails = vLimit (view (asConfig . confMailView . mvIndexRows) s) (renderListOfMails s)
-renderWidget s _ MailAttachmentOpenWithEditor = renderMailAttachmentOpenWithEditor s
-renderWidget s _ MailAttachmentPipeToEditor = renderMailAttachmentPipeToEditor s
+renderWidget s _ MailAttachmentOpenWithEditor =
+  renderEditorWithLabel (Proxy :: Proxy 'MailAttachmentOpenWithEditor) "Open with:" s
+renderWidget s _ MailAttachmentPipeToEditor =
+  renderEditorWithLabel (Proxy :: Proxy 'MailAttachmentPipeToEditor) "Pipe to:" s
 renderWidget s _ ListOfMails = renderListOfMails s
 renderWidget s _ ComposeListOfAttachments = attachmentsEditor s
 renderWidget s _ MailListOfAttachments = renderAttachmentsList s
 renderWidget s _ ListOfFiles = renderFileBrowser s
 renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor s
-renderWidget s _ SearchThreadsEditor = renderSearchThreadsEditor s
-renderWidget s _ ManageMailTagsEditor = renderMailTagsEditor s
-renderWidget s _ ManageThreadTagsEditor = renderThreadTagsEditor s
+renderWidget s _ SearchThreadsEditor =
+  renderEditorWithLabel (Proxy :: Proxy 'SearchThreadsEditor) "Query:" s
+renderWidget s _ ManageMailTagsEditor =
+  renderEditorWithLabel (Proxy :: Proxy 'ManageMailTagsEditor) "Labels:" s
+renderWidget s _ ManageThreadTagsEditor =
+  renderEditorWithLabel (Proxy :: Proxy 'ManageThreadTagsEditor) "Labels:" s
 renderWidget s _ ScrollingMailView = renderMailView s
 renderWidget s _ ScrollingHelpView = renderHelp s
-renderWidget s _ ComposeFrom = drawFrom s
-renderWidget s _ ComposeTo = drawTo s
-renderWidget s _ ComposeSubject = drawSubject s
+renderWidget s _ ComposeFrom = renderEditorWithLabel (Proxy :: Proxy 'ComposeFrom) "From:" s
+renderWidget s _ ComposeTo = renderEditorWithLabel (Proxy :: Proxy 'ComposeTo) "To:" s
+renderWidget s _ ComposeSubject = renderEditorWithLabel (Proxy :: Proxy 'ComposeSubject) "Subject:" s
 renderWidget s _ ComposeHeaders = drawHeaders s
 renderWidget s _ StatusBar = statusbar s
 
