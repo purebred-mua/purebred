@@ -21,8 +21,7 @@ import Data.List (isInfixOf)
 import Data.Semigroup ((<>))
 
 import Purebred.Tags
-import Types (TagOp(..))
-import Error
+import Types (TagOp(..), Error(..))
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@=?), testCase, assertBool, assertFailure)

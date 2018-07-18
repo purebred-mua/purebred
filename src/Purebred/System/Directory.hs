@@ -26,7 +26,6 @@ import System.Directory (listDirectory, doesDirectoryExist)
 import System.FilePath ((</>))
 import Data.List (sort)
 
-import Error
 import Types
 
 

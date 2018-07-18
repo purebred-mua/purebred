@@ -15,9 +15,8 @@ import qualified Data.Text as T
 
 import Data.MIME
 
-import Error
 import Storage.Notmuch (mailFilepath)
-import Types (NotmuchMail, decodeLenient)
+import Types (Error(..), NotmuchMail, decodeLenient)
 
 parseMail
   :: (MonadError Error m, MonadIO m)

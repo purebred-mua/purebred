@@ -42,7 +42,6 @@ library
   default-language:    Haskell2010
   other-modules:       Paths_purebred
   exposed-modules:     UI.App
-                     , Error
                      , Types
                      , UI.Keybindings
                      , UI.Actions

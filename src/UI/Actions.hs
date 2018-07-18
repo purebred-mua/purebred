@@ -97,7 +97,6 @@ import Data.MIME
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
-import Error
 import UI.Utils
        (safeUpdate, focusedViewWidget, focusedViewName, selectedFiles)
 import UI.Views (listOfMailsView, mailView)

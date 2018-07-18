@@ -31,7 +31,6 @@ import qualified Data.Text.Encoding as T
 import Notmuch (Tag, mkTag)
 
 import Types
-import Error
 
 
 tagOp :: Parser TagOp

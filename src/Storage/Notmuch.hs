@@ -20,7 +20,6 @@ import qualified Notmuch
 import Notmuch.Search
 import Notmuch.Util (bracketT)
 
-import Error
 import Types
 
 
