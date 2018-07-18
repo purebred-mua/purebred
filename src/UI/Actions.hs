@@ -25,6 +25,8 @@
 
 module UI.Actions (
   Scrollable(..)
+  , HasEditor(..)
+  , HasName(..)
   , quit
   , focus
   , done
@@ -135,6 +137,33 @@ instance Scrollable 'ScrollingMailView where
 instance Scrollable 'ScrollingHelpView where
   makeViewportScroller _ = Brick.viewportScroll ScrollingHelpView
 
+-- | contexts that have an editor
+class HasEditor (n :: Name) where
+  editorL :: Proxy n -> Lens' AppState (E.Editor T.Text Name)
+
+instance HasEditor 'ComposeFrom where
+  editorL _ = asCompose . cFrom
+
+instance HasEditor 'ComposeTo where
+  editorL _ = asCompose . cTo
+
+instance HasEditor 'ComposeSubject where
+  editorL _ = asCompose . cSubject
+
+instance HasEditor 'ManageMailTagsEditor where
+  editorL _ = asMailIndex . miMailTagsEditor
+
+instance HasEditor 'MailAttachmentOpenWithEditor where
+  editorL _ = asMailView . mvOpenCommand
+
+instance HasEditor 'MailAttachmentPipeToEditor where
+  editorL _ = asMailView . mvPipeCommand
+
+instance HasEditor 'SearchThreadsEditor where
+  editorL _ = asMailIndex . miSearchThreadsEditor
+
+instance HasEditor 'ManageThreadTagsEditor where
+  editorL _ = asMailIndex . miThreadTagsEditor
 
 -- | Contexts that have a navigable (Brick) list
 class HasList (n :: Name) where
@@ -197,7 +226,7 @@ instance Completable 'ComposeListOfAttachments where
 
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
-    case getEditorTagOps (asMailIndex . miMailTagsEditor) s of
+    case getEditorTagOps (Proxy :: Proxy 'ManageMailTagsEditor) s of
         Left err -> pure $ setError err s
         Right ops' -> over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
                       <$> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops')
@@ -220,7 +249,7 @@ instance Completable 'ComposeSubject where
 -- don't show up in the UI.
 --
 instance Completable 'ManageThreadTagsEditor where
-  complete _ s = case getEditorTagOps (asMailIndex . miThreadTagsEditor) s of
+  complete _ s = case getEditorTagOps (Proxy :: Proxy 'ManageThreadTagsEditor) s of
                       Left err -> pure $ setError err s
                       Right ops ->
                         toggleLastVisibleWidget SearchThreadsEditor
@@ -300,7 +329,7 @@ instance Resetable 'ViewMail 'MailAttachmentOpenWithEditor where
             . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Hidden
 
 instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
-  reset _ _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
+  reset _ _ = pure . over (asMailView . mvPipeCommand . E.editContentsL) clearZipper
             . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentPipeToEditor . veState) Hidden
 
 clearMailComposition :: AppState -> AppState
@@ -887,9 +916,9 @@ selectedItemHelper l s func =
   Just (_, a) -> func a
   Nothing -> pure $ setError (GenericError "No item selected.")
 
-getEditorTagOps :: Lens' AppState (E.Editor T.Text Name) -> AppState -> Either Error [TagOp]
-getEditorTagOps widget s =
-  let contents = (foldr (<>) "" $ E.getEditContents $ view widget s)
+getEditorTagOps :: HasEditor n => Proxy n -> AppState -> Either Error [TagOp]
+getEditorTagOps p s =
+  let contents = (foldr (<>) "" $ E.getEditContents $ view (editorL p) s)
   in parseTagOps contents
 
 applyTagOps

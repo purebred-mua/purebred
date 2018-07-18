@@ -58,7 +58,6 @@ library
                      , UI.Status.Main
                      , UI.ComposeEditor.Main
                      , UI.ComposeEditor.Keybindings
-                     , UI.GatherHeaders.Main
                      , UI.GatherHeaders.Keybindings
                      , UI.Mail.Main
                      , UI.Mail.Keybindings
