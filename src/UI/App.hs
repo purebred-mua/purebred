@@ -21,10 +21,8 @@ import qualified Data.Map as Map
 
 import Storage.Notmuch (getThreads)
 import UI.Keybindings
-import UI.GatherHeaders.Main (drawSubject, drawFrom, drawTo)
 import UI.Index.Main
-       (renderListOfThreads, renderListOfMails, renderSearchThreadsEditor,
-        renderMailTagsEditor, renderThreadTagsEditor)
+       (renderListOfThreads, renderListOfMails)
 import UI.Actions (initialCompose)
 import UI.FileBrowser.Main
        (renderFileBrowser, renderFileBrowserSearchPathEditor)
@@ -36,6 +34,7 @@ import UI.Views
        (indexView, mailView, composeView, helpView, listOfMailsView,
         filebrowserView)
 import UI.ComposeEditor.Main (attachmentsEditor)
+import UI.Draw.Main (renderEditorWithLabel)
 import Types
 
 drawUI :: AppState -> [Widget Name]
@@ -48,14 +47,14 @@ renderWidget s _ ListOfMails = renderListOfMails s
 renderWidget s _ ListOfAttachments = attachmentsEditor s
 renderWidget s _ ListOfFiles = renderFileBrowser s
 renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor s
-renderWidget s _ SearchThreadsEditor = renderSearchThreadsEditor s
-renderWidget s _ ManageMailTagsEditor = renderMailTagsEditor s
-renderWidget s _ ManageThreadTagsEditor = renderThreadTagsEditor s
+renderWidget s _ SearchThreadsEditor = renderEditorWithLabel "Query:" SearchThreadsEditor s
+renderWidget s _ ManageMailTagsEditor = renderEditorWithLabel "Labels:" ManageMailTagsEditor s
+renderWidget s _ ManageThreadTagsEditor = renderEditorWithLabel "Labels:" ManageThreadTagsEditor s
 renderWidget s _ ScrollingMailView = renderMailView s
 renderWidget s _ ScrollingHelpView = renderHelp s
-renderWidget s _ ComposeFrom = drawFrom s
-renderWidget s _ ComposeTo = drawTo s
-renderWidget s _ ComposeSubject = drawSubject s
+renderWidget s _ ComposeFrom = renderEditorWithLabel "From:" ComposeFrom s
+renderWidget s _ ComposeTo = renderEditorWithLabel "To:" ComposeTo s
+renderWidget s _ ComposeSubject = renderEditorWithLabel "Subject:" ComposeSubject s
 renderWidget s _ StatusBar = statusbar s
 
 handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)

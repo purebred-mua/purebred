@@ -2,10 +2,7 @@
 
 module UI.Index.Main (
     renderListOfThreads
-  , renderListOfMails
-  , renderSearchThreadsEditor
-  , renderMailTagsEditor
-  , renderThreadTagsEditor) where
+  , renderListOfMails) where
 
 import Brick.Types (Padding(..), Widget)
 import Brick.AttrMap (AttrName)
@@ -21,8 +18,7 @@ import Data.Text as T (Text, pack, unwords)
 
 import Notmuch (getTag)
 
-import UI.Draw.Main (renderEditorWithLabel, fillLine)
-import UI.Utils (focusedViewWidget)
+import UI.Draw.Main (fillLine)
 import Storage.Notmuch (hasTag)
 import Types
 import Config.Main
@@ -35,21 +31,6 @@ renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex
 
 renderListOfMails :: AppState -> Widget Name
 renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . miListOfMails) s
-
-renderSearchThreadsEditor :: AppState -> Widget Name
-renderSearchThreadsEditor s =
-    let hasFocus = SearchThreadsEditor == focusedViewWidget s ListOfThreads
-    in renderEditorWithLabel "Query:" hasFocus (view (asMailIndex . miSearchThreadsEditor) s)
-
-renderMailTagsEditor :: AppState -> Widget Name
-renderMailTagsEditor s =
-    let hasFocus = ManageMailTagsEditor == focusedViewWidget s ListOfThreads
-    in renderEditorWithLabel "Labels:" hasFocus (view (asMailIndex . miMailTagsEditor) s)
-
-renderThreadTagsEditor :: AppState -> Widget Name
-renderThreadTagsEditor s =
-    let hasFocus = ManageThreadTagsEditor == focusedViewWidget s ListOfThreads
-    in renderEditorWithLabel "Labels:" hasFocus (view (asMailIndex . miThreadTagsEditor) s)
 
 listDrawMail :: AppState -> Bool -> NotmuchMail -> Widget Name
 listDrawMail s sel a =
