@@ -9,7 +9,6 @@
 module Types
   ( module Types
   , Tag
-  , module Purebred.Events
   ) where
 
 import GHC.Generics (Generic)
@@ -25,6 +24,7 @@ import Control.Lens
 import qualified Data.Map as Map
 import Control.Monad.Except (MonadError)
 import Control.Monad.Reader (MonadIO)
+import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -40,7 +40,6 @@ import Notmuch (Tag)
 import Data.MIME
 
 import Error
-import Purebred.Events
 import Purebred.LazyVector (V)
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
@@ -476,6 +475,16 @@ fbEntries = lens _fbEntries (\cv x -> cv { _fbEntries = x })
 fbSearchPath :: Lens' FileBrowser (E.Editor FilePath Name)
 fbSearchPath = lens _fbSearchPath (\c x -> c { _fbSearchPath = x})
 
+-- | State needed to be kept for keeping track of
+-- concurrent/asynchronous actions
+newtype Async = Async
+  { _aValidation :: Maybe ThreadId
+  }
+
+aValidation :: Lens' Async (Maybe ThreadId)
+aValidation = lens _aValidation (\as x -> as { _aValidation = x })
+
+
 -- | Overall application state
 data AppState = AppState
     { _asConfig :: InternalConfiguration
@@ -486,6 +495,7 @@ data AppState = AppState
     , _asViews     :: ViewSettings -- ^ stores widget and focus information
     , _asFileBrowser :: FileBrowser
     , _asLocalTime :: UTCTime
+    , _asAsync :: Async
     }
 
 asConfig :: Lens' AppState InternalConfiguration
@@ -504,13 +514,16 @@ asError :: Lens' AppState (Maybe Error)
 asError = lens _asError (\appstate x -> appstate { _asError = x })
 
 asViews :: Lens' AppState ViewSettings
-asViews f (AppState a b c d e g h i) = fmap (\g' -> AppState a b c d e g' h i) (f g)
+asViews f (AppState a b c d e g h i j) = fmap (\g' -> AppState a b c d e g' h i j) (f g)
 
 asFileBrowser :: Lens' AppState FileBrowser
 asFileBrowser = lens _asFileBrowser (\as x -> as { _asFileBrowser = x })
 
 asLocalTime :: Lens' AppState UTCTime
 asLocalTime = lens _asLocalTime (\as x -> as { _asLocalTime = x })
+
+asAsync :: Lens' AppState Async
+asAsync = lens _asAsync (\as x -> as { _asAsync = x })
 
 data Action (v :: ViewName) (ctx :: Name) a = Action
     { _aDescription :: [T.Text]
@@ -680,3 +693,26 @@ ccResource ::
      (MonadIO m, MonadError Error m)
   => Lens' (EntityCommand m a) (ResourceSpec m a)
 ccResource = lens _ccResource (\cc x -> cc {_ccResource = x})
+
+
+-- | A serial number that can be used to match (or ignore as
+-- irrelevant) asynchronous events to current application state.
+--
+-- Use the 'Eq' and 'Ord' instances to compare generations.  The
+-- constructor is hidden; use 'firstGeneration' as the first
+-- generation, and use 'nextGeneration' to monotonically increment
+-- it.
+--
+newtype Generation = Generation Integer
+  deriving (Eq, Ord)
+
+-- | Purebred event type.  In the future we can abstract this over
+-- a custom event type to allow plugins to define their own events.
+-- But I've YAGNI'd it for now because it will require an event
+-- type parameter on 'AppState', which will be a noisy change.
+--
+data PurebredEvent
+  = NotifyNumThreads Int
+                     Generation
+  | InputValidated (Lens' AppState (Maybe Error))
+                   (Maybe Error)

@@ -76,7 +76,7 @@ main = defaultMain $ testTmux pre post tests
       , testSendMail
       , testCanToggleHeaders
       , testSetsMailToRead
-      , testErrorHandling
+      , testShowsAndClearsError
       , testHelp
       , testManageTagsOnMails
       , testManageTagsOnThreads
@@ -92,7 +92,92 @@ main = defaultMain $ testTmux pre post tests
       , testOpenEntitiesSuccessfully
       , testPipeEntitiesSuccessfully
       , testEditingMailHeaders
+      , testShowsInvalidCompositionInput
+      , testShowsInvalidTaggingInput
       ]
+
+testShowsInvalidTaggingInput :: PurebredTestCase
+testShowsInvalidTaggingInput = purebredTmuxSession "shows errors when tagging" $
+  \step -> do
+    startApplication
+
+    step "start tagging"
+    sendKeys "`" (Regex ("Labels: " <> buildAnsiRegex [] ["37"] []))
+
+    step "enter invalid tag input"
+    sendKeys "=," (Substring "Failed reading: unexpected ',' at offset 1")
+
+    step "clear"
+    sendKeys "BSpace" (Regex ("Labels: " <> buildAnsiRegex [] ["37"] [] <> "="))
+
+    step "exit editor"
+    sendKeys "C-g" (Substring "Query")
+
+    step "open thread"
+    sendKeys "Enter" (Substring "Testmail with whitespace")
+
+    step "start tagging"
+    sendKeys "`" (Regex ("Labels: " <> buildAnsiRegex [] ["37"] []))
+
+    step "enter invalid tag input"
+    sendKeys "=," (Substring "Failed reading: unexpected ',' at offset 1")
+
+    step "clear"
+    sendKeys "BSpace" (Regex ("Labels: " <> buildAnsiRegex [] ["37"] [] <> "="))
+
+testShowsInvalidCompositionInput :: PurebredTestCase
+testShowsInvalidCompositionInput = purebredTmuxSession "shows errors when composing" $
+  \step -> do
+    startApplication
+    step "start composition"
+    sendKeys "m" (Substring "From")
+
+    step "trigger error"
+    sendKeys "<" (Substring "Failed reading")
+
+    step "continue"
+    sendKeys "BSpace" (Substring "Purebred: (0,27)")
+    sendKeys "Enter" (Substring "To:")
+
+    step "trigger error"
+    sendKeys "," (Substring "Failed reading")
+
+    step "continue"
+    sendKeys "BSpace" (Substring "Purebred: (0,0)")
+    sendKeys "Enter" (Substring "Subject:")
+
+    step "leave empty subject"
+    sendKeys "Enter" (Substring "~")
+
+    step "enter mail body"
+    sendKeys "iThis is a test body" (Substring "body")
+
+    step "exit insert mode in vim"
+    sendKeys "Escape" (Substring "body")
+
+    step "exit vim"
+    sendKeys ": x\r" (Substring "text/plain")
+
+    step "focus from field"
+    sendKeys "f" (Regex $ "From:\\s"
+                  <> buildAnsiRegex [] ["37"] []
+                  <> "\"Joe Bloggs\" <joe@foo.test>")
+
+    step "trigger error"
+    sendKeys "," (Substring "Failed reading: unexpected ',' at offset 27")
+
+    step "abort editing"
+    sendKeys "C-g" (Substring "ComposeView-Attachments")
+
+    step "focus to field"
+    sendKeys "t" (Regex $ "To:\\s" <> buildAnsiRegex [] ["37"] [])
+
+    step "trigger error"
+    sendKeys "," (Substring "Failed reading")
+
+    step "abort editing"
+    sendKeys "C-g" (Substring "ComposeView-Attachments")
+  
 
 testEditingMailHeaders :: PurebredTestCase
 testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
@@ -591,8 +676,8 @@ testHelp = purebredTmuxSession "help view" $
 
     sendKeys "Escape" (Substring "Purebred")
 
-testErrorHandling :: PurebredTestCase
-testErrorHandling = purebredTmuxSession "error handling" $
+testShowsAndClearsError :: PurebredTestCase
+testShowsAndClearsError = purebredTmuxSession "shows and clears error" $
   \step -> do
     startApplication
 

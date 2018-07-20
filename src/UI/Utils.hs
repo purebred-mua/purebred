@@ -22,8 +22,8 @@ module UI.Utils
   , toggledItems
   , selectedFiles
   , takeFileName
+  , getEditor
   ) where
-
 import Data.List (union)
 
 import Data.Text (Text, pack, unpack)
@@ -31,6 +31,7 @@ import qualified System.FilePath as FP (takeFileName)
 import Control.Lens
        (folded, traversed, filtered, toListOf, view, _2)
 import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.Edit as E
 
 import Types
 
@@ -47,6 +48,14 @@ selectedFiles l = let cur = case L.listSelectedElement l of
 
 takeFileName :: Text -> Text
 takeFileName = pack . FP.takeFileName . unpack
+
+getEditor :: Name -> AppState -> E.Editor Text Name
+getEditor ComposeFrom = view (asCompose . cFrom)
+getEditor ComposeTo = view (asCompose . cTo)
+getEditor ComposeSubject = view (asCompose . cSubject)
+getEditor ManageMailTagsEditor = view (asMailIndex . miMailTagsEditor)
+getEditor ManageThreadTagsEditor = view (asMailIndex . miThreadTagsEditor)
+getEditor _ = view (asMailIndex . miSearchThreadsEditor)
 
 class Titleize a where
   titleize :: a -> Text

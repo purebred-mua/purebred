@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2019  Fraser Tweedale
+-- Copyright (C) 2017-2019 Fraser Tweedale and Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -13,22 +13,21 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+module Purebred.Parsing.Text where
 
-{- |
+import Control.Applicative ((<|>))
+import qualified Data.Attoparsec.Internal.Types as AT
+import Data.Attoparsec.Text (Parser, endOfInput, peekChar')
 
-Types and functions for custom brick events.
+niceEndOfInput :: Parser ()
+niceEndOfInput = endOfInput <|> p
+  where
+  p = do
+    c <- peekChar'
+    off <- offset
+    fail $ "unexpected " <> show c <> " at offset " <> show off
 
--}
-module Purebred.Events
-  (
-  firstGeneration
-  , nextGeneration
-  ) where
-
-import Types
-
-firstGeneration :: Generation
-firstGeneration = Generation 0
-
-nextGeneration :: Generation -> Generation
-nextGeneration (Generation n) = Generation (succ n)
+-- | Get the current position of the parser
+offset :: AT.Parser i Int
+offset = AT.Parser $ \t pos more _lose suc -> suc t pos more (AT.fromPos pos)

@@ -65,9 +65,11 @@ library
                      , UI.Help.Keybindings
                      , UI.Utils
                      , UI.Views
+                     , UI.Validation
                      , Purebred.Events
                      , Purebred.LazyVector
                      , Purebred.Tags
+                     , Purebred.Parsing.Text
                      , Purebred.System.Directory
                      , Purebred.System.Process
                      , UI.FileBrowser.Main

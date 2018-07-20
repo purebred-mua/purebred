@@ -123,6 +123,7 @@ import UI.Utils (selectedFiles, takeFileName)
 import UI.Views
        (listOfMailsView, mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
+import Purebred.Events (nextGeneration)
 import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
