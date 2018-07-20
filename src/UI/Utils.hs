@@ -18,7 +18,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Utils
        (safeUpdate, focusedViewWidget, focusedViewWidgets,
-        focusedViewName, focusedView, titleize, Titleize, toggledItems, selectedFiles)
+        focusedViewName, focusedView, titleize, Titleize, toggledItems,
+        selectedFiles, getEditor)
        where
 import qualified Data.Vector as Vector
 import Data.Foldable (toList)
@@ -29,6 +30,7 @@ import Control.Lens
        (folded, traversed, filtered, toListOf, view, at, _Just, _2)
 import Brick.Focus (focusGetCurrent)
 import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.Edit as E
 
 import UI.Views (indexView)
 
@@ -67,6 +69,14 @@ selectedFiles l = let cur = case L.listSelectedElement l of
                         _ -> []
                       toggled = view (_2 . fsEntryName) <$> toggledItems l
                   in toggled `union` toListOf (traversed . _2 . fsEntryName) cur
+
+getEditor :: Name -> AppState -> E.Editor Text Name
+getEditor ComposeFrom = view (asCompose . cFrom)
+getEditor ComposeTo = view (asCompose . cTo)
+getEditor ComposeSubject = view (asCompose . cSubject)
+getEditor ManageMailTagsEditor = view (asMailIndex . miMailTagsEditor)
+getEditor ManageThreadTagsEditor = view (asMailIndex . miThreadTagsEditor)
+getEditor _ = view (asMailIndex . miSearchThreadsEditor)
 
 class Titleize a where
   titleize :: a -> Text

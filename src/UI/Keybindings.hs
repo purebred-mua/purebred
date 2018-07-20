@@ -9,10 +9,19 @@ import qualified Brick.Main as Brick
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Graphics.Vty (Event (..))
-import Control.Lens ((&), view, set)
+import Control.Lens ((&), view, set, to, preview, _Left)
 import Data.List (find)
+import Data.Attoparsec.ByteString.Char8 (parseOnly)
+import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Zipper (currentLine)
+import Data.Text (Text)
 import Prelude hiding (readFile, unlines)
+
 import Types
+import UI.Utils (getEditor, focusedViewWidget)
+import Purebred.Tags (parseTagOps)
+import Data.MIME (mailbox)
+
 
 lookupKeybinding :: Event -> [Keybinding v ctx] -> Maybe (Keybinding v ctx)
 lookupKeybinding e = find (\x -> view kbEvent x == e)
@@ -28,6 +37,17 @@ dispatch (EventHandler l fallback) s ev =
   case lookupKeybinding ev (view l s) of
     Just kb -> s & view (kbAction . aAction) kb . set asError Nothing
     Nothing -> fallback s ev
+
+checkError :: Name -> Text -> Maybe Error
+checkError ComposeFrom = preview (_Left . to GenericError) . parseOnly mailbox . encodeUtf8
+checkError ManageThreadTagsEditor = preview _Left . parseTagOps
+checkError ManageMailTagsEditor = preview _Left . parseTagOps
+
+validate :: AppState -> Brick.EventM Name AppState
+validate s = let text = view (E.editContentsL . to currentLine) (getEditor (focusedViewWidget s ListOfThreads) s)
+             in case checkError (focusedViewWidget s ListOfThreads) text of
+               Nothing -> pure $ set asError Nothing s
+               e -> pure $ set asError e s
 
 -- | Do nothing.  It might be worthwhile to enhance this to display
 -- a message like "no binding for key <blah>".
@@ -54,7 +74,7 @@ eventHandlerSearchThreadsEditor = EventHandler
 eventHandlerManageMailTagsEditor :: EventHandler 'Mails 'ManageMailTagsEditor
 eventHandlerManageMailTagsEditor = EventHandler
   (asConfig . confIndexView . ivManageMailTagsKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailIndex . miMailTagsEditor) E.handleEditorEvent)
+  (\s -> Brick.continue <=< validate <=< Brick.handleEventLensed s (asMailIndex . miMailTagsEditor) E.handleEditorEvent)
 
 eventHandlerViewMailManageMailTagsEditor :: EventHandler 'ViewMail 'ManageMailTagsEditor
 eventHandlerViewMailManageMailTagsEditor = EventHandler
@@ -64,7 +84,7 @@ eventHandlerViewMailManageMailTagsEditor = EventHandler
 eventHandlerManageThreadTagsEditor :: EventHandler 'Threads 'ManageThreadTagsEditor
 eventHandlerManageThreadTagsEditor = EventHandler
   (asConfig . confIndexView . ivManageThreadTagsKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailIndex . miThreadTagsEditor) E.handleEditorEvent)
+  (\s -> Brick.continue <=< validate <=< Brick.handleEventLensed s (asMailIndex . miThreadTagsEditor) E.handleEditorEvent)
 
 eventHandlerScrollingMailView :: EventHandler 'ViewMail 'ScrollingMailView
 eventHandlerScrollingMailView = EventHandler
@@ -79,7 +99,7 @@ eventHandlerScrollingHelpView = EventHandler
 eventHandlerThreadComposeFrom :: EventHandler 'Threads 'ComposeFrom
 eventHandlerThreadComposeFrom = EventHandler
   (asConfig . confIndexView . ivFromKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cFrom) E.handleEditorEvent)
+  (\s -> Brick.continue <=< validate <=< Brick.handleEventLensed s (asCompose . cFrom) E.handleEditorEvent)
 
 eventHandlerThreadComposeTo :: EventHandler 'Threads 'ComposeTo
 eventHandlerThreadComposeTo = EventHandler
@@ -94,7 +114,7 @@ eventHandlerThreadComposeSubject = EventHandler
 eventHandlerComposeFrom :: EventHandler 'ComposeView 'ComposeFrom
 eventHandlerComposeFrom = EventHandler
   (asConfig . confComposeView . cvFromKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cFrom) E.handleEditorEvent)
+  (\s -> Brick.continue <=< validate <=< Brick.handleEventLensed s (asCompose . cFrom) E.handleEditorEvent)
 
 eventHandlerComposeTo :: EventHandler 'ComposeView 'ComposeTo
 eventHandlerComposeTo = EventHandler

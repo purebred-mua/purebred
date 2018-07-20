@@ -61,6 +61,7 @@ solarizedDark =
         , (E.editFocusedAttr, V.white `on` V.brightBlack)
         , (editorAttr, V.brightBlue `on` V.brightBlack)
         , (editorLabelAttr, V.brightYellow `on` V.brightBlack)
+        , (editorErrorAttr, fg V.red)
         , (statusbarErrorAttr, fg V.red)
         , (statusbarAttr, V.brightYellow `on` V.black)
         , (headerKeyAttr, fg V.cyan)
@@ -81,6 +82,7 @@ solarizedLight =
         , (E.editFocusedAttr, V.brightBlack `on` V.brightWhite)
         , (editorAttr, V.brightBlue `on` V.brightWhite)
         , (editorLabelAttr, V.brightYellow `on` V.brightWhite)
+        , (editorErrorAttr, fg V.red)
         , (statusbarErrorAttr, fg V.red)
         , (statusbarAttr, V.brightYellow `on` V.white)
         , (mailViewAttr, bg V.brightWhite)
@@ -102,6 +104,9 @@ editorAttr = E.editAttr
 
 editorFocusedAttr :: A.AttrName
 editorFocusedAttr = E.editFocusedAttr
+
+editorErrorAttr :: A.AttrName
+editorErrorAttr = editorAttr <> "error"
 
 editorLabelAttr :: A.AttrName
 editorLabelAttr = editorAttr <> "label"
