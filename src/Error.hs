@@ -35,6 +35,7 @@ data Error
   | SendMailError String
   | GenericError String
   | ProcessError String
+  | ParseError String
   deriving (Show, Eq)
 
 instance AsNotmuchError Error where

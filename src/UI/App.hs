@@ -27,7 +27,7 @@ import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty.Input.Events as Vty
-import Control.Lens (set, view)
+import Control.Lens ((&), set, view)
 import qualified Data.Map as Map
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
@@ -47,6 +47,7 @@ import UI.Views
         focusedViewName)
 import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders)
 import UI.Draw.Main (renderEditorWithLabel)
+import Purebred.Events (firstGeneration)
 import Types
 
 drawUI :: AppState -> [Widget Name]
@@ -113,6 +114,7 @@ appEvent s (T.AppEvent ev) = case ev of
     if gen == view (asMailIndex . miListOfThreadsGeneration) s
     then set (asMailIndex . miThreads . listLength) (Just n) s
     else s
+  InputValidated l err -> M.continue (s & set l err . set (asAsync . aValidation) Nothing)
 appEvent s _ = M.continue s
 
 initialState :: InternalConfiguration -> IO AppState
@@ -150,7 +152,8 @@ initialState conf =
          (E.editor ManageFileBrowserSearchPath Nothing path)
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
-    s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch
+    async = Async Nothing
+    s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
   in applySearch s
 
 theApp
