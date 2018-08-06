@@ -10,7 +10,7 @@ module UI.Index.Main (
 import Brick.Types (Padding(..), Widget)
 import Brick.AttrMap (AttrName)
 import Brick.Widgets.Core
-       (hLimit, padLeft, txt, vLimit, withAttr, (<+>))
+       (hLimitPercent, padLeft, txt, vLimit, withAttr, (<+>))
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import qualified Data.ByteString as B
@@ -56,8 +56,8 @@ listDrawMail s sel a =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
         widget = padLeft (Pad 1) (txt $ formatDate (view mailDate a)) <+>
-                 padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings)) <+>
                  padLeft (Pad 1) (renderAuthors sel $ view mailFrom a) <+>
+                 padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings)) <+>
                  padLeft (Pad 1) (txt (view mailSubject a)) <+> fillLine
     in withAttr (getListAttr isNewMail sel) widget
 
@@ -66,9 +66,9 @@ listDrawThread s sel a =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
         widget = padLeft (Pad 1) (txt $ formatDate (view thDate a)) <+>
+                 padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a) <+>
                  padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")") <+>
                  padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings)) <+>
-                 padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a) <+>
                  padLeft (Pad 1) (txt (view thSubject a)) <+> fillLine
     in withAttr (getListAttr isNewMail sel) widget
 
@@ -89,7 +89,7 @@ renderAuthors isSelected authors =
             if isSelected
                 then mailSelectedAuthorsAttr
                 else mailAuthorsAttr
-    in withAttr attribute $ hLimit 15 (txt authors)
+    in withAttr attribute $ hLimitPercent 20 (txt authors <+> fillLine)
 
 renderTagsWidget :: [Tag] -> Tag -> Widget Name
 renderTagsWidget tgs ignored =

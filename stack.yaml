@@ -51,12 +51,12 @@ packages:
 extra-deps:
 - concise-0.1.0.1
 - config-ini-0.2.2.0
-- data-clist-0.1.2.0
+- data-clist-0.1.2.1
 - word-wrap-0.4.1
-- vty-5.20
-- brick-0.34
-- megaparsec-6.4.0
-- parser-combinators-0.4.0
+- vty-5.23.1
+- brick-0.40
+- megaparsec-6.5.0
+- parser-combinators-1.0.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}

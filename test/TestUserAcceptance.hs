@@ -110,14 +110,14 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
     sendKeys "Down" (Literal "2 of 2")
 
     liftIO $ step "go back to thread list which is read"
-    sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> " 08/Feb \\(2\\)"))
+    sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> " 08/Feb\\sRóman\\sJoost\\s+\\(2\\)"))
 
     liftIO $ step "set one mail to unread"
     sendKeys "Enter" (Literal "Beginning of large text")
-    sendKeys "q t" (Regex (buildAnsiRegex ["1"] [] [] <> "\\sWIP Refactor\\s" <> buildAnsiRegex ["0"] ["34"] ["40"]))
+    sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s" <> buildAnsiRegex ["0"] ["34"] ["40"]))
 
     liftIO $ step "returning to thread list shows thread unread"
-    sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> " 08/Feb \\(2\\)"))
+    sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
 
     pure ()
 
@@ -361,7 +361,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "Escape" (Regex (buildAnsiRegex [] ["36"] []
                               <> "replied thread"
                               <> buildAnsiRegex [] ["37"] []
-                              <> "\\sRóman Joost\\s<\\w+\\sRe: WIP Refactor"))
+                              <> "\\sRe: WIP Refactor"))
 
     liftIO $ step "go back to list of threads"
     sendKeys "Escape" (Literal "List of Threads")
@@ -445,11 +445,10 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
     liftIO $ step "shows tag"
     out <- capture
     assertSubstrInOutput "inbox" out
-    -- Should have white space removed (see: #152)
     assertSubstrInOutput "Testmail with whitespace in the subject" out
 
     liftIO $ step "open thread"
-    sendKeys "Enter" (Regex "url.user\\s+Testmail with whitespace in the subject")
+    sendKeys "Enter" (Literal "Testmail with whitespace in the subject")
 
     liftIO $ step "view mail"
     sendKeys "Enter" (Literal "This is a test mail")
