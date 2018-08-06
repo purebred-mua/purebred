@@ -70,7 +70,7 @@ library
                      , Network.Mail.Mime.Lens
   build-depends:       base >= 4.9 && < 5
                      , lens
-                     , brick >= 0.34
+                     , brick >= 0.40
                      , text-zipper
                      , vty
                      , vector
@@ -129,5 +129,5 @@ test-suite unittests
                      , notmuch
                      , time
                      , filepath
-                     , brick >= 0.34
+                     , brick >= 0.40
                      , vector
