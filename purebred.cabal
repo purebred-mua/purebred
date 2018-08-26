@@ -67,7 +67,6 @@ library
                      , Storage.Notmuch
                      , Storage.ParsedMail
                      , Purebred
-                     , Network.Mail.Mime.Lens
   build-depends:       base >= 4.9 && < 5
                      , lens
                      , brick >= 0.40
@@ -77,7 +76,6 @@ library
                      , notmuch
                      , text
                      , process
-                     , mime-mail
                      , directory
                      , bytestring
                      , time
