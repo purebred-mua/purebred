@@ -32,6 +32,7 @@ data Error
   | ThreadNotFound B.ByteString -- thread id
   | FileReadError FilePath IOError -- ^ failed to read a file
   | FileParseError FilePath String -- ^ failed to parse a file
+  | SendMailError String
   | GenericError String
   deriving (Show, Eq)
 

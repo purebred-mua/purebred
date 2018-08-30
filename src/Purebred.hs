@@ -8,8 +8,6 @@ module Purebred (
   Modifier(..),
   List(..),
   Next,
-  Mail,
-  renderMail',
   getDatabasePath,
   defaultConfig,
   solarizedDark,
@@ -50,7 +48,6 @@ import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.Main (defaultMain)
 import Brick.Types (Next)
 import Brick.Widgets.List (List(..))
-import Network.Mail.Mime (Mail, renderMail')
 import Control.Lens ((&), over, set)
 
 newtype AppConfig = AppConfig
@@ -115,9 +112,6 @@ processConfig =
 boundaryChars :: String
 boundaryChars = ['0'..'9'] <> ['a'..'z'] <> ['A'..'Z'] <> "'()+_,-./:=?"
 
--- | Note: iterate returns a list including the first random character. That
--- first random character is most often not Boundary compliant, so invoke
--- iterate with the seed value which returns only boundary compliant characters.
 genBoundary :: RandomGen g => g -> String
 genBoundary = filter isBoundaryChar . randomRs (minimum boundaryChars, maximum boundaryChars)
   where

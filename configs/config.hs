@@ -21,7 +21,7 @@ Example configuration, currently used for testing which demonstrates various
 ways to overwrite the configuration.
 -}
 import Purebred
-import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString as B
 import System.Environment (lookupEnv)
 import System.Directory (getCurrentDirectory)
 import Data.Maybe (fromMaybe)
@@ -42,13 +42,15 @@ myMailKeybindings =
     [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]
 
-writeMailtoFile :: Mail -> IO ()
+-- Note: The empty string return value is currently used as an error condition,
+-- but for this case it is not used.
+writeMailtoFile :: B.ByteString -> IO String
 writeMailtoFile m = do
-  m' <- renderMail' m
   confdir <- lookupEnv "PUREBRED_CONFIG_DIR"
   currentdir <- getCurrentDirectory
   let fname = fromMaybe currentdir confdir </> "sentMail"
-  L.writeFile fname m'
+  B.writeFile fname m
+  pure ""
 
 
 main :: IO ()

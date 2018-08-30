@@ -55,7 +55,7 @@ instance WithContext (L.List Name NotmuchMail) where
 instance WithContext (L.List Name (Bool, FileSystemEntry)) where
   renderContext _ = currentItemW
 
-instance WithContext (L.List Name MailPart) where
+instance WithContext (L.List Name MIMEMessage) where
   renderContext _ = currentItemW
 
 instance WithContext (E.Editor Text Name) where

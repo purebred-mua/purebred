@@ -50,41 +50,49 @@ import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Network.Mail.Mime
-       (Part(..), Address(..), emptyMail, Encoding(..), plainPart,
-        addPart)
-import Network.Mail.Mime.Lens
-       (lMailParts, lMailFrom, lMailTo, lMailHeaders, lpartContent)
 import Network.Mime (defaultMimeLookup)
 import Data.Proxy
 import Data.Semigroup ((<>))
-import Data.Text (unlines, unpack, pack, Text)
-import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.Text.Lazy.Encoding as LT
-import qualified Data.Text.Encoding.Error as LT
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import qualified Data.Text.Encoding as T
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as C8
+import Data.Attoparsec.ByteString.Char8 (parseOnly)
 import Data.Vector.Lens (vector)
 import Data.Maybe (fromMaybe)
 import Data.List (union)
 import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
-import System.Directory (getTemporaryDirectory)
+import System.Directory (getTemporaryDirectory, removeFile)
 import System.Process (system)
-import System.FilePath (takeDirectory, (</>))
+import System.FilePath (takeFileName, takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
+import Data.Functor (($>))
 import Control.Applicative ((<|>))
 import Control.Lens
-  ( _Just, to, at, ix, _1, _2, toListOf, filtered, traversed, has, snoc
-  , itoList, set, over, preview, view, (&), Getting, Lens'
-  )
+       (_Just, to, at, ix, _1, _2, toListOf, traversed, has, snoc,
+        filtered, itoList, set, over, preview, view, (&), nullOf, firstOf,
+        traversed, traverse, Getting, Lens')
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
-import Control.Exception (onException)
+import Control.Exception (onException, catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Catch (bracket)
 import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper)
+import Data.Time.Clock (getCurrentTime)
+
+import Data.RFC5322 (Message(..))
+import Data.MIME
+       (createMultipartMixedMessage, contentTypeApplicationOctetStream,
+        createTextPlainMessage, createAttachmentFromFile, renderMessage,
+        contentDisposition, dispositionType, headers, filename,
+        parseContentType, attachments, isAttachment, entities,
+        matchContentType, contentType, mailboxList, renderMailboxes,
+        addressList, renderAddresses, renderRFC5422Date, MIMEMessage,
+        WireEntity, DispositionType(..), ContentType(..))
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
@@ -207,7 +215,7 @@ instance Focusable 'Threads 'ManageThreadTagsEditor where
                   . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ManageThreadTagsEditor)
 
 instance Focusable 'Threads 'ComposeFrom where
-  switchFocus _ _ s = if has (asCompose . cMail . lMailParts . traversed) s
+  switchFocus _ _ s = if nullOf (asCompose . cMail) s
                     then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
                     else pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeFrom)
 
@@ -240,7 +248,7 @@ instance Focusable 'Mails 'ListOfMails where
   switchFocus _ _ = pure
 
 instance Focusable 'Mails 'ComposeFrom where
-  switchFocus _ _ s = if has (asCompose . cMail . lMailParts . traversed) s
+  switchFocus _ _ s = if nullOf (asCompose . cMail) s
                     then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
                     else pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeFrom)
 
@@ -410,7 +418,7 @@ abort = Action ["cancel"] (reset (Proxy :: Proxy a))
 
 focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState
 focus = Action
-  ["switch mode to " <> pack (show (name (Proxy :: Proxy a)))]
+  ["switch mode to " <> T.pack (show (name (Proxy :: Proxy a)))]
   (switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a))
 
 -- | A no-op action which just returns the current AppState
@@ -639,12 +647,12 @@ createAttachments =
 --
 makeAttachmentsFromSelected :: AppState -> IO AppState
 makeAttachmentsFromSelected s = do
-  parts <- traverse (makePlainPart Attachment . makeFullPath) (selectedFiles (view (asFileBrowser . fbEntries) s))
+  parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (selectedFiles (view (asFileBrowser . fbEntries) s))
   pure $ s & over (asCompose . cAttachments) (go parts)
     . over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
     . over (asViews . vsViews . at ComposeView . _Just . vFocus) (Brick.focusSetCurrent ListOfFiles)
   where
-    go :: [MailPart] -> L.List Name MailPart -> L.List Name MailPart
+    go :: [MIMEMessage] -> L.List Name MIMEMessage -> L.List Name MIMEMessage
     go parts list = foldr upsertPart list parts
     makeFullPath path = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> path
 
@@ -700,7 +708,7 @@ selectedItemHelper l s func =
   Just m -> func m
   Nothing -> pure $ setError (GenericError "No item selected.")
 
-getEditorTagOps :: Lens' AppState (E.Editor Text Name) -> AppState -> Either Error [TagOp]
+getEditorTagOps :: Lens' AppState (E.Editor T.Text Name) -> AppState -> Either Error [TagOp]
 getEditorTagOps widget s =
   let contents = (foldr (<>) "" $ E.getEditContents $ view widget s)
   in parseTagOps contents
@@ -758,41 +766,50 @@ replyToMail s =
 
 sendMail :: AppState -> T.EventM Name AppState
 sendMail s = do
-    let mTo =
-            Address
-                Nothing
-                (unlines $ E.getEditContents $ view (asCompose . cTo) s)
-    let from =
-            Address
-                Nothing
-                (unlines $ E.getEditContents $ view (asCompose . cFrom) s)
-    let subject =
-            [ ( BC.pack "Subject"
-              , unlines $ E.getEditContents $ view (asCompose . cSubject) s)]
-    let inlineParts = plainPart . LT.decodeUtf8With LT.lenientDecode
-                      <$> toListOf (asCompose
-                                    . cAttachments
-                                    . L.listElementsL
-                                    . traversed
-                                    . filtered isInline
-                                    . mailPart
-                                    . lpartContent) s
-    let attachments = toListOf (asCompose . cAttachments . L.listElementsL . traversed . filtered (not . isInline) . mailPart) s
-    let s' =
-            s & set (asCompose . cMail . lMailTo) [mTo]
-            . set (asCompose . cMail . lMailFrom) from
-            . set (asCompose . cMail . lMailHeaders) subject
-            . over (asCompose . cMail) (\m -> foldr (\p a -> addPart [p] a) m (inlineParts <> attachments))
-    liftIO $ view (asConfig . confComposeView . cvSendMailCmd) s' (view (asCompose . cMail) s')
-    pure $ set asCompose initialCompose s'
+    dateTimeNow <- liftIO getCurrentTime
+    let to' = either (pure []) id $ parseOnly addressList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cTo) s
+        from = either (pure []) id $ parseOnly mailboxList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cFrom) s
+        subject = T.unlines $ E.getEditContents $ view (asCompose . cSubject) s
+        attachments' = toListOf (asCompose . cAttachments . L.listElementsL . traversed) s
+        (b, l') = splitAt 50 $ view (asConfig . confComposeView . cvBoundary) s
+        mail = if has (asCompose . cAttachments . L.listElementsL . traversed . filtered isAttachment) s
+                then Just $ createMultipartMixedMessage (C8.pack b) attachments'
+                else firstOf (asCompose . cAttachments . L.listElementsL . traversed) s
+    case mail of
+        Nothing -> pure $ setError (GenericError "Black hole detected") s
+        (Just m) -> let m' = m
+                          & set (headers . at "Subject") (Just $ T.encodeUtf8 subject)
+                          . set (headers . at "From") (Just $ renderMailboxes from)
+                          . set (headers . at "To") (Just $ renderAddresses to')
+                          . set (headers . at "Date") (Just $ renderRFC5422Date dateTimeNow)
+                    in liftIO $ trySendAndCatch l' (renderMessage $ sanitizeMail m') s
 
-isInline :: MailPart -> Bool
-isInline (MailPart Inline _) = True
-isInline _ = False
+-- Handler to send the mail, but catch and show an error if it happened. This is
+-- really a TODO to improve this, since ideally we can do this in the
+-- cvSendMailCmd. However what prevented me from simply moving there is using
+-- the MonadError typeclass. Using that, the typevariable has to be carried into
+-- the configuration as another? type variable. So all in all it was non
+-- trivial.
+-- See #200
+trySendAndCatch :: String -> B.ByteString -> AppState -> IO AppState
+trySendAndCatch l' m s = do
+    let cmd = view (asConfig . confComposeView . cvSendMailCmd) s
+    catch
+        (cmd m $> (s
+         & set asCompose initialCompose
+         . set (asConfig . confComposeView . cvBoundary) l'))
+        (\e ->
+              let err = show (e :: IOException)
+              in pure $ s & setError (SendMailError err))
+
+-- | santize the mail before we send it out
+-- Note: currently only strips away path names from files
+sanitizeMail :: MIMEMessage -> MIMEMessage
+sanitizeMail = over (attachments . headers . contentDisposition . filename) (T.pack . takeFileName . T.unpack)
 
 initialCompose :: Compose
 initialCompose =
-  let mail = emptyMail (Address Nothing "user@localhost")
+  let mail = B.empty
   in Compose
         mail
         (E.editorText ComposeFrom (Just 1) "")
@@ -804,28 +821,39 @@ initialCompose =
 invokeEditor' :: AppState -> IO AppState
 invokeEditor' s = do
   let editor = view (asConfig . confEditor) s
-  tmpfile <- attachmentFilename s
+  let m = preview (asCompose . cAttachments . to L.listSelectedElement
+                     . _Just . _2 . to getTextPlainPart . _Just) s
+  tmpfile <- getTempFileForEditing m
   status <- onException (system (editor <> " " <> tmpfile)) (pure $ setError editorError)
   case status of
     ExitFailure _ -> pure $ s & over (asViews . vsFocusedView) (Brick.focusSetCurrent Mails)
                               & setError editorError
     ExitSuccess -> do
-      body <- liftIO $ makePlainPart Inline tmpfile
-      pure $ s & over (asCompose . cAttachments) (upsertPart body)
+      contents <- T.readFile tmpfile
+      removeIfExists tmpfile
+      let mail = createTextPlainMessage contents
+      pure $ s & over (asCompose . cAttachments) (upsertPart mail)
+
+removeIfExists :: FilePath -> IO ()
+removeIfExists fp = removeFile fp `catch` handleError
+  where
+    handleError :: IOError -> IO ()
+    handleError _ = pure ()
 
 editAttachment :: AppState -> IO AppState
 editAttachment s =
     case L.listSelectedElement $ view (asCompose . cAttachments) s of
         Nothing -> pure $ setError (GenericError "No file selected to edit") s
-        Just (_,MailPart Inline _) -> invokeEditor' s
-        Just (_,MailPart Attachment _) -> pure $ setError (GenericError "Not implemented. See #182") s
+        Just (_, m) -> case preview (headers . contentDisposition . dispositionType) m of
+          (Just Inline) -> invokeEditor' s
+          _ -> pure $ setError (GenericError "Not implemented. See #182") s
 
-upsertPart :: MailPart -> L.List Name MailPart -> L.List Name MailPart
+upsertPart :: MIMEMessage -> L.List Name MIMEMessage -> L.List Name MIMEMessage
 upsertPart newPart list =
   case L.listSelectedElement list of
     Nothing -> L.listInsert 0 newPart list
     Just (_, part) ->
-      if partFilename (view mailPart part) == partFilename (view mailPart newPart) then
+      if view (headers . contentDisposition . filename) part == view (headers . contentDisposition . filename) newPart then
         -- replace
         L.listModify (const newPart) list
       else
@@ -833,19 +861,24 @@ upsertPart newPart list =
         list & over L.listElementsL (`snoc` newPart)
              . set L.listSelectedL (Just (view (L.listElementsL . to length) list))
 
-attachmentFilename :: AppState -> IO String
-attachmentFilename s = let tempfile = getTemporaryDirectory >>= \tdir -> emptyTempFile tdir "purebred.txt"
-                       in case L.listSelectedElement $ view (asCompose . cAttachments) s of
-                            Nothing -> tempfile
-                            Just (_, p) -> maybe tempfile (pure . unpack) (partFilename $ view mailPart p)
+-- | Helper which writes the contents of the mail into the file, otherwise
+-- return an empty filepath
+getTempFileForEditing :: Maybe WireEntity -> IO String
+getTempFileForEditing m = do
+    tempfile <- getTemporaryDirectory >>= \tdir -> emptyTempFile tdir "purebred.txt"
+    f tempfile m
+ where
+   f fp (Just (Message _ body)) = B.writeFile fp body >> pure fp
+   f fp _ = pure fp
 
-makePlainPart :: AttachmentType -> String -> IO MailPart
-makePlainPart aType filename = do
-  content <- BL.readFile filename
-  pure $ MailPart aType (Part (mimeType filename) Base64 (Just $ pack filename) [] content)
+getTextPlainPart :: MIMEMessage -> Maybe WireEntity
+getTextPlainPart = firstOf (entities . filtered f)
+  where
+  f = matchContentType "text" (Just "plain") . view (headers . contentType)
 
-mimeType :: String -> Text
-mimeType = decodeLenient . defaultMimeLookup . pack
+mimeType :: FilePath -> ContentType
+mimeType x = let parsed = parseOnly parseContentType $ defaultMimeLookup (T.pack x)
+             in either (const contentTypeApplicationOctetStream) id parsed
 
 editorError :: Error
 editorError = GenericError ("Editor command exited with error code."
