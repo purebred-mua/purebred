@@ -90,6 +90,7 @@ library
                      , containers
                      , mime-types
                      , random
+                     , time
 
 executable purebred
   hs-source-dirs:      app

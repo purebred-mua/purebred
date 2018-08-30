@@ -24,7 +24,6 @@ import qualified Data.Text.Encoding.Error as T
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
-import qualified Network.Mail.Mime as Mail
 
 import Notmuch (Tag)
 import Data.MIME
@@ -104,14 +103,14 @@ mvHeadersState :: Lens' MailView HeadersState
 mvHeadersState = lens _mvHeadersState (\mv hs -> mv { _mvHeadersState = hs })
 
 data Compose = Compose
-    { _cMail :: Mail.Mail
+    { _cMail :: B.ByteString
     , _cFrom :: E.Editor T.Text Name
     , _cTo :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
-    , _cAttachments :: L.List Name MailPart
+    , _cAttachments :: L.List Name MIMEMessage
     }
 
-cMail :: Lens' Compose Mail.Mail
+cMail :: Lens' Compose B.ByteString
 cMail = lens _cMail (\c x -> c { _cMail = x })
 
 cFrom :: Lens' Compose (E.Editor T.Text Name)
@@ -123,21 +122,8 @@ cTo = lens _cTo (\c x -> c { _cTo = x })
 cSubject :: Lens' Compose (E.Editor T.Text Name)
 cSubject = lens _cSubject (\c x -> c { _cSubject = x })
 
-cAttachments :: Lens' Compose (L.List Name MailPart)
+cAttachments :: Lens' Compose (L.List Name MIMEMessage)
 cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
-
-data AttachmentType
-    = Inline
-    | Attachment
-    deriving (Eq,Show)
-
-data MailPart =
-    MailPart AttachmentType
-             Mail.Part
-    deriving (Eq,Show)
-
-mailPart :: Lens' MailPart Mail.Part
-mailPart f (MailPart a b) = fmap (\b' -> MailPart a b') (f b)
 
 data NotmuchSettings a = NotmuchSettings
     { _nmSearch :: T.Text
@@ -218,7 +204,7 @@ data ComposeViewSettings = ComposeViewSettings
     { _cvFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
     , _cvToKeybindings :: [Keybinding 'ComposeView 'ComposeTo]
     , _cvSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
-    , _cvSendMailCmd :: Mail.Mail -> IO ()
+    , _cvSendMailCmd :: B.ByteString -> IO String
     , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ListOfAttachments]
     , _cvBoundary :: String
     }
@@ -232,7 +218,7 @@ cvToKeybindings = lens _cvToKeybindings (\cv x -> cv { _cvToKeybindings = x })
 cvSubjectKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeSubject]
 cvSubjectKeybindings = lens _cvSubjectKeybindings (\cv x -> cv { _cvSubjectKeybindings = x })
 
-cvSendMailCmd :: Lens' ComposeViewSettings (Mail.Mail -> IO ())
+cvSendMailCmd :: Lens' ComposeViewSettings (B.ByteString -> IO String)
 cvSendMailCmd = lens _cvSendMailCmd (\cv x -> cv { _cvSendMailCmd = x })
 
 cvListOfAttachmentsKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ListOfAttachments]

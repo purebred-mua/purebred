@@ -9,12 +9,14 @@ import Data.Monoid ((<>))
 import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as C8
 import System.Environment (lookupEnv)
 import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
-import Network.Mail.Mime (renderSendMail)
+import System.Process (readProcess)
 
-import Data.MIME (ContentType(..))
+import Data.MIME (contentTypeTextPlain)
 
 import UI.FileBrowser.Keybindings
        (fileBrowserKeybindings, manageSearchPathKeybindings)
@@ -35,6 +37,16 @@ import UI.ComposeEditor.Keybindings
 
 import Types
 import Storage.Notmuch (getDatabasePath)
+
+sendmailPath :: FilePath
+sendmailPath = "/usr/sbin/sendmail"
+
+-- TODO: see #200
+renderSendMail :: B.ByteString -> IO String
+renderSendMail m =
+        -- -t which extracts recipients from the mail
+        -- TODO: accept a ByteString as stdin, see #201
+        readProcess sendmailPath ["-t", "-v"] (C8.unpack m)
 
 solarizedDark :: Theme
 solarizedDark =
@@ -148,7 +160,7 @@ defaultConfig =
     , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
     , _confMailView = MailViewSettings
       { _mvIndexRows = 10
-      , _mvPreferredContentType = ContentType "text" "plain" []
+      , _mvPreferredContentType = contentTypeTextPlain
       , _mvHeadersToShow = (`elem` ["subject", "to", "from", "cc"])
       , _mvKeybindings = displayMailKeybindings
       , _mvManageMailTagsKeybindings = mailViewManageMailTagsKeybindings

@@ -40,7 +40,7 @@ messageToMailView s msg =
       ShowAll -> const True
 
     filteredHeaders =
-      toListOf (headers . folded . filtered (wantHeader . fst)) msg
+      toListOf (headerList . folded . filtered (wantHeader . fst)) msg
 
     headerToWidget :: (CI.CI B.ByteString, B.ByteString) -> Widget Name
     headerToWidget (k, v) =
