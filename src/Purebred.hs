@@ -16,6 +16,7 @@ module Purebred (
   solarizedLight,
   (</>),
   module Control.Lens,
+  genBoundary,
   purebred) where
 
 import UI.App (theApp, initialState)
@@ -35,6 +36,7 @@ import System.Directory (getModificationTime, getCurrentDirectory)
 import System.FilePath.Posix ((</>))
 import System.IO (hPrint, stderr, hFlush)
 import Data.Maybe (fromMaybe)
+import System.Random (RandomGen, getStdGen, randomRs)
 
 import UI.Index.Keybindings
 import UI.Mail.Keybindings
@@ -97,7 +99,8 @@ buildLaunch = do
 
 launch :: UserConfiguration -> IO ()
 launch cfg = do
-    cfg' <- processConfig cfg
+    b <- genBoundary <$> getStdGen
+    cfg' <- processConfig $ set (confComposeView . cvBoundary) b cfg
     s <- initialState cfg'
     void $ defaultMain (theApp s) s
 
@@ -106,6 +109,19 @@ processConfig =
   (confNotmuch . nmDatabase) id
   >=> confEditor id
   >=> (confFileBrowserView . fbHomePath) id
+
+
+-- RFC2046 5.1.1
+boundaryChars :: String
+boundaryChars = ['0'..'9'] <> ['a'..'z'] <> ['A'..'Z'] <> "'()+_,-./:=?"
+
+-- | Note: iterate returns a list including the first random character. That
+-- first random character is most often not Boundary compliant, so invoke
+-- iterate with the seed value which returns only boundary compliant characters.
+genBoundary :: RandomGen g => g -> String
+genBoundary = filter isBoundaryChar . randomRs (minimum boundaryChars, maximum boundaryChars)
+  where
+    isBoundaryChar = (`elem` boundaryChars)
 
 -- | Recompile the config file if it has changed based on the modification timestamp
 -- Node: Mostly a XMonad.Main.hs rip-off.

@@ -89,6 +89,7 @@ library
                      , attoparsec
                      , containers
                      , mime-types
+                     , random
 
 executable purebred
   hs-source-dirs:      app
