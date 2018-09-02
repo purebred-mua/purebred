@@ -220,6 +220,7 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
     , _cvSendMailCmd :: Mail.Mail -> IO ()
     , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ListOfAttachments]
+    , _cvBoundary :: String
     }
 
 cvFromKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeFrom]
@@ -236,6 +237,9 @@ cvSendMailCmd = lens _cvSendMailCmd (\cv x -> cv { _cvSendMailCmd = x })
 
 cvListOfAttachmentsKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ListOfAttachments]
 cvListOfAttachmentsKeybindings = lens _cvListOfAttachmentsKeybindings (\cv x -> cv { _cvListOfAttachmentsKeybindings = x })
+
+cvBoundary :: Lens' ComposeViewSettings String
+cvBoundary = lens _cvBoundary (\cv x -> cv { _cvBoundary = x })
 
 newtype HelpViewSettings = HelpViewSettings
   { _hvKeybindings :: [Keybinding 'Help 'ScrollingHelpView]
