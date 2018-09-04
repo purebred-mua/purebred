@@ -43,7 +43,7 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/purebred-mua/purebred-email.git
-    commit: a016b57faf9e6707690ba2482b6cd83312e162f4
+    commit: 92dbd55b991796fd836862e0b697874bf9245bb7
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
