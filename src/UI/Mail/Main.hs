@@ -7,7 +7,7 @@ import Brick.Widgets.Core
   (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr)
 
 import Control.Applicative ((<|>))
-import Control.Lens (filtered, firstOf, folded, to, toListOf, view)
+import Control.Lens (filtered, firstOf, folded, to, toListOf, view, preview)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import Data.Semigroup ((<>))
@@ -58,7 +58,10 @@ chooseEntity :: AppState -> MIMEMessage -> Maybe WireEntity
 chooseEntity s msg =
   let
     preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
-    match = ctEq preferredContentType . view (headers . contentType)
+    match x = matchContentType
+      (view (headers . contentType . ctType) x)
+      (preview (headers . contentType . ctSubtype) x)
+      preferredContentType
 
     -- select first entity with matching content-type;
     -- otherwise select first entity;
