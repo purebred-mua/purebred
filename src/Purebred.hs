@@ -15,6 +15,9 @@ module Purebred (
   (</>),
   module Control.Lens,
   genBoundary,
+  Mailbox(..),
+  AddrSpec(..),
+  Domain(..),
   purebred) where
 
 import UI.App (theApp, initialState)
@@ -49,6 +52,7 @@ import Brick.Main (defaultMain)
 import Brick.Types (Next)
 import Brick.Widgets.List (List(..))
 import Control.Lens ((&), over, set)
+import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 
 newtype AppConfig = AppConfig
     { databaseFilepath :: Maybe String

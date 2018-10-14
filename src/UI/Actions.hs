@@ -85,6 +85,7 @@ import Data.Text.Zipper
 import Data.Time.Clock (getCurrentTime)
 
 import Data.RFC5322 (Message(..))
+import qualified Data.RFC5322.Address.Text as AddressText (renderMailboxes)
 import Data.MIME
        (createMultipartMixedMessage, contentTypeApplicationOctetStream,
         createTextPlainMessage, createAttachmentFromFile, renderMessage,
@@ -92,7 +93,7 @@ import Data.MIME
         parseContentType, attachments, isAttachment, entities,
         matchContentType, contentType, mailboxList, renderMailboxes,
         addressList, renderAddresses, renderRFC5422Date, MIMEMessage,
-        WireEntity, DispositionType(..), ContentType(..))
+        WireEntity, DispositionType(..), ContentType(..), Mailbox(..))
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
@@ -180,8 +181,10 @@ instance Resetable 'ManageThreadTagsEditor where
               . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 instance Resetable 'ComposeFrom where
-  reset _ s = pure $ s & over (asCompose . cFrom . E.editContentsL) clearZipper
-              . resetThreadViewEditor
+  reset _ s = let mailboxes = AddressText.renderMailboxes $ view (asConfig . confComposeView . cvIdentities) s
+              in pure $ s & over (asCompose . cFrom . E.editContentsL)
+                 (insertMany mailboxes . clearZipper)
+                 . resetThreadViewEditor
 
 instance Resetable 'ComposeSubject where
   reset _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) clearZipper
@@ -215,9 +218,7 @@ instance Focusable 'Threads 'ManageThreadTagsEditor where
                   . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ManageThreadTagsEditor)
 
 instance Focusable 'Threads 'ComposeFrom where
-  switchFocus _ _ s = if nullOf (asCompose . cMail) s
-                    then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
-                    else pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeFrom)
+  switchFocus = focusComposeFrom
 
 instance Focusable 'Threads 'ComposeTo where
   switchFocus _ _ s = pure $ over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeTo) s
@@ -248,9 +249,7 @@ instance Focusable 'Mails 'ListOfMails where
   switchFocus _ _ = pure
 
 instance Focusable 'Mails 'ComposeFrom where
-  switchFocus _ _ s = if nullOf (asCompose . cMail) s
-                    then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
-                    else pure $ s & over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeFrom)
+  switchFocus = focusComposeFrom
 
 instance Focusable 'ViewMail 'ListOfMails where
   switchFocus _ _ = pure . over (asViews . vsViews . at ViewMail . _Just . vFocus) (Brick.focusSetCurrent ListOfMails)
@@ -273,6 +272,27 @@ instance Focusable 'FileBrowser 'ListOfFiles where
 instance Focusable 'FileBrowser 'ManageFileBrowserSearchPath where
   switchFocus _ _ = pure
 
+
+-- In case the user is already composing a new mail, go back to the compose
+-- editor, otherwise focus the editor to input the from address.
+focusComposeFrom
+    :: Applicative f
+    => proxy1
+    -> proxy2
+    -> AppState
+    -> f AppState
+focusComposeFrom _ _ s =
+    if nullOf (asCompose . cMail) s
+        then pure $
+             over
+                 (asViews . vsFocusedView)
+                 (Brick.focusSetCurrent ComposeView)
+                 s
+        else pure $ s &
+             over
+                 (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets)
+                 (replaceEditor ComposeFrom) .
+             over (asCompose . cFrom) (E.applyEdit gotoEOL)
 
 -- TODO: helper function to replace whatever editor we're displaying at the
 -- bottom with a new editor given by name. There is currently nothing which
@@ -794,9 +814,10 @@ sendMail s = do
 trySendAndCatch :: String -> B.ByteString -> AppState -> IO AppState
 trySendAndCatch l' m s = do
     let cmd = view (asConfig . confComposeView . cvSendMailCmd) s
+        defMailboxes = view (asConfig . confComposeView . cvIdentities) s
     catch
         (cmd m $> (s
-         & set asCompose initialCompose
+         & set asCompose (initialCompose defMailboxes)
          . set (asConfig . confComposeView . cvBoundary) l'))
         (\e ->
               let err = show (e :: IOException)
@@ -807,12 +828,12 @@ trySendAndCatch l' m s = do
 sanitizeMail :: MIMEMessage -> MIMEMessage
 sanitizeMail = over (attachments . headers . contentDisposition . filename) (T.pack . takeFileName . T.unpack)
 
-initialCompose :: Compose
-initialCompose =
+initialCompose :: [Mailbox] -> Compose
+initialCompose mailboxes =
   let mail = B.empty
   in Compose
         mail
-        (E.editorText ComposeFrom (Just 1) "")
+        (E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
         (E.editorText ComposeTo (Just 1) "")
         (E.editorText ComposeSubject (Just 1) "")
         (L.list ListOfAttachments mempty 1)

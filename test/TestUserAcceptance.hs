@@ -80,7 +80,29 @@ systemTests =
       , testUpdatesReadState
       , testCanJumpToFirstListItem
       , testAddAttachments
+      , testFromAddressIsProperlyReset
       ]
+
+testFromAddressIsProperlyReset :: Int -> TestTree
+testFromAddressIsProperlyReset = withTmuxSession "from address is reset to configured identity" $
+  \step -> do
+    testdir <- view (envDir . ask)
+    setEnvVarInSession "GHC" "stack"
+    setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
+    setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
+
+    startApplication
+
+    liftIO $ step "Start composing"
+    sendKeys "m" (Literal "Joe Bloggs")
+
+    liftIO $ step "abort editing"
+    sendKeys "Escape" (Literal "tag:inbox")
+
+    liftIO $ step "Start composing again"
+    sendKeys "m" (Literal "Joe Bloggs")
+
+    pure ()
 
 testCanJumpToFirstListItem :: Int -> TestTree
 testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and thread" $
@@ -153,7 +175,7 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
     sendKeys "m" (Literal "From")
 
     liftIO $ step "enter from email"
-    sendKeys "testuser@foo.test\r" (Literal "To")
+    sendKeys "Enter" (Literal "To")
 
     liftIO $ step "enter to: email"
     sendKeys "user@to.test\r" (Literal "Subject")
@@ -560,8 +582,8 @@ testSendMail =
           liftIO $ step "start composition"
           sendKeys "m" (Literal "From")
 
-          liftIO $ step "enter from email"
-          sendKeys "testuser@foo.test\r" (Literal "To")
+          liftIO $ step "append an additional from email"
+          sendKeys ", testuser@foo.test\r" (Literal "To")
 
           liftIO $ step "enter to: email"
           sendKeys "user@to.test\r" (Literal "Subject")
@@ -578,6 +600,9 @@ testSendMail =
 
           liftIO $ step "exit vim"
           sendKeys ": x\r" (Literal "text/plain")
+            >>= assertRegex ("From: "
+                             <> buildAnsiRegex [] ["34"] []
+                             <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
 
           liftIO $ step "user can re-edit body"
           sendKeys "e" (Literal "This is a test body")

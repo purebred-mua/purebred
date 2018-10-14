@@ -26,6 +26,7 @@ import System.Environment (lookupEnv)
 import System.Directory (getCurrentDirectory)
 import Data.Maybe (fromMaybe)
 import Data.List (union)
+import Data.List.NonEmpty (NonEmpty(..))
 
 myBrowseThreadsKbs :: [Keybinding 'Threads 'ListOfThreads]
 myBrowseThreadsKbs =
@@ -52,6 +53,12 @@ writeMailtoFile m = do
   B.writeFile fname m
   pure ""
 
+fromMail :: [Mailbox]
+fromMail =
+    [ Mailbox
+          (Just "Joe Bloggs")
+          (AddrSpec "joe" (DomainDotAtom $ "foo" :| ["test"]))
+    ]
 
 main :: IO ()
 main = purebred $ tweak defaultConfig where
@@ -61,3 +68,4 @@ main = purebred $ tweak defaultConfig where
     . over (confMailView . mvKeybindings) (`union` myMailKeybindings)
     . set (confComposeView . cvSendMailCmd) writeMailtoFile
     . set (confFileBrowserView . fbHomePath) getCurrentDirectory
+    . set (confComposeView . cvIdentities) fromMail
