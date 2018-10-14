@@ -114,8 +114,9 @@ initialState conf = do
                 fb = CreateFileBrowser
                      (L.list ListOfFiles Vector.empty 1)
                      (E.editor ManageFileBrowserSearchPath Nothing path)
+                mailboxes = view (confComposeView . cvIdentities) conf
             in pure $
-               AppState conf mi mv initialCompose Nothing viewsettings fb
+               AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb
 
 theApp :: AppState -> M.App AppState e Name
 theApp s =

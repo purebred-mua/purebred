@@ -182,6 +182,7 @@ defaultConfig =
       , _cvSendMailCmd = renderSendMail
       , _cvListOfAttachmentsKeybindings = listOfAttachmentsKeybindings
       , _cvBoundary = []
+      , _cvIdentities = []
       }
     , _confHelpView = HelpViewSettings
       { _hvKeybindings = helpKeybindings
