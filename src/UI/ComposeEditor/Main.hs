@@ -3,8 +3,8 @@
 
 module UI.ComposeEditor.Main (attachmentsEditor) where
 
-import Brick.Types (Padding(..), Widget)
-import Brick.Widgets.Core (padLeft, padRight, txt, (<+>), withAttr)
+import Brick.Types (Padding(Max), Widget)
+import Brick.Widgets.Core (hBox, padLeftRight, padRight, txt, withAttr)
 import qualified Brick.Widgets.List as L
 import Control.Lens (view, preview)
 import Data.Maybe (fromMaybe)
@@ -28,6 +28,10 @@ renderPart selected m =
   let pType = showContentType $ view (headers . contentType) m
       pFilename = fromMaybe "--" (preview (headers . contentDisposition . filename) m)
       listItemAttr = if selected then listSelectedAttr else listAttr
-      attachmentType = if isAttachment m then txt "A" else txt "I"
-      widget = padRight (Pad 1) (padLeft (Pad 1) attachmentType) <+> padRight Max (txt pFilename) <+> txt pType
+      attachmentType = txt (if isAttachment m then "A" else "I")
+      widget = hBox
+        [ padLeftRight 1 attachmentType
+        , padRight Max (txt pFilename)
+        , txt pType
+        ]
   in withAttr listItemAttr widget

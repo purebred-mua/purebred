@@ -4,7 +4,7 @@ module UI.Mail.Main (renderMailView) where
 
 import Brick.Types (Padding(..), ViewportType(..), Widget)
 import Brick.Widgets.Core
-  (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr)
+  (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr, vBox)
 
 import Control.Applicative ((<|>))
 import Control.Lens (filtered, firstOf, folded, to, toListOf, view, preview)
@@ -52,7 +52,7 @@ messageToMailView s msg =
     bodyWidget = padTop (Pad 1) (maybe (txt "No entity selected") entityToView ent)
     ent = chooseEntity s msg
   in
-    foldr (<=>) (padTop (Pad 1) bodyWidget) headerWidgets
+    vBox headerWidgets <=> padTop (Pad 1) bodyWidget
 
 chooseEntity :: AppState -> MIMEMessage -> Maybe WireEntity
 chooseEntity s msg =
