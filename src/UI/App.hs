@@ -1,13 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
+
 -- | The main application module
 module UI.App where
 
 import qualified Brick.Main as M
 import Brick.Types (Widget)
 import Brick.Focus (focusRing)
-import Brick.Widgets.Core (vLimit)
+import Brick.Widgets.Core (vBox, vLimit)
 import Brick.Themes (themeToAttrMap)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
@@ -39,7 +39,7 @@ import UI.ComposeEditor.Main (attachmentsEditor)
 import Types
 
 drawUI :: AppState -> [Widget Name]
-drawUI s = [unVBox $ foldMap (VBox . renderWidget s (focusedViewName s)) (focusedViewWidgets s)]
+drawUI s = [vBox (renderWidget s (focusedViewName s) <$> focusedViewWidgets s)]
 
 renderWidget :: AppState -> ViewName -> Name -> Widget Name
 renderWidget s _ ListOfThreads = renderListOfThreads s

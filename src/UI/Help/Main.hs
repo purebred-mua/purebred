@@ -17,17 +17,18 @@ import Types
 import UI.Utils (titleize, Titleize)
 
 renderHelp :: AppState -> Widget Name
-renderHelp s = let tweak = views (asConfig . confIndexView . ivBrowseMailsKeybindings) (renderKbGroup ListOfMails) s
-                         <=> views (asConfig . confIndexView . ivBrowseThreadsKeybindings) (renderKbGroup ListOfThreads) s
-                         <=> views (asConfig . confIndexView . ivSearchThreadsKeybindings) (renderKbGroup SearchThreadsEditor) s
-                         <=> views (asConfig . confIndexView . ivManageMailTagsKeybindings) (renderKbGroup ManageMailTagsEditor) s
-                         <=> views (asConfig . confIndexView . ivManageThreadTagsKeybindings) (renderKbGroup ManageThreadTagsEditor) s
-                         <=> views (asConfig . confMailView . mvKeybindings) (renderKbGroup ScrollingMailView) s
-                         <=> views (asConfig . confHelpView . hvKeybindings) (renderKbGroup ScrollingHelpView) s
-                         <=> views (asConfig . confComposeView . cvListOfAttachmentsKeybindings) (renderKbGroup ListOfAttachments) s
-                         <=> views (asConfig . confFileBrowserView . fbKeybindings) (renderKbGroup ListOfFiles) s
-                         <=> views (asConfig . confFileBrowserView . fbSearchPathKeybindings) (renderKbGroup ManageFileBrowserSearchPath) s
-             in viewport ScrollingHelpView T.Vertical tweak
+renderHelp s = viewport ScrollingHelpView T.Vertical $ vBox
+  [ views (asConfig . confIndexView . ivBrowseMailsKeybindings) (renderKbGroup ListOfMails) s
+  , views (asConfig . confIndexView . ivBrowseThreadsKeybindings) (renderKbGroup ListOfThreads) s
+  , views (asConfig . confIndexView . ivSearchThreadsKeybindings) (renderKbGroup SearchThreadsEditor) s
+  , views (asConfig . confIndexView . ivManageMailTagsKeybindings) (renderKbGroup ManageMailTagsEditor) s
+  , views (asConfig . confIndexView . ivManageThreadTagsKeybindings) (renderKbGroup ManageThreadTagsEditor) s
+  , views (asConfig . confMailView . mvKeybindings) (renderKbGroup ScrollingMailView) s
+  , views (asConfig . confHelpView . hvKeybindings) (renderKbGroup ScrollingHelpView) s
+  , views (asConfig . confComposeView . cvListOfAttachmentsKeybindings) (renderKbGroup ListOfAttachments) s
+  , views (asConfig . confFileBrowserView . fbKeybindings) (renderKbGroup ListOfFiles) s
+  , views (asConfig . confFileBrowserView . fbSearchPathKeybindings) (renderKbGroup ManageFileBrowserSearchPath) s
+  ]
 
 renderKbGroup :: Titleize a => a -> [Keybinding v ctx] -> Widget Name
 renderKbGroup name kbs =

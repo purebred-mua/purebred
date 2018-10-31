@@ -8,11 +8,9 @@ module Types
   , Tag
   ) where
 
-import Data.Semigroup (Semigroup, (<>))
 import qualified Brick.Focus as Brick
 import Brick.Themes (Theme)
-import Brick.Widgets.Core ((<=>), emptyWidget)
-import Brick.Types (EventM, Next, Widget)
+import Brick.Types (EventM, Next)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Control.Lens
@@ -50,15 +48,6 @@ data Name =
     | StatusBar
     deriving (Eq,Show,Ord)
 
--- | Drawing types
-newtype VBox = VBox { unVBox :: Widget Name }
-
-instance Semigroup VBox where
-  VBox a <> VBox b = VBox (a <=> b)
-
-instance Monoid VBox where
-  mappend = (<>)
-  mempty = VBox emptyWidget
 
 {- | main application interface
 

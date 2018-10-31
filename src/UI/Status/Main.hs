@@ -3,9 +3,8 @@
 
 module UI.Status.Main where
 
-import Brick.Types (Widget, Padding(..))
-import Brick.Widgets.Core
-       (txt, str, withAttr, (<+>), strWrap, padRight)
+import Brick.Types (Widget)
+import Brick.Widgets.Core (hBox, txt, str, withAttr, (<+>), strWrap)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
 import Control.Lens (view)
@@ -65,12 +64,15 @@ instance WithContext (Maybe MIMEMessage) where
   renderContext s _ = currentItemW (view (asMailIndex . miListOfMails) s)
 
 renderStatusbar :: WithContext w => w -> AppState -> Widget Name
-renderStatusbar w s =
-    withAttr statusbarAttr
-    $ str "Purebred: "
-    <+> padRight (Pad 1) (renderContext s w)
-    <+> fillLine
-    <+> padRight (Pad 1) (txt (titleize (focusedViewName s) <> "-" <> titleize (focusedViewWidget s ListOfThreads)))
+renderStatusbar w s = withAttr statusbarAttr $ hBox
+  [ str "Purebred: "
+  , renderContext s w
+  , fillLine
+  , txt (
+      titleize (focusedViewName s) <> "-"
+      <> titleize (focusedViewWidget s ListOfThreads) <> " "
+      )
+  ]
 
 currentItemW :: Show e => L.List Name e -> Widget Name
 currentItemW l = str $

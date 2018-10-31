@@ -10,7 +10,7 @@ module UI.Index.Main (
 import Brick.Types (Padding(..), Widget)
 import Brick.AttrMap (AttrName)
 import Brick.Widgets.Core
-       (hLimitPercent, padLeft, txt, vLimit, withAttr, (<+>))
+  (hBox, hLimitPercent, padLeft, txt, vLimit, withAttr, (<+>))
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import qualified Data.ByteString as B
@@ -55,21 +55,29 @@ listDrawMail :: AppState -> Bool -> NotmuchMail -> Widget Name
 listDrawMail s sel a =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
-        widget = padLeft (Pad 1) (txt $ formatDate (view mailDate a)) <+>
-                 padLeft (Pad 1) (renderAuthors sel $ view mailFrom a) <+>
-                 padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings)) <+>
-                 padLeft (Pad 1) (txt (view mailSubject a)) <+> fillLine
+        widget = hBox
+          -- NOTE: I believe that inserting a `str " "` is more efficient than
+          -- `padLeft/Right (Pad 1)`.  This hypothesis should be tested.
+          [ padLeft (Pad 1) (txt $ formatDate (view mailDate a))
+          , padLeft (Pad 1) (renderAuthors sel $ view mailFrom a)
+          , padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings))
+          , padLeft (Pad 1) (txt (view mailSubject a))
+          , fillLine
+          ]
     in withAttr (getListAttr isNewMail sel) widget
 
 listDrawThread :: AppState -> Bool -> NotmuchThread -> Widget Name
 listDrawThread s sel a =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
-        widget = padLeft (Pad 1) (txt $ formatDate (view thDate a)) <+>
-                 padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a) <+>
-                 padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")") <+>
-                 padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings)) <+>
-                 padLeft (Pad 1) (txt (view thSubject a)) <+> fillLine
+        widget = hBox
+          [ padLeft (Pad 1) (txt $ formatDate (view thDate a))
+          , padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a)
+          , padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")")
+          , padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings))
+          , padLeft (Pad 1) (txt (view thSubject a))
+          , fillLine
+          ]
     in withAttr (getListAttr isNewMail sel) widget
 
 getListAttr :: Bool  -- ^ new?
