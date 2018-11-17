@@ -35,6 +35,8 @@ data Name =
     SearchThreadsEditor
     | ListOfMails
     | ListOfThreads
+    -- cache using the unique id of the item and it's selected state
+    | ListItem B.ByteString Bool
     | ScrollingMailView
     | ComposeFrom
     | ComposeTo

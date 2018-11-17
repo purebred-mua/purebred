@@ -10,7 +10,8 @@ module UI.Index.Main (
 import Brick.Types (Padding(..), Widget)
 import Brick.AttrMap (AttrName)
 import Brick.Widgets.Core
-  (hBox, hLimitPercent, padLeft, txt, vLimit, withAttr, (<+>))
+       (hBox, hLimitPercent, padLeft, txt, vLimit, withAttr, (<+>),
+        cached)
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import qualified Data.ByteString as B
@@ -70,7 +71,8 @@ listDrawThread :: AppState -> Bool -> NotmuchThread -> Widget Name
 listDrawThread s sel a =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
-        widget = hBox
+        uniqueName = ListItem (view thId a) sel
+        widget = cached uniqueName $ hBox
           [ padLeft (Pad 1) (txt $ formatDate (view thDate a))
           , padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a)
           , padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")")
