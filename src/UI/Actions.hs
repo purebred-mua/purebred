@@ -95,7 +95,8 @@ import Data.MIME
         addressList, renderAddresses, renderRFC5422Date, MIMEMessage,
         WireEntity, DispositionType(..), ContentType(..), Mailbox(..))
 import qualified Storage.Notmuch as Notmuch
-import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
+import Storage.ParsedMail
+       (parseMail, getTo, getFrom, getSubject, toQuotedMail)
 import Types
 import Error
 import UI.Utils
@@ -376,6 +377,8 @@ instance ViewTransition 'Mails 'ViewMail where
 instance ViewTransition 'ViewMail 'Mails where
   transitionHook _ _ = set (asViews . vsViews . at Mails . _Just) listOfMailsView
 
+instance ViewTransition 'ViewMail 'ComposeView where
+
 instance ViewTransition 'FileBrowser 'ComposeView where
 
 
@@ -555,7 +558,7 @@ switchComposeEditor =
                           else pure s
     }
 
-replyMail :: Action 'Mails 'ListOfMails AppState
+replyMail :: Action 'ViewMail 'ScrollingMailView AppState
 replyMail =
     Action
     { _aDescription = ["reply to an e-mail"]
@@ -760,16 +763,16 @@ replyToMail s =
   pure . ($ s)
   =<< case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
     Just (_, m) -> either handleErr handleMail
-                   <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
+                   <$> (either Left (toQuotedMail preferredContentType) <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s)))
     Nothing -> pure id
   where
+    preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
     handleErr e = over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) . setError e
     handleMail pmail s' = s' &
-      set (asCompose . cTo) (E.editor ComposeTo Nothing $ getFrom pmail)
-      . set (asCompose . cFrom) (E.editor ComposeFrom Nothing $ getTo pmail)
-      . set (asCompose . cSubject)
-        (E.editor ComposeSubject Nothing ("Re: " <> getSubject pmail))
-      . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeFrom)
+      set (asCompose . cTo) (E.editor ComposeTo Nothing $ getTo pmail)
+      . set (asCompose . cFrom) (E.editor ComposeFrom Nothing $ getFrom pmail)
+      . set (asCompose . cSubject) (E.editor ComposeSubject Nothing (getSubject pmail))
+      . over (asCompose . cAttachments) (upsertPart pmail)
 
 sendMail :: AppState -> T.EventM Name AppState
 sendMail s = do

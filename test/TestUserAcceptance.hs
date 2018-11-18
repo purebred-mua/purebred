@@ -87,7 +87,52 @@ main = defaultMain $
       , testCanJumpToFirstListItem
       , testAddAttachments
       , testFromAddressIsProperlyReset
+      , testRepliesToMailSuccessfully
       ]
+
+testRepliesToMailSuccessfully :: Int -> TestTree
+testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
+  \step -> do
+    let subject = "Testmail with whitespace in the subject"
+    testdir <- view (envDir . ask)
+    setEnvVarInSession "GHC" "stack"
+    setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
+    setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
+
+    startApplication
+
+    liftIO $ step "pick first mail"
+    out <- sendKeys "Enter" (Literal "This is a test mail for purebred")
+
+    assertSubstrInOutput "From: <roman@host.example>" out
+    assertSubstrInOutput "To: <frase@host.example>" out
+    assertSubstrInOutput ("Subject: " <> subject) out
+
+    liftIO $ step "start replying"
+    sendKeys "r" (Literal "> This is a test mail for purebred")
+
+    liftIO $ step "exit vim"
+    out' <- sendKeys ": x\r" (Literal "Attachments")
+
+    assertRegex (buildAnsiRegex [] ["33"] ["40"] <> "From:\\s"
+                 <> buildAnsiRegex [] ["34"] [] <> "<frase@host.example>") out'
+    assertRegex (buildAnsiRegex [] ["33"] [] <> "To:\\s"
+                 <> buildAnsiRegex [] ["34"] [] <> "<roman@host.example>") out'
+    assertRegex (buildAnsiRegex [] ["33"] []
+                 <> "Subject:\\s" <> buildAnsiRegex [] ["34"] [] <> "Re: " <> subject) out'
+
+    liftIO $ step "send mail"
+    sendKeys "y" (Literal "Query")
+
+    let fpath = testdir </> "sentMail"
+    contents <- liftIO $ B.readFile fpath
+    let decoded = chr . fromEnum <$> B.unpack contents
+    assertSubstrInOutput ("Subject: Re: " <> subject) decoded
+    assertSubstrInOutput "From: frase@host.example" decoded
+    assertSubstrInOutput "To: roman@host.example" decoded
+    assertSubstrInOutput "> This is a test mail for purebred" decoded
+
+    pure ()
 
 testFromAddressIsProperlyReset :: Int -> TestTree
 testFromAddressIsProperlyReset = withTmuxSession "from address is reset to configured identity" $
