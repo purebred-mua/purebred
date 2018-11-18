@@ -20,7 +20,6 @@ browseMailKeybindings =
     , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
     , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help 'ScrollingHelpView AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar '`') []) (noop `chain'` (focus :: Action 'Mails 'ManageMailTagsEditor AppState) `chain` continue)

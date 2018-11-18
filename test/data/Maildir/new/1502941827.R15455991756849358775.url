@@ -1,16 +1,16 @@
-Return-Path: <rjoost@url.usersys.redhat.com>
+Return-Path: <rjoost@host.example>
 X-Original-To: rjoost
-Delivered-To: rjoost@url.usersys.redhat.com
-Received: by url.usersys.redhat.com (Postfix, from userid 20845)
+Delivered-To: rjoost@host.example
+Received: by host.example (Postfix, from userid 20845)
 	id 55C4580B8F; Thu, 17 Aug 2017 13:50:04 +1000 (AEST)
-From: <roman@url.usersys.redhat.com>
-To: <rjoost@url.usersys.redhat.com>
+From: <roman@host.example>
+To: <frase@host.example>
 Subject: Testmail with whitespace in the
 	subject
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-Message-Id: <20170817035004.55C4580B8F@url.usersys.redhat.com>
+Message-Id: <20170817035004.55C4580B8F@host.example>
 Date: Thu, 17 Aug 2017 13:50:04 +1000 (AEST)
 Content-Length: 33
 
