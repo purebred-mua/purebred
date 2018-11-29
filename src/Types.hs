@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -8,11 +10,14 @@ module Types
   , Tag
   ) where
 
+import GHC.Generics (Generic)
+
 import qualified Brick.Focus as Brick
 import Brick.Themes (Theme)
 import Brick.Types (EventM, Next)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import Control.DeepSeq (NFData(rnf), force)
 import Control.Lens
 import qualified Data.Map as Map
 import qualified Data.ByteString as B
@@ -119,6 +124,7 @@ data NotmuchSettings a = NotmuchSettings
     , _nmDatabase :: a
     , _nmNewTag :: Tag
     }
+    deriving (Generic, NFData)
 
 nmSearch :: Lens' (NotmuchSettings a) T.Text
 nmSearch f (NotmuchSettings a b c) = fmap (\a' -> NotmuchSettings a' b c) (f a)
@@ -135,6 +141,7 @@ data FileBrowserSettings a = FileBrowserSettings
   , _fbSearchPathKeybindings :: [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
   , _fbHomePath :: a
   }
+  deriving (Generic, NFData)
 
 fbKeybindings :: Lens' (FileBrowserSettings a) [Keybinding 'FileBrowser 'ListOfFiles]
 fbKeybindings = lens _fbKeybindings (\cv x -> cv { _fbKeybindings = x })
@@ -156,6 +163,7 @@ data Configuration a b c = Configuration
     , _confDefaultView :: ViewName
     , _confFileBrowserView :: FileBrowserSettings c
     }
+    deriving (Generic, NFData)
 
 type UserConfiguration = Configuration (IO FilePath) (IO String) (IO FilePath)
 type InternalConfiguration = Configuration FilePath String FilePath
@@ -198,6 +206,7 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvBoundary :: String
     , _cvIdentities :: [Mailbox]
     }
+    deriving (Generic, NFData)
 
 cvFromKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeFrom]
 cvFromKeybindings = lens _cvFromKeybindings (\cv x -> cv { _cvFromKeybindings = x })
@@ -223,6 +232,7 @@ cvIdentities = lens _cvIdentities (\cv x -> cv { _cvIdentities = x })
 newtype HelpViewSettings = HelpViewSettings
   { _hvKeybindings :: [Keybinding 'Help 'ScrollingHelpView]
   }
+  deriving (Generic, NFData)
 
 hvKeybindings :: Lens' HelpViewSettings [Keybinding 'Help 'ScrollingHelpView]
 hvKeybindings f (HelpViewSettings a) = fmap (\a' -> HelpViewSettings a') (f a)
@@ -237,6 +247,7 @@ data IndexViewSettings = IndexViewSettings
     , _ivToKeybindings :: [Keybinding 'Threads 'ComposeTo]
     , _ivSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject]
     }
+    deriving (Generic, NFData)
 
 ivBrowseThreadsKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ListOfThreads]
 ivBrowseThreadsKeybindings = lens _ivBrowseThreadsKeybindings (\s x -> s { _ivBrowseThreadsKeybindings = x })
@@ -270,6 +281,7 @@ data MailViewSettings = MailViewSettings
     , _mvKeybindings         :: [Keybinding 'ViewMail 'ScrollingMailView]
     , _mvManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor]
     }
+    deriving (Generic, NFData)
 
 mvIndexRows :: Lens' MailViewSettings Int
 mvIndexRows = lens _mvIndexRows (\mv x -> mv { _mvIndexRows = x })
@@ -293,7 +305,7 @@ data ViewName
     | ComposeView
     | Help
     | FileBrowser
-    deriving (Eq,Ord,Show)
+    deriving (Eq, Ord, Show, Generic, NFData)
 
 data View = View
     { _vFocus :: Brick.FocusRing Name
@@ -375,6 +387,7 @@ data Action (v :: ViewName) (ctx :: Name) a = Action
     -- ^ sequential list of things that the action does
     , _aAction :: AppState -> EventM Name a
     }
+    deriving (Generic, NFData)
 
 aAction :: Getter (Action v ctx a) (AppState -> EventM Name a)
 aAction = to (\(Action _ b) -> b)
@@ -383,6 +396,13 @@ data Keybinding (v :: ViewName) (ctx :: Name) = Keybinding
     { _kbEvent :: Vty.Event
     , _kbAction :: Action v ctx (Next AppState)
     }
+
+-- | __HACK__: the 'Vty.Event' is only evaluated to WHNF.
+-- There is no 'NFData' instance for 'Vty.Event' and I don't want
+-- to make an orphan instance for it.
+instance NFData (Keybinding v ctx) where
+  rnf (Keybinding ev act) = Keybinding (ev `seq` ev) (force act) `seq` ()
+
 instance Eq (Keybinding v ctx) where
   (==) (Keybinding a _) (Keybinding b _) = a == b
   (/=) (Keybinding a _) (Keybinding b _) = a /= b

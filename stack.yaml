@@ -39,11 +39,11 @@ packages:
 - '.'
 - location:
     git: https://github.com/purebred-mua/hs-notmuch.git
-    commit: 441380c287df0d8fc08196148350c931f4b25a20
+    commit: a96a91762e2295a32794a80b725b7cbc9ac7339a
   extra-dep: true
 - location:
     git: https://github.com/purebred-mua/purebred-email.git
-    commit: 59bec51da86a9c608ea94bb847da9c1bda50d895
+    commit: 84bf3033a46146969dd4fd5c8da7321b1c7d0d29
   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
@@ -53,8 +53,8 @@ extra-deps:
 - config-ini-0.2.2.0
 - data-clist-0.1.2.1
 - word-wrap-0.4.1
-- vty-5.23.1
-- brick-0.40
+- vty-5.25.1
+- brick-0.41.4
 - megaparsec-6.5.0
 - parser-combinators-1.0.0
 

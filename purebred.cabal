@@ -68,8 +68,9 @@ library
                      , Storage.ParsedMail
                      , Purebred
   build-depends:       base >= 4.9 && < 5
+                     , deepseq >= 1.4.2
                      , lens
-                     , brick >= 0.40
+                     , brick >= 0.41.4
                      , text-zipper
                      , vty
                      , vector
