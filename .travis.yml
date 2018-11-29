@@ -52,12 +52,24 @@ matrix:
   - env: STACK_ARGS="--resolver lts-10" NOTMUCHVER=0.27
     compiler: ": #stackage lts-10 (ghc-8.2.2) - notmuch: 0.27"
 
+  - env: STACK_ARGS="--resolver lts-11" NOTMUCHVER=0.26.2
+    compiler: ": #stackage lts-11 (ghc-8.2.2) - notmuch: 0.26.2"
+
+  - env: STACK_ARGS="--resolver lts-11" NOTMUCHVER=0.28
+    compiler: ": #stackage lts-11 (ghc-8.2.2) - notmuch: 0.28"
+
+  - env: STACK_ARGS="--resolver lts-12" NOTMUCHVER=0.26.2
+    compiler: ": #stackage lts-12 (ghc-8.4.4) - notmuch: 0.26.2"
+
+  - env: STACK_ARGS="--resolver lts-12" NOTMUCHVER=0.28
+    compiler: ": #stackage lts-12 (ghc-8.4.4) - notmuch: 0.28"
+
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.26.2
     compiler: ": #stackage nightly - notmuch: 0.26.2"
 
-  - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.27
-    compiler: ": #stackage nightly - notmuch: 0.27"
+  - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.28
+    compiler: ": #stackage nightly - notmuch: 0.28"
 
   allow_failures:
   - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.26.2
-  - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.27
+  - env: STACK_ARGS="--resolver nightly" NOTMUCHVER=0.28
