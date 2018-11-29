@@ -22,6 +22,7 @@ module Purebred (
 
 import UI.App (theApp, initialState)
 
+import qualified Control.DeepSeq
 import Control.Exception.Base (SomeException(..), IOException, catch)
 import Control.Monad ((>=>), unless, void)
 import Options.Applicative hiding (str)
@@ -101,15 +102,20 @@ buildLaunch = do
 launch :: UserConfiguration -> IO ()
 launch cfg = do
     b <- genBoundary <$> getStdGen
-    cfg' <- processConfig $ set (confComposeView . cvBoundary) b cfg
+    -- Set the boundary generator (an INFINITE [Char]) /after/ deepseq'ing :)
+    -- FIXME: seems like something that shouldn't be exposed in user config
+    cfg' <- set (confComposeView . cvBoundary) b <$> processConfig cfg
     s <- initialState cfg'
     void $ defaultMain (theApp s) s
 
+-- | Process the user config into an internal configuration, then
+-- fully evaluates it.
 processConfig :: UserConfiguration -> IO InternalConfiguration
-processConfig =
+processConfig = fmap Control.DeepSeq.force . (
   (confNotmuch . nmDatabase) id
   >=> confEditor id
   >=> (confFileBrowserView . fbHomePath) id
+  )
 
 
 -- RFC2046 5.1.1
