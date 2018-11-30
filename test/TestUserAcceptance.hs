@@ -682,7 +682,7 @@ setUp i desc = do
 setUpPurebredConfig :: FilePath -> IO ()
 setUpPurebredConfig testdir = do
   c <- getCurrentDirectory
-  copyFile (c <> "/configs/config.hs") (testdir <> "/config.hs")
+  copyFile (c <> "/configs/purebred.hs") (testdir <> "/purebred.hs")
 
 setUpTempMaildir :: IO (String, String)
 setUpTempMaildir = do
@@ -834,8 +834,10 @@ startApplication :: ReaderT Env IO ()
 startApplication = do
   testmdir <- getTestMaildir
   sessionName <- getSessionName
+  -- add $STACK_ARGS so that we use the same resolver as was used for the build
+  let cmdline = "stack $STACK_ARGS exec purebred -- --database " <> testmdir <> "\r"
   liftIO $ callProcess "tmux" $
-    communicateSessionArgs sessionName ("purebred --database " <> testmdir <> "\r") False
+    communicateSessionArgs sessionName cmdline False
   void $ waitForString "Purebred: Item" defaultCountdown
 
 
