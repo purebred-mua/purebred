@@ -114,6 +114,8 @@ import Data.Semigroup ((<>))
 import System.Environment (lookupEnv)
 import System.FilePath.Posix ((</>))
 import System.Random (RandomGen, getStdGen, randomRs)
+import Data.Version (showVersion)
+import Paths_purebred (version)
 
 import UI.Index.Keybindings
 import UI.Mail.Keybindings
@@ -141,11 +143,19 @@ appconfig =
          Builder.str
          (long "database" <> metavar "DATABASE" <>
           help "Filepath to notmuch database") )
+     <* Builder.infoOption versionString
+         (long "version" <> short 'v' <>
+          help "Prints the Purebred version and exits")
+
+versionString :: String
+versionString = showVersion version
 
 optParser :: ParserInfo AppConfig
 optParser = info
   (appconfig <**> helper)
-  (fullDesc <> progDesc "purebred" <> header "a search based, terminal mail user agent")
+  (fullDesc
+   <> progDesc "purebred"
+   <> header ("a search based, terminal mail user agent - " <> versionString))
 
 launch :: UserConfiguration -> IO ()
 launch cfg = do
