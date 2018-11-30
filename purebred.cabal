@@ -69,6 +69,7 @@ library
                      , Purebred
   build-depends:       base >= 4.9 && < 5
                      , deepseq >= 1.4.2
+                     , dyre >= 0.8.12
                      , lens
                      , brick >= 0.41.4
                      , text-zipper
@@ -82,7 +83,6 @@ library
                      , time
                      , case-insensitive
                      , optparse-applicative >= 0.13
-                     , xdg-basedir
                      , filepath
                      , mtl
                      , exceptions

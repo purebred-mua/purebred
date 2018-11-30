@@ -101,7 +101,7 @@ This package provides configuration files for purebred.
 %ghc_fix_rpath %{pkgver}
 mv %{buildroot}%{_ghclicensedir}/{,ghc-}%{name}
 
-install -p -m 0644 -D configs/config.hs %{buildroot}%{_datadir}/purebred/config.hs
+install -p -m 0644 -D configs/purebred.hs %{buildroot}%{_datadir}/purebred/purebred.hs
 
 
 %check
@@ -132,7 +132,7 @@ install -p -m 0644 -D configs/config.hs %{buildroot}%{_datadir}/purebred/config.
 %doc README.md
 
 %files config
-%{_datadir}/purebred/config.hs
+%{_datadir}/purebred/purebred.hs
 
 %changelog
 * Thu Dec  7 2017 Fedora Haskell SIG <haskell@lists.fedoraproject.org> - 0.1.0.0-0.20171207

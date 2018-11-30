@@ -1,3 +1,86 @@
+-- This file is part of purebred
+-- Copyright (C) 2017-2018 Fraser Tweedale and Róman Joost
+--
+-- purebred is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU Affero General Public License for more details.
+--
+-- You should have received a copy of the GNU Affero General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+{- |
+
+To customise purebred configuration, create
+@~\/.config\/purebred\/purebred.hs@ and change the default config to
+your liking.  For example, the following configuration adds some
+custom keybindings:
+
+@
+import Data.Semigroup ((<>))
+import Purebred
+
+scrollKeybindings :: ('Scrollable' w) => ['Keybinding' v w]
+scrollKeybindings =
+  [ 'Keybinding' (EvKey (KChar 'j') []) ('scrollDown' ``chain`` 'continue')
+  , Keybinding (EvKey (KChar 'k') []) ('scrollUp' \`chain\` continue)
+  , Keybinding (EvKey (KChar 'd') []) ('scrollPageDown' \`chain\` continue)
+  , Keybinding (EvKey (KChar 'u') []) ('scrollPageUp' \`chain\` continue)
+  ]
+
+mailViewKeybindings =
+  [ Keybinding (EvKey (KChar 'J') []) ('listDown' ``chain'`` 'displayMail' \`chain\` continue)
+  , Keybinding (EvKey (KChar 'K') []) ('listUp' \`chain'` displayMail \`chain\` continue)
+  , Keybinding (EvKey (KChar 'G') []) ('listJumpToEnd' \`chain\` continue)
+  , Keybinding (EvKey (KChar 'g') []) ('listJumpToStart' \`chain\` continue)
+  ]
+  <> scrollKeybindings
+
+main = 'purebred' $ tweak 'defaultConfig' where
+  tweak =
+    over ('confMailView' . 'mvKeybindings') (mailViewKeybindings <>)
+    . over ('confHelpView' . 'hvKeybindings') (scrollKeybindings <>)
+@
+
+The invoke the program, just run @purebred@:
+
+But if recompilation is needed and you used @stack@ to build and install the
+program, it will not be able to find the libraries:
+
+> ftweedal% purebred
+> Configuration '/home/ftweedal/.config/purebred/purebred.hs' changed. Recompiling.
+> Error occurred while loading configuration file.
+> Launching custom binary /home/ftweedal/.cache/purebred/purebred-linux-x86_64
+> 
+> purebred-linux-x86_64: 
+> /home/ftweedal/.config/purebred/purebred.hs:4:1: error:
+>     Could not find module ‘Purebred’
+>     Use -v to see a list of the files searched for.
+>   |
+> 4 | import Purebred
+>   | ^^^^^^^^^^^^^^^
+> 
+> CallStack (from HasCallStack):
+>   error, called at src/Purebred.hs:205:32 in purebred-0.1.0.0-8yyFpK6IBghCAYUvNAhJRk:Purebred
+
+To avoid this, don't use stack.  But if you insist, you can run
+@stack exec purebred@ from the source tree.
+
+If you want to override the configuration file location, use the
+@PUREBRED_CONFIG_DIR@ environment variable.  The configuration file,
+located in this directory, must always be name @purebred.hs@.
+
+The binary is normally cached in @~\/.cache\/purebred\/@.  If you
+override the configuration directory, the configuration directory is
+also used as the cache directory, to avoid clobbering the cached
+binary for the other configurations.
+
+-}
 module Purebred (
   module Types,
   module UI.Actions,
@@ -22,22 +105,14 @@ module Purebred (
 
 import UI.App (theApp, initialState)
 
+import qualified Config.Dyre as Dyre
 import qualified Control.DeepSeq
-import Control.Exception.Base (SomeException(..), IOException, catch)
-import Control.Monad ((>=>), unless, void)
+import Control.Monad ((>=>), void)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import Data.Semigroup ((<>))
-import System.Process
-       (createProcess, proc, runProcess, waitForProcess, ProcessHandle)
-import System.Info (arch, os)
-import System.Exit (ExitCode(..), exitWith)
-import System.Environment (getProgName, lookupEnv, getArgs)
-import System.Environment.XDG.BaseDir (getUserConfigDir)
-import System.Directory (getModificationTime, getCurrentDirectory)
+import System.Environment (lookupEnv)
 import System.FilePath.Posix ((</>))
-import System.IO (hPrint, stderr, hFlush)
-import Data.Maybe (fromMaybe)
 import System.Random (RandomGen, getStdGen, randomRs)
 
 import UI.Index.Keybindings
@@ -67,46 +142,29 @@ appconfig =
          (long "database" <> metavar "DATABASE" <>
           help "Filepath to notmuch database") )
 
-purebred :: UserConfiguration -> IO ()
-purebred config = do
-    appconf <- execParser opts
-    let
-      setDB = maybe id (const . pure) (databaseFilepath appconf)
-      cfg' = over (confNotmuch . nmDatabase) setDB config
-    buildLaunch `catch`
-        \e -> hPrint stderr (e :: IOException) >> hFlush stderr
-    launch cfg'
-  where
-    opts =
-        info
-            (appconfig <**> helper)
-            (fullDesc <> progDesc "purebred" <>
-             header "a search based, terminal mail user agent")
-
--- | Try to compile the config if it has changed and execute it
--- Note: This code is mostly borrowed from XMonad.Main.hs with the exception
--- that we're not handling any signals, but leave that up to System.Process for
--- good or worse.
-buildLaunch :: IO ()
-buildLaunch = do
-    void $ recompile False
-    configDir <- getPurebredConfigDir
-    whoami <- getProgName
-    args <- getArgs
-    let bin = purebredCompiledName
-    unless (whoami == bin) $
-        createProcess (proc (configDir </> bin) args) >>=
-        \(_,_,_,ph) -> waitForProcess ph >>=
-        exitWith
+optParser :: ParserInfo AppConfig
+optParser = info
+  (appconfig <**> helper)
+  (fullDesc <> progDesc "purebred" <> header "a search based, terminal mail user agent")
 
 launch :: UserConfiguration -> IO ()
 launch cfg = do
-    b <- genBoundary <$> getStdGen
-    -- Set the boundary generator (an INFINITE [Char]) /after/ deepseq'ing :)
-    -- FIXME: seems like something that shouldn't be exposed in user config
-    cfg' <- set (confComposeView . cvBoundary) b <$> processConfig cfg
-    s <- initialState cfg'
-    void $ defaultMain (theApp s) s
+
+  -- set the user-specified database path *before* processing config,
+  -- to avoid possible error in `notmuch config-get`
+  opts <- execParser optParser
+  let pre = maybe id (set (confNotmuch . nmDatabase) . pure) (databaseFilepath opts)
+
+  -- Set the boundary generator (an INFINITE [Char]) /after/ deepseq'ing :)
+  -- FIXME: seems like something that shouldn't be exposed in user config
+  b <- genBoundary <$> getStdGen
+  let post = set (confComposeView . cvBoundary) b
+
+  cfg' <- post <$> processConfig (pre cfg)
+
+  s <- initialState cfg'
+  void $ defaultMain (theApp s) s
+
 
 -- | Process the user config into an internal configuration, then
 -- fully evaluates it.
@@ -127,63 +185,19 @@ genBoundary = filter isBoundaryChar . randomRs (minimum boundaryChars, maximum b
   where
     isBoundaryChar = (`elem` boundaryChars)
 
--- | Recompile the config file if it has changed based on the modification timestamp
--- Node: Mostly a XMonad.Main.hs rip-off.
-recompile :: Bool -> IO Bool
-recompile force = do
-    configDir <- getPurebredConfigDir
-    currDir <- getCurrentDirectory
-    let binName = purebredCompiledName
-        bin = configDir </> binName
-        configSrc = configDir </> "config.hs"
 
-    srcT <- getModTime configSrc
-    binT <- getModTime bin
-
-    if force || any (binT <) [srcT]
-        then do
-            status <- waitForProcess =<< compileGHC bin currDir configSrc
-            pure (status == ExitSuccess)
-        else pure True
-  where
-    getModTime f = catch (Just <$> getModificationTime f) (\(SomeException _) -> pure Nothing)
-
--- | Runs GHC to compile the given source file.
--- Note: This is also borrowed from XMonad.Main.hs, with the exception that I've
--- added the possibility to invoke stacks' GHC in case the user is in a stack
--- project. Copying configuration files around for development and (local)
--- testing could otherwise become a nuisance.
-compileGHC :: String -> FilePath -> FilePath -> IO ProcessHandle
-compileGHC bin cfgdir sourcePath = do
-    compiler <- lookupEnv "GHC"
-    compiler_opts <- lookupEnv "GHC_ARGS"
-    let ghc = fromMaybe "ghc" compiler
-    let ghcopts = fromMaybe [] compiler_opts
-    runProcess
-        ghc
-        (words ghcopts <>
-         [ "-threaded"
-         , "--make"
-         , sourcePath
-         , "-i"
-         , "-ilib"
-         , "-fforce-recomp"
-         , "-main-is"
-         , "main"
-         , "-v0"
-         , "-o"
-         , bin])
-        (Just cfgdir)
-        Nothing
-        Nothing
-        Nothing
-        Nothing
-
-getPurebredConfigDir :: IO FilePath
-getPurebredConfigDir = do
-  cfgdir <- lookupEnv "PUREBRED_CONFIG_DIR"
-  defaultcfgdir <- getUserConfigDir "purebred"
-  pure $ fromMaybe defaultcfgdir cfgdir
-
-purebredCompiledName :: String
-purebredCompiledName = "purebred-" ++ arch ++ "-" ++ os
+purebred :: UserConfiguration -> IO ()
+purebred cfg = do
+  configDir <- lookupEnv "PUREBRED_CONFIG_DIR"
+  let
+    dyreParams = Dyre.defaultParams
+      { Dyre.projectName = "purebred"
+      , Dyre.realMain = launch
+      , Dyre.showError = const error
+      , Dyre.configDir = pure <$> configDir
+      -- if config dir specified, also use it as cache dir to avoid
+      -- clobbering cached binaries for other configurations
+      , Dyre.cacheDir = pure <$> configDir
+      , Dyre.ghcOpts = ["-threaded"]
+      }
+  Dyre.wrapMain dyreParams cfg
