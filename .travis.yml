@@ -13,7 +13,8 @@ before_install:
   - export PATH=$HOME/.local/bin:/opt/ghc/$GHCVER/bin:$PATH
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
   - mkdir -p /tmp/notmuch
-  - curl -L https://notmuchmail.org/releases/notmuch-$NOTMUCHVER.tar.gz | tar xz --wildcards --strip-components=1 -C /tmp/notmuch
+  - curl -L https://github.com/notmuch/notmuch/archive/$NOTMUCHVER.tar.gz | tar xz --wildcards --strip-components=1 -C /tmp/notmuch
+
   - pushd /tmp/notmuch && ./configure --prefix=/usr --without-emacs --without-ruby && make && sudo make install && popd
 
 script:
