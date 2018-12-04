@@ -1,5 +1,6 @@
 module Main where
 
+import qualified LazyVector
 import TestMail (mailTests)
 import TestUserAcceptance (systemTests)
 import TestActions (actionTests)
@@ -13,7 +14,12 @@ tests = testGroup "tests" [unittests, systemTests]
 -- unit tests
 --
 unittests :: TestTree
-unittests = testGroup "unit tests" [mailTests, tagparserTests, actionTests]
+unittests = testGroup "unit tests"
+  [ mailTests
+  , tagparserTests
+  , actionTests
+  , LazyVector.tests
+  ]
 
 main ::
   IO ()
