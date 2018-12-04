@@ -49,12 +49,13 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
+- vector-0.12.0.2
 - concise-0.1.0.1
 - config-ini-0.2.2.0
 - data-clist-0.1.2.1
 - word-wrap-0.4.1
 - vty-5.25.1
-- brick-0.41.4
+- brick-0.44
 - megaparsec-6.5.0
 - parser-combinators-1.0.0
 

@@ -60,6 +60,7 @@ library
                      , UI.Help.Keybindings
                      , UI.Utils
                      , UI.Views
+                     , Purebred.LazyVector
                      , Purebred.Tags
                      , Purebred.System.Directory
                      , UI.FileBrowser.Main
@@ -72,10 +73,10 @@ library
                      , deepseq >= 1.4.2
                      , dyre >= 0.8.12
                      , lens
-                     , brick >= 0.41.4
+                     , brick >= 0.44
                      , text-zipper
                      , vty
-                     , vector
+                     , vector >= 0.12.0.0
                      , notmuch
                      , text
                      , process
@@ -111,6 +112,7 @@ test-suite unittests
                      , TestActions
                      , TestUserAcceptance
                      , TestTagParser
+                     , LazyVector
   default-language:    Haskell2010
   build-depends:       base
                      , purebred
@@ -131,5 +133,5 @@ test-suite unittests
                      , notmuch
                      , time
                      , filepath
-                     , brick >= 0.40
+                     , brick >= 0.44
                      , vector
