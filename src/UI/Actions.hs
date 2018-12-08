@@ -703,7 +703,7 @@ applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . con
    where searchterms = currentLine $ view (asMailIndex . miSearchThreadsEditor . E.editContentsL) s
          updateList vec =
            over (asMailIndex . miThreads . listList) (L.listReplace vec (Just 0))
-           . set (asMailIndex . miThreads . listLength) (Just (length vec))
+           . set (asMailIndex . miThreads . listLength) Nothing
 
 setMailsForThread :: AppState -> IO AppState
 setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
@@ -714,10 +714,10 @@ setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t 
   in either setError updateThreadMails <$> runExceptT (Notmuch.getThreadMessages dbpath t)
 
 selectedItemHelper
-    :: Applicative f
-    => Getting (L.List n t) AppState (L.List n t)
+    :: (Applicative f, Foldable t, L.Splittable t)
+    => Getting (L.GenericList n t a) AppState (L.GenericList n t a)
     -> AppState
-    -> (t -> f (AppState -> AppState))
+    -> (a -> f (AppState -> AppState))
     -> f AppState
 selectedItemHelper l s func =
   ($ s) <$> case L.listSelectedElement (view l s) of

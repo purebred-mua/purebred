@@ -7,9 +7,10 @@ module Storage.Notmuch where
 
 import Control.Monad (when)
 import Data.Function (on)
+import System.IO.Unsafe (unsafeInterleaveIO)
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Except (MonadError, throwError, ExceptT)
+import Control.Monad.Except (MonadError, throwError, ExceptT, runExceptT)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import Data.Traversable (traverse)
@@ -23,10 +24,10 @@ import Control.Lens (view, over, set, firstOf, folded, Lens')
 
 import qualified Notmuch
 import Notmuch.Search
-import Notmuch.Util (bracketT)
 
 import Error
 import Types
+import Purebred.LazyVector
 
 
 -- | apply tag operations on all given mails and write the resulting tags to the
@@ -87,14 +88,18 @@ instance ManageTags NotmuchMail where
 instance ManageTags NotmuchThread where
   tags = thTags
 
--- | A helper function for opening, performing work,
--- and closing the database
+-- | A helper function for opening and performing work on a database.
+-- The database is not explicitly closed (GC will take care of that).
+--
 withDatabase
   :: (Notmuch.AsNotmuchError e, Notmuch.Mode a, MonadError e m, MonadIO m)
   => FilePath
   -> (Notmuch.Database a -> ExceptT e IO c)
   -> m c
-withDatabase dbpath = bracketT (Notmuch.databaseOpen dbpath) Notmuch.databaseDestroy
+withDatabase dbpath f =
+  Notmuch.databaseOpen dbpath >>= liftIO . runExceptT . f
+  >>= either throwError pure
+
 
 -- | Same as 'withDatabase', but the database connection
 -- is read-only
@@ -171,14 +176,18 @@ getThreads
   :: (MonadError Error m, MonadIO m)
   => T.Text
   -> NotmuchSettings FilePath
-  -> m (Vec.Vector NotmuchThread)
+  -> m (V NotmuchThread)
 getThreads s settings =
   withDatabaseReadOnly (view nmDatabase settings) go
   where
     go db = do
         ts <- Notmuch.query db (FreeForm $ T.unpack s) >>= Notmuch.threads
-        t <- liftIO $ traverse threadToThread ts
-        pure $ Vec.fromList t
+        t <- liftIO $ lazyTraverse threadToThread ts
+        pure $ fromList 128 {- chunk size -} t
+
+lazyTraverse :: (a -> IO b) -> [a] -> IO [b]
+lazyTraverse f =
+  foldr (\x ys -> (:) <$> f x <*> unsafeInterleaveIO ys) (pure [])
 
 -- | returns a vector of *all* messages belonging to the given thread
 --

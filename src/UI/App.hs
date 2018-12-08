@@ -99,7 +99,7 @@ initialState conf = do
             let mi =
                     MailIndex
                         (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
-                        (ListWithLength (L.list ListOfThreads vec 1) (Just (length vec)))
+                        (ListWithLength (L.list ListOfThreads vec 1) Nothing)
                         (E.editorText SearchThreadsEditor Nothing searchterms)
                         (E.editorText ManageMailTagsEditor Nothing "")
                         (E.editorText ManageThreadTagsEditor Nothing "")
