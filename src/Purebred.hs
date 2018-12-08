@@ -16,6 +16,8 @@
 
 {- |
 
+= Synopsis
+
 To customise purebred configuration, create
 @~\/.config\/purebred\/purebred.hs@ and change the default config to
 your liking.  For example, the following configuration adds some
@@ -49,7 +51,41 @@ main = 'purebred' $ tweak 'defaultConfig' where
 
 The invoke the program, just run @purebred@:
 
-But if recompilation is needed and you used @stack@ to build and install the
+= Overriding the config directory
+
+If you want to override the configuration file location, use the
+@PUREBRED_CONFIG_DIR@ environment variable.  The configuration file,
+located in this directory, must always be name @purebred.hs@.
+
+The binary is normally cached in @~\/.cache\/purebred\/@.  If you
+override the configuration directory, the configuration directory is
+also used as the cache directory, to avoid clobbering the cached
+binary for the other configurations.
+
+= Recompilation
+
+== Passing extra arguments to GHC
+
+If you want to pass extra arguments to GHC, use the @GHCOPTS@
+environment variable.  For example, to compile with profiling:
+
+@
+GHCOPTS="-prof" purebred
+@
+
+Note that the presence of the @GHCOPTS@ environment variable will
+not force recompilation to occur.  To force recompilation you could
+make a benign change to the custom configuration file (e.g. add or
+remove an empty line).
+
+== With Cabal (newstyle)
+
+If recompilation is needed and the library files are in a cabal
+newstyle build, use @cabal new-exec purebred@.
+
+== With Stack
+
+If recompilation is needed and you used @stack@ to build and install the
 program, it will not be able to find the libraries:
 
 > ftweedal% purebred
@@ -70,15 +106,6 @@ program, it will not be able to find the libraries:
 
 To avoid this, don't use stack.  But if you insist, you can run
 @stack exec purebred@ from the source tree.
-
-If you want to override the configuration file location, use the
-@PUREBRED_CONFIG_DIR@ environment variable.  The configuration file,
-located in this directory, must always be name @purebred.hs@.
-
-The binary is normally cached in @~\/.cache\/purebred\/@.  If you
-override the configuration directory, the configuration directory is
-also used as the cache directory, to avoid clobbering the cached
-binary for the other configurations.
 
 -}
 module Purebred (
@@ -199,7 +226,9 @@ genBoundary = filter isBoundaryChar . randomRs (minimum boundaryChars, maximum b
 purebred :: UserConfiguration -> IO ()
 purebred cfg = do
   configDir <- lookupEnv "PUREBRED_CONFIG_DIR"
+  ghcOptsEnv <- lookupEnv "GHCOPTS"
   let
+    ghcOpts = "-threaded" : maybe [] words ghcOptsEnv
     dyreParams = Dyre.defaultParams
       { Dyre.projectName = "purebred"
       , Dyre.realMain = launch
@@ -208,6 +237,6 @@ purebred cfg = do
       -- if config dir specified, also use it as cache dir to avoid
       -- clobbering cached binaries for other configurations
       , Dyre.cacheDir = pure <$> configDir
-      , Dyre.ghcOpts = ["-threaded"]
+      , Dyre.ghcOpts = ghcOpts
       }
   Dyre.wrapMain dyreParams cfg
