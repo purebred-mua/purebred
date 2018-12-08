@@ -34,6 +34,7 @@ import Notmuch (Tag)
 import Data.MIME
 
 import Error
+import Purebred.LazyVector (V)
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
@@ -84,7 +85,7 @@ search and composes e-mails from here.
 -}
 data MailIndex = MailIndex
     { _miListOfMails  :: ListWithLength V.Vector NotmuchMail
-    , _miListOfThreads :: ListWithLength V.Vector NotmuchThread
+    , _miListOfThreads :: ListWithLength V NotmuchThread
     , _miSearchThreadsEditor :: E.Editor T.Text Name
     , _miMailTagsEditor :: E.Editor T.Text Name
     , _miThreadTagsEditor :: E.Editor T.Text Name
@@ -93,13 +94,13 @@ data MailIndex = MailIndex
 miMails :: Lens' MailIndex (ListWithLength V.Vector NotmuchMail)
 miMails = lens _miListOfMails (\m v -> m { _miListOfMails = v })
 
-miThreads :: Lens' MailIndex (ListWithLength V.Vector NotmuchThread)
+miThreads :: Lens' MailIndex (ListWithLength V NotmuchThread)
 miThreads = lens _miListOfThreads (\m v -> m { _miListOfThreads = v})
 
 miListOfMails :: Lens' MailIndex (L.GenericList Name V.Vector NotmuchMail)
 miListOfMails = miMails . listList
 
-miListOfThreads :: Lens' MailIndex (L.GenericList Name V.Vector NotmuchThread)
+miListOfThreads :: Lens' MailIndex (L.GenericList Name V NotmuchThread)
 miListOfThreads = miThreads . listList
 
 miSearchThreadsEditor :: Lens' MailIndex (E.Editor T.Text Name)
