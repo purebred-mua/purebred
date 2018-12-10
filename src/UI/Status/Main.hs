@@ -45,16 +45,7 @@ statusbar s =
 class WithContext a where
   renderContext :: AppState -> a -> Widget Name
 
-instance WithContext (L.List Name NotmuchThread) where
-  renderContext _ = currentItemW
-
-instance WithContext (L.List Name NotmuchMail) where
-  renderContext _ = currentItemW
-
-instance WithContext (L.List Name (Bool, FileSystemEntry)) where
-  renderContext _ = currentItemW
-
-instance WithContext (L.List Name MIMEMessage) where
+instance WithContext (L.List Name e) where
   renderContext _ = currentItemW
 
 instance WithContext (E.Editor Text Name) where
@@ -74,7 +65,7 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
       )
   ]
 
-currentItemW :: Show e => L.List Name e -> Widget Name
+currentItemW :: L.List n e -> Widget n
 currentItemW l = str $
   maybe
     "No items"
