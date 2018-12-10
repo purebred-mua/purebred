@@ -118,7 +118,6 @@ module Purebred (
   Event(..),
   Key(..),
   Modifier(..),
-  List(..),
   Next,
   getDatabasePath,
   defaultConfig,
@@ -159,7 +158,6 @@ import Types
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.Main (defaultMain)
 import Brick.Types (Next)
-import Brick.Widgets.List (List(..))
 import Control.Lens ((&), _head, over, preview, set)
 import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 
