@@ -2,6 +2,9 @@ dist
 .cabal-sandbox
 cabal.sandbox.config
 .stack-work
+.ghc.environment.*
+cabal.project.local
+dist-newstyle
 
 *.o
 *.hi
