@@ -80,8 +80,10 @@ remove an empty line).
 
 == With Cabal (newstyle)
 
-If recompilation is needed and the library files are in a cabal
-newstyle build, use @cabal new-exec purebred@.
+purebred should be able to determine the correct package-id and pass
+this datum to GHC when recompiling.  Whether running from the
+repository or not, recompile should /just work/, regardless of where
+you are running the program from.
 
 == With Stack
 
@@ -137,12 +139,14 @@ import qualified Control.DeepSeq
 import Control.Monad ((>=>), void)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
+import Data.List (isInfixOf, isPrefixOf)
 import Data.Semigroup ((<>))
 import System.Environment (lookupEnv)
+import System.FilePath (dropTrailingPathSeparator, splitPath)
 import System.FilePath.Posix ((</>))
 import System.Random (RandomGen, getStdGen, randomRs)
 import Data.Version (showVersion)
-import Paths_purebred (version)
+import Paths_purebred (version, getLibDir)
 
 import UI.Index.Keybindings
 import UI.Mail.Keybindings
@@ -156,7 +160,7 @@ import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.Main (defaultMain)
 import Brick.Types (Next)
 import Brick.Widgets.List (List(..))
-import Control.Lens ((&), over, set)
+import Control.Lens ((&), _head, over, preview, set)
 import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 
 newtype AppConfig = AppConfig
@@ -223,12 +227,34 @@ genBoundary = filter isBoundaryChar . randomRs (minimum boundaryChars, maximum b
     isBoundaryChar = (`elem` boundaryChars)
 
 
+-- | Try to determine a package-related args from the libdir
+--
+guessPackageArgs :: FilePath -> [String]
+guessPackageArgs dir =
+  let
+    path = dropTrailingPathSeparator <$> splitPath dir
+    reversedPath = case reverse path of
+      ("lib" : xs) -> xs  -- if component is "lib", drop it
+      xs -> xs
+    f s
+      | [".cabal", "store"] `isInfixOf` path
+        && ("purebred-" <> versionString <> "-") `isPrefixOf` s =
+          Just s -- cabal newstyle install
+      | otherwise = Nothing
+    packageId = maybe [] (\s -> ["-package-id", s]) (preview _head reversedPath >>= f)
+  in
+    packageId
+
+
 purebred :: UserConfiguration -> IO ()
 purebred cfg = do
   configDir <- lookupEnv "PUREBRED_CONFIG_DIR"
   ghcOptsEnv <- lookupEnv "GHCOPTS"
+
+  libdir <- getLibDir
+
   let
-    ghcOpts = "-threaded" : maybe [] words ghcOptsEnv
+    ghcOpts = "-threaded" : maybe [] words ghcOptsEnv <> guessPackageArgs libdir
     dyreParams = Dyre.defaultParams
       { Dyre.projectName = "purebred"
       , Dyre.realMain = launch
