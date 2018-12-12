@@ -74,11 +74,10 @@ import Prelude hiding (readFile, unlines)
 import Data.Functor (($>))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traversed, has, snoc,
-        filtered, itoList, set, over, preview, view, (&), nullOf, firstOf,
+        filtered, set, over, preview, view, (&), nullOf, firstOf,
         traversed, traverse, Getting, Lens')
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
-import Control.Monad.State (evalState, get, put)
 import Control.Exception (onException, catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Catch (bracket)
@@ -711,7 +710,7 @@ applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . con
          updateList vec = over (asMailIndex . miListOfThreads) (L.listReplace vec (Just 0))
 
 setMailsForThread :: AppState -> IO AppState
-setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \(_, t) ->
+setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
       updateThreadMails vec = over (asMailIndex . miListOfMails) (L.listReplace vec (Just 0))
   in either setError updateThreadMails <$> runExceptT (Notmuch.getThreadMessages dbpath t)
@@ -720,11 +719,11 @@ selectedItemHelper
     :: Applicative f
     => Getting (L.List n t) AppState (L.List n t)
     -> AppState
-    -> ((Int, t) -> f (AppState -> AppState))
+    -> (t -> f (AppState -> AppState))
     -> f AppState
 selectedItemHelper l s func =
   ($ s) <$> case L.listSelectedElement (view l s) of
-  Just m -> func m
+  Just (_, a) -> func a
   Nothing -> pure $ setError (GenericError "No item selected.")
 
 getEditorTagOps :: Lens' AppState (E.Editor T.Text Name) -> AppState -> Either Error [TagOp]
@@ -735,15 +734,15 @@ getEditorTagOps widget s =
 applyTagOps
   :: (Traversable t, MonadIO m)
   => [TagOp]
-  -> t (a, NotmuchMail)
+  -> t NotmuchMail
   -> AppState
-  -> m (Either Error (t (a, NotmuchMail)))
+  -> m (Either Error (t NotmuchMail))
 applyTagOps ops mails s =
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
   in runExceptT (Notmuch.messageTagModify dbpath ops mails)
 
 updateStateWithParsedMail :: AppState -> IO AppState
-updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s $ \(_, m) ->
+updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
         either
             (\e -> setError e . over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads))
             (\pmail -> set (asMailView . mvMail) (Just pmail) . over (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail))
@@ -756,25 +755,11 @@ manageMailTags
     :: MonadIO m
     => AppState
     -> [TagOp]
-    -> (Int, NotmuchMail)
+    -> NotmuchMail
     -> m (AppState -> AppState)
 manageMailTags s tagop m =
-  either setError (updateMails . runIdentity) <$> applyTagOps tagop (Identity m) s
-
-updateMails :: (Int, NotmuchMail) -> AppState -> AppState
-updateMails (i, x) =
-  over (asMailIndex . miListOfMails . L.listElementsL)
-  (updateAtIndex i (pure x))
-
--- | Indexed map
-imap :: (Traversable t) => (Int -> a -> b) -> t a -> t b
-imap f xs =
-  let act = traverse (\a -> get >>= \i -> put (i + 1) $> f i a) xs
-  in evalState act 0
-
--- | Apply a function to the value at the given index
-updateAtIndex :: (Traversable t) => Int -> (a -> a) -> t a -> t a
-updateAtIndex i f = imap (\j x -> if i == j then f x else x)
+  either setError (over (asMailIndex . miListOfMails) . L.listModify . const . runIdentity)
+  <$> applyTagOps tagop (Identity m) s
 
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
@@ -926,7 +911,7 @@ manageThreadTags
     :: MonadIO m
     => AppState
     -> [TagOp]
-    -> (t, NotmuchThread)
+    -> NotmuchThread
     -> m (AppState -> AppState)
 manageThreadTags s ops t =
   let update ops' _ = over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
@@ -936,12 +921,14 @@ manageThreadTags s ops t =
 
 getMailsForThread
     :: MonadIO f
-    => (t, NotmuchThread)
+    => NotmuchThread
     -> AppState
-    -> f (Vector.Vector (Int, NotmuchMail))
-getMailsForThread (_, ts) s =
+    -> f (Vector.Vector NotmuchMail)
+getMailsForThread ts s =
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
-  in either (const mempty)(view vector . itoList) <$> runExceptT (Notmuch.getThreadMessages dbpath ts)
+  in
+    either (const mempty) id
+    <$> runExceptT (Notmuch.getThreadMessages dbpath ts)
 
 reloadThreadTags
   :: MonadIO m
