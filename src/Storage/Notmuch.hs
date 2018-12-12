@@ -5,6 +5,9 @@
 -- | module for integrating notmuch within purebred
 module Storage.Notmuch where
 
+import Control.Monad (when)
+import Data.Function (on)
+
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError, ExceptT)
 import qualified Data.ByteString as B
@@ -14,7 +17,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Vector as Vec
 import System.Process (readProcess)
 import qualified Data.Text as T
-import Control.Lens (_2, view, over, set, firstOf, folded, Lens')
+import Control.Lens (view, over, set, firstOf, folded, Lens')
 
 import qualified Notmuch
 import Notmuch.Search
@@ -30,32 +33,28 @@ messageTagModify
   :: (Traversable t, MonadError Error m, MonadIO m)
   => FilePath  -- ^ database
   -> [TagOp]
-  -> t (a, NotmuchMail)
-  -> m (t (a, NotmuchMail))
+  -> t NotmuchMail
+  -> m (t NotmuchMail)
 messageTagModify dbpath ops xs =
-    withDatabase dbpath (\db -> traverse (applyTags ops db) xs)
+  withDatabase dbpath (\db -> applyTags ops db xs)
 
 applyTags
-    :: (MonadError Error m, MonadIO m)
+    :: (MonadError Error m, MonadIO m, Traversable t)
     => [TagOp]
     -> Notmuch.Database Notmuch.RW
-    -> (a, NotmuchMail)
-    -> m (a, NotmuchMail)
-applyTags ops db mail = do
-    let
-      mail' = over _2 (tagItem ops) mail
-      nmtags = view (_2 . mailTags) mail'
-    if haveTagsChanged mail mail'
-        then do
-            tagsToMessage nmtags (view (_2 . mailId) mail') db
-            pure mail'
-        else pure mail'
+    -> t NotmuchMail
+    -> m (t NotmuchMail)
+applyTags ops db = traverse $ \m -> do
+  let m' = tagItem ops m
+  when (haveTagsChanged m m')
+    (tagsToMessage (view mailTags m') (view mailId m') db)
+  pure m'
 
 tagItem :: ManageTags a => [TagOp] -> a -> a
 tagItem ops mail = foldl (flip applyTagOp) mail ops
 
-haveTagsChanged :: (a, NotmuchMail) -> (a, NotmuchMail) -> Bool
-haveTagsChanged m1 m2 = sort (nub (view (_2 . mailTags) m1)) /= sort (nub (view (_2 . mailTags) m2))
+haveTagsChanged :: NotmuchMail -> NotmuchMail -> Bool
+haveTagsChanged = (/=) `on` (sort . nub . view mailTags)
 
 applyTagOp :: (ManageTags a) => TagOp -> a -> a
 applyTagOp (AddTag t) = addTags [t]
