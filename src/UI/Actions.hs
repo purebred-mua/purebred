@@ -45,6 +45,7 @@ module UI.Actions (
   , delete
   ) where
 
+import Data.Foldable (find, toList)
 import Data.Functor.Identity (Identity(..))
 
 import qualified Brick
@@ -62,7 +63,6 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C8
 import Data.Attoparsec.ByteString.Char8 (parseOnly)
 import Data.Vector.Lens (vector)
-import Data.Maybe (fromMaybe)
 import Data.List (union)
 import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
@@ -692,9 +692,6 @@ updateBrowseFileContents contents s =
   let contents' = view vector ((False, ) <$> contents)
   in over (asFileBrowser . fbEntries) (L.listReplace contents' (Just 0)) s
 
-findIndexWithOffset :: Int -> (a -> Bool) -> Vector.Vector a -> Maybe Int
-findIndexWithOffset i fx = fmap (i+) . Vector.findIndex fx . Vector.drop i
-
 listSetSelectionEnd :: Lens' AppState (L.List Name a) -> AppState -> AppState
 listSetSelectionEnd list s =
   let index = view (list . L.listElementsL . to length) s
@@ -703,8 +700,10 @@ listSetSelectionEnd list s =
 -- | Seek forward from an offset, returning the offset if
 -- nothing after it matches the predicate.
 --
-seekIndex :: Int -> (a -> Bool) -> Vector.Vector a -> Int
-seekIndex i f = fromMaybe i . findIndexWithOffset i f
+seekIndex :: (Foldable t, L.Splittable t) => Int -> (a -> Bool) -> t a -> Int
+seekIndex i test =
+  maybe i ((i+) . fst)
+  . find (test . snd) . zip [0..] . toList . snd . L.splitAt i
 
 applySearch :: AppState -> T.EventM Name AppState
 applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
