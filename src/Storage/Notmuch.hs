@@ -226,6 +226,6 @@ reloadThreadTags fp item = withDatabaseReadOnly fp go
     go db = fmap (`setTags` item) . Notmuch.tags =<< getThread db (view thId item)
 
 fixupWhitespace :: T.Text -> T.Text
-fixupWhitespace = T.map f . T.filter (not . (== '\n'))
+fixupWhitespace = T.map f . T.filter (/= '\n')
   where f '\t' = ' '
         f c = c
