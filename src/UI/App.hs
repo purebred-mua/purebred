@@ -15,7 +15,6 @@ import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty.Input.Events as Vty
 import Control.Lens (to, view)
 import Control.Monad.Except (runExceptT)
-import qualified Data.Vector as Vector
 import System.Exit (die)
 import qualified Data.Map as Map
 
@@ -93,7 +92,7 @@ initialState conf = do
         Right vec ->
             let mi =
                     MailIndex
-                        (L.list ListOfMails Vector.empty 1)
+                        (L.list ListOfMails mempty 1)
                         (L.list ListOfThreads vec 1)
                         (E.editorText SearchThreadsEditor Nothing searchterms)
                         (E.editorText ManageMailTagsEditor Nothing "")
@@ -112,7 +111,7 @@ initialState conf = do
                     }
                 path = view (confFileBrowserView . fbHomePath) conf
                 fb = CreateFileBrowser
-                     (L.list ListOfFiles Vector.empty 1)
+                     (L.list ListOfFiles mempty 1)
                      (E.editor ManageFileBrowserSearchPath Nothing path)
                 mailboxes = view (confComposeView . cvIdentities) conf
             in pure $
