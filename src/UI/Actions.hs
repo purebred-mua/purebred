@@ -45,6 +45,8 @@ module UI.Actions (
   , delete
   ) where
 
+import Data.Functor.Identity (Identity(..))
+
 import qualified Brick
 import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
@@ -77,6 +79,7 @@ import Control.Lens
         traversed, traverse, Getting, Lens')
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
+import Control.Monad.State (evalState, get, put)
 import Control.Exception (onException, catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Catch (bracket)
@@ -99,7 +102,7 @@ import Storage.ParsedMail (parseMail, getTo, getFrom, getSubject)
 import Types
 import Error
 import UI.Utils
-       (safeUpdate, focusedViewWidget, focusedViewName, selectedFiles)
+       (focusedViewWidget, focusedViewName, selectedFiles)
 import UI.Views (listOfMailsView, mailView)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
@@ -760,10 +763,22 @@ manageMailTags
     -> (Int, NotmuchMail)
     -> m (AppState -> AppState)
 manageMailTags s tagop m =
-  either setError updateMails <$> applyTagOps tagop [m] s
+  either setError (updateMails . runIdentity) <$> applyTagOps tagop (Identity m) s
 
-updateMails :: Foldable t => t (Int, NotmuchMail) -> AppState -> AppState
-updateMails mails = over (asMailIndex . miListOfMails . L.listElementsL) (`safeUpdate` mails)
+updateMails :: (Int, NotmuchMail) -> AppState -> AppState
+updateMails (i, x) =
+  over (asMailIndex . miListOfMails . L.listElementsL)
+  (updateAtIndex i (pure x))
+
+-- | Indexed map
+imap :: (Traversable t) => (Int -> a -> b) -> t a -> t b
+imap f xs =
+  let act = traverse (\a -> get >>= \i -> put (i + 1) $> f i a) xs
+  in evalState act 0
+
+-- | Apply a function to the value at the given index
+updateAtIndex :: (Traversable t) => Int -> (a -> a) -> t a -> t a
+updateAtIndex i f = imap (\j x -> if i == j then f x else x)
 
 setError :: Error -> AppState -> AppState
 setError = set asError . Just

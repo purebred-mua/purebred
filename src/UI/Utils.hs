@@ -17,11 +17,9 @@
 --
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Utils
-       (safeUpdate, focusedViewWidget, focusedViewWidgets,
+       (focusedViewWidget, focusedViewWidgets,
         focusedViewName, focusedView, titleize, Titleize, toggledItems, selectedFiles)
        where
-import qualified Data.Vector as Vector
-import Data.Foldable (toList)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import Data.List (union)
@@ -34,9 +32,6 @@ import UI.Views (indexView)
 
 
 import Types
-
-safeUpdate :: Foldable t => Vector.Vector a -> t (Int, a) -> Vector.Vector a
-safeUpdate v = (Vector.//) v  . filter ((\i -> i >= 0 && i < length v) . fst) . toList
 
 focusedViewWidget :: AppState -> Name -> Name
 focusedViewWidget s defaultWidget =
