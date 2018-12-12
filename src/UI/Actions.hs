@@ -72,7 +72,6 @@ import System.FilePath (takeFileName, takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Data.Functor (($>))
-import Control.Applicative ((<|>))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traversed, has, snoc,
         filtered, itoList, set, over, preview, view, (&), nullOf, firstOf,
@@ -709,9 +708,7 @@ applySearch :: AppState -> T.EventM Name AppState
 applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
                 >>= pure . ($ s) . either setError updateList
    where searchterms = currentLine $ view (asMailIndex . miSearchThreadsEditor . E.editContentsL) s
-         updateList vec s' =
-           let current = view (asMailIndex . miListOfThreads . L.listSelectedL) s' <|> Just 0
-           in over (asMailIndex . miListOfThreads) (L.listReplace vec current) s'
+         updateList vec = over (asMailIndex . miListOfThreads) (L.listReplace vec (Just 0))
 
 setMailsForThread :: AppState -> IO AppState
 setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \(_, t) ->
