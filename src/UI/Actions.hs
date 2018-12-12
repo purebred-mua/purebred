@@ -692,10 +692,10 @@ updateBrowseFileContents contents s =
   let contents' = view vector ((False, ) <$> contents)
   in over (asFileBrowser . fbEntries) (L.listReplace contents' (Just 0)) s
 
-listSetSelectionEnd :: Lens' AppState (L.List Name a) -> AppState -> AppState
-listSetSelectionEnd list s =
-  let index = view (list . L.listElementsL . to length) s
-  in over list (L.listMoveTo index) s
+listSetSelectionEnd
+  :: (Foldable t, L.Splittable t)
+  => Lens' s (L.GenericList Name t a) -> s -> s
+listSetSelectionEnd l = over l (L.listMoveTo (-1))
 
 -- | Seek forward from an offset, returning the offset if
 -- nothing after it matches the predicate.
