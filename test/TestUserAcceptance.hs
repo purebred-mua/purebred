@@ -18,7 +18,7 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module TestUserAcceptance where
+module Main where
 
 import Data.Char (isAscii, isAlphaNum, chr)
 import qualified Data.Text as T
@@ -43,7 +43,7 @@ import Data.List (isInfixOf, intercalate)
 import System.Process (callProcess, readProcess)
 import System.Directory
        (getCurrentDirectory, removeDirectoryRecursive, removeFile, copyFile)
-import Test.Tasty (TestTree, TestName, testGroup, withResource)
+import Test.Tasty (TestTree, TestName, defaultMain, testGroup, withResource)
 import Test.Tasty.HUnit (testCaseSteps, assertBool)
 import Text.Regex.Posix ((=~))
 
@@ -57,9 +57,8 @@ data Condition
   | Regex String
   deriving (Show)
 
-systemTests ::
-  TestTree
-systemTests =
+main :: IO ()
+main = defaultMain $
   withResource pre post $ \_ ->
     testGroup "user acceptance tests" $ zipWith ($) tests [0..]
   where
