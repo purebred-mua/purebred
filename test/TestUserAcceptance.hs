@@ -33,7 +33,7 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (atomically)
 import Control.Exception (catch, IOException)
 import System.IO (hPutStr, hPutStrLn, stderr, stdout)
-import System.Environment (lookupEnv)
+import System.Environment (lookupEnv, getEnvironment)
 import System.FilePath.Posix ((</>))
 import Control.Monad (void, when)
 import Data.Maybe (isJust)
@@ -45,9 +45,9 @@ import Control.Monad.Reader (runReaderT, ask, ReaderT)
 
 import Control.Lens (Lens', view)
 import System.Process.Typed
-       (proc, runProcess_, withProcess_,
+       (proc, runProcess_, withProcess_, readProcess_,
         waitExitCodeSTM, setStdout, getStdout, setStderr, useHandleOpen,
-        byteStringOutput, setStdin, closed, ProcessConfig)
+        byteStringOutput, setStdin, closed, setEnv, ProcessConfig)
 import System.Directory
        (getCurrentDirectory, removeDirectoryRecursive, removeFile, copyFile)
 import Test.Tasty (TestTree, TestName, defaultMain, testGroup, withResource)
@@ -683,7 +683,15 @@ setUp i desc = do
   prepareEnvironment sessionName
   (testdir, maildir) <- setUpTempMaildir
   setUpPurebredConfig testdir
+  precompileConfig testdir
   pure $ Env testdir maildir sessionName
+
+precompileConfig :: FilePath -> IO ()
+precompileConfig testdir = do
+  env <- getEnvironment
+  let systemEnv = ("PUREBRED_CONFIG_DIR", testdir) : env
+      config = setEnv systemEnv $ proc "stack" ["exec", "purebred", "--", "--version"]
+  void $ readProcess_ config
 
 setUpPurebredConfig :: FilePath -> IO ()
 setUpPurebredConfig testdir = do
