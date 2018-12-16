@@ -130,7 +130,7 @@ test-suite unittests
 test-suite uat
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  ghc-options:         -Wall
+  ghc-options:         -Wall -threaded
   main-is:             TestUserAcceptance.hs
   default-language:    Haskell2010
   build-depends:       base
@@ -138,12 +138,13 @@ test-suite uat
                      , tasty
                      , tasty-hunit
                      , directory
-                     , process
+                     , typed-process
                      , bytestring
                      , ini
                      , temporary
                      , text
                      , regex-posix
                      , mtl
+                     , stm
                      , lens
                      , filepath

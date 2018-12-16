@@ -22,25 +22,32 @@ module Main where
 
 import Data.Char (isAscii, isAlphaNum, chr)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Encoding.Error as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Data.Functor (($>))
 import Data.Ini (parseIni, writeIniFileWith, KeySeparator(..), WriteIniSettings(..))
 import Data.Semigroup ((<>))
 import Data.Either (isRight)
 import Control.Concurrent (threadDelay)
+import Control.Concurrent.STM (atomically)
 import Control.Exception (catch, IOException)
-import System.IO (hPutStr, hPutStrLn, stderr)
+import System.IO (hPutStr, hPutStrLn, stderr, stdout)
 import System.Environment (lookupEnv)
 import System.FilePath.Posix ((</>))
 import Control.Monad (void, when)
 import Data.Maybe (isJust)
+import Data.List (intercalate, isInfixOf)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT, ask, ReaderT)
 
 import Control.Lens (Lens', view)
-import Data.List (isInfixOf, intercalate)
-import System.Process (callProcess, readProcess)
+import System.Process.Typed
+       (proc, runProcess_, withProcess_,
+        waitExitCodeSTM, setStdout, getStdout, setStderr, useHandleOpen,
+        byteStringOutput, setStdin, closed, ProcessConfig)
 import System.Directory
        (getCurrentDirectory, removeDirectoryRecursive, removeFile, copyFile)
 import Test.Tasty (TestTree, TestName, defaultMain, testGroup, withResource)
@@ -693,7 +700,7 @@ setUpTempMaildir = do
 -- | run notmuch to create the notmuch database
 -- Note: discard stdout which otherwise clobbers the test output
 setUpNotmuch :: FilePath -> IO ()
-setUpNotmuch notmuchcfg = void $ readProcess "notmuch" ["--config=" <> notmuchcfg, "new"] []
+setUpNotmuch notmuchcfg = void $ readProcess_ $ proc "notmuch" ["--config=" <> notmuchcfg, "new" ]
 
 -- | write a notmuch config
 -- Note: currently writes a minimal config pointing to our database
@@ -710,7 +717,7 @@ setUpMaildir testdir = do
   let testmdir = testdir <> "/Maildir/"
   c <- getCurrentDirectory
   let maildir = c <> "/test/data/Maildir/"
-  callProcess "cp" ["-r", maildir, testmdir]
+  runProcess_ $ proc "cp" ["-r", maildir, testmdir]
   pure testmdir
 
 -- | create a tmux session running in the background
@@ -719,7 +726,7 @@ setUpMaildir testdir = do
 setUpTmuxSession :: String -> IO ()
 setUpTmuxSession sessionname =
     catch
-        (callProcess
+        (runProcess_ $ proc
              "tmux"
              [ "new-session"
              , "-x"
@@ -740,7 +747,7 @@ setUpTmuxSession sessionname =
 cleanUpTmuxSession :: String -> IO ()
 cleanUpTmuxSession sessionname =
     catch
-        (callProcess "tmux" ["kill-session", "-t", sessionname])
+        (runProcess_ $ proc "tmux" ["kill-session", "-t", sessionname])
         (\e ->
               do let err = show (e :: IOException)
                  hPutStrLn stderr ("\nException when killing session: " <> err)
@@ -763,19 +770,19 @@ withTmuxSession tcname testfx i =
 sendKeys :: String -> Condition -> ReaderT Env IO String
 sendKeys keys expect = do
     sessionName <- getSessionName
-    liftIO $ callProcess "tmux" $ communicateSessionArgs sessionName keys False
+    liftIO $ runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName keys False
     waitForCondition expect defaultCountdown
 
 sendLiteralKeys :: String -> ReaderT Env IO String
 sendLiteralKeys keys = do
     sessionName <- getSessionName
-    liftIO $ callProcess "tmux" $ communicateSessionArgs sessionName keys True
+    liftIO $ runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName keys True
     waitForString keys defaultCountdown
 
 capture :: ReaderT Env IO String
 capture = do
   sessionname <- getSessionName
-  liftIO $ readProcess "tmux" ["capture-pane", "-e", "-p", "-t", sessionname] []
+  liftIO $ readProcessWithErrorOutput_ $ proc "tmux" ["capture-pane", "-e", "-p", "-t", sessionname]
 
 getSessionName :: (Monad m) => ReaderT Env m String
 getSessionName = view (envSessionName . ask)
@@ -835,7 +842,7 @@ startApplication = do
   sessionName <- getSessionName
   -- add $STACK_ARGS so that we use the same resolver as was used for the build
   let cmdline = "stack $STACK_ARGS exec purebred -- --database " <> testmdir <> "\r"
-  liftIO $ callProcess "tmux" $
+  liftIO $ runProcess_ $ proc "tmux" $
     communicateSessionArgs sessionName cmdline False
   void $ waitForString "Purebred: Item" defaultCountdown
 
@@ -848,7 +855,7 @@ startApplication = do
 -- background values > 37), while our CI environment only supports 16 colours.
 prepareEnvironment :: String -> IO ()
 prepareEnvironment sessionName =
-  liftIO $ callProcess "tmux" $
+  runProcess_ $ proc "tmux" $
     communicateSessionArgs sessionName "export TERM=ansi\r" False
 
 -- | Sets a shell environment variable
@@ -898,3 +905,16 @@ buildAnsiRegex attrs fgs bgs =
     choice l r = "(" <> l <> "|" <> r <> ")"
   in
     choice tmux24 tmux25
+
+-- | Interleaves stderr with stdout
+-- Does not accept STDIN arguments, since we do not need to communicate with the
+-- process
+readProcessWithErrorOutput_ :: ProcessConfig stdinClosed stdout stderr -> IO String
+readProcessWithErrorOutput_ pc = do
+  (_, out) <- withProcess_ config $ \p -> atomically $ (,) <$> waitExitCodeSTM p <*> getStdout p
+  pure $ T.unpack $ decodeLenient $ LB.toStrict out
+  where
+    config = setStdout byteStringOutput
+             $ setStderr (useHandleOpen stdout)
+             $ setStdin closed pc
+    decodeLenient = T.decodeUtf8With T.lenientDecode
