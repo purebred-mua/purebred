@@ -73,7 +73,7 @@ library
                      , deepseq >= 1.4.2
                      , dyre >= 0.8.12
                      , lens
-                     , brick >= 0.44
+                     , brick >= 0.45
                      , text-zipper
                      , vty
                      , vector >= 0.12.0.0
@@ -124,7 +124,7 @@ test-suite unittests
                      , lens
                      , notmuch
                      , time
-                     , brick >= 0.44
+                     , brick
                      , vector
 
 test-suite uat

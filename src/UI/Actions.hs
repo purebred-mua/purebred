@@ -45,7 +45,6 @@ module UI.Actions (
   , delete
   ) where
 
-import Data.Foldable (find, toList)
 import Data.Functor.Identity (Identity(..))
 
 import qualified Brick
@@ -483,6 +482,10 @@ displayMail =
     }
   where resetScrollState = Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy 'ScrollingMailView))
 
+-- | Sets the mail list to the mails for the selected thread. Does
+-- not select a mail; a movement action such as 'displayNextUnread'
+-- should follow this action.
+--
 displayThreadMails :: Action 'Threads 'ListOfThreads AppState
 displayThreadMails =
     Action
@@ -587,15 +590,11 @@ selectNextUnread =
   Action { _aDescription = ["select next unread"]
          , _aAction = \s ->
            let
-             vec = view (asMailIndex . miListOfMails . L.listElementsL) s
-             cur = view (asMailIndex . miListOfMails . L.listSelectedL) s
-             fx = Notmuch.hasTag (view (asConfig . confNotmuch . nmNewTag) s)
-           in
-             pure $
-               over
-                 (asMailIndex . miListOfMails)
-                 (L.listMoveTo (maybe 0 (\i -> seekIndex i fx vec) cur))
-                 s
+             -- find by unread tag...
+             p = Notmuch.hasTag (view (asConfig . confNotmuch . nmNewTag) s)
+             -- but iff there is no resulting selection, move to 0
+             f l = maybe (L.listMoveTo 0 l) (const l) (view L.listSelectedL l)
+           in pure $ over (asMailIndex . miListOfMails) (f . L.listFindBy p) s
          }
 
 focusNextWidget :: Action v w AppState
@@ -695,14 +694,6 @@ listSetSelectionEnd
   => Lens' s (L.GenericList Name t a) -> s -> s
 listSetSelectionEnd l = over l (L.listMoveTo (-1))
 
--- | Seek forward from an offset, returning the offset if
--- nothing after it matches the predicate.
---
-seekIndex :: (Foldable t, L.Splittable t) => Int -> (a -> Bool) -> t a -> Int
-seekIndex i test =
-  maybe i ((i+) . fst)
-  . find (test . snd) . zip [0..] . toList . snd . L.splitAt i
-
 applySearch :: AppState -> T.EventM Name AppState
 applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
                 >>= pure . ($ s) . either setError updateList
@@ -712,7 +703,7 @@ applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . con
 setMailsForThread :: AppState -> IO AppState
 setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
-      updateThreadMails vec = over (asMailIndex . miListOfMails) (L.listReplace vec (Just 0))
+      updateThreadMails vec = over (asMailIndex . miListOfMails) (L.listReplace vec Nothing)
   in either setError updateThreadMails <$> runExceptT (Notmuch.getThreadMessages dbpath t)
 
 selectedItemHelper
