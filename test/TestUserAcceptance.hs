@@ -778,13 +778,13 @@ withTmuxSession tcname testfx i =
 sendKeys :: String -> Condition -> ReaderT Env IO String
 sendKeys keys expect = do
     sessionName <- getSessionName
-    liftIO $ runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName keys False
+    runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName keys False
     waitForCondition expect defaultCountdown
 
 sendLiteralKeys :: String -> ReaderT Env IO String
 sendLiteralKeys keys = do
     sessionName <- getSessionName
-    liftIO $ runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName keys True
+    runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName keys True
     waitForString keys defaultCountdown
 
 capture :: ReaderT Env IO String
@@ -850,8 +850,7 @@ startApplication = do
   sessionName <- getSessionName
   -- add $STACK_ARGS so that we use the same resolver as was used for the build
   let cmdline = "stack $STACK_ARGS exec purebred -- --database " <> testmdir <> "\r"
-  liftIO $ runProcess_ $ proc "tmux" $
-    communicateSessionArgs sessionName cmdline False
+  runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName cmdline False
   void $ waitForString "Purebred: Item" defaultCountdown
 
 
