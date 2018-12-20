@@ -43,15 +43,13 @@ myMailKeybindings =
     [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]
 
--- Note: The empty string return value is currently used as an error condition,
--- but for this case it is not used.
-writeMailtoFile :: B.ByteString -> IO String
+writeMailtoFile :: B.ByteString -> IO (Either Error ())
 writeMailtoFile m = do
   confdir <- lookupEnv "PUREBRED_CONFIG_DIR"
   currentdir <- getCurrentDirectory
   let fname = fromMaybe currentdir confdir </> "sentMail"
   B.writeFile fname m
-  pure ""
+  pure (Right ())
 
 fromMail :: [Mailbox]
 fromMail =

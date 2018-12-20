@@ -10,11 +10,13 @@ import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as C8
+import qualified Data.ByteString.Lazy as LB
+import qualified Data.Text as T
 import System.Environment (lookupEnv)
 import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
-import System.Process (readProcess)
+import System.Process.Typed (proc, readProcessStderr, setStdin, byteStringInput)
+import System.Exit (ExitCode(..))
 
 import Data.MIME (contentTypeTextPlain)
 
@@ -35,18 +37,23 @@ import UI.ComposeEditor.Keybindings
        (listOfAttachmentsKeybindings, composeFromKeybindings,
         composeToKeybindings, composeSubjectKeybindings)
 
+import Error
 import Types
 import Storage.Notmuch (getDatabasePath)
 
 sendmailPath :: FilePath
 sendmailPath = "/usr/sbin/sendmail"
 
--- TODO: see #200
-renderSendMail :: B.ByteString -> IO String
-renderSendMail m =
-        -- -t which extracts recipients from the mail
-        -- TODO: accept a ByteString as stdin, see #201
-        readProcess sendmailPath ["-t", "-v"] (C8.unpack m)
+renderSendMail :: B.ByteString -> IO (Either Error ())
+renderSendMail m = do
+  -- -t which extracts recipients from the mail
+  result <- readProcessStderr config
+  case result of
+    (ExitFailure _, stderr)-> pure $ Left $ SendMailError (decode stderr)
+    (ExitSuccess, _) -> pure $ Right ()
+  where
+    config = setStdin (byteStringInput (LB.fromStrict m)) $ proc sendmailPath ["-t", "-v"]
+    decode = T.unpack . decodeLenient . LB.toStrict
 
 solarizedDark :: Theme
 solarizedDark =
