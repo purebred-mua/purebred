@@ -11,11 +11,13 @@ import Data.Function (on)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError, ExceptT)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import Data.Traversable (traverse)
 import Data.List (union, notElem, nub, sort)
 import Data.Maybe (fromMaybe)
 import qualified Data.Vector as Vec
-import System.Process (readProcess)
+import System.Process.Typed (readProcess, proc)
+import System.Exit (ExitCode(..))
 import qualified Data.Text as T
 import Control.Lens (view, over, set, firstOf, folded, Lens')
 
@@ -153,14 +155,15 @@ messageToMail m = do
       <*> Notmuch.messageId m
 
 getDatabasePath :: IO FilePath
-getDatabasePath = getFromNotmuchConfig "database.path"
-
-getFromNotmuchConfig :: String -> IO String
-getFromNotmuchConfig key = do
+getDatabasePath = do
   let cmd = "notmuch"
-  let args = ["config", "get", key]
-  stdout <- readProcess cmd args []
-  pure $ filter (/= '\n') stdout
+  let args = ["config", "get", "database.path"]
+  (exitc, stdout, err) <- readProcess $ proc cmd args
+  case exitc of
+    ExitFailure _ -> error (decode err)
+    ExitSuccess -> pure (filter (/= '\n') (decode stdout))
+  where
+      decode = T.unpack . decodeLenient . LB.toStrict
 
 -- | creates a vector of threads from a notmuch search
 --

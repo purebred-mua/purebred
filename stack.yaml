@@ -58,6 +58,7 @@ extra-deps:
 - brick-0.45
 - megaparsec-6.5.0
 - parser-combinators-1.0.0
+- typed-process-0.2.3.0@sha256:8e9206a2f3c2e1ba2233df97600bbf2bf0007b4670f36b87d456a066d1dee14d
 
 # Override default flag values for local packages and extra-deps
 flags: {}

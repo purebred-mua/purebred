@@ -66,7 +66,7 @@ import Data.List (union)
 import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
 import System.Directory (getTemporaryDirectory, removeFile)
-import System.Process (system)
+import System.Process.Typed (proc, runProcess)
 import System.FilePath (takeFileName, takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
@@ -77,7 +77,7 @@ import Control.Lens
         traversed, traverse, Getting, Lens')
 import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
-import Control.Exception (onException, catch, IOException)
+import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Control.Monad.Catch (bracket)
 import Data.Text.Zipper
@@ -832,7 +832,7 @@ invokeEditor' s = do
   let m = preview (asCompose . cAttachments . to L.listSelectedElement
                      . _Just . _2 . to getTextPlainPart . _Just) s
   tmpfile <- getTempFileForEditing m
-  status <- onException (system (editor <> " " <> tmpfile)) (pure $ setError editorError)
+  status <- runProcess (proc editor [tmpfile])
   case status of
     ExitFailure _ -> pure $ s & over (asViews . vsFocusedView) (Brick.focusSetCurrent Mails)
                               & setError editorError

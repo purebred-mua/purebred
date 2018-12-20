@@ -201,7 +201,7 @@ data ComposeViewSettings = ComposeViewSettings
     { _cvFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
     , _cvToKeybindings :: [Keybinding 'ComposeView 'ComposeTo]
     , _cvSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
-    , _cvSendMailCmd :: B.ByteString -> IO String
+    , _cvSendMailCmd :: B.ByteString -> IO (Either Error ())
     , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ListOfAttachments]
     , _cvBoundary :: String
     , _cvIdentities :: [Mailbox]
@@ -217,7 +217,7 @@ cvToKeybindings = lens _cvToKeybindings (\cv x -> cv { _cvToKeybindings = x })
 cvSubjectKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeSubject]
 cvSubjectKeybindings = lens _cvSubjectKeybindings (\cv x -> cv { _cvSubjectKeybindings = x })
 
-cvSendMailCmd :: Lens' ComposeViewSettings (B.ByteString -> IO String)
+cvSendMailCmd :: Lens' ComposeViewSettings (B.ByteString -> IO (Either Error ()))
 cvSendMailCmd = lens _cvSendMailCmd (\cv x -> cv { _cvSendMailCmd = x })
 
 cvListOfAttachmentsKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ListOfAttachments]

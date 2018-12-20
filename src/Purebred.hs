@@ -112,6 +112,7 @@ To avoid this, don't use stack.  But if you insist, you can run
 -}
 module Purebred (
   module Types,
+  module Error,
   module UI.Actions,
   module UI.Index.Keybindings,
   module UI.Mail.Keybindings,
@@ -153,6 +154,7 @@ import UI.Actions
 import Storage.Notmuch (getDatabasePath)
 import Config.Main (defaultConfig, solarizedDark, solarizedLight)
 import Types
+import Error
 
 -- re-exports for configuration
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))

@@ -79,7 +79,7 @@ library
                      , vector >= 0.12.0.0
                      , notmuch >= 0.1 && < 0.2
                      , text
-                     , process
+                     , typed-process >= 0.2.1.0
                      , directory
                      , bytestring
                      , time
