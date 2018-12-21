@@ -691,7 +691,7 @@ precompileConfig testdir = do
   env <- getEnvironment
   let systemEnv = ("PUREBRED_CONFIG_DIR", testdir) : env
       config = setEnv systemEnv $ proc "stack" ["exec", "purebred", "--", "--version"]
-  void $ readProcess_ config
+  void $ runProcess_ config
 
 setUpPurebredConfig :: FilePath -> IO ()
 setUpPurebredConfig testdir = do
