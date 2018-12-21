@@ -188,7 +188,7 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 
     liftIO $ step "set one mail to unread"
     sendKeys "Enter" (Literal "Beginning of large text")
-    sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s" <> buildAnsiRegex ["0"] ["34"] ["40"]))
+    sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s+" <> buildAnsiRegex ["0"] ["34"] ["40"]))
 
     liftIO $ step "returning to thread list shows thread unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
@@ -366,10 +366,8 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
 
     liftIO $ step "cancel tagging and expect old UI"
     -- instead of asserting the absence of the tagging editor, we assert the
-    -- last visible "item" in the UI followed by whitespace. Give it an
-    -- estimated upper range, since there could be some variable amount of
-    -- whitespace.
-    sendKeys "Escape" (Regex "This is a test mail for purebred\\s{4,8}$")
+    -- last visible "item" in the UI followed by whitespace.
+    sendKeys "Escape" (Regex "This is a test mail for purebred\\s+$")
 
     pure ()
 
@@ -839,7 +837,11 @@ sendLiteralKeys keys = do
 
 capture :: ReaderT Env IO String
 capture =
-  tmuxSessionProc "capture-pane" ["-e", "-p"]
+  tmuxSessionProc "capture-pane"
+    [ "-e"  -- include escape sequences
+    , "-p"  -- send output to stdout
+    , "-J"  -- join wrapped lines and preserve trailing whitespace
+    ]
   >>= liftIO . readProcessWithErrorOutput_
 
 holdOffTime :: Int
