@@ -111,9 +111,6 @@ testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
   \step -> do
     let subject = "Testmail with whitespace in the subject"
     testdir <- view effectiveDir
-    setEnvVarInSession "GHC" "stack"
-    setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
-
     startApplication
 
     liftIO $ step "pick first mail"
@@ -152,8 +149,6 @@ testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
 testFromAddressIsProperlyReset :: TestCase
 testFromAddressIsProperlyReset = withTmuxSession "from address is reset to configured identity" $
   \step -> do
-    setEnvVarInSession "GHC" "stack"
-    setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
     startApplication
 
     liftIO $ step "Start composing"
@@ -209,8 +204,6 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 testConfig :: TestCase
 testConfig = withTmuxSession "test custom config" $
   \step -> do
-    setEnvVarInSession "GHC" "stack"
-    setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
     startApplication
 
     liftIO $ step "archive thread"
@@ -225,8 +218,6 @@ testAddAttachments :: TestCase
 testAddAttachments = withTmuxSession "use file browser to add attachments" $
   \step -> do
     testdir <- view effectiveDir
-    setEnvVarInSession "GHC" "stack"
-    setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
     startApplication
 
     liftIO $ step "start composition"
@@ -629,8 +620,6 @@ testSendMail =
   withTmuxSession "sending mail successfully" $
         \step -> do
           testdir <- view effectiveDir
-          setEnvVarInSession "GHC" "stack"
-          setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
           startApplication
 
           liftIO $ step "start composition"
@@ -769,8 +758,8 @@ precompileConfig :: FilePath -> IO ()
 precompileConfig testdir = do
   env <- getEnvironment
   let systemEnv = ("PUREBRED_CONFIG_DIR", testdir) : env
-      config = setEnv systemEnv $ proc "stack" ["exec", "purebred", "--", "--version"]
-  void $ runProcess_ config
+      config = setEnv systemEnv $ proc "purebred" ["--version"]
+  runProcess_ config
 
 setUpPurebredConfig :: FilePath -> IO ()
 setUpPurebredConfig testdir = do
@@ -919,9 +908,7 @@ defaultCountdown = 5
 startApplication :: ReaderT Env IO ()
 startApplication = do
   testmdir <- view envMaildir
-  -- add $STACK_ARGS so that we use the same resolver as was used for the build
-  let cmdline = "stack $STACK_ARGS exec purebred -- --database " <> testmdir <> "\r"
-  tmuxSendKeys InterpretKeys cmdline
+  tmuxSendKeys InterpretKeys ("purebred --database " <> testmdir <> "\r")
   void $ waitForString "Purebred: Item" defaultCountdown
 
 -- | Sets a shell environment variable
