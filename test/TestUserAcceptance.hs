@@ -26,7 +26,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Encoding.Error as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
-import Data.Functor (($>))
 import Data.Ini (parseIni, writeIniFileWith, KeySeparator(..), WriteIniSettings(..))
 import Data.Semigroup ((<>))
 import Data.Either (isRight)
@@ -37,14 +36,14 @@ import System.IO (hPutStr, hPutStrLn, stderr, stdout)
 import System.Environment (lookupEnv, getEnvironment)
 import System.FilePath.Posix ((</>))
 import Control.Monad (void, when)
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe, isJust)
 import Data.List (intercalate, isInfixOf)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT, ReaderT)
 
-import Control.Lens (Lens', view)
+import Control.Lens (Getter, Lens', to, view)
 import System.Process.Typed
        (proc, runProcess_, withProcess_, readProcess_,
         waitExitCodeSTM, setStdout, getStdout, setStderr, useHandleOpen,
@@ -66,13 +65,29 @@ data Condition
   | Regex String
   deriving (Show)
 
+type TestCase = IO GlobalEnv -> Int -> TestTree
+
 main :: IO ()
 main = defaultMain $
-  withResource pre post $ \_ ->
-    testGroup "user acceptance tests" $ zipWith ($) tests [0..]
+  withResource pre post $ \env ->
+    testGroup "user acceptance tests" $ zipWith ($ env) tests [0..]
   where
-    pre = let n = "keepalive" in setUpTmuxSession n $> n
-    post = cleanUpTmuxSession
+    -- Create the tmux keepalive session and a config dir, with
+    -- precompiled custom binary, that all test cases can use
+    pre =
+      let n = "keepalive"
+      in do
+        setUpTmuxSession n
+        dir <- mkTempDir
+        setUpPurebredConfig dir
+        precompileConfig dir
+        pure (GlobalEnv n dir)
+
+    -- Remove the shared config dir and kill the keepalive session
+    post (GlobalEnv n dir) = do
+      cleanUpTmuxSession n
+      removeDirectoryRecursive dir
+
     tests =
       [ testUserViewsMailSuccessfully
       , testUserCanManipulateNMQuery
@@ -92,14 +107,13 @@ main = defaultMain $
       , testRepliesToMailSuccessfully
       ]
 
-testRepliesToMailSuccessfully :: Int -> TestTree
+testRepliesToMailSuccessfully :: TestCase
 testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
   \step -> do
     let subject = "Testmail with whitespace in the subject"
-    testdir <- view envDir
+    testdir <- view effectiveDir
     setEnvVarInSession "GHC" "stack"
     setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
-    setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
 
     startApplication
 
@@ -136,14 +150,11 @@ testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
 
     pure ()
 
-testFromAddressIsProperlyReset :: Int -> TestTree
+testFromAddressIsProperlyReset :: TestCase
 testFromAddressIsProperlyReset = withTmuxSession "from address is reset to configured identity" $
   \step -> do
-    testdir <- view envDir
     setEnvVarInSession "GHC" "stack"
     setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
-    setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
-
     startApplication
 
     liftIO $ step "Start composing"
@@ -157,7 +168,7 @@ testFromAddressIsProperlyReset = withTmuxSession "from address is reset to confi
 
     pure ()
 
-testCanJumpToFirstListItem :: Int -> TestTree
+testCanJumpToFirstListItem :: TestCase
 testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and thread" $
   \step -> do
     startApplication
@@ -170,7 +181,7 @@ testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and th
 
     pure ()
 
-testUpdatesReadState :: Int -> TestTree
+testUpdatesReadState :: TestCase
 testUpdatesReadState = withTmuxSession "updates read state for mail and thread" $
   \step -> do
     startApplication
@@ -196,14 +207,11 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 
     pure ()
 
-testConfig :: Int -> TestTree
+testConfig :: TestCase
 testConfig = withTmuxSession "test custom config" $
   \step -> do
-    testdir <- view envDir
     setEnvVarInSession "GHC" "stack"
     setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
-    setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
-
     startApplication
 
     liftIO $ step "archive thread"
@@ -214,14 +222,12 @@ testConfig = withTmuxSession "test custom config" $
 
     pure ()
 
-testAddAttachments :: Int -> TestTree
+testAddAttachments :: TestCase
 testAddAttachments = withTmuxSession "use file browser to add attachments" $
   \step -> do
-    testdir <- view envDir
+    testdir <- view effectiveDir
     setEnvVarInSession "GHC" "stack"
     setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
-    setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
-
     startApplication
 
     liftIO $ step "start composition"
@@ -322,7 +328,7 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
     assertSubstrInOutput "stack.yaml" decoded
     assertSubstrInOutput "This is a test body" decoded
 
-testManageTagsOnMails :: Int -> TestTree
+testManageTagsOnMails :: TestCase
 testManageTagsOnMails = withTmuxSession "manage tags on mails" $
   \step -> do
     startApplication
@@ -370,7 +376,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
 
     pure ()
 
-testManageTagsOnThreads :: Int -> TestTree
+testManageTagsOnThreads :: TestCase
 testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
   \step -> do
     startApplication
@@ -445,7 +451,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
 
     pure ()
 
-testHelp :: Int -> TestTree
+testHelp :: TestCase
 testHelp = withTmuxSession "help view" $
   \step -> do
     startApplication
@@ -456,13 +462,13 @@ testHelp = withTmuxSession "help view" $
     sendKeys "Escape" (Literal "Purebred")
     pure ()
 
-testErrorHandling :: Int -> TestTree
+testErrorHandling :: TestCase
 testErrorHandling = withTmuxSession "error handling" $
   \step -> do
     startApplication
 
     testmdir <- view envMaildir
-    liftIO $ removeFile (testmdir <> "/new/1502941827.R15455991756849358775.url")
+    liftIO $ removeFile (testmdir <> "/Maildir/new/1502941827.R15455991756849358775.url")
 
     liftIO $ step "open thread"
     sendKeys "Enter" (Literal "Testmail")
@@ -476,7 +482,7 @@ testErrorHandling = withTmuxSession "error handling" $
 
     pure ()
 
-testSetsMailToRead :: Int -> TestTree
+testSetsMailToRead :: TestCase
 testSetsMailToRead = withTmuxSession "user can toggle read tag" $
   \step -> do
     startApplication
@@ -492,7 +498,7 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
     sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
     pure ()
 
-testCanToggleHeaders :: Int -> TestTree
+testCanToggleHeaders :: TestCase
 testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
   \step -> do
     startApplication
@@ -509,7 +515,7 @@ testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
     out <- sendKeys "h" (Literal "This is a test mail")
     assertRegex "Purebred.*\n.*[Ff]rom" out
 
-testUserViewsMailSuccessfully :: Int -> TestTree
+testUserViewsMailSuccessfully :: TestCase
 testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
   \step -> do
     startApplication
@@ -547,7 +553,7 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
 
     pure ()
 
-testUserCanManipulateNMQuery :: Int -> TestTree
+testUserCanManipulateNMQuery :: TestCase
 testUserCanManipulateNMQuery =
     withTmuxSession
         "manipulating notmuch search query results in empty index" $
@@ -580,7 +586,7 @@ testUserCanManipulateNMQuery =
           sendKeys "Enter" (Literal "HOLY PUREBRED")
           pure ()
 
-testUserCanSwitchBackToIndex :: Int -> TestTree
+testUserCanSwitchBackToIndex :: TestCase
 testUserCanSwitchBackToIndex =
   withTmuxSession "user can switch back to mail index during composition" $
         \step -> do
@@ -619,15 +625,13 @@ testUserCanSwitchBackToIndex =
                                    <> buildAnsiRegex [] ["37"] [] <> "testuser@foo.test"))
             pure ()
 
-testSendMail :: Int -> TestTree
+testSendMail :: TestCase
 testSendMail =
   withTmuxSession "sending mail successfully" $
         \step -> do
-          testdir <- view envDir
+          testdir <- view effectiveDir
           setEnvVarInSession "GHC" "stack"
           setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
-          setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
-
           startApplication
 
           liftIO $ step "start composition"
@@ -695,45 +699,71 @@ assertRegex regex out = liftIO $ assertBool
 sessionNamePrefix :: String
 sessionNamePrefix = "purebredtest"
 
+-- Global test environment (shared by all test cases)
+data GlobalEnv = GlobalEnv String FilePath
+
+globalEnvDir :: Lens' GlobalEnv FilePath
+globalEnvDir f (GlobalEnv a b) = fmap (GlobalEnv a) (f b)
+
+-- Session test environment
 data Env = Env
-  { _envDir :: FilePath
+  { _envGlobalEnv :: GlobalEnv
+  , _envDir :: Maybe FilePath   -- override the global config dir
   , _envMaildir :: FilePath
   , _envSessionName :: String
   }
 
-envDir :: Lens' Env FilePath
-envDir f (Env a b c) = fmap (\a' -> Env a' b c) (f a)
+globalEnv :: Lens' Env GlobalEnv
+globalEnv f (Env a b c d) = fmap (\a' -> Env a' b c d) (f a)
+
+sessionEnvDir :: Lens' Env (Maybe FilePath)
+sessionEnvDir f (Env a b c d) = fmap (\b' -> Env a b' c d) (f b)
+
+-- | The effective config dir for a session
+effectiveDir :: Getter Env FilePath
+effectiveDir = to $ \env ->
+  fromMaybe (view (globalEnv . globalEnvDir) env) (view sessionEnvDir env)
 
 envMaildir :: Lens' Env FilePath
-envMaildir f (Env a b c) = fmap (\b' -> Env a b' c) (f b)
+envMaildir f (Env a b c d) = fmap (\c' -> Env a b c' d) (f c)
 
 envSessionName :: Lens' Env String
-envSessionName f (Env a b c) = fmap (\c' -> Env a b c') (f c)
+envSessionName f (Env a b c d) = fmap (\d' -> Env a b c d') (f d)
 {-# ANN envSessionName ("HLint: ignore Avoid lambda" :: String) #-}
 
 -- | Tear down a test session
 tearDown :: Env -> IO ()
-tearDown (Env testdir _ sessionName) = do
-  removeDirectoryRecursive testdir
+tearDown (Env _ dir mdir sessionName) = do
+  traverse removeDirectoryRecursive dir  -- remove session config dir if exists
+  removeDirectoryRecursive mdir
   cleanUpTmuxSession sessionName
 
 -- | Set up a test session.
-setUp :: Int -> String -> IO Env
-setUp i desc = do
+setUp :: IO GlobalEnv -> Int -> String -> IO Env
+setUp getGEnv i desc = do
   let
     sessionName = intercalate "-" (sessionNamePrefix : show i : descWords)
     descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
   setUpTmuxSession sessionName
-  (testdir, maildir) <- setUpTempMaildir
-  let env = Env testdir maildir sessionName
+  maildir <- setUpTempMaildir
+
+  gEnv <- getGEnv
+
+  let
+    -- For now, we never need to override the global config dir.
+    -- But in the future, if we have tests for which we want to use
+    -- a custom config, create the dir and set to 'Just dir'
+    sessionConfDir = Nothing
+    env = Env gEnv sessionConfDir maildir sessionName
 
   -- a) Make the regex less color code dependent by setting the TERM to 'ansi'.
   -- This can happen if different environments support more than 16 colours (e.g.
   -- background values > 37), while our CI environment only supports 16 colours.
   runReaderT (setEnvVarInSession "TERM" "ansi") env
 
-  setUpPurebredConfig testdir
-  precompileConfig testdir
+  -- set the config dir
+  runReaderT (view effectiveDir >>= setEnvVarInSession "PUREBRED_CONFIG_DIR") env
+
   pure env
 
 precompileConfig :: FilePath -> IO ()
@@ -748,12 +778,18 @@ setUpPurebredConfig testdir = do
   c <- getCurrentDirectory
   copyFile (c <> "/configs/purebred.hs") (testdir <> "/purebred.hs")
 
-setUpTempMaildir :: IO (String, String)
+mkTempDir :: IO FilePath
+mkTempDir = getCanonicalTemporaryDirectory >>= flip createTempDirectory sessionNamePrefix
+
+-- | Set up a temporary Maildir containing the test database
+-- The returned directory contains the 'Maildir' subdirectory.
+setUpTempMaildir :: IO FilePath
 setUpTempMaildir = do
-  systmp <- getCanonicalTemporaryDirectory
-  testdir <- createTempDirectory systmp sessionNamePrefix
-  mdir <- setUpMaildir testdir
-  setUpNotmuchCfg testdir mdir >>= setUpNotmuch >> pure (testdir, mdir)
+  mdir <- mkTempDir
+  cwd <- getCurrentDirectory
+  runProcess_ $ proc "cp" ["-r", cwd <> "/test/data/Maildir/", mdir]
+  setUpNotmuchCfg mdir >>= setUpNotmuch
+  pure mdir
 
 -- | run notmuch to create the notmuch database
 -- Note: discard stdout which otherwise clobbers the test output
@@ -762,21 +798,12 @@ setUpNotmuch notmuchcfg = void $ readProcess_ $ proc "notmuch" ["--config=" <> n
 
 -- | write a notmuch config
 -- Note: currently writes a minimal config pointing to our database
-setUpNotmuchCfg :: FilePath -> FilePath -> IO FilePath
-setUpNotmuchCfg testdir testmdir = do
+setUpNotmuchCfg :: FilePath -> IO FilePath
+setUpNotmuchCfg testmdir = do
   let (Right ini) = parseIni (T.pack "[database]\npath=" <> T.pack testmdir)
-  let nmcfg = testdir <> "/notmuch-config"
+  let nmcfg = testmdir <> "/notmuch-config"
   writeIniFileWith (WriteIniSettings EqualsKeySeparator) nmcfg ini
   pure nmcfg
-
--- | setup a temporary Maildir for notmuch and the test session
-setUpMaildir :: FilePath -> IO FilePath
-setUpMaildir testdir = do
-  let testmdir = testdir <> "/Maildir/"
-  c <- getCurrentDirectory
-  let maildir = c <> "/test/data/Maildir/"
-  runProcess_ $ proc "cp" ["-r", maildir, testmdir]
-  pure testmdir
 
 -- | create a tmux session running in the background
 -- Note: the width and height are the default values tmux uses, but I thought
@@ -816,10 +843,11 @@ cleanUpTmuxSession sessionname =
 withTmuxSession
   :: TestName
   -> ((String -> IO ()) -> ReaderT Env IO ())
+  -> IO GlobalEnv
   -> Int  -- ^ session sequence number (will be appended to session name)
   -> TestTree
-withTmuxSession tcname testfx i =
-  withResource (setUp i tcname) tearDown $
+withTmuxSession tcname testfx gEnv i =
+  withResource (setUp gEnv i tcname) tearDown $
       \env -> testCaseSteps tcname $ \stepfx -> env >>= runReaderT (testfx stepfx)
 
 -- | Send keys into the program and wait for the condition to be
