@@ -315,13 +315,11 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
 
     let fpath = testdir </> "sentMail"
     contents <- liftIO $ B.readFile fpath
-    let decoded = (chr . fromEnum <$> B.unpack contents)
+    let decoded = chr . fromEnum <$> B.unpack contents
     assertSubstrInOutput "attachment; filename" decoded
     assertSubstrInOutput "screenshot.png" decoded
     assertSubstrInOutput "stack.yaml" decoded
     assertSubstrInOutput "This is a test body" decoded
-
-    pure ()
 
 testManageTagsOnMails :: Int -> TestTree
 testManageTagsOnMails = withTmuxSession "manage tags on mails" $
@@ -639,7 +637,7 @@ testSendMail =
           sendKeys "user@to.test\r" (Literal "Subject")
 
           liftIO $ step "enter subject"
-          let subj = ("test subject from directory " <> testdir)
+          let subj = "test subject from directory " <> testdir
           sendKeys (subj <> "\r") (Literal "~")
 
           liftIO $ step "enter mail body"
@@ -672,7 +670,6 @@ testSendMail =
           liftIO $ step "parse mail with purebred-email"
           assertMailSuccessfullyParsed (testdir </> "sentMail")
 
-          pure ()
 
 parseMail :: B.ByteString -> Either String MIMEMessage
 parseMail = parse (message mime)
