@@ -16,6 +16,7 @@
 --
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
@@ -41,7 +42,7 @@ import Data.List (intercalate, isInfixOf)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (runReaderT, ask, ReaderT)
+import Control.Monad.Reader (MonadIO, MonadReader, runReaderT, ReaderT)
 
 import Control.Lens (Lens', view)
 import System.Process.Typed
@@ -94,7 +95,7 @@ testRepliesToMailSuccessfully :: Int -> TestTree
 testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
   \step -> do
     let subject = "Testmail with whitespace in the subject"
-    testdir <- view (envDir . ask)
+    testdir <- view envDir
     setEnvVarInSession "GHC" "stack"
     setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
     setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
@@ -137,7 +138,7 @@ testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
 testFromAddressIsProperlyReset :: Int -> TestTree
 testFromAddressIsProperlyReset = withTmuxSession "from address is reset to configured identity" $
   \step -> do
-    testdir <- view (envDir . ask)
+    testdir <- view envDir
     setEnvVarInSession "GHC" "stack"
     setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
     setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
@@ -197,7 +198,7 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 testConfig :: Int -> TestTree
 testConfig = withTmuxSession "test custom config" $
   \step -> do
-    testdir <- view (envDir . ask)
+    testdir <- view envDir
     setEnvVarInSession "GHC" "stack"
     setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
     setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
@@ -215,7 +216,7 @@ testConfig = withTmuxSession "test custom config" $
 testAddAttachments :: Int -> TestTree
 testAddAttachments = withTmuxSession "use file browser to add attachments" $
   \step -> do
-    testdir <- view (envDir . ask)
+    testdir <- view envDir
     setEnvVarInSession "GHC" "stack"
     setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
     setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
@@ -463,7 +464,7 @@ testErrorHandling = withTmuxSession "error handling" $
   \step -> do
     startApplication
 
-    testmdir <- getTestMaildir
+    testmdir <- view envMaildir
     liftIO $ removeFile (testmdir <> "/new/1502941827.R15455991756849358775.url")
 
     liftIO $ step "open thread"
@@ -623,7 +624,7 @@ testSendMail :: Int -> TestTree
 testSendMail =
   withTmuxSession "sending mail successfully" $
         \step -> do
-          testdir <- view (envDir . ask)
+          testdir <- view envDir
           setEnvVarInSession "GHC" "stack"
           setEnvVarInSession "GHC_ARGS" "\"$STACK_ARGS ghc --\""
           setEnvVarInSession "PUREBRED_CONFIG_DIR" testdir
@@ -725,11 +726,17 @@ setUp i desc = do
     sessionName = intercalate "-" (sessionNamePrefix : show i : descWords)
     descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
   setUpTmuxSession sessionName
-  prepareEnvironment sessionName
   (testdir, maildir) <- setUpTempMaildir
+  let env = Env testdir maildir sessionName
+
+  -- a) Make the regex less color code dependent by setting the TERM to 'ansi'.
+  -- This can happen if different environments support more than 16 colours (e.g.
+  -- background values > 37), while our CI environment only supports 16 colours.
+  runReaderT (setEnvVarInSession "TERM" "ansi") env
+
   setUpPurebredConfig testdir
   precompileConfig testdir
-  pure $ Env testdir maildir sessionName
+  pure env
 
 precompileConfig :: FilePath -> IO ()
 precompileConfig testdir = do
@@ -822,26 +829,18 @@ withTmuxSession tcname testfx i =
 -- time.
 sendKeys :: String -> Condition -> ReaderT Env IO String
 sendKeys keys expect = do
-    sessionName <- getSessionName
-    runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName keys False
+    tmuxSendKeys InterpretKeys keys
     waitForCondition expect defaultCountdown
 
 sendLiteralKeys :: String -> ReaderT Env IO String
 sendLiteralKeys keys = do
-    sessionName <- getSessionName
-    runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName keys True
+    tmuxSendKeys LiteralKeys keys
     waitForString keys defaultCountdown
 
 capture :: ReaderT Env IO String
-capture = do
-  sessionname <- getSessionName
-  liftIO $ readProcessWithErrorOutput_ $ proc "tmux" ["capture-pane", "-e", "-p", "-t", sessionname]
-
-getSessionName :: (Monad m) => ReaderT Env m String
-getSessionName = view (envSessionName . ask)
-
-getTestMaildir :: (Monad m) => ReaderT Env m FilePath
-getTestMaildir = view (envMaildir . ask)
+capture =
+  tmuxSessionProc "capture-pane" ["-e", "-p"]
+  >>= liftIO . readProcessWithErrorOutput_
 
 holdOffTime :: Int
 holdOffTime = 10 ^ (6 :: Int)
@@ -891,24 +890,11 @@ defaultCountdown = 5
 -- reason.
 startApplication :: ReaderT Env IO ()
 startApplication = do
-  testmdir <- getTestMaildir
-  sessionName <- getSessionName
+  testmdir <- view envMaildir
   -- add $STACK_ARGS so that we use the same resolver as was used for the build
   let cmdline = "stack $STACK_ARGS exec purebred -- --database " <> testmdir <> "\r"
-  runProcess_ $ proc "tmux" $ communicateSessionArgs sessionName cmdline False
+  tmuxSendKeys InterpretKeys cmdline
   void $ waitForString "Purebred: Item" defaultCountdown
-
-
--- | Prepare the environment
--- Here we're setting up the environment to run in a more predictable fasion.
---
--- a) Make the regex less color code dependent by setting the TERM to 'ansi'.
--- This can happen if different environments support more than 16 colours (e.g.
--- background values > 37), while our CI environment only supports 16 colours.
-prepareEnvironment :: String -> IO ()
-prepareEnvironment sessionName =
-  runProcess_ $ proc "tmux" $
-    communicateSessionArgs sessionName "export TERM=ansi\r" False
 
 -- | Sets a shell environment variable
 -- Note: The tmux program provides a command to set environment variables for
@@ -918,13 +904,32 @@ setEnvVarInSession name value = do
   void $ sendLiteralKeys ("export " <> name <> "=" <> value)
   void $ sendKeys "Enter" (Literal name)
 
-communicateSessionArgs
-  :: String -- ^ session name
-  -> String -- ^ keys
-  -> Bool   -- ^ send the keys literally
-  -> [String]
-communicateSessionArgs sessionName keys asLiteral =
-  ["send-keys", "-t", sessionName] <> ["-l" | asLiteral] <> [keys]
+-- | Whether to tell tmux to treat keys literally or interpret
+-- sequences like "Enter" or "C-x".
+--
+data TmuxKeysMode = LiteralKeys | InterpretKeys
+  deriving (Eq)
+
+-- | Run a tmux command via 'runProcess_'.  The session name is read
+-- from the 'MonadReader' environment
+--
+tmuxSendKeys :: (MonadReader Env m, MonadIO m) => TmuxKeysMode -> String -> m ()
+tmuxSendKeys mode keys = tmuxSendKeysProc mode keys >>= runProcess_
+
+-- | Construct the 'ProcessConfig' for a tmux command.  The session
+-- name is read from the 'MonadReader' environment.
+--
+tmuxSendKeysProc :: (MonadReader Env m) => TmuxKeysMode -> String -> m (ProcessConfig () () ())
+tmuxSendKeysProc mode keys = tmuxSessionProc "send-keys" (["-l" | mode == LiteralKeys] <> [keys])
+
+-- | Create a 'ProcessConfig' for a tmux command, taking the session
+-- name from the 'MonadReader' environment.
+--
+tmuxSessionProc :: (MonadReader Env m) => String -> [String] -> m (ProcessConfig () () ())
+tmuxSessionProc cmd args = do
+  sessionName <- view envSessionName
+  pure $ proc "tmux" (cmd : "-t" : sessionName : args)
+
 
 
 type AnsiAttrParam = String
