@@ -140,7 +140,6 @@ test-suite uat
                      , directory
                      , typed-process
                      , bytestring
-                     , ini
                      , temporary
                      , text
                      , regex-posix
