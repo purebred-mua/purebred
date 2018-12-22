@@ -103,7 +103,7 @@ executable purebred
   build-depends:       base >= 4.9 && < 5
                      , purebred
 
-test-suite unittests
+test-suite unit
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   ghc-options:         -Wall
