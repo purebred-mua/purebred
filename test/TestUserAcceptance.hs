@@ -26,7 +26,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Encoding.Error as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
-import Data.Ini (parseIni, writeIniFileWith, KeySeparator(..), WriteIniSettings(..))
 import Data.Semigroup ((<>))
 import Data.Either (isRight)
 import Control.Concurrent (threadDelay)
@@ -796,14 +795,12 @@ setUpTempMaildir = do
 setUpNotmuch :: FilePath -> IO ()
 setUpNotmuch notmuchcfg = void $ readProcess_ $ proc "notmuch" ["--config=" <> notmuchcfg, "new" ]
 
--- | write a notmuch config
--- Note: currently writes a minimal config pointing to our database
+-- | Write a minimal notmuch config pointing to the database.
 setUpNotmuchCfg :: FilePath -> IO FilePath
-setUpNotmuchCfg testmdir = do
-  let (Right ini) = parseIni (T.pack "[database]\npath=" <> T.pack testmdir)
-  let nmcfg = testmdir <> "/notmuch-config"
-  writeIniFileWith (WriteIniSettings EqualsKeySeparator) nmcfg ini
-  pure nmcfg
+setUpNotmuchCfg dir = do
+  let cfgData = "[database]\npath=" <> dir <> "\n"
+      cfgFile = dir <> "/notmuch-config"
+  writeFile cfgFile cfgData *> pure cfgFile
 
 -- | create a tmux session running in the background
 -- Note: the width and height are the default values tmux uses, but I thought
