@@ -761,9 +761,14 @@ precompileConfig testdir = do
       config = setEnv systemEnv $ proc "purebred" ["--version"]
   runProcess_ config
 
+-- | Get the explicitly-specified source directory via SRCDIR
+-- env var, or fall back to CWD.
+getSourceDirectory :: IO FilePath
+getSourceDirectory = lookupEnv "SRCDIR" >>= maybe getCurrentDirectory pure
+
 setUpPurebredConfig :: FilePath -> IO ()
 setUpPurebredConfig testdir = do
-  c <- getCurrentDirectory
+  c <- getSourceDirectory
   copyFile (c <> "/configs/purebred.hs") (testdir <> "/purebred.hs")
 
 mkTempDir :: IO FilePath
@@ -774,7 +779,7 @@ mkTempDir = getCanonicalTemporaryDirectory >>= flip createTempDirectory sessionN
 setUpTempMaildir :: IO FilePath
 setUpTempMaildir = do
   mdir <- mkTempDir
-  cwd <- getCurrentDirectory
+  cwd <- getSourceDirectory
   runProcess_ $ proc "cp" ["-r", cwd <> "/test/data/Maildir/", mdir]
   setUpNotmuchCfg mdir >>= setUpNotmuch
   pure mdir
@@ -907,6 +912,8 @@ defaultCountdown = 5
 -- reason.
 startApplication :: ReaderT Env IO ()
 startApplication = do
+  srcdir <- liftIO getSourceDirectory
+  tmuxSendKeys LiteralKeys ("cd " <> srcdir <> "\r")
   testmdir <- view envMaildir
   tmuxSendKeys InterpretKeys ("purebred --database " <> testmdir <> "\r")
   void $ waitForString "Purebred: Item" defaultCountdown
