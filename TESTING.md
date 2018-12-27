@@ -2,8 +2,8 @@
 
 ## Framework
 
-The current test framework uses tmux and executes certain key strokes against
-the started application.
+Purebred comes with an extensive suite of user acceptance tests. It expects that
+the `purebred` binary can be found in the `$PATH` as well as can be recompiled.
 
 ## Writing new user acceptance tests
 
@@ -28,12 +28,14 @@ You can limit which tests to run. Tasty provides extensive documentation
 example:
 
     # would only run a user acceptance test with an "error" substring
-    stack test --test-arguments='-p "tests/user*/*error*"'
+    cabal test --show-details=streaming --test-option='-p "tests/user*/*error*"'
+    
+    # On NixOS, keep in mind that you will need to build the binary first and then run the acceptance tests in a NIX shell
+    PATH=$PATH:result/bin cabal test --show-details=streaming --test-option='-p "tests/user*/*error*"'
 
-## Running purebred with a custom config and stack
+## Running purebred with a custom config
 
 Purebred accepts environment variables which are also used in the acceptance
-tests. To run purebred with stack and a custom config, here is an example:
+tests. To point purebred to a custom config:
 
-    # Purebred invokes: "stack ghc --" + additional compile arguments
-    GHC="stack" GHC_ARGS="ghc --" PUREBRED_CONFIG_DIR=configs stack exec purebred
+    PUREBRED_CONFIG_DIR=configs cabal new-run purebred

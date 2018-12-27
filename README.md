@@ -24,9 +24,28 @@ are welcome.  See [HACKING] for more info.
 - [ ] extensible with plug-ins
 - [x] enforce sane configuration by using Haskell's type system
 
-## Development packages
+## Try it
+
+Try out purebred with the following choices. Keep in mind that *none of these* are
+*currently tested* in our CI and may be broken.
+
 ### Fedora
 
 We operate a
 [Fedora Copr](https://copr.fedorainfracloud.org/coprs/romanofski/purebred/)
 repository which provides easily installable RPM packages.
+
+### Nix
+
+If you're using the nix package manager - whether on NixOS or any other Linux distribution - you can build purebred too.
+You can use `nix-build` to try out purebred without installing it:
+
+```
+$ nix-build default.nix
+```
+
+and `nix-env` to install the application:
+
+```
+$ nix-env --file default.nix --install
+```

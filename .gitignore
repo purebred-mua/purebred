@@ -8,3 +8,5 @@ dist-newstyle
 
 *.o
 *.hi
+
+result
