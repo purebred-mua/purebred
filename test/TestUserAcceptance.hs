@@ -34,21 +34,24 @@ import Control.Exception (catch, IOException)
 import System.IO (hPutStr, hPutStrLn, stderr, stdout)
 import System.Environment (lookupEnv, getEnvironment)
 import System.FilePath.Posix ((</>))
-import Control.Monad (void, when)
+import Control.Monad (filterM, void, when)
 import Data.Maybe (fromMaybe, isJust)
-import Data.List (intercalate, isInfixOf)
+import Data.List (intercalate, isInfixOf, sort)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT, ReaderT)
 
-import Control.Lens (Getter, Lens', to, view)
+import Control.Lens (Getter, Lens', preview, to, view, _init, _last)
+import System.Directory
+  ( copyFile, getCurrentDirectory, listDirectory, removeDirectoryRecursive
+  , removeFile
+  )
+import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed
        (proc, runProcess_, withProcess_, readProcess_,
         waitExitCodeSTM, setStdout, getStdout, setStderr, useHandleOpen,
         byteStringOutput, setStdin, closed, setEnv, ProcessConfig)
-import System.Directory
-       (getCurrentDirectory, removeDirectoryRecursive, removeFile, copyFile)
 import Test.Tasty (TestTree, TestName, defaultMain, testGroup, withResource)
 import Test.Tasty.HUnit (testCaseSteps, assertBool)
 import Text.Regex.Posix ((=~))
@@ -218,6 +221,18 @@ testAddAttachments :: TestCase
 testAddAttachments = withTmuxSession "use file browser to add attachments" $
   \step -> do
     testdir <- view effectiveDir
+
+    -- To be resilient against differences in list contents between
+    -- git and sdist, list the directory ourselves to work out what
+    -- the final entry should be.  Note that dirs come first in the
+    -- filebrowser widget.
+    files <- fmap sort $ liftIO $
+      getSourceDirectory >>= listDirectory
+      >>= filterM (fmap isRegularFile . getFileStatus)
+    let
+      lastFile = fromMaybe "MISSING" $ preview _last files
+      secondLastFile = fromMaybe "MISSING" $ preview (_init . _last) files
+
     startApplication
 
     liftIO $ step "start composition"
@@ -246,10 +261,10 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
     liftIO $ step "jump to the end of the list"
-    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - stack.yaml")
+    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
 
     liftIO $ step "add first selected file"
-    sendKeys "Enter" (Literal $ cwd </> "stack.yaml")
+    sendKeys "Enter" (Literal $ cwd </> lastFile)
 
     liftIO $ step "up to select mail body"
     sendKeys "Up" (Literal "Item 1 of 2")
@@ -295,17 +310,17 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
     liftIO $ step "jump to the end of the list"
-    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - stack.yaml")
+    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
 
     liftIO $ step "select the file"
-    sendKeys "Space" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9745 - stack.yaml")
+    sendKeys "Space" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9745 - " <> lastFile)
 
     liftIO $ step "move one item up"
-    sendKeys "Up" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - screenshot.png")
+    sendKeys "Up" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> secondLastFile)
 
     liftIO $ step "add selected files"
     out <- sendKeys "Enter" (Literal "Item 3 of 3")
-    assertSubstrInOutput "screenshot.png" out
+    assertSubstrInOutput secondLastFile out
 
     liftIO $ step "send mail"
     sendKeys "y" (Literal "Query")
@@ -314,8 +329,8 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
     contents <- liftIO $ B.readFile fpath
     let decoded = chr . fromEnum <$> B.unpack contents
     assertSubstrInOutput "attachment; filename" decoded
-    assertSubstrInOutput "screenshot.png" decoded
-    assertSubstrInOutput "stack.yaml" decoded
+    assertSubstrInOutput secondLastFile decoded
+    assertSubstrInOutput lastFile decoded
     assertSubstrInOutput "This is a test body" decoded
 
 testManageTagsOnMails :: TestCase

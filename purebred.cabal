@@ -88,7 +88,7 @@ library
                      , notmuch >= 0.1 && < 0.2
                      , text
                      , typed-process >= 0.2.1.0
-                     , directory
+                     , directory >= 1.2.5.0
                      , bytestring
                      , time
                      , case-insensitive
@@ -155,3 +155,4 @@ test-suite uat
                      , stm
                      , lens
                      , filepath
+                     , unix
