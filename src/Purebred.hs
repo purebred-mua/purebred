@@ -139,10 +139,10 @@ import qualified Control.DeepSeq
 import Control.Monad ((>=>), void)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
-import Data.List (isInfixOf, isPrefixOf)
+import Data.List (elemIndex, isInfixOf, isPrefixOf)
 import Data.Semigroup ((<>))
 import System.Environment (lookupEnv)
-import System.FilePath (dropTrailingPathSeparator, splitPath)
+import System.FilePath (dropTrailingPathSeparator, joinPath, splitPath)
 import System.FilePath.Posix ((</>))
 import System.Random (RandomGen, getStdGen, randomRs)
 import Data.Version (showVersion)
@@ -236,14 +236,23 @@ guessPackageArgs dir =
     reversedPath = case reverse path of
       ("lib" : xs) -> xs  -- if component is "lib", drop it
       xs -> xs
-    f s
-      | [".cabal", "store"] `isInfixOf` path
-        && ("purebred-" <> versionString <> "-") `isPrefixOf` s =
-          Just s -- cabal newstyle install
-      | otherwise = Nothing
-    packageId = maybe [] (\s -> ["-package-id", s]) (preview _head reversedPath >>= f)
+    isCabalStore = [".cabal", "store"] `isInfixOf` path
+    packageId =
+      let
+        f s
+          | isCabalStore && ("purebred-" <> versionString <> "-") `isPrefixOf` s =
+              Just s -- cabal newstyle install
+          | otherwise = Nothing
+      in
+        maybe [] (\s -> ["-package-id", s]) (preview _head reversedPath >>= f)
+    packageDb
+      | isCabalStore =
+          maybe []
+            (\i -> ["-package-db", joinPath (take (i + 3) path <> ["package.db"])])
+            (elemIndex ".cabal" path)
+      | otherwise = []
   in
-    packageId
+    packageDb <> packageId
 
 
 purebred :: UserConfiguration -> IO ()
