@@ -207,13 +207,25 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 testConfig :: TestCase
 testConfig = withTmuxSession "test custom config" $
   \step -> do
+    -- Set a short command prompt, to a value otherwise unlikely to
+    -- appear, so that we can easily check for program termination.
+    let unlikelyString = "unlikely"
+    sendKeys ("PS1=" <> unlikelyString <> "$ \r") (Literal unlikelyString)
     startApplication
 
     liftIO $ step "archive thread"
     sendKeys "a" (Literal "archive")
 
     liftIO $ step "quit"
-    sendKeys "q" (Literal "purebred")
+    sendKeys "q" Unconditional
+
+    -- Wait a bit so that purebred, which may not yet have
+    -- terminated, does not eat the upcoming keystroke(s)
+    liftIO $ threadDelay 200000  -- 0.2 seconds
+
+    -- Press Enter again to deal with case where cursor is not at
+    -- column 0, which could cause target string to be split.
+    sendKeys "Enter" (Literal unlikelyString)
 
     pure ()
 
