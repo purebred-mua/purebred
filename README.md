@@ -18,6 +18,12 @@ are welcome.  See [HACKING] for more info.
 
 ![](screenshot.png)
 
+## Goals
+
+- [ ] re-use strong UX patterns from existing console mailers like mutt and sup
+- [ ] extensible with plug-ins
+- [x] enforce sane configuration by using Haskell's type system
+
 ## Development packages
 ### Fedora
 
