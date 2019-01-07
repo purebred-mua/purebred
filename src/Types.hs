@@ -24,6 +24,7 @@ import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Encoding.Error as T
+import qualified Data.Vector as V
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
@@ -53,6 +54,26 @@ data Name =
     | StatusBar
     deriving (Eq,Show,Ord)
 
+-- | A brick list, with a field that optionally contains its length.
+--
+-- Rather than reading the length from the underlying list, to support
+-- lazy loading we have a separate field that optionally contains the
+-- length.  Widgets should read the length from this field and must
+-- handle the @Nothing@ case.
+--
+-- For strict lists (e.g. Vector-based) the length can be recorded when
+-- constructed.  For lazy lists, it could be left empty, or a thread
+-- could be spawned to compute the length in the background and update
+-- the value when the length is known.
+--
+data ListWithLength t a = ListWithLength (L.GenericList Name t a) (Maybe Int)
+
+listList :: Lens' (ListWithLength t a) (L.GenericList Name t a)
+listList f (ListWithLength a b) = (\a' -> ListWithLength a' b) <$> f a
+
+listLength :: Lens' (ListWithLength t a) (Maybe Int)
+listLength f (ListWithLength a b) = (\b' -> ListWithLength a b') <$> f b
+
 
 {- | main application interface
 
@@ -61,18 +82,24 @@ search and composes e-mails from here.
 
 -}
 data MailIndex = MailIndex
-    { _miListOfMails  :: L.List Name NotmuchMail
-    , _miListOfThreads :: L.List Name NotmuchThread
+    { _miListOfMails  :: ListWithLength V.Vector NotmuchMail
+    , _miListOfThreads :: ListWithLength V.Vector NotmuchThread
     , _miSearchThreadsEditor :: E.Editor T.Text Name
     , _miMailTagsEditor :: E.Editor T.Text Name
     , _miThreadTagsEditor :: E.Editor T.Text Name
     }
 
-miListOfMails :: Lens' MailIndex (L.List Name NotmuchMail)
-miListOfMails = lens _miListOfMails (\m v -> m { _miListOfMails = v })
+miMails :: Lens' MailIndex (ListWithLength V.Vector NotmuchMail)
+miMails = lens _miListOfMails (\m v -> m { _miListOfMails = v })
 
-miListOfThreads :: Lens' MailIndex (L.List Name NotmuchThread)
-miListOfThreads = lens _miListOfThreads (\m v -> m { _miListOfThreads = v})
+miThreads :: Lens' MailIndex (ListWithLength V.Vector NotmuchThread)
+miThreads = lens _miListOfThreads (\m v -> m { _miListOfThreads = v})
+
+miListOfMails :: Lens' MailIndex (L.GenericList Name V.Vector NotmuchMail)
+miListOfMails = miMails . listList
+
+miListOfThreads :: Lens' MailIndex (L.GenericList Name V.Vector NotmuchThread)
+miListOfThreads = miThreads . listList
 
 miSearchThreadsEditor :: Lens' MailIndex (E.Editor T.Text Name)
 miSearchThreadsEditor = lens _miSearchThreadsEditor (\m v -> m { _miSearchThreadsEditor = v})
