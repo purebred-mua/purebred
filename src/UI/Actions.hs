@@ -701,12 +701,16 @@ applySearch :: AppState -> T.EventM Name AppState
 applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
                 >>= pure . ($ s) . either setError updateList
    where searchterms = currentLine $ view (asMailIndex . miSearchThreadsEditor . E.editContentsL) s
-         updateList vec = over (asMailIndex . miListOfThreads) (L.listReplace vec (Just 0))
+         updateList vec =
+           over (asMailIndex . miThreads . listList) (L.listReplace vec (Just 0))
+           . set (asMailIndex . miThreads . listLength) (Just (length vec))
 
 setMailsForThread :: AppState -> IO AppState
 setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
-      updateThreadMails vec = over (asMailIndex . miListOfMails) (L.listReplace vec Nothing)
+      updateThreadMails vec =
+        over (asMailIndex . miMails . listList) (L.listReplace vec Nothing)
+        . set (asMailIndex . miMails . listLength) (Just (length vec))
   in either setError updateThreadMails <$> runExceptT (Notmuch.getThreadMessages dbpath t)
 
 selectedItemHelper
