@@ -23,7 +23,6 @@ import qualified Data.Text as T
 import Control.Lens (view, over, set, firstOf, folded, Lens')
 
 import qualified Notmuch
-import Notmuch.Search
 
 import Error
 import Types
@@ -121,7 +120,7 @@ getMessages
 getMessages s settings =
   withDatabaseReadOnly (view nmDatabase settings) go
   where go db = do
-              msgs <- Notmuch.query db (FreeForm $ T.unpack s) >>= Notmuch.messages
+              msgs <- Notmuch.query db (Notmuch.Bare $ T.unpack s) >>= Notmuch.messages
               mails <- liftIO $ mapM messageToMail msgs
               pure $ Vec.fromList mails
 
@@ -181,7 +180,7 @@ getThreads s settings =
   withDatabaseReadOnly (view nmDatabase settings) go
   where
     go db = do
-        ts <- Notmuch.query db (FreeForm $ T.unpack s) >>= Notmuch.threads
+        ts <- Notmuch.query db (Notmuch.Bare $ T.unpack s) >>= Notmuch.threads
         t <- liftIO $ lazyTraverse threadToThread ts
         pure $ fromList 128 {- chunk size -} t
 
@@ -212,7 +211,7 @@ getThread
   :: (MonadError Error m, MonadIO m)
   => Notmuch.Database mode -> B.ByteString -> m (Notmuch.Thread mode)
 getThread db tid = do
-  t <- Notmuch.query db (Thread tid) >>= Notmuch.threads
+  t <- Notmuch.query db (Notmuch.Thread tid) >>= Notmuch.threads
   maybe (throwError (ThreadNotFound tid)) pure (firstOf folded t)
 
 threadToThread
