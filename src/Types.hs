@@ -12,6 +12,7 @@ module Types
 
 import GHC.Generics (Generic)
 
+import Brick.BChan (BChan)
 import qualified Brick.Focus as Brick
 import Brick.Themes (Theme)
 import Brick.Types (EventM, Next)
@@ -179,7 +180,7 @@ fbSearchPathKeybindings = lens _fbSearchPathKeybindings (\cv x -> cv { _fbSearch
 fbHomePath :: Lens (FileBrowserSettings a) (FileBrowserSettings a') a a'
 fbHomePath = lens _fbHomePath (\s a -> s { _fbHomePath = a })
 
-data Configuration a b c = Configuration
+data Configuration extra a b c = Configuration
     { _confTheme :: Theme
     , _confNotmuch :: NotmuchSettings a
     , _confEditor :: b
@@ -189,40 +190,51 @@ data Configuration a b c = Configuration
     , _confHelpView :: HelpViewSettings
     , _confDefaultView :: ViewName
     , _confFileBrowserView :: FileBrowserSettings c
+    , _confExtra :: extra  -- data specific to a particular "phase" of configuration
     }
     deriving (Generic, NFData)
 
-type UserConfiguration = Configuration (IO FilePath) (IO String) (IO FilePath)
-type InternalConfiguration = Configuration FilePath String FilePath
+type UserConfiguration = Configuration () (IO FilePath) (IO String) (IO FilePath)
+type InternalConfiguration = Configuration (BChan PurebredEvent, String) FilePath String FilePath
 
-type ConfigurationLens v = forall a b c. Lens' (Configuration a b c) v
+type ConfigurationLens v = forall z a b c. Lens' (Configuration z a b c) v
 
 confTheme :: ConfigurationLens Theme
 confTheme = lens _confTheme (\c x -> c { _confTheme = x })
 
-confEditor :: Lens (Configuration a b c) (Configuration a b' c) b b'
-confEditor f (Configuration a b c d e g h i j) = fmap (\c' -> Configuration a b c' d e g h i j) (f c)
+confEditor :: Lens (Configuration z a b c) (Configuration z a b' c) b b'
+confEditor = lens _confEditor (\conf x -> conf { _confEditor = x })
 
-confNotmuch :: Lens (Configuration a b c) (Configuration a' b c) (NotmuchSettings a) (NotmuchSettings a')
-confNotmuch f (Configuration a b c d e g h i j) = fmap (\b' -> Configuration a b' c d e g h i j) (f b)
+confNotmuch :: Lens (Configuration z a b c) (Configuration z a' b c) (NotmuchSettings a) (NotmuchSettings a')
+confNotmuch = lens _confNotmuch (\conf x -> conf { _confNotmuch = x })
 
 confMailView :: ConfigurationLens MailViewSettings
-confMailView f (Configuration a b c d e g h i j) = fmap (\d' -> Configuration a b c d' e g h i j) (f d)
+confMailView = lens _confMailView (\conf x -> conf { _confMailView = x })
 
 confIndexView :: ConfigurationLens IndexViewSettings
-confIndexView f (Configuration a b c d e g h i j) = fmap (\e' -> Configuration a b c d e' g h i j) (f e)
+confIndexView = lens _confIndexView (\conf x -> conf { _confIndexView = x })
 
 confComposeView :: ConfigurationLens ComposeViewSettings
-confComposeView f (Configuration a b c d e g h i j) = fmap (\g' -> Configuration a b c d e g' h i j) (f g)
+confComposeView = lens _confComposeView (\conf x -> conf { _confComposeView = x})
 
 confHelpView :: ConfigurationLens HelpViewSettings
-confHelpView f (Configuration a b c d e g h i j) = fmap (\h' -> Configuration a b c d e g h' i j) (f h)
+confHelpView = lens _confHelpView (\conf x -> conf { _confHelpView = x })
 
 confDefaultView :: ConfigurationLens ViewName
 confDefaultView = lens _confDefaultView (\conf x -> conf { _confDefaultView = x })
 
-confFileBrowserView :: Lens (Configuration a b c) (Configuration a b c') (FileBrowserSettings c) (FileBrowserSettings c')
+confFileBrowserView :: Lens (Configuration z a b c) (Configuration z a b c') (FileBrowserSettings c) (FileBrowserSettings c')
 confFileBrowserView = lens _confFileBrowserView (\conf x -> conf { _confFileBrowserView = x })
+
+confExtra :: Lens (Configuration extra a b c) (Configuration extra' a b c) extra extra'
+confExtra = lens _confExtra (\cfg x -> cfg { _confExtra = x })
+
+confBChan :: Lens' InternalConfiguration (BChan PurebredEvent)
+confBChan = confExtra . _1
+
+confBoundary :: Lens' InternalConfiguration String
+confBoundary = confExtra . _2
+
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
@@ -230,7 +242,6 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
     , _cvSendMailCmd :: B.ByteString -> IO (Either Error ())
     , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ListOfAttachments]
-    , _cvBoundary :: String
     , _cvIdentities :: [Mailbox]
     }
     deriving (Generic, NFData)
@@ -249,9 +260,6 @@ cvSendMailCmd = lens _cvSendMailCmd (\cv x -> cv { _cvSendMailCmd = x })
 
 cvListOfAttachmentsKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ListOfAttachments]
 cvListOfAttachmentsKeybindings = lens _cvListOfAttachmentsKeybindings (\cv x -> cv { _cvListOfAttachmentsKeybindings = x })
-
-cvBoundary :: Lens' ComposeViewSettings String
-cvBoundary = lens _cvBoundary (\cv x -> cv { _cvBoundary = x })
 
 cvIdentities :: Lens' ComposeViewSettings [Mailbox]
 cvIdentities = lens _cvIdentities (\cv x -> cv { _cvIdentities = x })
@@ -501,3 +509,12 @@ decodeLenient = T.decodeUtf8With T.lenientDecode
 -- | Tag operations
 data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
   deriving (Show, Eq)
+
+
+-- | Purebred event type.  In the future we can abstract this over
+-- a custom event type to allow plugins to define their own events.
+-- But I've YAGNI'd it for now because it will require an event
+-- type parameter on 'AppState', which will be a noisy change.
+--
+data PurebredEvent
+  -- internal event types will go here

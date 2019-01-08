@@ -157,10 +157,12 @@ import Types
 import Error
 
 -- re-exports for configuration
+import qualified Graphics.Vty
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
-import Brick.Main (defaultMain)
+import Brick.BChan (BChan, newBChan)
+import Brick.Main (customMain)
 import Brick.Types (Next)
-import Control.Lens ((&), _head, over, preview, set)
+import Control.Lens ((&), _head, over, preview, set, view)
 import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 
 newtype AppConfig = AppConfig
@@ -199,22 +201,37 @@ launch cfg = do
   -- Set the boundary generator (an INFINITE [Char]) /after/ deepseq'ing :)
   -- FIXME: seems like something that shouldn't be exposed in user config
   b <- genBoundary <$> getStdGen
-  let post = set (confComposeView . cvBoundary) b
 
-  cfg' <- post <$> processConfig (pre cfg)
+  -- Create a channel for sending custom events into Brick event loop.
+  -- It gets set in the InternalConfiguration.
+  --
+  -- There are max 32 elems in chan.  If full, writing will block.  I have
+  -- no idea if 32 is a good number or not.
+  --
+  bchan <- newBChan 32
+
+  cfg' <- processConfig (bchan, b) (pre cfg)
 
   s <- initialState cfg'
-  void $ defaultMain (theApp s) s
+  void $ customMain
+    (Graphics.Vty.mkVty Graphics.Vty.defaultConfig)
+    (Just bchan)
+    (theApp s)
+    s
 
 
--- | Process the user config into an internal configuration, then
--- fully evaluates it.
-processConfig :: UserConfiguration -> IO InternalConfiguration
-processConfig = fmap Control.DeepSeq.force . (
-  (confNotmuch . nmDatabase) id
-  >=> confEditor id
-  >=> (confFileBrowserView . fbHomePath) id
-  )
+-- | Fully evaluate the 'UserConfiguration', then set the extra data to
+-- turn it into an 'InternalConfiguration'.
+processConfig
+  :: (BChan PurebredEvent, String)  -- ^ extra data for internal conf
+  -> UserConfiguration
+  -> IO InternalConfiguration
+processConfig z = fmap (set confExtra z . Control.DeepSeq.force) . unIO
+  where
+  unIO =
+    (confNotmuch . nmDatabase) id
+    >=> confEditor id
+    >=> (confFileBrowserView . fbHomePath) id
 
 
 -- RFC2046 5.1.1
