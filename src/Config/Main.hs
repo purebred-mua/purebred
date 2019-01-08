@@ -188,7 +188,6 @@ defaultConfig =
       , _cvSubjectKeybindings = composeSubjectKeybindings
       , _cvSendMailCmd = renderSendMail
       , _cvListOfAttachmentsKeybindings = listOfAttachmentsKeybindings
-      , _cvBoundary = []
       , _cvIdentities = []
       }
     , _confHelpView = HelpViewSettings
@@ -200,4 +199,5 @@ defaultConfig =
       , _fbSearchPathKeybindings = manageSearchPathKeybindings
       , _fbHomePath = getHomeDirectory
       }
+    , _confExtra = ()
     }

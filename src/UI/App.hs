@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | The main application module
@@ -79,8 +80,13 @@ handleViewEvent = f where
   f _ _ = dispatch nullEventHandler
 
 
-appEvent :: AppState -> T.BrickEvent Name e -> T.EventM Name (T.Next AppState)
+appEvent
+  :: AppState               -- ^ program state
+  -> T.BrickEvent Name PurebredEvent  -- ^ event
+  -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s ListOfThreads) s ev
+appEvent _ (T.AppEvent ev) = case ev of
+  { }  -- handle "internal" events (none defined yet; remove EmptyCase when there are)
 appEvent s _ = M.continue s
 
 initialState :: InternalConfiguration -> IO AppState
@@ -117,7 +123,9 @@ initialState conf = do
             in pure $
                AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb
 
-theApp :: AppState -> M.App AppState e Name
+theApp
+  :: AppState               -- ^ initial state
+  -> M.App AppState PurebredEvent Name
 theApp s =
     M.App
     { M.appDraw = drawUI

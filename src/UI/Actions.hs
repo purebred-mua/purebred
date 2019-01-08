@@ -785,7 +785,7 @@ sendMail s = do
         from = either (pure []) id $ parseOnly mailboxList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cFrom) s
         subject = T.unlines $ E.getEditContents $ view (asCompose . cSubject) s
         attachments' = toListOf (asCompose . cAttachments . L.listElementsL . traversed) s
-        (b, l') = splitAt 50 $ view (asConfig . confComposeView . cvBoundary) s
+        (b, l') = splitAt 50 $ view (asConfig . confBoundary) s
         mail = if has (asCompose . cAttachments . L.listElementsL . traversed . filtered isAttachment) s
                 then Just $ createMultipartMixedMessage (C8.pack b) attachments'
                 else firstOf (asCompose . cAttachments . L.listElementsL . traversed) s
@@ -812,7 +812,7 @@ trySendAndCatch l' m s = do
     catch
         (cmd m $> (s
          & set asCompose (initialCompose defMailboxes)
-         . set (asConfig . confComposeView . cvBoundary) l'))
+         . set (asConfig . confBoundary) l'))
         (\e ->
               let err = show (e :: IOException)
               in pure $ s & setError (SendMailError err))
