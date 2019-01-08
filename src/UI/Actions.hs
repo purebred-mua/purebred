@@ -43,11 +43,13 @@ module UI.Actions (
   , parentDirectory
   , createAttachments
   , delete
+  , applySearch
   ) where
 
 import Data.Functor.Identity (Identity(..))
 
 import qualified Brick
+import Brick.BChan (writeBChan)
 import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
@@ -75,7 +77,8 @@ import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traversed, has, snoc,
         filtered, set, over, preview, view, (&), nullOf, firstOf,
         traversed, traverse, Getting, Lens')
-import Control.Monad ((>=>))
+import Control.Concurrent (forkIO)
+import Control.Monad ((>=>), void)
 import Control.Monad.Except (runExceptT)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
@@ -697,13 +700,24 @@ listSetSelectionEnd
   => Lens' s (L.GenericList Name t a) -> s -> s
 listSetSelectionEnd l = over l (L.listMoveTo (-1))
 
-applySearch :: AppState -> T.EventM Name AppState
-applySearch s = runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
-                >>= pure . ($ s) . either setError updateList
+applySearch :: (MonadIO m) => AppState -> m AppState
+applySearch s = do
+  r <- runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
+  case r of
+    Left e -> pure $ setError e s
+    Right threads -> notifyNumThreads s threads $> updateList threads s
    where searchterms = currentLine $ view (asMailIndex . miSearchThreadsEditor . E.editContentsL) s
          updateList vec =
            over (asMailIndex . miThreads . listList) (L.listReplace vec (Just 0))
            . set (asMailIndex . miThreads . listLength) Nothing
+
+-- | Fork a thread to compute the length of the container and send a
+-- NotifyNumThreads event.  'seq' ensures that the work is actually
+-- done by the spawned thread.
+notifyNumThreads :: (MonadIO m, Foldable t) => AppState -> t a -> m ()
+notifyNumThreads s l = void $ liftIO $ forkIO $
+  let len = length l
+  in len `seq` writeBChan (view (asConfig . confBChan) s) (NotifyNumThreads len)
 
 setMailsForThread :: AppState -> IO AppState
 setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
