@@ -518,4 +518,4 @@ data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
 -- type parameter on 'AppState', which will be a noisy change.
 --
 data PurebredEvent
-  -- internal event types will go here
+  = NotifyNumThreads !Int

@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | The main application module
@@ -14,18 +13,15 @@ import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty.Input.Events as Vty
-import Control.Lens (to, view)
-import Control.Monad.Except (runExceptT)
-import System.Exit (die)
+import Control.Lens (set, to, view)
 import qualified Data.Map as Map
 
-import Storage.Notmuch (getThreads)
 import UI.Keybindings
 import UI.GatherHeaders.Main (drawSubject, drawFrom, drawTo)
 import UI.Index.Main
        (renderListOfThreads, renderListOfMails, renderSearchThreadsEditor,
         renderMailTagsEditor, renderThreadTagsEditor)
-import UI.Actions (initialCompose)
+import UI.Actions (applySearch, initialCompose)
 import UI.FileBrowser.Main
        (renderFileBrowser, renderFileBrowserSearchPathEditor)
 import UI.Mail.Main (renderMailView)
@@ -85,43 +81,41 @@ appEvent
   -> T.BrickEvent Name PurebredEvent  -- ^ event
   -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s ListOfThreads) s ev
-appEvent _ (T.AppEvent ev) = case ev of
-  { }  -- handle "internal" events (none defined yet; remove EmptyCase when there are)
+appEvent s (T.AppEvent ev) = case ev of
+  NotifyNumThreads n -> M.continue $ set (asMailIndex . miThreads . listLength) (Just n) s
 appEvent s _ = M.continue s
 
 initialState :: InternalConfiguration -> IO AppState
-initialState conf = do
-    let searchterms = view (confNotmuch . nmSearch) conf
-    r <- runExceptT $ getThreads searchterms (view confNotmuch conf)
-    case r of
-        Left e -> die $ show e  -- TODO don't crash?
-        Right vec ->
-            let mi =
-                    MailIndex
-                        (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
-                        (ListWithLength (L.list ListOfThreads vec 1) Nothing)
-                        (E.editorText SearchThreadsEditor Nothing searchterms)
-                        (E.editorText ManageMailTagsEditor Nothing "")
-                        (E.editorText ManageThreadTagsEditor Nothing "")
-                mv = MailView Nothing Filtered
-                viewsettings =
-                    ViewSettings
-                    { _vsViews = Map.fromList
-                          [ (Threads, indexView)
-                          , (Mails, listOfMailsView)
-                          , (ViewMail, mailView)
-                          , (Help, helpView)
-                          , (ComposeView, composeView)
-                          , (FileBrowser, filebrowserView)]
-                    , _vsFocusedView = focusRing [Threads, Mails, ViewMail, Help, ComposeView, FileBrowser]
-                    }
-                path = view (confFileBrowserView . fbHomePath) conf
-                fb = CreateFileBrowser
-                     (L.list ListOfFiles mempty 1)
-                     (E.editor ManageFileBrowserSearchPath Nothing path)
-                mailboxes = view (confComposeView . cvIdentities) conf
-            in pure $
-               AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb
+initialState conf =
+  let
+    searchterms = view (confNotmuch . nmSearch) conf
+    mi =
+        MailIndex
+            (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
+            (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
+            (E.editorText SearchThreadsEditor Nothing searchterms)
+            (E.editorText ManageMailTagsEditor Nothing "")
+            (E.editorText ManageThreadTagsEditor Nothing "")
+    mv = MailView Nothing Filtered
+    viewsettings =
+        ViewSettings
+        { _vsViews = Map.fromList
+              [ (Threads, indexView)
+              , (Mails, listOfMailsView)
+              , (ViewMail, mailView)
+              , (Help, helpView)
+              , (ComposeView, composeView)
+              , (FileBrowser, filebrowserView)]
+        , _vsFocusedView = focusRing [Threads, Mails, ViewMail, Help, ComposeView, FileBrowser]
+        }
+    path = view (confFileBrowserView . fbHomePath) conf
+    fb = CreateFileBrowser
+         (L.list ListOfFiles mempty 1)
+         (E.editor ManageFileBrowserSearchPath Nothing path)
+    mailboxes = view (confComposeView . cvIdentities) conf
+    s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb
+  in
+    applySearch s
 
 theApp
   :: AppState               -- ^ initial state
