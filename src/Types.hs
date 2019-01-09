@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -56,6 +57,12 @@ data Name =
     | StatusBar
     deriving (Eq,Show,Ord)
 
+-- | A serial number that can be used to match (or ignore as
+-- irrelevant) asynchronous events to current application state.
+--
+newtype Generation = Generation Integer
+  deriving (Eq, Ord, Enum)
+
 -- | A brick list, with a field that optionally contains its length.
 --
 -- Rather than reading the length from the underlying list, to support
@@ -86,6 +93,7 @@ search and composes e-mails from here.
 data MailIndex = MailIndex
     { _miListOfMails  :: ListWithLength V.Vector NotmuchMail
     , _miListOfThreads :: ListWithLength V NotmuchThread
+    , _miListOfThreadsGeneration :: Generation
     , _miSearchThreadsEditor :: E.Editor T.Text Name
     , _miMailTagsEditor :: E.Editor T.Text Name
     , _miThreadTagsEditor :: E.Editor T.Text Name
@@ -102,6 +110,10 @@ miListOfMails = miMails . listList
 
 miListOfThreads :: Lens' MailIndex (L.GenericList Name V NotmuchThread)
 miListOfThreads = miThreads . listList
+
+miListOfThreadsGeneration :: Lens' MailIndex Generation
+miListOfThreadsGeneration =
+  lens _miListOfThreadsGeneration (\s b -> s { _miListOfThreadsGeneration = b })
 
 miSearchThreadsEditor :: Lens' MailIndex (E.Editor T.Text Name)
 miSearchThreadsEditor = lens _miSearchThreadsEditor (\m v -> m { _miSearchThreadsEditor = v})
@@ -518,4 +530,4 @@ data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
 -- type parameter on 'AppState', which will be a noisy change.
 --
 data PurebredEvent
-  = NotifyNumThreads !Int
+  = NotifyNumThreads Int Generation

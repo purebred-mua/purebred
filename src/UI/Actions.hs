@@ -75,10 +75,10 @@ import Prelude hiding (readFile, unlines)
 import Data.Functor (($>))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traversed, has, snoc,
-        filtered, set, over, preview, view, (&), nullOf, firstOf,
+        filtered, set, over, preview, view, views, (&), nullOf, firstOf,
         traversed, traverse, Getting, Lens')
 import Control.Concurrent (forkIO)
-import Control.Monad ((>=>), void)
+import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
@@ -705,7 +705,7 @@ applySearch s = do
   r <- runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
   case r of
     Left e -> pure $ setError e s
-    Right threads -> notifyNumThreads s threads $> updateList threads s
+    Right threads -> updateList threads <$> notifyNumThreads s threads
    where searchterms = currentLine $ view (asMailIndex . miSearchThreadsEditor . E.editContentsL) s
          updateList vec =
            over (asMailIndex . miThreads . listList) (L.listReplace vec (Just 0))
@@ -713,11 +713,17 @@ applySearch s = do
 
 -- | Fork a thread to compute the length of the container and send a
 -- NotifyNumThreads event.  'seq' ensures that the work is actually
--- done by the spawned thread.
-notifyNumThreads :: (MonadIO m, Foldable t) => AppState -> t a -> m ()
-notifyNumThreads s l = void $ liftIO $ forkIO $
-  let len = length l
-  in len `seq` writeBChan (view (asConfig . confBChan) s) (NotifyNumThreads len)
+-- done by the spawned thread.  Increments the generation and updates
+-- the 'AppState' with it.
+notifyNumThreads :: (MonadIO m, Foldable t) => AppState -> t a -> m AppState
+notifyNumThreads s l =
+  let
+    len = length l
+    nextGen = views (asMailIndex . miListOfThreadsGeneration) succ s
+    s' = set (asMailIndex . miListOfThreadsGeneration) nextGen s
+    go = len `seq` writeBChan (view (asConfig . confBChan) s) (NotifyNumThreads len nextGen)
+  in
+    liftIO $ forkIO go $> s'
 
 setMailsForThread :: AppState -> IO AppState
 setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
