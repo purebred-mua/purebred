@@ -82,7 +82,10 @@ appEvent
   -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s ListOfThreads) s ev
 appEvent s (T.AppEvent ev) = case ev of
-  NotifyNumThreads n -> M.continue $ set (asMailIndex . miThreads . listLength) (Just n) s
+  NotifyNumThreads n gen -> M.continue $
+    if gen == view (asMailIndex . miListOfThreadsGeneration) s
+    then set (asMailIndex . miThreads . listLength) (Just n) s
+    else s
 appEvent s _ = M.continue s
 
 initialState :: InternalConfiguration -> IO AppState
@@ -93,6 +96,7 @@ initialState conf =
         MailIndex
             (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
             (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
+            (Generation 0)
             (E.editorText SearchThreadsEditor Nothing searchterms)
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
