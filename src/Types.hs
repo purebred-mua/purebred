@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -9,6 +8,7 @@
 module Types
   ( module Types
   , Tag
+  , module Purebred.Events
   ) where
 
 import GHC.Generics (Generic)
@@ -35,6 +35,7 @@ import Notmuch (Tag)
 import Data.MIME
 
 import Error
+import Purebred.Events
 import Purebred.LazyVector (V)
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
@@ -56,12 +57,6 @@ data Name =
     | ManageFileBrowserSearchPath
     | StatusBar
     deriving (Eq,Show,Ord)
-
--- | A serial number that can be used to match (or ignore as
--- irrelevant) asynchronous events to current application state.
---
-newtype Generation = Generation Integer
-  deriving (Eq, Ord, Enum)
 
 -- | A brick list, with a field that optionally contains its length.
 --
@@ -522,12 +517,3 @@ decodeLenient = T.decodeUtf8With T.lenientDecode
 -- | Tag operations
 data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
   deriving (Show, Eq)
-
-
--- | Purebred event type.  In the future we can abstract this over
--- a custom event type to allow plugins to define their own events.
--- But I've YAGNI'd it for now because it will require an event
--- type parameter on 'AppState', which will be a noisy change.
---
-data PurebredEvent
-  = NotifyNumThreads Int Generation

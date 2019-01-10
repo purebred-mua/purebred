@@ -719,7 +719,7 @@ notifyNumThreads :: (MonadIO m, Foldable t) => AppState -> t a -> m AppState
 notifyNumThreads s l =
   let
     len = length l
-    nextGen = views (asMailIndex . miListOfThreadsGeneration) succ s
+    nextGen = views (asMailIndex . miListOfThreadsGeneration) nextGeneration s
     s' = set (asMailIndex . miListOfThreadsGeneration) nextGen s
     go = len `seq` writeBChan (view (asConfig . confBChan) s) (NotifyNumThreads len nextGen)
   in
