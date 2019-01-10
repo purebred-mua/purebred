@@ -66,6 +66,7 @@ library
                      , UI.Help.Keybindings
                      , UI.Utils
                      , UI.Views
+                     , Purebred.Events
                      , Purebred.LazyVector
                      , Purebred.Tags
                      , Purebred.System.Directory

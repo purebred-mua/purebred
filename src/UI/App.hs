@@ -96,7 +96,7 @@ initialState conf =
         MailIndex
             (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
             (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
-            (Generation 0)
+            firstGeneration
             (E.editorText SearchThreadsEditor Nothing searchterms)
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
