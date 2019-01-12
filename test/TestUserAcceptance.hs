@@ -94,6 +94,7 @@ main = defaultMain $
       [ testUserViewsMailSuccessfully
       , testUserCanManipulateNMQuery
       , testUserCanSwitchBackToIndex
+      , testUserCanAbortMailComposition
       , testSendMail
       , testCanToggleHeaders
       , testSetsMailToRead
@@ -640,6 +641,62 @@ testUserCanSwitchBackToIndex =
             liftIO $ step "cycle to next input field"
             sendKeys "C-n" (Regex (buildAnsiRegex [] ["33"] ["40"] <> "From:\\s+"
                                    <> buildAnsiRegex [] ["37"] [] <> "testuser@foo.test"))
+            pure ()
+
+testUserCanAbortMailComposition :: TestCase
+testUserCanAbortMailComposition =
+  withTmuxSession "user can abort composing mail" $
+        \step -> do
+            startApplication
+            liftIO $ step "start composition"
+            sendKeys "m" (Literal "From")
+
+            liftIO $ step "enter from email"
+            sendKeys "Enter" (Literal "To")
+
+            liftIO $ step "enter to: email"
+            sendKeys "user@to.test\r" (Literal "Subject")
+
+            liftIO $ step "enter subject"
+            sendKeys "test subject\r" (Literal "~")
+
+            liftIO $ step "enter mail body"
+            sendKeys "iThis is a test body" (Literal "body")
+
+            liftIO $ step "exit insert mode in vim"
+            sendKeys "Escape" (Literal "body")
+
+            liftIO $ step "exit vim"
+            sendKeys ": x\r" (Regex $ "From: "
+                             <> buildAnsiRegex [] ["34"] []
+                             <> "\"Joe Bloggs\" <joe@foo.test>")
+
+            liftIO $ step "abort mail"
+            sendKeys "q" (Literal "Testmail")
+
+            liftIO $ step "start composition again"
+            sendKeys "m" (Literal "From")
+            sendKeys "Enter" (Regex ("To:\\s" <> buildAnsiRegex [] ["37"] []))
+
+            liftIO $ step "enter to: email"
+            sendKeys "new@second.test\r" (Regex ("Subject:\\s" <> buildAnsiRegex [] ["37"] []))
+
+            liftIO $ step "enter subject"
+            sendKeys "test subject\r" (Regex "~\\s+")
+
+            liftIO $ step "enter mail body"
+            sendKeys "iThis is my second mail" Unconditional
+
+            liftIO $ step "exit insert mode in vim"
+            sendKeys "Escape" Unconditional
+
+            liftIO $ step "exit vim"
+            sendKeys ": x\r" (Regex ("To: " <> buildAnsiRegex [] ["34"] [] <> "new@second.test\\s+"
+                                     <> buildAnsiRegex [] ["33"] []
+                                     <> "Subject: " <> buildAnsiRegex [] ["34"] [] <> "test subject"))
+
+            liftIO $ step "edit body"
+            sendKeys "e" (Regex "This is my second mail\\s+")
             pure ()
 
 testSendMail :: TestCase

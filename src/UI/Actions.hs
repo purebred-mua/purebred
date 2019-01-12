@@ -185,27 +185,37 @@ instance Resetable 'ManageThreadTagsEditor where
               . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 instance Resetable 'ComposeFrom where
-  reset _ s = let mailboxes = AddressText.renderMailboxes $ view (asConfig . confComposeView . cvIdentities) s
-              in pure $ s & over (asCompose . cFrom . E.editContentsL)
-                 (insertMany mailboxes . clearZipper)
-                 . resetThreadViewEditor
+  reset _ = pure . clearMailComposition
 
 instance Resetable 'ComposeSubject where
-  reset _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) clearZipper
-              . resetThreadViewEditor
+  reset _ = pure . clearMailComposition
 
 instance Resetable 'ComposeTo where
-  reset _ s = pure $ s & over (asCompose . cTo . E.editContentsL) clearZipper
-              . resetThreadViewEditor
+  reset _ = pure . clearMailComposition
 
 instance Resetable 'ListOfAttachments where
-  reset _ = pure . resetThreadViewEditor
+  reset _ = pure . clearMailComposition
 
 instance Resetable 'ManageFileBrowserSearchPath where
   reset _ = pure . over (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
 
-resetThreadViewEditor :: AppState -> AppState
-resetThreadViewEditor s = over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor) s
+clearMailComposition :: AppState -> AppState
+clearMailComposition s =
+    let mailboxes = AddressText.renderMailboxes $ view (asConfig . confComposeView . cvIdentities) s
+    in s
+        -- insert default from addresses
+        & over (asCompose . cFrom . E.editContentsL) (insertMany mailboxes . clearZipper)
+        -- clear editor contents for other fields
+        . over (asCompose . cTo . E.editContentsL) clearZipper
+        . over (asCompose . cSubject . E.editContentsL) clearZipper
+        . over (asCompose . cAttachments) L.listClear
+        -- reset the UI
+        -- Note: Only replace the last widget on the Threads view with the
+        -- SearchThreadsEditor. This is important if we abort mail composition
+        -- when we're still looking at a list of threads. The composition can
+        -- also be aborted in the composition editor, with which we would not
+        -- want to replace anything. Implement #181 to fix this.
+        . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
 
 -- | Generalisation of focus changes between widgets on the same "view"
 -- expressed with the mode in the application state.
