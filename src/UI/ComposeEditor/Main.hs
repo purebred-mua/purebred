@@ -19,7 +19,7 @@ import Types
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
-    let hasFocus = ListOfAttachments == focusedViewWidget s
+    let hasFocus = ComposeListOfAttachments == focusedViewWidget s
         attachmentsList = L.renderList renderPart hasFocus (view (asCompose . cAttachments) s)
     in attachmentsList
 

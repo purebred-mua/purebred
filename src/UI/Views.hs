@@ -134,10 +134,9 @@ composeView =
           , Tile Visible ComposeTo
           , Tile Visible ComposeSubject
           , Tile Visible StatusBar
-          , Tile Visible ListOfAttachments
+          , Tile Visible ComposeListOfAttachments
           ]
     , _vFocus = ComposeFrom
-    }
 
 helpView :: View
 helpView =

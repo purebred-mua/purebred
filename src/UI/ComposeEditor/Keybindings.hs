@@ -16,7 +16,7 @@ commonKeybindings =
 composeSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
 composeSubjectKeybindings =
     [ Keybinding (V.EvKey (V.KChar '\t') []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'ComposeView 'ListOfAttachments AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain` continue)
     ] <> commonKeybindings
 
 composeFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
@@ -31,7 +31,7 @@ composeToKeybindings =
     , Keybinding (V.EvKey V.KEsc []) (abort `chain` continue)
     ] <> commonKeybindings
 
-listOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ListOfAttachments]
+listOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ComposeListOfAttachments]
 listOfAttachmentsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'q') []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)

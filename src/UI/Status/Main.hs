@@ -51,7 +51,7 @@ statusbar s =
                 ListOfThreads -> renderStatusbar (view (asMailIndex . miThreads) s) s
                 ListOfMails -> renderStatusbar (view (asMailIndex . miMails) s) s
                 ScrollingMailView -> renderStatusbar (view (asMailIndex . miMails) s) s
-                ListOfAttachments -> renderStatusbar (views (asCompose . cAttachments) lwl s) s
+                ComposeListOfAttachments -> renderStatusbar (views (asCompose . cAttachments) lwl s) s
                 ListOfFiles -> renderStatusbar (views (asFileBrowser . fbEntries) lwl s) s
                 ComposeTo -> renderStatusbar (view (asCompose . cTo) s) s
                 ComposeFrom -> renderStatusbar (view (asCompose . cFrom) s) s
