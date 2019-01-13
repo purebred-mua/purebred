@@ -106,7 +106,7 @@ eventHandlerComposeSubject = EventHandler
   (asConfig . confComposeView . cvSubjectKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cSubject) E.handleEditorEvent)
 
-eventHandlerComposeListOfAttachments :: EventHandler 'ComposeView 'ListOfAttachments
+eventHandlerComposeListOfAttachments :: EventHandler 'ComposeView 'ComposeListOfAttachments
 eventHandlerComposeListOfAttachments = EventHandler
   (asConfig . confComposeView . cvListOfAttachmentsKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cAttachments) L.handleListEvent)

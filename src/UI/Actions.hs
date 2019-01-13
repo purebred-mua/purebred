@@ -151,7 +151,7 @@ instance Completable 'SearchThreadsEditor where
 instance Completable 'ManageMailTagsEditor where
   complete _ s = liftIO $ completeMailTags s >>= pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
-instance Completable 'ListOfAttachments where
+instance Completable 'ComposeListOfAttachments where
   complete _ = sendMail
 
 completeMailTags :: AppState -> IO AppState
@@ -209,7 +209,7 @@ instance Resetable 'ComposeSubject where
 instance Resetable 'ComposeTo where
   reset _ = pure . clearMailComposition
 
-instance Resetable 'ListOfAttachments where
+instance Resetable 'ComposeListOfAttachments where
   reset _ = pure . clearMailComposition
 
 instance Resetable 'ManageFileBrowserSearchPath where
@@ -284,7 +284,7 @@ instance Focusable 'Help 'ScrollingHelpView where
   switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
 
 instance Focusable 'ComposeView 'ListOfAttachments where
-  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ListOfAttachments
+  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
                     . resetView Threads indexView
 
 instance Focusable 'FileBrowser 'ListOfFiles where
@@ -353,8 +353,8 @@ instance HasName 'ComposeSubject where
 instance HasName 'ManageThreadTagsEditor where
   name _ = ManageThreadTagsEditor
 
-instance HasName 'ListOfAttachments where
-  name _ = ListOfAttachments
+instance HasName 'ComposeListOfAttachments where
+  name _ = ComposeListOfAttachments
 
 instance HasName 'ListOfFiles where
   name _ = ListOfFiles
@@ -430,7 +430,7 @@ continue = Action mempty Brick.continue
 invokeEditor :: Action v ctx (T.Next AppState)
 invokeEditor = Action ["invoke external editor"] (Brick.suspendAndResume . liftIO . invokeEditor')
 
-edit :: Action 'ComposeView 'ListOfAttachments (T.Next AppState)
+edit :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
 edit = Action ["edit file"] (Brick.suspendAndResume . liftIO . editAttachment)
 
 chain :: Action v ctx AppState -> Action v ctx a -> Action v ctx a
@@ -527,7 +527,7 @@ listUp =
     , _aAction = \s -> case focusedViewWidget s of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
-        ListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveUp s
+        ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveUp s
         ListOfFiles -> pure $ over (asFileBrowser . fbEntries) L.listMoveUp s
         _ -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
     }
@@ -539,7 +539,7 @@ listDown =
     , _aAction = \s -> case focusedViewWidget s of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveDown s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
-        ListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveDown s
+        ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveDown s
         ListOfFiles -> pure $ over (asFileBrowser . fbEntries) L.listMoveDown s
         _ -> pure $ over (asMailIndex. miListOfMails) L.listMoveDown s
     }
@@ -550,7 +550,7 @@ listJumpToEnd = Action
     , _aAction = \s -> case focusedViewWidget s of
         ListOfThreads -> pure $ listSetSelectionEnd (asMailIndex . miListOfThreads) s
         ScrollingMailView -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
-        ListOfAttachments -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
+        ComposeListOfAttachments -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
         ListOfFiles -> pure $ listSetSelectionEnd (asFileBrowser . fbEntries) s
         _ -> pure $ listSetSelectionEnd (asMailIndex. miListOfMails) s
   }
@@ -561,7 +561,7 @@ listJumpToStart = Action
     , _aAction = \s -> case focusedViewWidget s of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) (L.listMoveTo 0) s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
-        ListOfAttachments -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
+        ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
         ListOfFiles -> pure $ over (asFileBrowser . fbEntries) (L.listMoveTo 0) s
         _ -> pure $ over (asMailIndex. miListOfMails) (L.listMoveTo 0) s
   }
@@ -635,7 +635,7 @@ toggleListItem =
                           (view (asFileBrowser . fbEntries . L.listSelectedL) s)
     }
 
-delete :: Action 'ComposeView 'ListOfAttachments AppState
+delete :: Action 'ComposeView 'ComposeListOfAttachments AppState
 delete =
     Action
     { _aDescription = ["delete entry"]
@@ -868,7 +868,7 @@ initialCompose mailboxes =
         (E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
         (E.editorText ComposeTo (Just 1) "")
         (E.editorText ComposeSubject (Just 1) "")
-        (L.list ListOfAttachments mempty 1)
+        (L.list ComposeListOfAttachments mempty 1)
 
 
 invokeEditor' :: AppState -> IO AppState

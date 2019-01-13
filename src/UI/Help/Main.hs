@@ -25,7 +25,7 @@ renderHelp s = viewport ScrollingHelpView T.Vertical $ vBox
   , views (asConfig . confIndexView . ivManageThreadTagsKeybindings) (renderKbGroup ManageThreadTagsEditor) s
   , views (asConfig . confMailView . mvKeybindings) (renderKbGroup ScrollingMailView) s
   , views (asConfig . confHelpView . hvKeybindings) (renderKbGroup ScrollingHelpView) s
-  , views (asConfig . confComposeView . cvListOfAttachmentsKeybindings) (renderKbGroup ListOfAttachments) s
+  , views (asConfig . confComposeView . cvListOfAttachmentsKeybindings) (renderKbGroup ComposeListOfAttachments) s
   , views (asConfig . confFileBrowserView . fbKeybindings) (renderKbGroup ListOfFiles) s
   , views (asConfig . confFileBrowserView . fbSearchPathKeybindings) (renderKbGroup ManageFileBrowserSearchPath) s
   ]

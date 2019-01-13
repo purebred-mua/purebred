@@ -50,10 +50,10 @@ data Name =
     | ComposeFrom
     | ComposeTo
     | ComposeSubject
+    | ComposeListOfAttachments
     | ScrollingHelpView
     | ManageMailTagsEditor
     | ManageThreadTagsEditor
-    | ListOfAttachments
     | ListOfFiles
     | ManageFileBrowserSearchPath
     | StatusBar
@@ -250,7 +250,7 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvToKeybindings :: [Keybinding 'ComposeView 'ComposeTo]
     , _cvSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
     , _cvSendMailCmd :: B.ByteString -> IO (Either Error ())
-    , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ListOfAttachments]
+    , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ComposeListOfAttachments]
     , _cvIdentities :: [Mailbox]
     }
     deriving (Generic, NFData)
@@ -267,7 +267,7 @@ cvSubjectKeybindings = lens _cvSubjectKeybindings (\cv x -> cv { _cvSubjectKeybi
 cvSendMailCmd :: Lens' ComposeViewSettings (B.ByteString -> IO (Either Error ()))
 cvSendMailCmd = lens _cvSendMailCmd (\cv x -> cv { _cvSendMailCmd = x })
 
-cvListOfAttachmentsKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ListOfAttachments]
+cvListOfAttachmentsKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeListOfAttachments]
 cvListOfAttachmentsKeybindings = lens _cvListOfAttachmentsKeybindings (\cv x -> cv { _cvListOfAttachmentsKeybindings = x })
 
 cvIdentities :: Lens' ComposeViewSettings [Mailbox]

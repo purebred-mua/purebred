@@ -56,7 +56,7 @@ renderWidget :: AppState -> ViewName -> Name -> Widget Name
 renderWidget s _ ListOfThreads = renderListOfThreads s
 renderWidget s ViewMail ListOfMails = vLimit (view (asConfig . confMailView . mvIndexRows) s) (renderListOfMails s)
 renderWidget s _ ListOfMails = renderListOfMails s
-renderWidget s _ ListOfAttachments = attachmentsEditor s
+renderWidget s _ ComposeListOfAttachments = attachmentsEditor s
 renderWidget s _ ListOfFiles = renderFileBrowser s
 renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor s
 renderWidget s _ SearchThreadsEditor = renderSearchThreadsEditor s
@@ -74,7 +74,7 @@ handleViewEvent = f where
   f ComposeView ComposeFrom = dispatch eventHandlerComposeFrom
   f ComposeView ComposeSubject = dispatch eventHandlerComposeSubject
   f ComposeView ComposeTo = dispatch eventHandlerComposeTo
-  f ComposeView ListOfAttachments = dispatch eventHandlerComposeListOfAttachments
+  f ComposeView ComposeListOfAttachments = dispatch eventHandlerComposeListOfAttachments
   f Mails ListOfMails = dispatch eventHandlerListOfMails
   f Mails ManageMailTagsEditor = dispatch eventHandlerManageMailTagsEditor
   f Threads ComposeFrom =  dispatch eventHandlerThreadComposeFrom
