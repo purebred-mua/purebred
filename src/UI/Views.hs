@@ -121,6 +121,7 @@ mailView =
           , Tile Visible StatusBar
           , Tile Visible ScrollingMailView
           , Tile Hidden ManageMailTagsEditor
+          , Tile Hidden MailListOfAttachments
           ]
     , _vFocus = ListOfMails
     }
@@ -137,6 +138,7 @@ composeView =
           , Tile Visible ComposeListOfAttachments
           ]
     , _vFocus = ComposeFrom
+    }
 
 helpView :: View
 helpView =

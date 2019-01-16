@@ -34,6 +34,14 @@ displayMailKeybindings =
                                              `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help 'ScrollingHelpView AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain'` (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain` invokeEditor)
+    , Keybinding (V.EvKey (V.KChar 'v') []) (noop `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
+    ]
+
+mailAttachmentsKeybindings :: [Keybinding 'ViewMail 'MailListOfAttachments]
+mailAttachmentsKeybindings =
+    [ Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
     ]
 
 mailViewManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor]

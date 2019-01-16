@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module UI.ComposeEditor.Main (attachmentsEditor) where
+module UI.ComposeEditor.Main (attachmentsEditor, renderPart) where
 
 import Brick.Types (Padding(Max), Widget)
 import Brick.Widgets.Core (hBox, padLeftRight, padRight, txt, withAttr)

@@ -107,7 +107,30 @@ main = defaultMain $
       , testFromAddressIsProperlyReset
       , testRepliesToMailSuccessfully
       , testUserCanMoveBetweenThreads
+      , testShowsMailEntities
       ]
+
+testShowsMailEntities :: TestCase
+testShowsMailEntities = withTmuxSession "shows mail entities successfully" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "open thread"
+    sendKeys "Enter" (Literal "This is a test mail for purebred")
+
+    liftIO $ step "show entities"
+    sendKeys "v" (Literal "text/plain")
+
+    liftIO $ step "select the second entity"
+    sendKeys "j" (Literal "text/html")
+
+    liftIO $ step "close the list of entities"
+    out <- sendKeys "q" (Literal "This is a test mail for purebred")
+
+    -- poor mans (?!text)
+    assertRegex "[^t][^e][^x][^t]" out
+
+    pure ()
 
 testUserCanMoveBetweenThreads :: TestCase
 testUserCanMoveBetweenThreads = withTmuxSession "user can navigate between threads" $

@@ -8,10 +8,26 @@ To: <frase@host.example>
 Subject: Testmail with whitespace in the
 	subject
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: multipart/alternative; boundary=00asdf
 Content-Transfer-Encoding: quoted-printable
 Message-Id: <20170817035004.55C4580B8F@host.example>
 Date: Thu, 17 Aug 2017 13:50:04 +1000 (AEST)
 Content-Length: 33
 
+--00asdf
+Content-Type: text/plain; charset=utf-8
+
 This is a test mail for purebred
+
+--00asdf
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">This is a test mail for purebred in which the HTML part co=
+ tains more crazy content than the text plain part and w &quot;linebreaks&q=
+uot; basically blah foo bar :<div><br></div><div><a href=3D"https://github.=
+purebred.com/purebred-mua/this/link/doesn/exist/really/bla/f" target=3D"_bl=
+ank">https://thislinkdoesnotexist/foo/bar/baz/just/to/fill/the/line/really/=
+XV3IJ</a> and this is were it ends.=C2=A0</div>
+
+--00asdf--

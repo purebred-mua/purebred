@@ -56,6 +56,7 @@ data Name =
     | ManageThreadTagsEditor
     | ListOfFiles
     | ManageFileBrowserSearchPath
+    | MailListOfAttachments
     | StatusBar
     deriving (Eq,Show,Ord)
 
@@ -125,6 +126,7 @@ data HeadersState = ShowAll | Filtered
 data MailView = MailView
     { _mvMail :: Maybe MIMEMessage
     , _mvHeadersState :: HeadersState
+    , _mvAttachments :: L.List Name WireEntity
     }
 
 mvMail :: Lens' MailView (Maybe MIMEMessage)
@@ -132,6 +134,9 @@ mvMail = lens _mvMail (\mv pm -> mv { _mvMail = pm })
 
 mvHeadersState :: Lens' MailView HeadersState
 mvHeadersState = lens _mvHeadersState (\mv hs -> mv { _mvHeadersState = hs })
+
+mvAttachments :: Lens' MailView (L.List Name WireEntity)
+mvAttachments = lens _mvAttachments (\mv hs -> mv { _mvAttachments = hs })
 
 data Compose = Compose
     { _cMail :: B.ByteString
@@ -324,6 +329,7 @@ data MailViewSettings = MailViewSettings
     , _mvHeadersToShow       :: CI.CI B.ByteString -> Bool
     , _mvKeybindings         :: [Keybinding 'ViewMail 'ScrollingMailView]
     , _mvManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor]
+    , _mvMailListOfAttachmentsKeybindings :: [Keybinding 'ViewMail 'MailListOfAttachments]
     }
     deriving (Generic, NFData)
 
@@ -341,6 +347,10 @@ mvKeybindings = lens _mvKeybindings (\mv x -> mv { _mvKeybindings = x })
 
 mvManageMailTagsKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'ManageMailTagsEditor]
 mvManageMailTagsKeybindings = lens _mvManageMailTagsKeybindings (\mv x -> mv { _mvManageMailTagsKeybindings = x })
+
+mvMailListOfAttachmentsKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'MailListOfAttachments]
+mvMailListOfAttachmentsKeybindings = lens _mvMailListOfAttachmentsKeybindings (\s x -> s { _mvMailListOfAttachmentsKeybindings = x })
+
 
 data ViewName
     = Threads
