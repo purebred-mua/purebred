@@ -215,6 +215,9 @@ instance Resetable 'ComposeListOfAttachments where
 instance Resetable 'ManageFileBrowserSearchPath where
   reset _ = pure . over (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
 
+instance Resetable 'MailListOfAttachments where
+  reset _ = pure . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailListOfAttachments . veState) Hidden
+
 clearMailComposition :: AppState -> AppState
 clearMailComposition s =
     let mailboxes = AddressText.renderMailboxes $ view (asConfig . confComposeView . cvIdentities) s
@@ -280,10 +283,14 @@ instance Focusable 'Mails 'ComposeFrom where
 instance Focusable 'ViewMail 'ListOfMails where
   switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) ListOfMails
 
+instance Focusable 'ViewMail 'MailListOfAttachments where
+  switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailListOfAttachments
+                    . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailListOfAttachments . veState) Visible
+
 instance Focusable 'Help 'ScrollingHelpView where
   switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
 
-instance Focusable 'ComposeView 'ListOfAttachments where
+instance Focusable 'ComposeView 'ComposeListOfAttachments where
   switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
                     . resetView Threads indexView
 
@@ -361,6 +368,9 @@ instance HasName 'ListOfFiles where
 
 instance HasName 'ManageFileBrowserSearchPath where
   name _ = ManageFileBrowserSearchPath
+
+instance HasName 'MailListOfAttachments where
+  name _ = MailListOfAttachments
 
 -- | Allow to change the view to a different view in order to put the focus on a widget there
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
@@ -528,6 +538,7 @@ listUp =
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
         ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveUp s
+        MailListOfAttachments -> pure $ over (asMailView . mvAttachments) L.listMoveUp s
         ListOfFiles -> pure $ over (asFileBrowser . fbEntries) L.listMoveUp s
         _ -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
     }
@@ -540,6 +551,7 @@ listDown =
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveDown s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
         ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveDown s
+        MailListOfAttachments -> pure $ over (asMailView . mvAttachments) L.listMoveDown s
         ListOfFiles -> pure $ over (asFileBrowser . fbEntries) L.listMoveDown s
         _ -> pure $ over (asMailIndex. miListOfMails) L.listMoveDown s
     }
@@ -551,6 +563,7 @@ listJumpToEnd = Action
         ListOfThreads -> pure $ listSetSelectionEnd (asMailIndex . miListOfThreads) s
         ScrollingMailView -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
         ComposeListOfAttachments -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
+        MailListOfAttachments -> pure $ listSetSelectionEnd (asMailView . mvAttachments) s
         ListOfFiles -> pure $ listSetSelectionEnd (asFileBrowser . fbEntries) s
         _ -> pure $ listSetSelectionEnd (asMailIndex. miListOfMails) s
   }
@@ -562,6 +575,7 @@ listJumpToStart = Action
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) (L.listMoveTo 0) s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
         ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
+        MailListOfAttachments -> pure $ over (asMailView . mvAttachments) (L.listMoveTo 0) s
         ListOfFiles -> pure $ over (asFileBrowser . fbEntries) (L.listMoveTo 0) s
         _ -> pure $ over (asMailIndex. miListOfMails) (L.listMoveTo 0) s
   }
@@ -689,7 +703,7 @@ makeAttachmentsFromSelected s = do
   parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (selectedFiles (view (asFileBrowser . fbEntries) s))
   pure $ s & over (asCompose . cAttachments) (go parts)
     . over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
-    . set (asViews . vsViews . at ComposeView . _Just . vFocus) ListOfAttachments
+    . set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
   where
     go :: [MIMEMessage] -> L.List Name MIMEMessage -> L.List Name MIMEMessage
     go parts list = foldr upsertPart list parts
@@ -776,8 +790,13 @@ updateStateWithParsedMail :: AppState -> IO AppState
 updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
         either
             (\e -> setError e . over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads))
-            (\pmail -> set (asMailView . mvMail) (Just pmail) . over (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail))
+            (\pmail -> set (asMailView . mvMail) (Just pmail)
+                       . over (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail)
+                       . set (asMailView . mvAttachments) (setEntities pmail)
+            )
             <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
+  where
+    setEntities m = L.list MailListOfAttachments (view vector $ toListOf entities m) 0
 
 updateReadState :: TagOp -> AppState -> IO AppState
 updateReadState op s = selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s [op])

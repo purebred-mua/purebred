@@ -39,7 +39,7 @@ import UI.Index.Main
 import UI.Actions (applySearch, initialCompose)
 import UI.FileBrowser.Main
        (renderFileBrowser, renderFileBrowserSearchPathEditor)
-import UI.Mail.Main (renderMailView)
+import UI.Mail.Main (renderMailView, renderAttachmentsList)
 import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
 import UI.Views
@@ -57,6 +57,7 @@ renderWidget s _ ListOfThreads = renderListOfThreads s
 renderWidget s ViewMail ListOfMails = vLimit (view (asConfig . confMailView . mvIndexRows) s) (renderListOfMails s)
 renderWidget s _ ListOfMails = renderListOfMails s
 renderWidget s _ ComposeListOfAttachments = attachmentsEditor s
+renderWidget s _ MailListOfAttachments = renderAttachmentsList s
 renderWidget s _ ListOfFiles = renderFileBrowser s
 renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor s
 renderWidget s _ SearchThreadsEditor = renderSearchThreadsEditor s
@@ -84,6 +85,7 @@ handleViewEvent = f where
   f Threads ManageThreadTagsEditor = dispatch eventHandlerManageThreadTagsEditor
   f Threads SearchThreadsEditor = dispatch eventHandlerSearchThreadsEditor
   f ViewMail ManageMailTagsEditor = dispatch eventHandlerViewMailManageMailTagsEditor
+  f ViewMail MailListOfAttachments = dispatch eventHandlerMailsListOfAttachments
   f ViewMail _ = dispatch eventHandlerScrollingMailView
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
   f _ ListOfFiles = dispatch eventHandlerComposeFileBrowser
@@ -115,7 +117,7 @@ initialState conf =
             (E.editorText SearchThreadsEditor Nothing searchterms)
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
-    mv = MailView Nothing Filtered
+    mv = MailView Nothing Filtered (L.list MailListOfAttachments mempty 1)
     viewsettings =
         ViewSettings
         { _vsViews = Map.fromList

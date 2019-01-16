@@ -1,21 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module UI.Mail.Main (renderMailView) where
+module UI.Mail.Main (renderMailView, renderAttachmentsList) where
 
 import Brick.Types (Padding(..), ViewportType(..), Widget)
+import qualified Brick.Widgets.List as L
 import Brick.Widgets.Core
-  (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr, vBox)
+  (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr, vBox,
+   hBox, padLeftRight, padRight)
 
-import Control.Lens (filtered, folded, toListOf, view)
+import Control.Lens (filtered, folded, toListOf, view, preview, has)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import Data.Semigroup ((<>))
+import Data.Maybe (fromMaybe)
 
 import Data.MIME
 import Storage.ParsedMail (chooseEntity, entityToText)
 
 import Types
-import Config.Main (headerKeyAttr, headerValueAttr, mailViewAttr)
+import UI.Views (focusedViewWidget)
+import Config.Main (headerKeyAttr, headerValueAttr, mailViewAttr,
+                    listSelectedAttr, listAttr)
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.
@@ -55,3 +60,28 @@ messageToMailView s msg =
 
 entityToView :: WireEntity -> Widget Name
 entityToView = txtWrap . entityToText
+
+renderAttachmentsList :: AppState -> Widget Name
+renderAttachmentsList s =
+    let hasFocus = MailListOfAttachments == focusedViewWidget s
+        attachmentsList = L.renderList renderPart hasFocus (view (asMailView . mvAttachments) s)
+    in attachmentsList
+
+-- TODO: Both these functions are basically duplicates. Use classes for
+-- WireEntity and MIMEMessage to don't repeat our selfs?
+-- See #264
+renderPart :: Bool -> WireEntity -> Widget Name
+renderPart selected m =
+  let pType = showContentType $ view (headers . contentType) m
+      pFilename = fromMaybe "--" (preview (headers . contentDisposition . filename) m)
+      listItemAttr = if selected then listSelectedAttr else listAttr
+      attachmentType = txt (if isAttachment' m then "A" else "I")
+      widget = hBox
+        [ padLeftRight 1 attachmentType
+        , padRight Max (txt pFilename)
+        , txt pType
+        ]
+  in withAttr listItemAttr widget
+
+isAttachment' :: WireEntity -> Bool
+isAttachment' = has (headers . contentDisposition . dispositionType . filtered (== Attachment))
