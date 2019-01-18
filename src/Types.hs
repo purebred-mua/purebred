@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Basic types for the UI used by this library
 module Types
@@ -350,15 +351,49 @@ data ViewName
     | FileBrowser
     deriving (Eq, Ord, Show, Generic, NFData)
 
+data ViewState
+  = Hidden
+  | Visible
+  deriving (Show, Eq)
+
+-- A view element is a name for a widget with a given view state
+data Tile =
+  Tile ViewState
+       Name
+  deriving (Show, Eq)
+
+veName :: Lens' Tile Name
+veName f (Tile a b) = fmap (\b' -> Tile a b') (f b)
+
+veState :: Lens' Tile ViewState
+veState f (Tile a b) = fmap (\a' -> Tile a' b) (f a)
+
 data View = View
-    { _vFocus :: Brick.FocusRing Name
-    , _vWidgets :: [Name]
+    { _vFocus :: Name
+    , _vWidgets :: Tiles
     }
 
-vWidgets :: Lens' View [Name]
+-- A tile is a view element with a widget and it's view state
+newtype Tiles =
+  Tiles (V.Vector Tile)
+  deriving (Eq, Show)
+
+type instance Index Tiles = Name
+type instance IxValue Tiles = Tile
+
+instance Ixed Tiles where
+  ix = tile
+
+tileiso :: Iso' Tiles (V.Vector Tile)
+tileiso = iso (\(Tiles xs) -> xs) Tiles
+
+tile :: Name -> Traversal' Tiles Tile
+tile k = tileiso . traversed . filtered (\x -> k == view veName x)
+
+vWidgets :: Lens' View Tiles
 vWidgets = lens _vWidgets (\settings x -> settings { _vWidgets = x })
 
-vFocus :: Lens' View (Brick.FocusRing Name)
+vFocus :: Lens' View Name
 vFocus = lens _vFocus (\settings x -> settings { _vFocus = x})
 
 data ViewSettings = ViewSettings

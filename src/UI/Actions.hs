@@ -64,7 +64,6 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C8
 import Data.Attoparsec.ByteString.Char8 (parseOnly)
 import Data.Vector.Lens (vector)
-import Data.List (union)
 import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
 import System.Directory (getTemporaryDirectory, removeFile)
@@ -103,8 +102,8 @@ import Storage.ParsedMail
 import Types
 import Error
 import UI.Utils
-       (focusedViewWidget, focusedViewName, selectedFiles, takeFileName)
-import UI.Views (listOfMailsView, mailView)
+       (focusedViewWidget, selectedFiles, takeFileName)
+import UI.Views (listOfMailsView, mailView, focusNext, toggleLastVisibleWidget, indexView, resetView)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
 
@@ -160,7 +159,7 @@ instance Completable 'ManageThreadTagsEditor where
                       Right ops ->
                         selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
                         >>= pure
-                        . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
+                        . toggleLastVisibleWidget SearchThreadsEditor
 
 instance Completable 'ManageFileBrowserSearchPath where
   complete _ s =
@@ -183,7 +182,7 @@ instance Resetable 'ManageMailTagsEditor where
 instance Resetable 'ManageThreadTagsEditor where
   reset _ s = pure $ s
               & over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
-              . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
+              . toggleLastVisibleWidget SearchThreadsEditor
 
 instance Resetable 'ComposeFrom where
   reset _ = pure . clearMailComposition
@@ -216,7 +215,7 @@ clearMailComposition s =
         -- when we're still looking at a list of threads. The composition can
         -- also be aborted in the composition editor, with which we would not
         -- want to replace anything. Implement #181 to fix this.
-        . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
+        . toggleLastVisibleWidget SearchThreadsEditor
 
 -- | Generalisation of focus changes between widgets on the same "view"
 -- expressed with the mode in the application state.
@@ -230,31 +229,31 @@ instance Focusable 'Threads 'SearchThreadsEditor where
 instance Focusable 'Threads 'ManageThreadTagsEditor where
   switchFocus _ _ s = pure $ s &
                     over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
-                  . over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ManageThreadTagsEditor)
+                    . toggleLastVisibleWidget ManageThreadTagsEditor
 
 instance Focusable 'Threads 'ComposeFrom where
   switchFocus = focusComposeFrom
 
 instance Focusable 'Threads 'ComposeTo where
-  switchFocus _ _ s = pure $ over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeTo) s
+  switchFocus _ _ = pure . toggleLastVisibleWidget ComposeTo
 
 instance Focusable 'Threads 'ComposeSubject where
-  switchFocus _ _ s = pure $ over (asViews. vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeSubject) s
+  switchFocus _ _ = pure . toggleLastVisibleWidget ComposeSubject
 
 instance Focusable 'Threads 'ListOfThreads where
   switchFocus _ _ = pure
 
 instance Focusable 'Mails 'ManageMailTagsEditor where
   switchFocus _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
-                    . over (asViews . vsViews . at Mails . _Just . vWidgets) (\l -> l `union` [ManageMailTagsEditor])
+                    . set (asViews . vsViews . at Mails . _Just . vFocus) ManageMailTagsEditor
 
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
-  switchFocus _ _ s = pure $ s & over (asViews. vsViews . at ViewMail . _Just . vWidgets) (\l -> l `union` [ManageMailTagsEditor])
-                      . over (asViews . vsViews . at ViewMail . _Just . vFocus) (Brick.focusSetCurrent ManageMailTagsEditor)
+  switchFocus _ _ s = pure $ s &
+                      set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix ManageMailTagsEditor . veState) Visible
+                      . set (asViews . vsViews . at ViewMail . _Just . vFocus) ManageMailTagsEditor
 
 instance Focusable 'ViewMail 'ScrollingMailView where
-  -- TODO would drop whatever widget is at the end of the widgets
-  switchFocus _ _ s = pure $ over (asViews. vsViews . at ViewMail . _Just . vWidgets) (reverse . drop 1 . reverse) s
+  switchFocus _ _ = pure . set (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailView
 
 instance Focusable 'Mails 'ListOfMails where
   switchFocus _ _ = pure
@@ -263,14 +262,14 @@ instance Focusable 'Mails 'ComposeFrom where
   switchFocus = focusComposeFrom
 
 instance Focusable 'ViewMail 'ListOfMails where
-  switchFocus _ _ = pure . over (asViews . vsViews . at ViewMail . _Just . vFocus) (Brick.focusSetCurrent ListOfMails)
+  switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) ListOfMails
 
 instance Focusable 'Help 'ScrollingHelpView where
   switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
 
 instance Focusable 'ComposeView 'ListOfAttachments where
-  switchFocus _ _ s = pure $ s & over (asViews . vsViews . at ComposeView . _Just . vFocus) (Brick.focusSetCurrent ListOfAttachments)
-                    . over (asViews . vsViews . at Threads . _Just . vWidgets) (replaceEditor SearchThreadsEditor)
+  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ListOfAttachments
+                    . resetView Threads indexView
 
 instance Focusable 'FileBrowser 'ListOfFiles where
   switchFocus _ _ s = let path = view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine) s
@@ -299,18 +298,8 @@ focusComposeFrom _ _ s =
                  (asViews . vsFocusedView)
                  (Brick.focusSetCurrent ComposeView)
                  s
-        else pure $ s &
-             over
-                 (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets)
-                 (replaceEditor ComposeFrom) .
-             over (asCompose . cFrom) (E.applyEdit gotoEOL)
-
--- TODO: helper function to replace whatever editor we're displaying at the
--- bottom with a new editor given by name. There is currently nothing which
--- checks if we're actually replacing an editor.
--- uses ViewPatterns
-replaceEditor :: Name -> [Name] -> [Name]
-replaceEditor n xs = reverse (drop 1 (reverse xs)) ++ [n]
+        else pure $ s & toggleLastVisibleWidget ComposeFrom
+             . over (asCompose . cFrom) (E.applyEdit gotoEOL)
 
 -- | Problem: How to chain actions, which operate not on the same mode, but a
 -- mode switched by the previous action?
@@ -443,7 +432,7 @@ chain' (Action d1 f1) (Action d2 f2) =
     switchMode s = pure $ s &
       transitionHook (Proxy :: Proxy v) (Proxy :: Proxy v')
       . over (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy :: Proxy v')))
-      . over (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (Brick.focusSetCurrent $ name (Proxy :: Proxy ctx'))
+      . set (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (name (Proxy :: Proxy ctx'))
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a AppState
 done = Action ["apply"] (complete (Proxy :: Proxy a))
@@ -616,8 +605,7 @@ focusNextWidget :: Action v w AppState
 focusNextWidget =
     Action
     { _aDescription = ["moves input focus to the next widget"]
-    , _aAction = \s -> pure $
-                      over (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) Brick.focusNext s
+    , _aAction = pure . focusNext
     }
 
 toggleListItem :: Action v 'ListOfFiles AppState
@@ -685,7 +673,7 @@ makeAttachmentsFromSelected s = do
   parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (selectedFiles (view (asFileBrowser . fbEntries) s))
   pure $ s & over (asCompose . cAttachments) (go parts)
     . over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
-    . over (asViews . vsViews . at ComposeView . _Just . vFocus) (Brick.focusSetCurrent ListOfFiles)
+    . set (asViews . vsViews . at ComposeView . _Just . vFocus) ListOfAttachments
   where
     go :: [MIMEMessage] -> L.List Name MIMEMessage -> L.List Name MIMEMessage
     go parts list = foldr upsertPart list parts
