@@ -42,15 +42,14 @@ import UI.Views (indexView)
 import Types
 
 focusedViewWidget :: AppState -> Name -> Name
-focusedViewWidget s defaultWidget =
-    let ring = view vFocus (focusedView s)
-    in fromMaybe defaultWidget $ focusGetCurrent ring
+focusedViewWidget s defaultWidget = view vFocus (focusedView s)
 
 focusedViewWidgets :: AppState -> [Name]
 focusedViewWidgets s =
     let defaultV = view (asConfig . confDefaultView) s
         focused = fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
-    in view (asViews . vsViews . at focused . _Just . vWidgets) s
+    in toListOf (asViews . vsViews . at focused . _Just . vWidgets . tileiso . traversed
+                 . filtered (\ve -> view veState ve == Visible) . veName) s
 
 focusedViewName :: AppState -> ViewName
 focusedViewName s =
