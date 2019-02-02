@@ -39,24 +39,22 @@ let
             overrides = self: super: {
               # Build with latest known stable version.
               purebred = with pkgs.haskell.lib; dontHaddock (self.callPackage ./.nix/purebred.nix { });
-              purebred-email = self.callPackage ./.nix/purebred-email.nix { };
-              # Version pins since those versions were bleeding edge and not on
-              # hackage/stackage or Nix yet. Remove these once builds without
-              # these pass.
               notmuch = self.callPackage ./.nix/hs-notmuch.nix {
                 notmuch = pkgs.notmuch;
                 talloc = pkgs.talloc;
               };
-              brick = self.callPackage ./.nix/brick.nix { };
-              vty = self.callPackage ./.nix/vty.nix { };
-              Cabal = self.callPackage ./.nix/Cabal.nix { };
             };
           };
         };
       };
     };
   };
-  pkgs = import <nixpkgs> { inherit config; };
+  pkgs = import (
+    builtins.fetchTarball {
+      url = "https://github.com/NixOS/nixpkgs/archive/e27e11480323db005ab62ef477eb1fd28b6b62f5.tar.gz";
+      sha256 = "0i64wsl20fl92bsqn900nxmmnr1v3088drbwhwpm9lvln42yf23s";
+    }
+  ) { inherit config; };
   env = pkgs.haskell.packages.${compiler}.ghcWithPackages (self: [
     self.purebred
   ]);
