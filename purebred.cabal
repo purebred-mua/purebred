@@ -147,7 +147,7 @@ test-suite uat
                      , tasty
                      , tasty-hunit
                      , directory
-                     , typed-process
+                     , typed-process >= 0.2.4.0
                      , bytestring
                      , temporary
                      , text
