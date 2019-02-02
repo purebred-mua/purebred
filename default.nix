@@ -27,15 +27,19 @@
 #
 # $ nix-shell default.nix
 #
-{ compiler ? "ghc822" }:
+{ compiler ? null, nixpkgs ? null }:
 
 let
+  compilerVersion = if isNull compiler then "ghc863" else compiler;
+  extraHaskellPackages = haskellPackages: with haskellPackages; [
+    cabal-install
+  ];
   config = {
     packageOverrides = super: let self = super.pkgs; in
     {
       haskell = super.haskell // {
         packages = super.haskell.packages // {
-          "${compiler}" = super.haskell.packages."${compiler}".override {
+          "${compilerVersion}" = super.haskell.packages."${compilerVersion}".override {
             overrides = self: super: {
               # Build with latest known stable version.
               purebred = with pkgs.haskell.lib; dontHaddock (self.callPackage ./.nix/purebred.nix { });
@@ -49,18 +53,22 @@ let
       };
     };
   };
-  pkgs = import (
-    builtins.fetchTarball {
-      url = "https://github.com/NixOS/nixpkgs/archive/e27e11480323db005ab62ef477eb1fd28b6b62f5.tar.gz";
-      sha256 = "0i64wsl20fl92bsqn900nxmmnr1v3088drbwhwpm9lvln42yf23s";
-    }
-  ) { inherit config; };
-  env = pkgs.haskell.packages.${compiler}.ghcWithPackages (self: [
+  pkgSrc =
+    if isNull nixpkgs
+    then
+      builtins.fetchTarball {
+        url = "https://github.com/NixOS/nixpkgs/archive/e27e11480323db005ab62ef477eb1fd28b6b62f5.tar.gz";
+        sha256 = "0i64wsl20fl92bsqn900nxmmnr1v3088drbwhwpm9lvln42yf23s";
+      }
+    else
+      nixpkgs;
+  pkgs = import pkgSrc { inherit config; };
+  env = pkgs.haskell.packages.${compilerVersion}.ghcWithPackages (self: [
     self.purebred
-  ]);
+  ] ++ extraHaskellPackages self);
   in
     if pkgs.lib.inNixShell
-    then pkgs.haskell.packages.${compiler}.purebred.env
+    then pkgs.haskell.packages.${compilerVersion}.purebred.env
     else {
         purebred = pkgs.stdenv.mkDerivation {
           name = "purebred-with-packages-${env.version}";
