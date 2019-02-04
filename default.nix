@@ -31,9 +31,6 @@
 
 let
   compilerVersion = if isNull compiler then "ghc863" else compiler;
-  extraHaskellPackages = haskellPackages: with haskellPackages; [
-    cabal-install
-  ];
   config = {
     packageOverrides = super: let self = super.pkgs; in
     {
@@ -65,10 +62,15 @@ let
   pkgs = import pkgSrc { inherit config; };
   env = pkgs.haskell.packages.${compilerVersion}.ghcWithPackages (self: [
     self.purebred
-  ] ++ extraHaskellPackages self);
+  ]);
+  nativeBuildTools = with pkgs.haskellPackages; [ cabal-install ghcid hindent pkgs.notmuch pkgs.tmux ];
   in
     if pkgs.lib.inNixShell
-    then pkgs.haskell.packages.${compilerVersion}.purebred.env
+    then pkgs.haskell.packages.${compilerVersion}.shellFor {
+      withHoogle = true;
+      packages = haskellPackages: [ haskellPackages.purebred ];
+      nativeBuildInputs = pkgs.haskell.packages.${compilerVersion}.purebred.env.nativeBuildInputs ++ nativeBuildTools;
+    }
     else {
         purebred = pkgs.stdenv.mkDerivation {
           name = "purebred-with-packages-${env.version}";
