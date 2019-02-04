@@ -51,7 +51,9 @@ matrix:
       language: nix
       before_install:
       install:
-      script: nix-build
+      script:
+       - nix-build
+       - nix-shell --command 'PATH=$PATH:result/bin cabal test --show-details=streaming uat'
     - compiler: "ghcHEAD"
       language: nix
       before_install:
