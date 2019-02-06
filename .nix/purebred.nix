@@ -4,7 +4,7 @@
 , optparse-applicative, purebred-email, quickcheck-instances
 , random, regex-posix, stdenv, stm, tasty, tasty-hunit
 , tasty-quickcheck, temporary, text, text-zipper, time
-, typed-process, vector, vty, tmux
+, typed-process, vector, vty
 , Cabal
 }:
 mkDerivation {
@@ -26,7 +26,7 @@ mkDerivation {
     base brick bytestring directory filepath ini lens mtl notmuch
     purebred-email quickcheck-instances regex-posix stm tasty
     tasty-hunit tasty-quickcheck temporary text time typed-process
-    vector tmux
+    vector
   ];
   homepage = "https://github.com/githubuser/purebred#readme";
   description = "An mail user agent built around notmuch";
