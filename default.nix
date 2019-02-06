@@ -29,47 +29,19 @@
 #
 { compiler ? null, nixpkgs ? null }:
 
+with (import .nix/nixpkgs.nix { inherit compiler nixpkgs; });
+
 let
-  compilerVersion = if isNull compiler then "ghc863" else compiler;
-  config = {
-    packageOverrides = super: let self = super.pkgs; in
-    {
-      haskell = super.haskell // {
-        packages = super.haskell.packages // {
-          "${compilerVersion}" = super.haskell.packages."${compilerVersion}".override {
-            overrides = self: super: {
-              # Build with latest known stable version.
-              purebred = with pkgs.haskell.lib; dontHaddock (self.callPackage ./.nix/purebred.nix { });
-              notmuch = self.callPackage ./.nix/hs-notmuch.nix {
-                notmuch = pkgs.notmuch;
-                talloc = pkgs.talloc;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-  pkgSrc =
-    if isNull nixpkgs
-    then
-      builtins.fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/e27e11480323db005ab62ef477eb1fd28b6b62f5.tar.gz";
-        sha256 = "0i64wsl20fl92bsqn900nxmmnr1v3088drbwhwpm9lvln42yf23s";
-      }
-    else
-      nixpkgs;
-  pkgs = import pkgSrc { inherit config; };
-  env = pkgs.haskell.packages.${compilerVersion}.ghcWithPackages (self: [
+  env = haskellPackages.ghcWithPackages (self: [
     self.purebred
   ]);
   nativeBuildTools = with pkgs.haskellPackages; [ cabal-install ghcid hindent pkgs.notmuch pkgs.tmux ];
   in
     if pkgs.lib.inNixShell
-    then pkgs.haskell.packages.${compilerVersion}.shellFor {
+    then haskellPackages.shellFor {
       withHoogle = true;
       packages = haskellPackages: [ haskellPackages.purebred ];
-      nativeBuildInputs = pkgs.haskell.packages.${compilerVersion}.purebred.env.nativeBuildInputs ++ nativeBuildTools;
+      nativeBuildInputs = haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
     }
     else {
         purebred = pkgs.stdenv.mkDerivation {
