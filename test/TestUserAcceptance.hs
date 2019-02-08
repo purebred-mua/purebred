@@ -275,7 +275,7 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
     sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
 
     liftIO $ step "add first selected file"
-    sendKeys "Enter" (Literal $ cwd </> lastFile)
+    sendKeys "Enter" (Literal lastFile)
 
     liftIO $ step "up to select mail body"
     sendKeys "Up" (Literal "Item 1 of 2")
