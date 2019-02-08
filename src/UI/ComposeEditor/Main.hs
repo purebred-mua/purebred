@@ -7,14 +7,13 @@ import Brick.Types (Padding(Max), Widget)
 import Brick.Widgets.Core (hBox, padLeftRight, padRight, txt, withAttr)
 import qualified Brick.Widgets.List as L
 import Control.Lens (view, preview)
-import Data.Maybe (fromMaybe)
 
 import Data.MIME
        (MIMEMessage, headers, contentType,
         filename, contentDisposition, isAttachment, showContentType)
 
 import Config.Main (listSelectedAttr, listAttr)
-import UI.Utils (focusedViewWidget)
+import UI.Utils (focusedViewWidget, takeFileName)
 import Types
 
 attachmentsEditor :: AppState -> Widget Name
@@ -26,7 +25,8 @@ attachmentsEditor s =
 renderPart :: Bool -> MIMEMessage -> Widget Name
 renderPart selected m =
   let pType = showContentType $ view (headers . contentType) m
-      pFilename = fromMaybe "--" (preview (headers . contentDisposition . filename) m)
+      -- Only show the filename for now. See #253 for a discussion to fix this.
+      pFilename = maybe "--" takeFileName (preview (headers . contentDisposition . filename) m)
       listItemAttr = if selected then listSelectedAttr else listAttr
       attachmentType = txt (if isAttachment m then "A" else "I")
       widget = hBox

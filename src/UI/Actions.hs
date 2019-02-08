@@ -69,7 +69,7 @@ import System.Exit (ExitCode(..))
 import System.IO (openTempFile, hClose)
 import System.Directory (getTemporaryDirectory, removeFile)
 import System.Process.Typed (proc, runProcess)
-import System.FilePath (takeFileName, takeDirectory, (</>))
+import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Data.Functor (($>))
@@ -103,7 +103,7 @@ import Storage.ParsedMail
 import Types
 import Error
 import UI.Utils
-       (focusedViewWidget, focusedViewName, selectedFiles)
+       (focusedViewWidget, focusedViewName, selectedFiles, takeFileName)
 import UI.Views (listOfMailsView, mailView)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
@@ -850,7 +850,7 @@ trySendAndCatch l' m s = do
 -- | santize the mail before we send it out
 -- Note: currently only strips away path names from files
 sanitizeMail :: MIMEMessage -> MIMEMessage
-sanitizeMail = over (attachments . headers . contentDisposition . filename) (T.pack . takeFileName . T.unpack)
+sanitizeMail = over (attachments . headers . contentDisposition . filename) takeFileName
 
 initialCompose :: [Mailbox] -> Compose
 initialCompose mailboxes =

@@ -17,12 +17,20 @@
 --
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Utils
-       (focusedViewWidget, focusedViewWidgets,
-        focusedViewName, focusedView, titleize, Titleize, toggledItems, selectedFiles)
-       where
+  ( focusedViewWidget
+  , focusedViewWidgets
+  , focusedViewName
+  , focusedView
+  , titleize
+  , Titleize
+  , toggledItems
+  , selectedFiles
+  , takeFileName
+  ) where
 import Data.Maybe (fromMaybe)
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unpack)
 import Data.List (union)
+import qualified System.FilePath as FP (takeFileName)
 import Control.Lens
        (folded, traversed, filtered, toListOf, view, at, _Just, _2)
 import Brick.Focus (focusGetCurrent)
@@ -62,6 +70,9 @@ selectedFiles l = let cur = case L.listSelectedElement l of
                         _ -> []
                       toggled = view (_2 . fsEntryName) <$> toggledItems l
                   in toggled `union` toListOf (traversed . _2 . fsEntryName) cur
+
+takeFileName :: Text -> Text
+takeFileName = pack . FP.takeFileName . unpack
 
 class Titleize a where
   titleize :: a -> Text
