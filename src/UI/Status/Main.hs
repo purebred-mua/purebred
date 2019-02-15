@@ -11,8 +11,10 @@ import Control.Lens (view, views)
 import Data.Semigroup ((<>))
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
+
 import UI.Draw.Main (fillLine)
-import UI.Utils (focusedViewWidget, focusedViewName, titleize)
+import UI.Utils (titleize)
+import UI.Views (focusedViewWidget, focusedViewName)
 import Types
 import Config.Main (statusbarAttr, statusbarErrorAttr)
 
@@ -27,7 +29,7 @@ statusbar s =
     case view asError s of
         Just e -> withAttr statusbarErrorAttr $ strWrap (show e)
         Nothing ->
-            case focusedViewWidget s ListOfThreads of
+            case focusedViewWidget s of
                 SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s) s
                 ManageMailTagsEditor -> renderStatusbar (view (asMailIndex . miMailTagsEditor) s) s
                 ManageThreadTagsEditor -> renderStatusbar (view (asMailIndex . miThreadTagsEditor) s) s
@@ -57,7 +59,7 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
   , fillLine
   , txt (
       titleize (focusedViewName s) <> "-"
-      <> titleize (focusedViewWidget s ListOfThreads) <> " "
+      <> titleize (focusedViewWidget s) <> " "
       )
   ]
 

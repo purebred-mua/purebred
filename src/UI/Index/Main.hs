@@ -22,7 +22,7 @@ import Data.Text as T (Text, pack, unwords)
 import Notmuch (getTag)
 
 import UI.Draw.Main (renderEditorWithLabel, fillLine)
-import UI.Utils (focusedViewWidget)
+import UI.Views (focusedViewWidget)
 import Storage.Notmuch (hasTag)
 import Types
 import Config.Main
@@ -38,17 +38,17 @@ renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . m
 
 renderSearchThreadsEditor :: AppState -> Widget Name
 renderSearchThreadsEditor s =
-    let hasFocus = SearchThreadsEditor == focusedViewWidget s ListOfThreads
+    let hasFocus = SearchThreadsEditor == focusedViewWidget s
     in renderEditorWithLabel "Query:" hasFocus (view (asMailIndex . miSearchThreadsEditor) s)
 
 renderMailTagsEditor :: AppState -> Widget Name
 renderMailTagsEditor s =
-    let hasFocus = ManageMailTagsEditor == focusedViewWidget s ListOfThreads
+    let hasFocus = ManageMailTagsEditor == focusedViewWidget s
     in renderEditorWithLabel "Labels:" hasFocus (view (asMailIndex . miMailTagsEditor) s)
 
 renderThreadTagsEditor :: AppState -> Widget Name
 renderThreadTagsEditor s =
-    let hasFocus = ManageThreadTagsEditor == focusedViewWidget s ListOfThreads
+    let hasFocus = ManageThreadTagsEditor == focusedViewWidget s
     in renderEditorWithLabel "Labels:" hasFocus (view (asMailIndex . miThreadTagsEditor) s)
 
 listDrawMail :: AppState -> Bool -> NotmuchMail -> Widget Name

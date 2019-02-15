@@ -13,12 +13,13 @@ import Data.MIME
         filename, contentDisposition, isAttachment, showContentType)
 
 import Config.Main (listSelectedAttr, listAttr)
-import UI.Utils (focusedViewWidget, takeFileName)
+import UI.Utils (takeFileName)
+import UI.Views (focusedViewWidget)
 import Types
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
-    let hasFocus = ListOfAttachments == focusedViewWidget s ComposeFrom
+    let hasFocus = ListOfAttachments == focusedViewWidget s
         attachmentsList = L.renderList renderPart hasFocus (view (asCompose . cAttachments) s)
     in attachmentsList
 
