@@ -10,11 +10,11 @@ import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import Config.Main (listSelectedAttr, listAttr)
 import UI.Draw.Main (fillLine)
-import UI.Utils (focusedViewWidget)
+import UI.Views (focusedViewWidget)
 import Types
 
 renderFileBrowser :: AppState -> Widget Name
-renderFileBrowser s = L.renderList drawListItem (ListOfFiles == focusedViewWidget s ListOfThreads)
+renderFileBrowser s = L.renderList drawListItem (ListOfFiles == focusedViewWidget s)
                       $ view (asFileBrowser . fbEntries) s
 
 drawListItem :: Bool -> (Bool, FileSystemEntry) -> Widget Name
@@ -30,7 +30,7 @@ drawListItem sel (toggled, x) =
 
 renderFileBrowserSearchPathEditor :: AppState -> Widget Name
 renderFileBrowserSearchPathEditor s =
-  let hasFocus = ManageFileBrowserSearchPath == focusedViewWidget s ListOfThreads
+  let hasFocus = ManageFileBrowserSearchPath == focusedViewWidget s
       editorDrawContent = str . unlines
       inputW = E.renderEditor editorDrawContent hasFocus (view (asFileBrowser . fbSearchPath) s)
       labelW = txt "Path: "

@@ -17,48 +17,21 @@
 --
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Utils
-  ( focusedViewWidget
-  , focusedViewWidgets
-  , focusedViewName
-  , focusedView
-  , titleize
+  ( titleize
   , Titleize
   , toggledItems
   , selectedFiles
   , takeFileName
   ) where
-import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack, unpack)
 import Data.List (union)
 import qualified System.FilePath as FP (takeFileName)
 import Control.Lens
-       (folded, traversed, filtered, toListOf, view, at, _Just, _2)
-import Brick.Focus (focusGetCurrent)
+       (folded, traversed, filtered, toListOf, view, _2)
 import qualified Brick.Widgets.List as L
-
-import UI.Views (indexView)
-
 
 import Types
 
-focusedViewWidget :: AppState -> Name -> Name
-focusedViewWidget s defaultWidget = view vFocus (focusedView s)
-
-focusedViewWidgets :: AppState -> [Name]
-focusedViewWidgets s =
-    let defaultV = view (asConfig . confDefaultView) s
-        focused = fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
-    in toListOf (asViews . vsViews . at focused . _Just . vWidgets . tileiso . traversed
-                 . filtered (\ve -> view veState ve == Visible) . veName) s
-
-focusedViewName :: AppState -> ViewName
-focusedViewName s =
-    let defaultV = view (asConfig . confDefaultView) s
-    in fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
-
-focusedView :: AppState -> View
-focusedView s = let focused = view (asViews . vsViews . at (focusedViewName s)) s
-                in fromMaybe indexView focused
 
 toggledItems :: L.List Name (Bool, a) -> [(Bool, a)]
 toggledItems = toListOf (L.listElementsL . folded . filtered fst)
