@@ -101,9 +101,10 @@ import Storage.ParsedMail
        (parseMail, getTo, getFrom, getSubject, toQuotedMail)
 import Types
 import Error
-import UI.Utils
-       (focusedViewWidget, selectedFiles, takeFileName)
-import UI.Views (listOfMailsView, mailView, focusNext, toggleLastVisibleWidget, indexView, resetView)
+import UI.Utils (selectedFiles, takeFileName)
+import UI.Views
+       (listOfMailsView, mailView, focusNext, toggleLastVisibleWidget, indexView, resetView,
+        focusedViewWidget)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
 
@@ -508,7 +509,7 @@ listUp :: Action v m AppState
 listUp =
     Action
     { _aDescription = ["mail index up one e-mail"]
-    , _aAction = \s -> case focusedViewWidget s ListOfThreads of
+    , _aAction = \s -> case focusedViewWidget s of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
         ListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveUp s
@@ -520,7 +521,7 @@ listDown :: Action v m AppState
 listDown =
     Action
     { _aDescription = ["mail index down one e-mail"]
-    , _aAction = \s -> case focusedViewWidget s ListOfThreads of
+    , _aAction = \s -> case focusedViewWidget s of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveDown s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
         ListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveDown s
@@ -531,7 +532,7 @@ listDown =
 listJumpToEnd :: Action v m AppState
 listJumpToEnd = Action
   { _aDescription = ["move selection to last element"]
-    , _aAction = \s -> case focusedViewWidget s ListOfThreads of
+    , _aAction = \s -> case focusedViewWidget s of
         ListOfThreads -> pure $ listSetSelectionEnd (asMailIndex . miListOfThreads) s
         ScrollingMailView -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
         ListOfAttachments -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
@@ -542,7 +543,7 @@ listJumpToEnd = Action
 listJumpToStart :: Action v m AppState
 listJumpToStart = Action
   { _aDescription = ["move selection to first element"]
-    , _aAction = \s -> case focusedViewWidget s ListOfThreads of
+    , _aAction = \s -> case focusedViewWidget s of
         ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) (L.listMoveTo 0) s
         ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
         ListOfAttachments -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
@@ -581,7 +582,7 @@ setTags :: [TagOp] -> Action v ctx AppState
 setTags ops =
     Action
     { _aDescription = ["apply given tags"]
-    , _aAction = \s -> case focusedViewWidget s ListOfThreads of
+    , _aAction = \s -> case focusedViewWidget s of
           ListOfMails -> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops)
           _ -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
     }

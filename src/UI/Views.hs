@@ -7,6 +7,10 @@ module UI.Views
   , filebrowserView
   , swapWidget
   , focusNext
+  , focusedViewWidgets
+  , focusedViewWidget
+  , focusedViewName
+  , focusedView
   , toggleLastVisibleWidget
   , resetView
   , findNextVisibleWidget
@@ -17,9 +21,19 @@ import Data.Maybe (fromMaybe)
 import Data.Semigroup ((<>))
 import Prelude hiding (splitAt)
 
-import Control.Lens ((&), _Just, ix, at, preview, set, lastOf, view, filtered, over)
+import Control.Lens
+  ((&), _Just, ix, at, preview, set, lastOf, view, filtered, over, toListOf,
+   traversed)
 import Brick.Focus (focusGetCurrent)
 import Types
+
+
+focusedViewWidgets :: AppState -> [Name]
+focusedViewWidgets s =
+    let defaultV = view (asConfig . confDefaultView) s
+        focused = fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
+    in toListOf (asViews . vsViews . at focused . _Just . vWidgets . tileiso . traversed
+                 . filtered (\ve -> view veState ve == Visible) . veName) s
 
 focusedViewWidget :: AppState -> Name
 focusedViewWidget s = view vFocus (focusedView s)

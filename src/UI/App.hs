@@ -27,10 +27,10 @@ import UI.FileBrowser.Main
 import UI.Mail.Main (renderMailView)
 import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
-import UI.Utils (focusedViewWidget, focusedViewWidgets, focusedViewName)
 import UI.Views
        (indexView, mailView, composeView, helpView, listOfMailsView,
-        filebrowserView)
+        filebrowserView, focusedViewWidget, focusedViewWidgets,
+        focusedViewName)
 import UI.ComposeEditor.Main (attachmentsEditor)
 import Types
 
@@ -80,7 +80,7 @@ appEvent
   :: AppState               -- ^ program state
   -> T.BrickEvent Name PurebredEvent  -- ^ event
   -> T.EventM Name (T.Next AppState)
-appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s ListOfThreads) s ev
+appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
 appEvent s (T.AppEvent ev) = case ev of
   NotifyNumThreads n gen -> M.continue $
     if gen == view (asMailIndex . miListOfThreadsGeneration) s
