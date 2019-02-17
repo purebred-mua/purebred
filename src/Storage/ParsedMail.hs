@@ -59,6 +59,14 @@ chooseEntity preferredContentType msg =
     -- otherwise select first entity;
   in firstOf (entities . filtered match) msg <|> firstOf entities msg
 
+entityToBytes :: WireEntity -> Either Error B.ByteString
+entityToBytes msg = either err Right (convert msg)
+  where
+    err :: EncodingError -> Either Error B.ByteString
+    err e = Left $ GenericError ("Decoding error: " <> show e)
+    convert :: WireEntity -> Either EncodingError B.ByteString
+    convert m = view body <$> view transferDecoded m
+
 entityToText :: WireEntity -> T.Text
 entityToText msg = either err (view body) $
   view transferDecoded msg >>= view charsetDecoded

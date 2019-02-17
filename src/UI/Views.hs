@@ -122,6 +122,7 @@ mailView =
           , Tile Visible ScrollingMailView
           , Tile Hidden ManageMailTagsEditor
           , Tile Hidden MailListOfAttachments
+          , Tile Hidden MailAttachmentOpenWithEditor
           ]
     , _vFocus = ListOfMails
     }

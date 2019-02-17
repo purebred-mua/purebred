@@ -108,7 +108,52 @@ main = defaultMain $
       , testRepliesToMailSuccessfully
       , testUserCanMoveBetweenThreads
       , testShowsMailEntities
+      , testOpenCommandDoesNotKillPurebred
+      , testOpenEntitiesSuccessfully
       ]
+
+testOpenEntitiesSuccessfully :: TestCase
+testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "open thread"
+    sendKeys "Enter" (Literal "This is a test mail for purebred")
+
+    liftIO $ step "show entities"
+    sendKeys "v" (Literal "text/plain")
+
+    liftIO $ step "open one entity"
+    sendKeys "Enter" (Literal "Open With")
+    _ <- sendLiteralKeys "less -e"
+
+    sendKeys "Enter" (Regex ("This is a test mail for purebred"
+                            <> buildAnsiRegex [] ["37"] ["40"]
+                            <> "\\s+"
+                            <> buildAnsiRegex ["7"] ["39"] ["49"]
+                            <> ".*purebred.*END"))
+
+    pure ()
+
+testOpenCommandDoesNotKillPurebred :: TestCase
+testOpenCommandDoesNotKillPurebred = withTmuxSession "open attachment does not kill purebred" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "open thread"
+    sendKeys "Enter" (Literal "This is a test mail for purebred")
+
+    liftIO $ step "show entities"
+    sendKeys "v" (Literal "text/plain")
+
+    liftIO $ step "open with"
+    sendKeys "Enter" (Literal "Open With")
+
+    liftIO $ step "Open with bogus command"
+    _ <- sendLiteralKeys "asdfasdfasdf"
+    sendKeys "Enter" (Literal "ProcessError")
+
+    pure ()
 
 testShowsMailEntities :: TestCase
 testShowsMailEntities = withTmuxSession "shows mail entities successfully" $

@@ -34,6 +34,7 @@ data Error
   | FileParseError FilePath String -- ^ failed to parse a file
   | SendMailError String
   | GenericError String
+  | ProcessError String
   deriving (Show, Eq)
 
 instance AsNotmuchError Error where
