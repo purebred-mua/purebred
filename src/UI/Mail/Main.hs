@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module UI.Mail.Main (renderMailView, renderAttachmentsList) where
+module UI.Mail.Main (
+    renderMailView
+  , renderAttachmentsList
+  , renderMailAttachmentOpenWithEditor) where
 
 import Brick.Types (Padding(..), ViewportType(..), Widget)
 import qualified Brick.Widgets.List as L
@@ -18,6 +21,7 @@ import Data.MIME
 import Storage.ParsedMail (chooseEntity, entityToText)
 
 import Types
+import UI.Draw.Main (renderEditorWithLabel)
 import UI.Views (focusedViewWidget)
 import Config.Main (headerKeyAttr, headerValueAttr, mailViewAttr,
                     listSelectedAttr, listAttr)
@@ -66,6 +70,11 @@ renderAttachmentsList s =
     let hasFocus = MailListOfAttachments == focusedViewWidget s
         attachmentsList = L.renderList renderPart hasFocus (view (asMailView . mvAttachments) s)
     in attachmentsList
+
+renderMailAttachmentOpenWithEditor :: AppState -> Widget Name
+renderMailAttachmentOpenWithEditor s =
+    let hasFocus = MailAttachmentOpenWithEditor == focusedViewWidget s
+    in renderEditorWithLabel "Open With:" hasFocus (view (asMailView . mvOpenCommand) s)
 
 -- TODO: Both these functions are basically duplicates. Use classes for
 -- WireEntity and MIMEMessage to don't repeat our selfs?

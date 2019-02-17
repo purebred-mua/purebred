@@ -48,6 +48,7 @@ statusbar s =
                 SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s) s
                 ManageMailTagsEditor -> renderStatusbar (view (asMailIndex . miMailTagsEditor) s) s
                 ManageThreadTagsEditor -> renderStatusbar (view (asMailIndex . miThreadTagsEditor) s) s
+                MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
                 ListOfThreads -> renderStatusbar (view (asMailIndex . miThreads) s) s
                 ListOfMails -> renderStatusbar (view (asMailIndex . miMails) s) s
                 ScrollingMailView -> renderStatusbar (view (asMailIndex . miMails) s) s

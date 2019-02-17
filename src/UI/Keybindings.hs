@@ -66,6 +66,11 @@ eventHandlerMailsListOfAttachments = EventHandler
   (asConfig . confMailView . mvMailListOfAttachmentsKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvAttachments) L.handleListEvent)
 
+eventHandlerMailAttachmentOpenWithEditor :: EventHandler 'ViewMail 'MailAttachmentOpenWithEditor
+eventHandlerMailAttachmentOpenWithEditor = EventHandler
+  (asConfig . confMailView . mvOpenWithKeybindings)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvOpenCommand) E.handleEditorEvent)
+
 eventHandlerManageThreadTagsEditor :: EventHandler 'Threads 'ManageThreadTagsEditor
 eventHandlerManageThreadTagsEditor = EventHandler
   (asConfig . confIndexView . ivManageThreadTagsKeybindings)

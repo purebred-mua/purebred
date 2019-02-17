@@ -62,6 +62,7 @@ instance Titleize Name where
   titleize ListOfFiles = "Directory Listing"
   titleize ComposeListOfAttachments = "Attachments"
   titleize ManageFileBrowserSearchPath = "Filepath for Directory Listing"
+  titleize MailAttachmentOpenWithEditor = "Open With Editor"
   titleize m = pack $ show m
 
 instance Titleize ViewName where

@@ -17,8 +17,8 @@ mkDerivation {
   libraryHaskellDepends = [
     attoparsec base brick bytestring case-insensitive containers
     deepseq directory dyre exceptions filepath lens mime-types mtl
-    notmuch optparse-applicative purebred-email random text text-zipper
-    time typed-process vector vty
+    notmuch optparse-applicative purebred-email random temporary text
+    text-zipper time typed-process vector vty
   ];
   testTarget = "unit";
   executableHaskellDepends = [ base ];
