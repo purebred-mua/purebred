@@ -32,7 +32,8 @@ import UI.Index.Keybindings
         manageMailTagsKeybindings)
 import UI.Mail.Keybindings
        (displayMailKeybindings, mailViewManageMailTagsKeybindings,
-        mailAttachmentsKeybindings, openWithKeybindings)
+        mailAttachmentsKeybindings, openWithKeybindings,
+        pipeToKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
 import UI.ComposeEditor.Keybindings
        (listOfAttachmentsKeybindings, composeFromKeybindings,
@@ -174,6 +175,7 @@ defaultConfig =
       , _mvManageMailTagsKeybindings = mailViewManageMailTagsKeybindings
       , _mvMailListOfAttachmentsKeybindings = mailAttachmentsKeybindings
       , _mvOpenWithKeybindings = openWithKeybindings
+      , _mvPipeToKeybindings = pipeToKeybindings
       }
     , _confIndexView = IndexViewSettings
       { _ivBrowseThreadsKeybindings = browseThreadsKeybindings

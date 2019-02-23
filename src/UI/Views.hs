@@ -123,6 +123,7 @@ mailView =
           , Tile Hidden ManageMailTagsEditor
           , Tile Hidden MailListOfAttachments
           , Tile Hidden MailAttachmentOpenWithEditor
+          , Tile Hidden MailAttachmentPipeToEditor
           ]
     , _vFocus = ListOfMails
     }
