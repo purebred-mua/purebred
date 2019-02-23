@@ -80,12 +80,11 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C8
 import Data.Attoparsec.ByteString.Char8 (parseOnly)
 import Data.Vector.Lens (vector)
-import System.Exit (ExitCode(..))
-import System.IO (openTempFile, hClose, hFlush)
+import System.IO (hFlush)
 import GHC.IO.Handle (Handle)
-import System.IO.Temp (withSystemTempFile)
+import System.IO.Temp (withSystemTempFile, emptyTempFile)
 import System.Directory (getTemporaryDirectory, removeFile)
-import System.Process.Typed (shell, proc, runProcess)
+import System.Process.Typed (shell, proc)
 import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
@@ -99,7 +98,6 @@ import Control.Monad ((>=>))
 import Control.Monad.Except (runExceptT)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
-import Control.Monad.Catch (bracket)
 import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper)
 import Data.Time.Clock (getCurrentTime)
@@ -920,18 +918,16 @@ initialCompose mailboxes =
 invokeEditor' :: AppState -> IO AppState
 invokeEditor' s = do
   let editor = view (asConfig . confEditor) s
-  let m = preview (asCompose . cAttachments . to L.listSelectedElement
+  let maybeEntity = preview (asCompose . cAttachments . to L.listSelectedElement
                      . _Just . _2 . to getTextPlainPart . _Just) s
-  tmpfile <- getTempFileForEditing m
-  status <- runProcess (proc editor [tmpfile])
-  case status of
-    ExitFailure _ -> pure $ s & over (asViews . vsFocusedView) (Brick.focusSetCurrent Mails)
-                              & setError editorError
-    ExitSuccess -> do
-      contents <- T.readFile tmpfile
-      removeIfExists tmpfile
+  tmpfile <- getTempFileForEditing maybeEntity
+  tryRunProcess (proc editor [tmpfile]) >>= either (handleIOException s) (updatePart tmpfile . handleExitCode s)
+  where
+    updatePart tmpf' s' = do
+      contents <- T.readFile tmpf'
+      removeIfExists tmpf'
       let mail = createTextPlainMessage contents
-      pure $ s & over (asCompose . cAttachments) (upsertPart mail)
+      pure $ s' & over (asCompose . cAttachments) (upsertPart mail)
 
 openCommand' :: AppState -> FilePath -> IO AppState
 openCommand' s cmd
@@ -992,16 +988,6 @@ getTextPlainPart = firstOf (entities . filtered f)
 mimeType :: FilePath -> ContentType
 mimeType x = let parsed = parseOnly parseContentType $ defaultMimeLookup (T.pack x)
              in either (const contentTypeApplicationOctetStream) id parsed
-
-editorError :: Error
-editorError = GenericError ("Editor command exited with error code."
-  <> " Check your editor configuration and your terminal.")
-
-emptyTempFile :: FilePath -> String -> IO FilePath
-emptyTempFile targetDir template = bracket
-  (openTempFile targetDir template)
-  (\(_, handle) -> hClose handle)
-  (\(filePath, _) -> pure filePath)
 
 manageThreadTags
     :: MonadIO m
