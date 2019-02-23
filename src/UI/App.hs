@@ -39,8 +39,9 @@ import UI.Index.Main
 import UI.Actions (applySearch, initialCompose)
 import UI.FileBrowser.Main
        (renderFileBrowser, renderFileBrowserSearchPathEditor)
-import UI.Mail.Main (renderMailView, renderAttachmentsList,
-                     renderMailAttachmentOpenWithEditor)
+import UI.Mail.Main
+  ( renderAttachmentsList, renderMailAttachmentOpenWithEditor
+  , renderMailAttachmentPipeToEditor, renderMailView)
 import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
 import UI.Views
@@ -57,6 +58,7 @@ renderWidget :: AppState -> ViewName -> Name -> Widget Name
 renderWidget s _ ListOfThreads = renderListOfThreads s
 renderWidget s ViewMail ListOfMails = vLimit (view (asConfig . confMailView . mvIndexRows) s) (renderListOfMails s)
 renderWidget s _ MailAttachmentOpenWithEditor = renderMailAttachmentOpenWithEditor s
+renderWidget s _ MailAttachmentPipeToEditor = renderMailAttachmentPipeToEditor s
 renderWidget s _ ListOfMails = renderListOfMails s
 renderWidget s _ ComposeListOfAttachments = attachmentsEditor s
 renderWidget s _ MailListOfAttachments = renderAttachmentsList s
@@ -89,6 +91,7 @@ handleViewEvent = f where
   f ViewMail ManageMailTagsEditor = dispatch eventHandlerViewMailManageMailTagsEditor
   f ViewMail MailListOfAttachments = dispatch eventHandlerMailsListOfAttachments
   f ViewMail MailAttachmentOpenWithEditor = dispatch eventHandlerMailAttachmentOpenWithEditor
+  f ViewMail MailAttachmentPipeToEditor = dispatch eventHandlerMailAttachmentPipeToEditor
   f ViewMail _ = dispatch eventHandlerScrollingMailView
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
   f _ ListOfFiles = dispatch eventHandlerComposeFileBrowser
@@ -125,6 +128,7 @@ initialState conf =
            Filtered
            (L.list MailListOfAttachments mempty 1)
            (E.editorText MailAttachmentOpenWithEditor Nothing "")
+           (E.editorText MailAttachmentPipeToEditor Nothing "")
     viewsettings =
         ViewSettings
         { _vsViews = Map.fromList

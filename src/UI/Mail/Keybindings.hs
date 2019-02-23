@@ -43,13 +43,23 @@ mailAttachmentsKeybindings =
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'q') []) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'ViewMail 'MailAttachmentOpenWithEditor AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '|') []) (noop `chain'` (focus :: Action 'ViewMail 'MailAttachmentPipeToEditor AppState) `chain` continue)
     ]
 
 openWithKeybindings :: [Keybinding 'ViewMail 'MailAttachmentOpenWithEditor]
 openWithKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '\t') []) (abort `chain'` (focus :: Action 'ViewMail 'MailAttachmentPipeToEditor AppState) `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` openWithCommand)
+    ]
+
+pipeToKeybindings :: [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
+pipeToKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '\t') []) (abort `chain'` (focus :: Action 'ViewMail 'MailAttachmentOpenWithEditor AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` pipeToCommand)
     ]
 
 mailViewManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor]

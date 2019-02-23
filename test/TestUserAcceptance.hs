@@ -110,7 +110,32 @@ main = defaultMain $
       , testShowsMailEntities
       , testOpenCommandDoesNotKillPurebred
       , testOpenEntitiesSuccessfully
+      , testPipeEntitiesSuccessfully
       ]
+
+testPipeEntitiesSuccessfully :: TestCase
+testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "open thread"
+    sendKeys "Enter" (Literal "This is a test mail for purebred")
+
+    liftIO $ step "show entities"
+    sendKeys "v" (Literal "text/plain")
+
+    liftIO $ step "pipe to"
+    sendKeys "|" (Literal "Pipe to")
+
+    liftIO $ step "use less"
+    _ <- sendLiteralKeys "less -e"
+    sendKeys "Enter" (Regex ("This is a test mail for purebred"
+                             <> buildAnsiRegex [] ["37"] ["40"]
+                             <> "\\s+"
+                             <> buildAnsiRegex ["7"] ["39"] ["49"]
+                             <> "\\(END\\)"))
+
+    pure ()
 
 testOpenEntitiesSuccessfully :: TestCase
 testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $

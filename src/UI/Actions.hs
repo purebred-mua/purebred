@@ -60,6 +60,7 @@ module UI.Actions (
   , delete
   , applySearch
   , openWithCommand
+  , pipeToCommand
   ) where
 
 import Data.Functor.Identity (Identity(..))
@@ -78,13 +79,14 @@ import qualified Data.Text.IO as T
 import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C8
+import qualified Data.ByteString.Lazy as LB
 import Data.Attoparsec.ByteString.Char8 (parseOnly)
 import Data.Vector.Lens (vector)
 import System.IO (hFlush)
 import GHC.IO.Handle (Handle)
 import System.IO.Temp (withSystemTempFile, emptyTempFile)
 import System.Directory (getTemporaryDirectory, removeFile)
-import System.Process.Typed (shell, proc)
+import System.Process.Typed (shell, proc, setStdin, byteStringInput)
 import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
@@ -188,6 +190,10 @@ instance Completable 'MailAttachmentOpenWithEditor where
   complete _ = pure
                . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Hidden
 
+instance Completable 'MailAttachmentPipeToEditor where
+  complete _ = pure
+               . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentPipeToEditor . veState) Hidden
+
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
 --
@@ -226,6 +232,10 @@ instance Resetable 'MailListOfAttachments where
 instance Resetable 'MailAttachmentOpenWithEditor where
   reset _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
             . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Hidden
+
+instance Resetable 'MailAttachmentPipeToEditor where
+  reset _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
+            . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentPipeToEditor . veState) Hidden
 
 clearMailComposition :: AppState -> AppState
 clearMailComposition s =
@@ -299,6 +309,10 @@ instance Focusable 'ViewMail 'MailListOfAttachments where
 instance Focusable 'ViewMail 'MailAttachmentOpenWithEditor where
   switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentOpenWithEditor
                     . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Visible
+
+instance Focusable 'ViewMail 'MailAttachmentPipeToEditor where
+  switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentPipeToEditor
+                    . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentPipeToEditor . veState) Visible
 
 instance Focusable 'Help 'ScrollingHelpView where
   switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
@@ -388,6 +402,9 @@ instance HasName 'MailListOfAttachments where
 instance HasName 'MailAttachmentOpenWithEditor where
   name _ = MailAttachmentOpenWithEditor
 
+instance HasName 'MailAttachmentPipeToEditor where
+  name _ = MailAttachmentPipeToEditor
+
 -- | Allow to change the view to a different view in order to put the focus on a widget there
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
   transitionHook :: Proxy v -> Proxy v' -> AppState -> AppState
@@ -466,6 +483,15 @@ openWithCommand =
   , _aAction = \s ->
     let cmd = view (asMailView . mvOpenCommand . E.editContentsL . to (T.unpack . currentLine)) s
     in Brick.suspendAndResume $ liftIO $ openCommand' s cmd
+  }
+
+pipeToCommand :: Action 'ViewMail 'MailAttachmentPipeToEditor (T.Next AppState)
+pipeToCommand =
+  Action
+  { _aDescription = ["pipe to external command"]
+  , _aAction = \s ->
+    let cmd = view (asMailView . mvPipeCommand . E.editContentsL . to (T.unpack . currentLine)) s
+    in Brick.suspendAndResume $ liftIO $ pipeCommand' s cmd
   }
 
 chain :: Action v ctx AppState -> Action v ctx a -> Action v ctx a
@@ -938,6 +964,19 @@ openCommand' s cmd
       withSystemTempFile ("purebred." <> filenameTemplate) $ \fp handle -> do
         updateFileContents handle maybeEntity
         tryRunProcess (shell (cmd <> " " <> fp)) >>= either (handleIOException s) (pure . handleExitCode s)
+
+pipeCommand' :: AppState -> FilePath -> IO AppState
+pipeCommand' s cmd
+  | null cmd = pure $ s & setError (GenericError "Empty command")
+  | otherwise =
+      let maybeEntity = preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2) s
+      in case maybeEntity of
+        Nothing -> pure $ s & setError (GenericError "No attachment selected")
+        Just e -> case entityToBytes e of
+          Left err -> pure $ s & setError err
+          Right bytes -> liftIO $
+            tryRunProcess (setStdin (byteStringInput $ LB.fromStrict bytes) (shell cmd))
+              >>= either (handleIOException s) (pure . handleExitCode s)
 
 removeIfExists :: FilePath -> IO ()
 removeIfExists fp = removeFile fp `catch` handleError
