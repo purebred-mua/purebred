@@ -452,7 +452,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "Escape" (Literal "Item 2 of 2")
 
     liftIO $ step "thread tags shows new tags"
-    sendKeys "Escape" (Literal "archive inbox replied")
+    sendKeys "Escape" (Literal "archive replied")
 
     liftIO $ step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -464,7 +464,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     _ <- sendLiteralKeys "+thread"
 
     liftIO $ step "apply"
-    sendKeys "Enter" (Literal "List of Threads")
+    sendKeys "Enter" (Literal "archive replied thread")
 
     liftIO $ step "show thread mails"
     sendKeys "Enter" (Literal "ViewMail")
