@@ -143,7 +143,8 @@ completeMailTags :: AppState -> IO AppState
 completeMailTags s =
     case getEditorTagOps (asMailIndex . miMailTagsEditor) s of
         Left err -> pure $ setError err s
-        Right ops' -> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops')
+        Right ops' -> over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
+                      <$> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops')
 
 -- | Applying tag operations on threads
 -- Note: notmuch does not support adding tags to threads themselves, instead we'll
@@ -241,11 +242,7 @@ instance Focusable 'Threads 'ComposeSubject where
   switchFocus _ _ s = pure $ over (asViews. vsViews . at (focusedViewName s) . _Just . vWidgets) (replaceEditor ComposeSubject) s
 
 instance Focusable 'Threads 'ListOfThreads where
-  -- Reload the threads tags when returning to the list of threads, since they
-  -- could have changed. If no thread is selected (e.g. invalid search leading
-  -- no results) then there is nothing to update.
-  switchFocus _ _ s = let selected = L.listSelectedElement $ view (asMailIndex . miListOfThreads) s
-                    in ($ s) <$> maybe (pure id) (reloadThreadTags s) selected
+  switchFocus _ _ = pure
 
 instance Focusable 'Mails 'ManageMailTagsEditor where
   switchFocus _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
@@ -778,6 +775,11 @@ updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s
 
 updateReadState :: TagOp -> AppState -> IO AppState
 updateReadState op s = selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s [op])
+                       -- Also update the thread to reflect the change. We used
+                       -- to pull the thread out of the database again when we
+                       -- navigated back to the index of threads, but does not
+                       -- always garantee an updated tag list. See #249
+                       >>= pure . over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem [op]))
 
 manageMailTags
     :: MonadIO m
@@ -957,13 +959,3 @@ getMailsForThread ts s =
   in
     either (const mempty) id
     <$> runExceptT (Notmuch.getThreadMessages dbpath ts)
-
-reloadThreadTags
-  :: MonadIO m
-  => AppState
-  -> (a, NotmuchThread)
-  -> m (AppState -> AppState)
-reloadThreadTags s (_, thread) =
-  let dbpath = view (asConfig. confNotmuch . nmDatabase) s
-      updateList t' = over (asMailIndex . miListOfThreads) (L.listModify $ const t')
-  in either setError updateList <$> runExceptT (Notmuch.reloadThreadTags dbpath thread)
