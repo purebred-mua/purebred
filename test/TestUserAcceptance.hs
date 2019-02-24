@@ -106,7 +106,27 @@ main = defaultMain $
       , testAddAttachments
       , testFromAddressIsProperlyReset
       , testRepliesToMailSuccessfully
+      , testUserCanMoveBetweenThreads
       ]
+
+testUserCanMoveBetweenThreads :: TestCase
+testUserCanMoveBetweenThreads = withTmuxSession "user can navigate between threads" $
+  \step -> do
+    startApplication
+    -- assert that the first mail is really the one we're later navigating back
+    -- to
+    out <- capture
+    assertRegex (buildAnsiRegex ["1"] ["37"] ["43"] <> "\\s17/Aug.*Testmail with whitespace") out
+
+    liftIO $ step "View Mail"
+    sendKeys "Enter" (Literal "This is a test mail for purebred")
+
+    liftIO $ step "Navigate down the threads list"
+    sendKeys "J" (Literal "HOLY PUREBRED")
+
+    liftIO $ step "Navigate up the threads list"
+    sendKeys "K" (Literal "This is a test mail for purebred")
+    pure ()
 
 testRepliesToMailSuccessfully :: TestCase
 testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
