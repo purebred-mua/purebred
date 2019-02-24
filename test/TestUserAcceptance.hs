@@ -366,7 +366,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "Escape" (Literal "Item 1 of 1")
 
     liftIO $ step "go back to list of threads"
-    sendKeys "Escape" (Literal "Testmail")
+    sendKeys "Escape" (Literal "List of Threads")
 
     -- find newly tagged mail
     liftIO $ step "focus tag search"
