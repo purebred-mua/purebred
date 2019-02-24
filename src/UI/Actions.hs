@@ -394,6 +394,8 @@ instance ViewTransition 'ViewMail 'ComposeView where
 
 instance ViewTransition 'FileBrowser 'ComposeView where
 
+instance ViewTransition 'ViewMail 'Threads where
+
 
 class HasViewName (a :: ViewName) where
   viewname :: Proxy a -> ViewName

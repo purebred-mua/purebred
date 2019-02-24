@@ -18,7 +18,20 @@ displayMailKeybindings =
     , Keybinding (V.EvKey V.KUp []) (noop `chain'` (focus :: Action 'ViewMail 'ListOfMails AppState) `chain` listUp `chain'` displayMail `chain` continue)
     , Keybinding (V.EvKey V.KDown []) (noop `chain'` (focus :: Action 'ViewMail 'ListOfMails AppState) `chain` listDown `chain'` displayMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain'` displayMail `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'J') []) (noop
+                                             `chain'` (focus :: Action 'Threads 'ListOfThreads AppState)
+                                             `chain` listDown
+                                             `chain'` displayThreadMails
+                                             `chain'` selectNextUnread
+                                             `chain'` displayMail
+                                             `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain'` displayMail `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'K') []) (noop
+                                             `chain'` (listUp :: Action 'Threads 'ListOfThreads AppState)
+                                             `chain'` displayThreadMails
+                                             `chain'` selectNextUnread
+                                             `chain'` displayMail
+                                             `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `chain'` (focus :: Action 'Help 'ScrollingHelpView AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain'` (focus :: Action 'ComposeView 'ListOfAttachments AppState) `chain` invokeEditor)
     ]
