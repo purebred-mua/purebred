@@ -6,6 +6,7 @@ let
     haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
         purebred = hsuper.callPackage ./purebred.nix { };
+        brick = hsuper.callPackage ./brick.nix {};
         notmuch = hsuper.callPackage ./hs-notmuch.nix {
           notmuch = self.pkgs.notmuch;
           talloc = self.pkgs.talloc;
