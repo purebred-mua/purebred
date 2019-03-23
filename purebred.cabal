@@ -82,7 +82,7 @@ library
                      , deepseq >= 1.4.2
                      , dyre >= 0.8.12
                      , lens
-                     , brick >= 0.45
+                     , brick >= 0.47
                      , text-zipper
                      , vty
                      , vector >= 0.12.0.0

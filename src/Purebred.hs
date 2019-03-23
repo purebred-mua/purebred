@@ -213,11 +213,9 @@ launch cfg = do
   cfg' <- processConfig (bchan, b) (pre cfg)
 
   s <- initialState cfg'
-  void $ customMain
-    (Graphics.Vty.mkVty Graphics.Vty.defaultConfig)
-    (Just bchan)
-    (theApp s)
-    s
+  let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
+  initialVty <- buildVty
+  void $ customMain initialVty buildVty (Just bchan) (theApp s) s
 
 
 -- | Fully evaluate the 'UserConfiguration', then set the extra data to
