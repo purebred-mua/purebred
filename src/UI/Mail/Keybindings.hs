@@ -19,8 +19,7 @@ displayMailKeybindings =
     , Keybinding (V.EvKey V.KDown []) (noop `chain'` (focus :: Action 'ViewMail 'ListOfMails AppState) `chain` listDown `chain'` displayMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain'` displayMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'J') []) (noop
-                                             `chain'` (focus :: Action 'Threads 'ListOfThreads AppState)
-                                             `chain` listDown
+                                             `chain'` (listDown :: Action 'Threads 'ListOfThreads AppState)
                                              `chain'` displayThreadMails
                                              `chain'` selectNextUnread
                                              `chain'` displayMail
