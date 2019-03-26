@@ -116,6 +116,7 @@ main = defaultMain $
 testPipeEntitiesSuccessfully :: TestCase
 testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
   \step -> do
+    setEnvVarInSession "LESS" ""
     startApplication
 
     liftIO $ step "open thread"
@@ -140,6 +141,7 @@ testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
 testOpenEntitiesSuccessfully :: TestCase
 testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
   \step -> do
+    setEnvVarInSession "LESS" ""
     startApplication
 
     liftIO $ step "open thread"
