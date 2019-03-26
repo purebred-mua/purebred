@@ -960,8 +960,7 @@ openCommand' s cmd
   | null cmd = pure $ s & setError (GenericError "Empty command")
   | otherwise = liftIO $ do
       let maybeEntity = preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2) s
-          filenameTemplate = view (_Just . headers . contentDisposition . filename . to T.unpack) maybeEntity
-      withSystemTempFile ("purebred." <> filenameTemplate) $ \fp handle -> do
+      withSystemTempFile "purebred" $ \fp handle -> do
         updateFileContents handle maybeEntity
         tryRunProcess (shell (cmd <> " " <> fp)) >>= either (handleIOException s) (pure . handleExitCode s)
 
