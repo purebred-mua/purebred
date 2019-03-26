@@ -14,6 +14,7 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DataKinds #-}
@@ -21,6 +22,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module UI.Actions (
   Scrollable(..)
@@ -122,6 +124,7 @@ import UI.Utils (selectedFiles, takeFileName)
 import UI.Views
        (listOfMailsView, mailView, focusNext, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
+import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
 import Purebred.System.Process (tryRunProcess, handleIOException, handleExitCode)
@@ -134,6 +137,44 @@ instance Scrollable 'ScrollingMailView where
 
 instance Scrollable 'ScrollingHelpView where
   makeViewportScroller _ = Brick.viewportScroll ScrollingHelpView
+
+
+-- | Contexts that have a navigable (Brick) list
+class HasList (n :: Name) where
+  type T n :: * -> *
+  type E n
+  list :: Proxy n -> Lens' AppState (L.GenericList Name (T n) (E n))
+
+instance HasList 'ListOfThreads where
+  type T 'ListOfThreads = V
+  type E 'ListOfThreads = NotmuchThread
+  list _ = asMailIndex . miListOfThreads
+
+instance HasList 'ListOfMails where
+  type T 'ListOfMails = Vector.Vector
+  type E 'ListOfMails = NotmuchMail
+  list _ = asMailIndex . miListOfMails
+
+instance HasList 'ScrollingMailView where
+  type T 'ScrollingMailView = Vector.Vector
+  type E 'ScrollingMailView = NotmuchMail
+  list _ = asMailIndex . miListOfMails
+
+instance HasList 'ComposeListOfAttachments where
+  type T 'ComposeListOfAttachments = Vector.Vector
+  type E 'ComposeListOfAttachments = MIMEMessage
+  list _ = asCompose . cAttachments
+
+instance HasList 'MailListOfAttachments where
+  type T 'MailListOfAttachments = Vector.Vector
+  type E 'MailListOfAttachments = WireEntity
+  list _ = asMailView . mvAttachments
+
+instance HasList 'ListOfFiles where
+  type T 'ListOfFiles = Vector.Vector
+  type E 'ListOfFiles = (Bool, FileSystemEntry)
+  list _ = asFileBrowser . fbEntries
+
 
 -- | An action - typically completed by a key press (e.g. Enter) - and it's
 -- contents are used to be applied to an action.
@@ -581,55 +622,25 @@ setUnread =
     , _aAction = \s -> liftIO $ updateReadState (AddTag $ view (asConfig . confNotmuch . nmNewTag) s) s
     }
 
-listUp :: Action v m AppState
-listUp =
-    Action
-    { _aDescription = ["mail index up one e-mail"]
-    , _aAction = \s -> case focusedViewWidget s of
-        ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveUp s
-        ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
-        ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveUp s
-        MailListOfAttachments -> pure $ over (asMailView . mvAttachments) L.listMoveUp s
-        ListOfFiles -> pure $ over (asFileBrowser . fbEntries) L.listMoveUp s
-        _ -> pure $ over (asMailIndex . miListOfMails) L.listMoveUp s
-    }
+listUp
+  :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
+  => Action v ctx AppState
+listUp = Action ["list up"] (pure . over (list (Proxy :: Proxy ctx)) L.listMoveUp)
 
-listDown :: Action v m AppState
-listDown =
-    Action
-    { _aDescription = ["mail index down one e-mail"]
-    , _aAction = \s -> case focusedViewWidget s of
-        ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) L.listMoveDown s
-        ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) L.listMoveDown s
-        ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) L.listMoveDown s
-        MailListOfAttachments -> pure $ over (asMailView . mvAttachments) L.listMoveDown s
-        ListOfFiles -> pure $ over (asFileBrowser . fbEntries) L.listMoveDown s
-        _ -> pure $ over (asMailIndex. miListOfMails) L.listMoveDown s
-    }
+listDown
+  :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
+  => Action v ctx AppState
+listDown = Action ["list down"] (pure . over (list (Proxy :: Proxy ctx)) L.listMoveDown)
 
-listJumpToEnd :: Action v m AppState
-listJumpToEnd = Action
-  { _aDescription = ["move selection to last element"]
-    , _aAction = \s -> case focusedViewWidget s of
-        ListOfThreads -> pure $ listSetSelectionEnd (asMailIndex . miListOfThreads) s
-        ScrollingMailView -> pure $ listSetSelectionEnd (asMailIndex . miListOfMails) s
-        ComposeListOfAttachments -> pure $ listSetSelectionEnd (asCompose . cAttachments) s
-        MailListOfAttachments -> pure $ listSetSelectionEnd (asMailView . mvAttachments) s
-        ListOfFiles -> pure $ listSetSelectionEnd (asFileBrowser . fbEntries) s
-        _ -> pure $ listSetSelectionEnd (asMailIndex. miListOfMails) s
-  }
+listJumpToStart
+  :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
+  => Action v ctx AppState
+listJumpToStart = Action ["list top"] (pure . over (list (Proxy :: Proxy ctx)) (L.listMoveTo 0))
 
-listJumpToStart :: Action v m AppState
-listJumpToStart = Action
-  { _aDescription = ["move selection to first element"]
-    , _aAction = \s -> case focusedViewWidget s of
-        ListOfThreads -> pure $ over (asMailIndex . miListOfThreads) (L.listMoveTo 0) s
-        ScrollingMailView -> pure $ over (asMailIndex . miListOfMails) (L.listMoveTo 0) s
-        ComposeListOfAttachments -> pure $ over (asCompose . cAttachments) (L.listMoveTo 0) s
-        MailListOfAttachments -> pure $ over (asMailView . mvAttachments) (L.listMoveTo 0) s
-        ListOfFiles -> pure $ over (asFileBrowser . fbEntries) (L.listMoveTo 0) s
-        _ -> pure $ over (asMailIndex. miListOfMails) (L.listMoveTo 0) s
-  }
+listJumpToEnd
+  :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
+  => Action v ctx AppState
+listJumpToEnd = Action ["list bottom"] (pure . over (list (Proxy :: Proxy ctx)) (L.listMoveTo (-1)))
 
 switchComposeEditor :: Action 'Threads 'ListOfThreads AppState
 switchComposeEditor =
@@ -757,7 +768,7 @@ makeAttachmentsFromSelected s = do
     . set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
   where
     go :: [MIMEMessage] -> L.List Name MIMEMessage -> L.List Name MIMEMessage
-    go parts list = foldr upsertPart list parts
+    go parts l = foldr upsertPart l parts
     makeFullPath path = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> path
 
 isFileUnderCursor :: Maybe (a, (b, FileSystemEntry)) -> Bool
@@ -772,11 +783,6 @@ updateBrowseFileContents :: [FileSystemEntry] -> AppState -> AppState
 updateBrowseFileContents contents s =
   let contents' = view vector ((False, ) <$> contents)
   in over (asFileBrowser . fbEntries) (L.listReplace contents' (Just 0)) s
-
-listSetSelectionEnd
-  :: (Foldable t, L.Splittable t)
-  => Lens' s (L.GenericList Name t a) -> s -> s
-listSetSelectionEnd l = over l (L.listMoveTo (-1))
 
 applySearch :: (MonadIO m) => AppState -> m AppState
 applySearch s = do
@@ -992,17 +998,17 @@ editAttachment s =
           _ -> pure $ setError (GenericError "Not implemented. See #182") s
 
 upsertPart :: MIMEMessage -> L.List Name MIMEMessage -> L.List Name MIMEMessage
-upsertPart newPart list =
-  case L.listSelectedElement list of
-    Nothing -> L.listInsert 0 newPart list
+upsertPart newPart l =
+  case L.listSelectedElement l of
+    Nothing -> L.listInsert 0 newPart l
     Just (_, part) ->
       if view (headers . contentDisposition . filename) part == view (headers . contentDisposition . filename) newPart then
         -- replace
-        L.listModify (const newPart) list
+        L.listModify (const newPart) l
       else
         -- append
-        list & over L.listElementsL (`snoc` newPart)
-             . set L.listSelectedL (Just (view (L.listElementsL . to length) list))
+        l & over L.listElementsL (`snoc` newPart)
+             . set L.listSelectedL (Just (view (L.listElementsL . to length) l))
 
 -- | Helper which writes the contents of the mail into the file, otherwise
 -- return an empty filepath
