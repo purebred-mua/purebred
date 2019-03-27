@@ -78,6 +78,7 @@ library
                      , Storage.ParsedMail
                      , Purebred
   other-modules:       Paths_purebred
+                     , Purebred.Types.IFC
   autogen-modules:     Paths_purebred
   build-depends:       base >= 4.9 && < 5
                      , deepseq >= 1.4.2
