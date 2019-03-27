@@ -1,6 +1,5 @@
-{-# LANGUAGE RankNTypes #-}
 -- This file is part of purebred
--- Copyright (C) 2017 Fraser Tweedale and Róman Joost
+-- Copyright (C) 2017-2019 Fraser Tweedale and Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -14,17 +13,23 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
---
+
 {-# LANGUAGE OverloadedStrings #-}
+
 module UI.Utils
   ( titleize
   , Titleize
   , toggledItems
   , selectedFiles
   , takeFileName
+  , sanitise
   ) where
-import Data.Text (Text, pack, unpack)
+
+import Data.Char (chr, isControl, ord)
 import Data.List (union)
+
+import qualified Data.Text as T
+import Data.Text (Text, pack, unpack)
 import qualified System.FilePath as FP (takeFileName)
 import Control.Lens
        (folded, traversed, filtered, toListOf, view, _2)
@@ -68,3 +73,21 @@ instance Titleize Name where
 
 instance Titleize ViewName where
   titleize a = pack $ show a
+
+-- | Convert or strip control characters from input.
+--
+-- * Tab (HT) is replaced with 8 spaces.
+-- * Other C0 codes (except CR and LF) and DEL are replaced with
+--   <https://en.wikipedia.org/wiki/Control_Pictures Control Pictures>
+-- * C1 and all other control characters are replaced with
+--   REPLACEMENT CHARACTER U+FFFD
+--
+sanitise :: T.Text -> T.Text
+sanitise = T.map substControl . T.replace "\t" "        "
+  where
+  substControl c
+    | c == '\n' || c == '\r' = c  -- CR and LF are OK
+    | c <= '\x1f' = chr (0x2400 + ord c)
+    | c == '\DEL' = '\x2421'
+    | isControl c = '\xfffd' -- REPLACEMENT CHARACTER
+    | otherwise = c
