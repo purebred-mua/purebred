@@ -22,7 +22,7 @@ import Data.MIME
 import Error
 import Storage.Notmuch (mailFilepath)
 import Types (NotmuchMail, decodeLenient)
-import UI.Utils (sanitise)
+import Purebred.Types.IFC (sanitiseText)
 
 parseMail
   :: (MonadError Error m, MonadIO m)
@@ -69,7 +69,7 @@ entityToBytes msg = either err Right (convert msg)
     convert m = view body <$> view transferDecoded m
 
 entityToText :: WireEntity -> T.Text
-entityToText msg = sanitise . either err (view body) $
+entityToText msg = sanitiseText . either err (view body) $
   view transferDecoded msg >>= view charsetDecoded
   where
     err :: EncodingError -> T.Text

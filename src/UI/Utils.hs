@@ -22,13 +22,10 @@ module UI.Utils
   , toggledItems
   , selectedFiles
   , takeFileName
-  , sanitise
   ) where
 
-import Data.Char (chr, isControl, ord)
 import Data.List (union)
 
-import qualified Data.Text as T
 import Data.Text (Text, pack, unpack)
 import qualified System.FilePath as FP (takeFileName)
 import Control.Lens
@@ -73,21 +70,3 @@ instance Titleize Name where
 
 instance Titleize ViewName where
   titleize a = pack $ show a
-
--- | Convert or strip control characters from input.
---
--- * Tab (HT) is replaced with 8 spaces.
--- * Other C0 codes (except CR and LF) and DEL are replaced with
---   <https://en.wikipedia.org/wiki/Control_Pictures Control Pictures>
--- * C1 and all other control characters are replaced with
---   REPLACEMENT CHARACTER U+FFFD
---
-sanitise :: T.Text -> T.Text
-sanitise = T.map substControl . T.replace "\t" "        "
-  where
-  substControl c
-    | c == '\n' || c == '\r' = c  -- CR and LF are OK
-    | c <= '\x1f' = chr (0x2400 + ord c)
-    | c == '\DEL' = '\x2421'
-    | isControl c = '\xfffd' -- REPLACEMENT CHARACTER
-    | otherwise = c

@@ -24,17 +24,21 @@ import System.Exit (ExitCode(..))
 import Control.Exception (try, IOException)
 import System.Process.Typed (readProcessStderr, ProcessConfig)
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.ByteString.Lazy.Char8 as L8
 import Control.Lens (set, (&))
 import Data.Semigroup ((<>))
 
+import qualified Data.Text as T
+
 import Error
 import Types
+import Purebred.Types.IFC
 
 
 -- | Handler to handle exit failures and possibly showing an error in the UI.
-handleExitCode :: AppState -> (ExitCode, LB.ByteString) -> AppState
-handleExitCode s (ExitFailure e, stderr) = s & setError (ProcessError (show e <> ": " <> L8.unpack stderr))
+handleExitCode :: AppState -> (ExitCode, Tainted LB.ByteString) -> AppState
+handleExitCode s (ExitFailure e, stderr) =
+  s & setError (ProcessError (
+    show e <> ": " <> untaint (T.unpack . sanitiseText . decodeLenient . LB.toStrict) stderr))
 handleExitCode s (ExitSuccess, _) = s
 
 -- | Handle only IOExceptions, everything else is fair game.
@@ -43,8 +47,10 @@ handleIOException s' ex = pure $ s' & setError (ProcessError (show ex))
 
 -- | Try running a process given by the `FilePath` and catch an IOExceptions.
 -- This is to avoid a crashing process also take down the running Brick program.
-tryRunProcess :: ProcessConfig stdout stderr stdin -> IO (Either IOException (ExitCode, LB.ByteString))
-tryRunProcess = try . readProcessStderr
+tryRunProcess
+  :: ProcessConfig stdout stderr stdin
+  -> IO (Either IOException (ExitCode, Tainted LB.ByteString))
+tryRunProcess = (fmap . fmap . fmap) taint . try . readProcessStderr
 
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
