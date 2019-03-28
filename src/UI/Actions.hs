@@ -102,7 +102,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Text.Zipper
-       (insertMany, currentLine, gotoEOL, clearZipper)
+       (insertMany, currentLine, gotoEOL, clearZipper, TextZipper)
 import Data.Time.Clock (getCurrentTime)
 
 import qualified Data.RFC5322.Address.Text as AddressText (renderMailboxes)
@@ -204,6 +204,15 @@ completeMailTags s =
         Right ops' -> over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
                       <$> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops')
 
+instance Completable 'ComposeTo where
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeTo . veState) Hidden
+
+instance Completable 'ComposeFrom where
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeFrom . veState) Hidden
+
+instance Completable 'ComposeSubject where
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeSubject . veState) Hidden
+
 -- | Applying tag operations on threads
 -- Note: notmuch does not support adding tags to threads themselves, instead we'll
 -- apply all tag operations on mails in the thread. Instead of reloading the
@@ -257,17 +266,28 @@ instance Resetable 'Threads 'ManageThreadTagsEditor where
 instance Resetable 'Threads 'ComposeFrom where
   reset _ _ = pure . clearMailComposition
 
-instance Resetable 'ComposeView 'ComposeFrom where
-  reset _ _ = pure . clearMailComposition
-
 instance Resetable 'Threads 'ComposeSubject where
   reset _ _ = pure . clearMailComposition
 
 instance Resetable 'Threads 'ComposeTo where
   reset _ _ = pure . clearMailComposition
 
+instance Resetable 'ComposeView 'ComposeFrom where
+  reset _ _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
+                . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeFrom . veState) Hidden
+
 instance Resetable 'ComposeView 'ComposeTo where
-  reset _ _ = pure . clearMailComposition
+  reset _ _ s = pure $ s & over (asCompose . cTo . E.editContentsL) (revertEditorContents s)
+                . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeTo . veState) Hidden
+
+instance Resetable 'ComposeView 'ComposeSubject where
+  reset _ _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
+                . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeTo . veState) Hidden
+
+revertEditorContents :: AppState -> TextZipper T.Text -> TextZipper T.Text
+revertEditorContents s z = let saved = view (asCompose . cTemp) s
+                               replace = insertMany saved . clearZipper
+                           in replace z
 
 instance Resetable 'ComposeView 'ComposeListOfAttachments where
   reset _ _ = pure . clearMailComposition
@@ -369,6 +389,21 @@ instance Focusable 'Help 'ScrollingHelpView where
 instance Focusable 'ComposeView 'ComposeListOfAttachments where
   switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
                     . resetView Threads indexView
+
+instance Focusable 'ComposeView 'ComposeFrom where
+  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeFrom
+                      . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
+                      . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeFrom . veState) Visible
+
+instance Focusable 'ComposeView 'ComposeTo where
+  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeTo
+                      . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
+                      . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeTo . veState) Visible
+
+instance Focusable 'ComposeView 'ComposeSubject where
+  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeSubject
+                      . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
+                      . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeSubject . veState) Visible
 
 instance Focusable 'FileBrowser 'ListOfFiles where
   switchFocus _ _ s = let path = view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine) s
@@ -952,6 +987,7 @@ initialCompose mailboxes =
         (E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
         (E.editorText ComposeTo (Just 1) "")
         (E.editorText ComposeSubject (Just 1) "")
+        T.empty
         (L.list ComposeListOfAttachments mempty 1)
 
 

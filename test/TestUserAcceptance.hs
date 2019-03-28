@@ -111,7 +111,56 @@ main = defaultMain $
       , testOpenCommandDoesNotKillPurebred
       , testOpenEntitiesSuccessfully
       , testPipeEntitiesSuccessfully
+      , testEditingMailHeaders
       ]
+
+testEditingMailHeaders :: TestCase
+testEditingMailHeaders = withTmuxSession "user can edit mail headers" $
+  \step -> do
+    startApplication
+
+    liftIO $ step "start composition"
+    sendKeys "m" (Literal "From")
+
+    liftIO $ step "accept default"
+    sendKeys "Enter" (Literal "To")
+
+    liftIO $ step "enter to: email"
+    sendKeys "user@to.test\r" (Literal "Subject")
+
+    liftIO $ step "leave default"
+    sendKeys "Enter" (Literal "~")
+
+    liftIO $ step "enter mail body"
+    sendKeys "iThis is a test body" (Literal "body")
+
+    liftIO $ step "exit insert mode in vim"
+    sendKeys "Escape" (Literal "body")
+
+    liftIO $ step "exit vim"
+    sendKeys ": x\r" (Literal "text/plain")
+      >>= assertSubstrInOutput ("From: \"Joe Bloggs\" <joe@foo.test>")
+
+    liftIO $ step "user can change from header"
+    sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
+
+    liftIO $ step "append an email"
+    sendKeys ", testuser@foo.test\r" (Literal $ "From: "
+                                      <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
+
+    liftIO $ step "user can change to header"
+    sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "user@to.test")
+
+    liftIO $ step "append an additional from email"
+    sendKeys ", testuser@foo.test\r" (Literal "To: user@to.test, testuser@foo.test")
+
+    liftIO $ step "change subject"
+    sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> "")
+
+    liftIO $ step "enter subject"
+    sendKeys ("foo subject\r") (Literal "Subject: foo subject")
+
+    pure ()
 
 testPipeEntitiesSuccessfully :: TestCase
 testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
@@ -243,12 +292,9 @@ testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
     liftIO $ step "exit vim"
     out' <- sendKeys ": x\r" (Literal "Attachments")
 
-    assertRegex (buildAnsiRegex [] ["33"] ["40"] <> "From:\\s"
-                 <> buildAnsiRegex [] ["34"] [] <> "<frase@host.example>") out'
-    assertRegex (buildAnsiRegex [] ["33"] [] <> "To:\\s"
-                 <> buildAnsiRegex [] ["34"] [] <> "<roman@host.example>") out'
-    assertRegex (buildAnsiRegex [] ["33"] []
-                 <> "Subject:\\s" <> buildAnsiRegex [] ["34"] [] <> "Re: " <> subject) out'
+    assertSubstrInOutput "From: <frase@host.example>" out'
+    assertSubstrInOutput "To: <roman@host.example>" out'
+    assertSubstrInOutput ("Subject: Re: " <> subject) out'
 
     liftIO $ step "send mail"
     sendKeys "y" (Literal "Query")
@@ -743,7 +789,7 @@ testUserCanSwitchBackToIndex =
             sendKeys "Escape" (Literal "body")
 
             liftIO $ step "exit vim"
-            sendKeys ": x\r" (Regex ("From: " <> buildAnsiRegex [] ["34"] [] <> "testuser@foo.test"))
+            sendKeys ": x\r" (Regex ("From: testuser@foo.test"))
 
             liftIO $ step "switch back to index"
             sendKeys "Tab" (Literal "Testmail")
@@ -751,9 +797,6 @@ testUserCanSwitchBackToIndex =
             liftIO $ step "switch back to the compose editor"
             sendKeys "Tab" (Literal "test subject")
 
-            liftIO $ step "cycle to next input field"
-            sendKeys "C-n" (Regex (buildAnsiRegex [] ["33"] ["40"] <> "From:\\s+"
-                                   <> buildAnsiRegex [] ["37"] [] <> "testuser@foo.test"))
             pure ()
 
 testUserCanAbortMailComposition :: TestCase
@@ -781,7 +824,6 @@ testUserCanAbortMailComposition =
 
             liftIO $ step "exit vim"
             sendKeys ": x\r" (Regex $ "From: "
-                             <> buildAnsiRegex [] ["34"] []
                              <> "\"Joe Bloggs\" <joe@foo.test>")
 
             liftIO $ step "abort mail"
@@ -804,13 +846,13 @@ testUserCanAbortMailComposition =
             sendKeys "Escape" Unconditional
 
             liftIO $ step "exit vim"
-            sendKeys ": x\r" (Regex ("To: " <> buildAnsiRegex [] ["34"] [] <> "new@second.test\\s+"
-                                     <> buildAnsiRegex [] ["33"] []
-                                     <> "Subject: " <> buildAnsiRegex [] ["34"] [] <> "test subject"))
+            sendKeys ": x\r" (Regex ("To: new@second.test\\s+"
+                                     <> "Subject: test subject"))
 
             liftIO $ step "edit body"
             sendKeys "e" (Regex "This is my second mail\\s+")
             pure ()
+
 
 testSendMail :: TestCase
 testSendMail =
@@ -841,7 +883,6 @@ testSendMail =
           liftIO $ step "exit vim"
           sendKeys ": x\r" (Literal "text/plain")
             >>= assertRegex ("From: "
-                             <> buildAnsiRegex [] ["34"] []
                              <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
 
           liftIO $ step "user can re-edit body"

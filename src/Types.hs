@@ -47,6 +47,7 @@ data Name =
     | ListOfMails
     | ListOfThreads
     | ScrollingMailView
+    | ComposeHeaders
     | ComposeFrom
     | ComposeTo
     | ComposeSubject
@@ -153,6 +154,7 @@ data Compose = Compose
     , _cFrom :: E.Editor T.Text Name
     , _cTo :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
+    , _cTemp :: T.Text
     , _cAttachments :: L.List Name MIMEMessage
     }
 
@@ -167,6 +169,9 @@ cTo = lens _cTo (\c x -> c { _cTo = x })
 
 cSubject :: Lens' Compose (E.Editor T.Text Name)
 cSubject = lens _cSubject (\c x -> c { _cSubject = x })
+
+cTemp :: Lens' Compose T.Text
+cTemp = lens _cTemp (\c x -> c { _cTemp = x })
 
 cAttachments :: Lens' Compose (L.List Name MIMEMessage)
 cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })

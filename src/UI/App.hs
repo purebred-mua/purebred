@@ -48,7 +48,7 @@ import UI.Views
        (indexView, mailView, composeView, helpView, listOfMailsView,
         filebrowserView, focusedViewWidget, focusedViewWidgets,
         focusedViewName)
-import UI.ComposeEditor.Main (attachmentsEditor)
+import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders)
 import Types
 
 drawUI :: AppState -> [Widget Name]
@@ -72,6 +72,7 @@ renderWidget s _ ScrollingHelpView = renderHelp s
 renderWidget s _ ComposeFrom = drawFrom s
 renderWidget s _ ComposeTo = drawTo s
 renderWidget s _ ComposeSubject = drawSubject s
+renderWidget s _ ComposeHeaders = drawHeaders s
 renderWidget s _ StatusBar = statusbar s
 
 handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
