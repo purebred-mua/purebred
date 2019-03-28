@@ -17,7 +17,6 @@ import Data.Traversable (traverse)
 import Data.List (union, notElem, nub, sort)
 import Data.Maybe (fromMaybe)
 import qualified Data.Vector as Vec
-import System.Process.Typed (readProcess, proc)
 import System.Exit (ExitCode(..))
 import qualified Data.Text as T
 import Control.Lens (view, over, set, firstOf, folded, Lens')
@@ -27,6 +26,8 @@ import qualified Notmuch
 import Error
 import Types
 import Purebred.LazyVector
+import Purebred.System.Process (readProcess, proc)
+import Purebred.Types.IFC (sanitiseText, untaint)
 
 
 -- | apply tag operations on all given mails and write the resulting tags to the
@@ -164,10 +165,10 @@ getDatabasePath = do
   let args = ["config", "get", "database.path"]
   (exitc, stdout, err) <- readProcess $ proc cmd args
   case exitc of
-    ExitFailure _ -> error (decode err)
-    ExitSuccess -> pure (filter (/= '\n') (decode stdout))
+    ExitFailure _ -> error (untaint decode err)
+    ExitSuccess -> pure (filter (/= '\n') (untaint decode stdout))
   where
-      decode = T.unpack . decodeLenient . LB.toStrict
+      decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
 -- | creates a vector of threads from a notmuch search
 --
