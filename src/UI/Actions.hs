@@ -237,44 +237,53 @@ instance Completable 'MailAttachmentPipeToEditor where
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
 --
-class Resetable (m :: Name) where
-  reset :: Proxy m -> AppState -> T.EventM Name AppState
+class Resetable (v :: ViewName) (m :: Name) where
+  reset :: Proxy v -> Proxy m -> AppState -> T.EventM Name AppState
 
-instance Resetable 'SearchThreadsEditor where
-  reset _ = pure
+instance Resetable 'Threads 'SearchThreadsEditor where
+  reset _ _ = pure
 
-instance Resetable 'ManageMailTagsEditor where
-  reset _ s = pure $ s & over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+instance Resetable 'Mails 'ManageMailTagsEditor where
+  reset _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
-instance Resetable 'ManageThreadTagsEditor where
-  reset _ s = pure $ s
+instance Resetable 'ViewMail 'ManageMailTagsEditor where
+  reset _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+
+instance Resetable 'Threads 'ManageThreadTagsEditor where
+  reset _ _ s = pure $ s
               & over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
               . toggleLastVisibleWidget SearchThreadsEditor
 
-instance Resetable 'ComposeFrom where
-  reset _ = pure . clearMailComposition
+instance Resetable 'Threads 'ComposeFrom where
+  reset _ _ = pure . clearMailComposition
 
-instance Resetable 'ComposeSubject where
-  reset _ = pure . clearMailComposition
+instance Resetable 'ComposeView 'ComposeFrom where
+  reset _ _ = pure . clearMailComposition
 
-instance Resetable 'ComposeTo where
-  reset _ = pure . clearMailComposition
+instance Resetable 'Threads 'ComposeSubject where
+  reset _ _ = pure . clearMailComposition
 
-instance Resetable 'ComposeListOfAttachments where
-  reset _ = pure . clearMailComposition
+instance Resetable 'Threads 'ComposeTo where
+  reset _ _ = pure . clearMailComposition
 
-instance Resetable 'ManageFileBrowserSearchPath where
-  reset _ = pure . over (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
+instance Resetable 'ComposeView 'ComposeTo where
+  reset _ _ = pure . clearMailComposition
 
-instance Resetable 'MailListOfAttachments where
-  reset _ = pure . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailListOfAttachments . veState) Hidden
+instance Resetable 'ComposeView 'ComposeListOfAttachments where
+  reset _ _ = pure . clearMailComposition
 
-instance Resetable 'MailAttachmentOpenWithEditor where
-  reset _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
+instance Resetable 'FileBrowser 'ManageFileBrowserSearchPath where
+  reset _ _ = pure . over (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
+
+instance Resetable 'ViewMail 'MailListOfAttachments where
+  reset _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailListOfAttachments . veState) Hidden
+
+instance Resetable 'ViewMail 'MailAttachmentOpenWithEditor where
+  reset _ _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
             . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Hidden
 
-instance Resetable 'MailAttachmentPipeToEditor where
-  reset _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
+instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
+  reset _ _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
             . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentPipeToEditor . veState) Hidden
 
 clearMailComposition :: AppState -> AppState
@@ -554,8 +563,8 @@ chain' (Action d1 f1) (Action d2 f2) =
 done :: forall a v. (HasViewName v, Completable a) => Action v a AppState
 done = Action ["apply"] (complete (Proxy :: Proxy a))
 
-abort :: forall a v. (HasViewName v, Resetable a) => Action v a AppState
-abort = Action ["cancel"] (reset (Proxy :: Proxy a))
+abort :: forall a v. (HasViewName v, Resetable v a) => Action v a AppState
+abort = Action ["cancel"] (reset (Proxy :: Proxy v) (Proxy :: Proxy a))
 
 focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState
 focus = Action
