@@ -15,7 +15,6 @@ import qualified Data.Text as T
 import System.Environment (lookupEnv)
 import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
-import System.Process.Typed (proc, readProcessStderr, setStdin, byteStringInput)
 import System.Exit (ExitCode(..))
 
 import Data.MIME (contentTypeTextPlain)
@@ -41,6 +40,8 @@ import UI.ComposeEditor.Keybindings
 
 import Error
 import Types
+import Purebred.System.Process
+import Purebred.Types.IFC (sanitiseText, untaint)
 import Storage.Notmuch (getDatabasePath)
 
 sendmailPath :: FilePath
@@ -49,13 +50,14 @@ sendmailPath = "/usr/sbin/sendmail"
 renderSendMail :: B.ByteString -> IO (Either Error ())
 renderSendMail m = do
   -- -t which extracts recipients from the mail
-  result <- readProcessStderr config
-  case result of
-    (ExitFailure _, stderr)-> pure $ Left $ SendMailError (decode stderr)
-    (ExitSuccess, _) -> pure $ Right ()
+  result <- tryRunProcess config
+  pure $ case result of
+    Left e -> Left $ SendMailError (show e)
+    Right (ExitFailure _, stderr) -> Left $ SendMailError (untaint decode stderr)
+    Right (ExitSuccess, _) -> Right ()
   where
     config = setStdin (byteStringInput (LB.fromStrict m)) $ proc sendmailPath ["-t", "-v"]
-    decode = T.unpack . decodeLenient . LB.toStrict
+    decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
 solarizedDark :: Theme
 solarizedDark =

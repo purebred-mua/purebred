@@ -18,11 +18,17 @@ module Purebred.System.Process
   ( tryRunProcess
   , handleIOException
   , handleExitCode
+
+  -- * Re-exports from @System.Process.Typed@
+  , ProcessConfig
+  , proc
+  , setStdin
+  , byteStringInput
   ) where
 
 import System.Exit (ExitCode(..))
 import Control.Exception (try, IOException)
-import System.Process.Typed (readProcessStderr, ProcessConfig)
+import System.Process.Typed
 import qualified Data.ByteString.Lazy as LB
 import Control.Lens (set, (&))
 import Data.Semigroup ((<>))
@@ -47,8 +53,11 @@ handleIOException s' ex = pure $ s' & setError (ProcessError (show ex))
 
 -- | Try running a process given by the `FilePath` and catch an IOExceptions.
 -- This is to avoid a crashing process also take down the running Brick program.
+--
+-- Returns the exit code and the standard error output.
+--
 tryRunProcess
-  :: ProcessConfig stdout stderr stdin
+  :: ProcessConfig stdout stderrIgnored stdin
   -> IO (Either IOException (ExitCode, Tainted LB.ByteString))
 tryRunProcess = (fmap . fmap . fmap) taint . try . readProcessStderr
 
