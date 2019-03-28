@@ -1,27 +1,38 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module UI.ComposeEditor.Main (attachmentsEditor, renderPart) where
+module UI.ComposeEditor.Main
+  ( attachmentsEditor
+  , renderPart
+  , drawHeaders
+  ) where
 
-import Brick.Types (Padding(Max), Widget)
-import Brick.Widgets.Core (hBox, padLeftRight, padRight, txt, withAttr)
+import Brick.Types (Padding(..), Widget)
+import Brick.Widgets.Core
+       (hBox, padLeftRight, padLeft, padRight, padBottom, txt, withAttr, (<=>),
+       (<+>), vLimit, hLimit)
+import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Control.Lens (view, preview)
+import Control.Lens (view, preview, to)
+import qualified Data.Text as T
+import Data.Text.Zipper (currentLine)
 
 import Data.MIME
        (MIMEMessage, headers, contentType,
         filename, contentDisposition, isAttachment, showContentType)
 
-import Config.Main (listSelectedAttr, listAttr)
+import Config.Main (listSelectedAttr, listAttr, statusbarAttr)
 import UI.Utils (takeFileName)
 import UI.Views (focusedViewWidget)
+import UI.Draw.Main (fillLine)
 import Types
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
     let hasFocus = ComposeListOfAttachments == focusedViewWidget s
         attachmentsList = L.renderList renderPart hasFocus (view (asCompose . cAttachments) s)
-    in attachmentsList
+        header = withAttr statusbarAttr $ hBox [ padLeft (Pad 1) (txt "-- Attachments") , fillLine]
+    in header <=> attachmentsList
 
 renderPart :: Bool -> MIMEMessage -> Widget Name
 renderPart selected m =
@@ -36,3 +47,28 @@ renderPart selected m =
         , txt pType
         ]
   in withAttr listItemAttr widget
+
+drawHeaders :: AppState -> Widget Name
+drawHeaders s = padBottom (Pad 1) $ foldr (drawTableRows s) (txt T.empty) [ComposeSubject, ComposeTo, ComposeFrom]
+
+-- | align labels to the right and values to the left, e.g.
+--
+--     Foo: bar
+-- Subject: test
+--
+drawTableRows :: AppState -> Name -> Widget Name -> Widget Name
+drawTableRows s name w = w
+                         <=> vLimit 1
+                         (hLimit 15 (padLeft Max (makeLabel name))
+                          <+> (padLeft (Pad 1) $ txt (widgetValue name s)))
+
+makeLabel :: Name -> Widget Name
+makeLabel ComposeFrom = txt "From:"
+makeLabel ComposeTo = txt "To:"
+makeLabel _ = txt "Subject:"
+
+widgetValue :: Name -> AppState -> T.Text
+widgetValue ComposeFrom = view (asCompose . cFrom . E.editContentsL . to currentLine)
+widgetValue ComposeTo = view (asCompose . cTo . E.editContentsL . to currentLine)
+widgetValue ComposeSubject = view (asCompose . cSubject . E.editContentsL . to currentLine)
+widgetValue _ = const T.empty

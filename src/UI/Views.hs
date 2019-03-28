@@ -133,11 +133,12 @@ composeView =
   View
     { _vWidgets =
         Tiles $ fromList
-          [ Tile Visible ComposeFrom
-          , Tile Visible ComposeTo
-          , Tile Visible ComposeSubject
-          , Tile Visible StatusBar
+          [ Tile Visible ComposeHeaders
           , Tile Visible ComposeListOfAttachments
+          , Tile Visible StatusBar
+          , Tile Hidden ComposeFrom
+          , Tile Hidden ComposeTo
+          , Tile Hidden ComposeSubject
           ]
     , _vFocus = ComposeFrom
     }
