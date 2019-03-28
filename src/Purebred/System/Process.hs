@@ -18,6 +18,7 @@ module Purebred.System.Process
   ( tryRunProcess
   , handleIOException
   , handleExitCode
+  , Purebred.System.Process.readProcess
 
   -- * Re-exports from @System.Process.Typed@
   , ProcessConfig
@@ -26,6 +27,7 @@ module Purebred.System.Process
   , byteStringInput
   ) where
 
+import Data.Bifunctor (bimap)
 import System.Exit (ExitCode(..))
 import Control.Exception (try, IOException)
 import System.Process.Typed
@@ -33,6 +35,7 @@ import qualified Data.ByteString.Lazy as LB
 import Control.Lens (set, (&))
 import Data.Semigroup ((<>))
 
+import Control.Monad.IO.Class (MonadIO)
 import qualified Data.Text as T
 
 import Error
@@ -51,6 +54,9 @@ handleExitCode s (ExitSuccess, _) = s
 handleIOException :: AppState -> IOException -> IO AppState
 handleIOException s' ex = pure $ s' & setError (ProcessError (show ex))
 
+setError :: Error -> AppState -> AppState
+setError = set asError . Just
+
 -- | Try running a process given by the `FilePath` and catch an IOExceptions.
 -- This is to avoid a crashing process also take down the running Brick program.
 --
@@ -61,5 +67,9 @@ tryRunProcess
   -> IO (Either IOException (ExitCode, Tainted LB.ByteString))
 tryRunProcess = (fmap . fmap . fmap) taint . try . readProcessStderr
 
-setError :: Error -> AppState -> AppState
-setError = set asError . Just
+-- | Run process, returning stdout and stderr as @ByteString@.
+readProcess
+  :: (MonadIO m)
+  => ProcessConfig stdin stdoutIgnored stderrIgnored
+  -> m (ExitCode, Tainted LB.ByteString, Tainted LB.ByteString)
+readProcess = (fmap . fmap) (bimap taint taint) System.Process.Typed.readProcess
