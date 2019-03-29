@@ -73,7 +73,7 @@ solarizedDark =
         , (editorAttr, V.brightBlue `on` V.brightBlack)
         , (editorLabelAttr, V.brightYellow `on` V.brightBlack)
         , (statusbarErrorAttr, fg V.red)
-        , (statusbarAttr, V.brightYellow `on` V.black)
+        , (statusbarAttr, V.black `on` V.brightYellow)
         , (headerKeyAttr, fg V.cyan)
         , (headerValueAttr, fg V.brightCyan)
         , (helpTitleAttr, fg V.cyan `V.withStyle` V.bold)]
