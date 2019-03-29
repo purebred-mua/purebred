@@ -20,7 +20,7 @@ description:
   Contributions are welcome (bug reports, feedback, doc, code, etc).
   See HACKING for more info.
 
-homepage:            https://github.com/githubuser/purebred#readme
+homepage:            https://github.com/purebred-mua/purebred#readme
 license:             AGPL-3.0-or-later
 license-file:        LICENSE
 author:              Róman Joost & Fraser Tweedale
