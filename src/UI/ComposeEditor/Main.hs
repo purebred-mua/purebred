@@ -10,7 +10,7 @@ module UI.ComposeEditor.Main
 import Brick.Types (Padding(..), Widget)
 import Brick.Widgets.Core
        (hBox, padLeftRight, padLeft, padRight, padBottom, txt, withAttr, (<=>),
-       (<+>), vLimit, hLimit)
+       (<+>), vLimit, hLimit, fill)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Control.Lens (view, preview, to)
@@ -24,14 +24,13 @@ import Data.MIME
 import Config.Main (listSelectedAttr, listAttr, statusbarAttr)
 import UI.Utils (takeFileName)
 import UI.Views (focusedViewWidget)
-import UI.Draw.Main (fillLine)
 import Types
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
     let hasFocus = ComposeListOfAttachments == focusedViewWidget s
         attachmentsList = L.renderList renderPart hasFocus (view (asCompose . cAttachments) s)
-        header = withAttr statusbarAttr $ hBox [ padLeft (Pad 1) (txt "-- Attachments") , fillLine]
+        header = withAttr statusbarAttr $ hBox [ padLeft (Pad 1) (txt "-- Attachments") , (vLimit 1 (fill '-'))]
     in header <=> attachmentsList
 
 renderPart :: Bool -> MIMEMessage -> Widget Name
