@@ -54,7 +54,6 @@ module UI.Actions (
   , edit
   , reloadList
   , selectNextUnread
-  , focusNextWidget
   , toggleListItem
   , enterDirectory
   , parentDirectory
@@ -121,7 +120,7 @@ import Types
 import Error
 import UI.Utils (selectedFiles, takeFileName)
 import UI.Views
-       (listOfMailsView, mailView, focusNext, toggleLastVisibleWidget, indexView, resetView,
+       (listOfMailsView, mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
@@ -735,13 +734,6 @@ selectNextUnread =
              f l = maybe (L.listMoveTo 0 l) (const l) (view L.listSelectedL l)
            in pure $ over (asMailIndex . miListOfMails) (f . L.listFindBy p) s
          }
-
-focusNextWidget :: Action v w AppState
-focusNextWidget =
-    Action
-    { _aDescription = ["moves input focus to the next widget"]
-    , _aAction = pure . focusNext
-    }
 
 toggleListItem :: Action v 'ListOfFiles AppState
 toggleListItem =

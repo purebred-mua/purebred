@@ -6,23 +6,20 @@ module UI.Views
   , helpView
   , filebrowserView
   , swapWidget
-  , focusNext
   , focusedViewWidgets
   , focusedViewWidget
   , focusedViewName
   , focusedView
   , toggleLastVisibleWidget
   , resetView
-  , findNextVisibleWidget
   ) where
 
-import Data.Vector (find, fromList, splitAt, findIndex, Vector)
+import Data.Vector (fromList)
 import Data.Maybe (fromMaybe)
-import Data.Semigroup ((<>))
 import Prelude hiding (splitAt)
 
 import Control.Lens
-  ((&), _Just, ix, at, preview, set, lastOf, view, filtered, over, toListOf,
+  ((&), _Just, ix, at, set, lastOf, view, filtered, over, toListOf,
    traversed)
 import Brick.Focus (focusGetCurrent)
 import Types
@@ -60,29 +57,8 @@ focusedViewName s =
     let defaultV = view (asConfig . confDefaultView) s
     in fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
 
--- | Ugh so what do we do here? We want to determine the next visible view
--- element. We used a circular list, which allows us to search forward until
--- we've re-visit the same position from where we left off again. In order to do
--- the same with a list-type data structure, we split the list and tack on the
--- head so we can be sure that we either find a next visible element or well the
--- currently focused.
-focusNext :: AppState -> AppState
-focusNext s = let focused = preview (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) s
-                  widgets = view (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets . tileiso) s
-                  index = maybe 0 (\n -> fromMaybe 0 $ findIndex (\x -> view veName x == n) widgets) focused
-              in maybe s (\x -> set (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) (findNextVisibleWidget x index widgets) s) focused
-
 resetView :: ViewName -> View -> AppState -> AppState
 resetView n = set (asViews . vsViews . at n . _Just)
-
-findNextVisibleWidget ::
-     Name -- ^ default fallback
-  -> Int -- ^ current index
-  -> Vector Tile
-  -> Name
-findNextVisibleWidget fallback i v =
-  let (head', tail') = splitAt (i + 1) v
-  in maybe fallback (view veName) $ find (\x -> view veState x == Visible) (tail' <> head')
 
 indexView :: View
 indexView =
