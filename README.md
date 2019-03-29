@@ -23,6 +23,8 @@ are welcome.  See [HACKING] for more info.
 - [ ] re-use strong UX patterns from existing console mailers like mutt and sup
 - [ ] extensible with plug-ins
 - [x] enforce sane configuration by using Haskell's type system
+- [ ] enforce security against malicious emails by using more expressive types
+- [x] provide a reliable application using a large suite of user acceptance tests
 
 ## Try it
 
