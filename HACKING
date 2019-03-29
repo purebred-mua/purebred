@@ -27,6 +27,11 @@ communication is the key here rather than hacking away.
   - ``Data.Semigroup.<>`` > ``Data.Monoid.<>`` > ``Data.List.++``
   - and so on...
 
+- For executing subprocesses, use only the functions exported
+  from `Purebred.System.Process`.  This is so that output is
+  tainted, indicating that it must be sanitised before use.
+  (The test suite is excepted from this policy.)
+
 
 ### Style
 
