@@ -25,7 +25,7 @@ license:             AGPL-3.0-or-later
 license-file:        LICENSE
 author:              Róman Joost & Fraser Tweedale
 maintainer:          frase@frase.id.au
-copyright:           2017-2018  Purebred contributors
+copyright:           2017-2019  Purebred contributors
 category:            Email
 build-type:          Simple
 
