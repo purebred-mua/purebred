@@ -23,6 +23,7 @@ module Purebred.System.Process
   -- * Re-exports from @System.Process.Typed@
   , ProcessConfig
   , proc
+  , shell
   , setStdin
   , byteStringInput
   ) where
