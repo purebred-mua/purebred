@@ -506,7 +506,7 @@ data Keybinding (v :: ViewName) (ctx :: Name) = Keybinding
 -- There is no 'NFData' instance for 'Vty.Event' and I don't want
 -- to make an orphan instance for it.
 instance NFData (Keybinding v ctx) where
-  rnf (Keybinding ev act) = Keybinding (ev `seq` ev) (force act) `seq` ()
+  rnf (Keybinding ev act) = Keybinding ev (force act) `seq` ()
 
 instance Eq (Keybinding v ctx) where
   (==) (Keybinding a _) (Keybinding b _) = a == b
