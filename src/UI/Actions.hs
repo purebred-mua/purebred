@@ -88,7 +88,6 @@ import System.IO (hFlush)
 import GHC.IO.Handle (Handle)
 import System.IO.Temp (withSystemTempFile, emptyTempFile)
 import System.Directory (getTemporaryDirectory, removeFile)
-import System.Process.Typed (shell, proc, setStdin, byteStringInput)
 import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
@@ -127,7 +126,7 @@ import UI.Views
 import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
-import Purebred.System.Process (tryRunProcess, handleIOException, handleExitCode)
+import Purebred.System.Process
 
 class Scrollable (n :: Name) where
   makeViewportScroller :: Proxy n -> Brick.ViewportScroll Name
