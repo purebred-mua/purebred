@@ -41,7 +41,8 @@ mailAttachmentsKeybindings =
     [ Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'q') []) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'ViewMail 'MailAttachmentOpenWithEditor AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) openAttachment
+    , Keybinding (V.EvKey (V.KChar 'o') []) (noop `chain'` (focus :: Action 'ViewMail 'MailAttachmentOpenWithEditor AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar '|') []) (noop `chain'` (focus :: Action 'ViewMail 'MailAttachmentPipeToEditor AppState) `chain` continue)
     ]
 

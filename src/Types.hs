@@ -347,6 +347,7 @@ data MailViewSettings = MailViewSettings
     , _mvMailListOfAttachmentsKeybindings :: [Keybinding 'ViewMail 'MailListOfAttachments]
     , _mvOpenWithKeybindings :: [Keybinding 'ViewMail 'MailAttachmentOpenWithEditor]
     , _mvPipeToKeybindings :: [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
+    , _mvMailcap :: [(ContentType -> Bool, String)]
     }
     deriving (Generic, NFData)
 
@@ -373,6 +374,9 @@ mvOpenWithKeybindings = lens _mvOpenWithKeybindings (\s x -> s { _mvOpenWithKeyb
 
 mvPipeToKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
 mvPipeToKeybindings = lens _mvPipeToKeybindings (\s x -> s { _mvPipeToKeybindings = x })
+
+mvMailcap :: Lens' MailViewSettings [(ContentType -> Bool, String)]
+mvMailcap = lens _mvMailcap (\s x -> s { _mvMailcap = x })
 
 data ViewName
     = Threads

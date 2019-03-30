@@ -61,6 +61,7 @@ module UI.Actions (
   , delete
   , applySearch
   , openWithCommand
+  , openAttachment
   , pipeToCommand
   ) where
 
@@ -92,11 +93,11 @@ import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Data.Functor (($>))
 import Control.Lens
-       (_Just, to, at, ix, _1, _2, toListOf, traversed, has, snoc,
+       (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has, snoc,
         filtered, set, over, preview, view, views, (&), nullOf, firstOf,
-        traversed, traverse, Getting, Lens')
+        Getting, Lens')
 import Control.Concurrent (forkIO)
-import Control.Monad ((>=>))
+import Control.Monad ((>=>), join)
 import Control.Monad.Except (runExceptT)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
@@ -109,10 +110,10 @@ import Data.MIME
        (createMultipartMixedMessage, contentTypeApplicationOctetStream,
         createTextPlainMessage, createAttachmentFromFile, renderMessage,
         contentDisposition, dispositionType, headers, filename,
-        parseContentType, attachments, isAttachment, entities,
-        matchContentType, contentType, mailboxList, renderMailboxes,
-        addressList, renderAddresses, renderRFC5422Date, MIMEMessage,
-        WireEntity, DispositionType(..), ContentType(..), Mailbox(..))
+        parseContentType, attachments, isAttachment, entities, matchContentType,
+        contentType, mailboxList, renderMailboxes, addressList, renderAddresses,
+        renderRFC5422Date, MIMEMessage, WireEntity, DispositionType(..),
+        ContentType(..), Mailbox(..))
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
        (parseMail, getTo, getFrom, getSubject, toQuotedMail, entityToBytes)
@@ -559,10 +560,31 @@ invokeEditor = Action ["invoke external editor"] (Brick.suspendAndResume . liftI
 edit :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
 edit = Action ["edit file"] (Brick.suspendAndResume . liftIO . editAttachment)
 
+openAttachment :: Action 'ViewMail ctx (T.Next AppState)
+openAttachment =
+  Action
+  { _aDescription = ["open attachment with external command"]
+  , _aAction = \s ->
+      let
+        match ct = firstOf (asConfig . confMailView . mvMailcap . traversed
+                            . filtered (flip fst ct)
+                            . _2) s
+        maybeCommand =
+          join
+          $ match
+          <$> preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2 . headers . contentType) s
+      in case maybeCommand of
+           (Just cmd) -> Brick.suspendAndResume $ liftIO $ openCommand' s cmd
+           Nothing ->
+             Brick.continue
+             $ s & set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentOpenWithEditor
+             . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Visible
+  }
+
 openWithCommand :: Action 'ViewMail 'MailAttachmentOpenWithEditor (T.Next AppState)
 openWithCommand =
   Action
-  { _aDescription = ["pass to external command"]
+  { _aDescription = ["ask for command to open attachment"]
   , _aAction = \s ->
     let cmd = view (asMailView . mvOpenCommand . E.editContentsL . to (T.unpack . currentLine)) s
     in Brick.suspendAndResume $ liftIO $ openCommand' s cmd

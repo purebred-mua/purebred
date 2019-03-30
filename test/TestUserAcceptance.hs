@@ -196,7 +196,7 @@ testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
     sendKeys "v" (Literal "text/plain")
 
     liftIO $ step "open one entity"
-    sendKeys "Enter" (Literal "Open With")
+    sendKeys "o" (Literal "Open With")
     _ <- sendLiteralKeys "less -e"
 
     sendKeys "Enter" (Regex ("This is a test mail for purebred"
@@ -217,7 +217,7 @@ testOpenCommandDoesNotKillPurebred = withTmuxSession "open attachment does not k
     sendKeys "v" (Literal "text/plain")
 
     liftIO $ step "open with"
-    sendKeys "Enter" (Literal "Open With")
+    sendKeys "o" (Literal "Open With")
 
     liftIO $ step "Open with bogus command"
     _ <- sendLiteralKeys "asdfasdfasdf"
