@@ -160,8 +160,6 @@ testEditingMailHeaders = withTmuxSession "user can edit mail headers" $
     liftIO $ step "enter subject"
     sendKeys ("foo subject\r") (Literal "Subject: foo subject")
 
-    pure ()
-
 testPipeEntitiesSuccessfully :: TestCase
 testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
   \step -> do
@@ -185,8 +183,6 @@ testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
                              <> buildAnsiRegex ["7"] ["39"] ["49"]
                              <> "\\(END\\)"))
 
-    pure ()
-
 testOpenEntitiesSuccessfully :: TestCase
 testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
   \step -> do
@@ -209,8 +205,6 @@ testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
                             <> buildAnsiRegex ["7"] ["39"] ["49"]
                             <> ".*purebred.*END"))
 
-    pure ()
-
 testOpenCommandDoesNotKillPurebred :: TestCase
 testOpenCommandDoesNotKillPurebred = withTmuxSession "open attachment does not kill purebred" $
   \step -> do
@@ -228,8 +222,6 @@ testOpenCommandDoesNotKillPurebred = withTmuxSession "open attachment does not k
     liftIO $ step "Open with bogus command"
     _ <- sendLiteralKeys "asdfasdfasdf"
     sendKeys "Enter" (Literal "ProcessError")
-
-    pure ()
 
 testShowsMailEntities :: TestCase
 testShowsMailEntities = withTmuxSession "shows mail entities successfully" $
@@ -251,8 +243,6 @@ testShowsMailEntities = withTmuxSession "shows mail entities successfully" $
     -- poor mans (?!text)
     assertRegex "[^t][^e][^x][^t]" out
 
-    pure ()
-
 testUserCanMoveBetweenThreads :: TestCase
 testUserCanMoveBetweenThreads = withTmuxSession "user can navigate between threads" $
   \step -> do
@@ -270,7 +260,6 @@ testUserCanMoveBetweenThreads = withTmuxSession "user can navigate between threa
 
     liftIO $ step "Navigate up the threads list"
     sendKeys "K" (Literal "This is a test mail for purebred")
-    pure ()
 
 testRepliesToMailSuccessfully :: TestCase
 testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
@@ -307,8 +296,6 @@ testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
     assertSubstrInOutput "To: roman@host.example" decoded
     assertSubstrInOutput "> This is a test mail for purebred" decoded
 
-    pure ()
-
 testFromAddressIsProperlyReset :: TestCase
 testFromAddressIsProperlyReset = withTmuxSession "from address is reset to configured identity" $
   \step -> do
@@ -323,8 +310,6 @@ testFromAddressIsProperlyReset = withTmuxSession "from address is reset to confi
     liftIO $ step "Start composing again"
     sendKeys "m" (Literal "Joe Bloggs")
 
-    pure ()
-
 testCanJumpToFirstListItem :: TestCase
 testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and thread" $
   \step -> do
@@ -335,8 +320,6 @@ testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and th
 
     liftIO $ step "Jump to first mail"
     sendKeys "1" (Literal "1 of 3")
-
-    pure ()
 
 testUpdatesReadState :: TestCase
 testUpdatesReadState = withTmuxSession "updates read state for mail and thread" $
@@ -362,8 +345,6 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
     liftIO $ step "returning to thread list shows thread unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
 
-    pure ()
-
 testConfig :: TestCase
 testConfig = withTmuxSession "test custom config" $
   \step -> do
@@ -386,8 +367,6 @@ testConfig = withTmuxSession "test custom config" $
     -- Press Enter again to deal with case where cursor is not at
     -- column 0, which could cause target string to be split.
     sendKeys "Enter" (Literal unlikelyString)
-
-    pure ()
 
 testAddAttachments :: TestCase
 testAddAttachments = withTmuxSession "use file browser to add attachments" $
@@ -551,8 +530,6 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     -- last visible "item" in the UI followed by whitespace.
     sendKeys "Escape" (Regex "This is a test mail for purebred\\s+$")
 
-    pure ()
-
 testManageTagsOnThreads :: TestCase
 testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
   \step -> do
@@ -626,8 +603,6 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     liftIO $ step "abort editing"
     sendKeys "Escape" (Literal "Query")
 
-    pure ()
-
 testHelp :: TestCase
 testHelp = withTmuxSession "help view" $
   \step -> do
@@ -637,7 +612,6 @@ testHelp = withTmuxSession "help view" $
     sendKeys "?" (Literal "quit the application")
 
     sendKeys "Escape" (Literal "Purebred")
-    pure ()
 
 testErrorHandling :: TestCase
 testErrorHandling = withTmuxSession "error handling" $
@@ -657,8 +631,6 @@ testErrorHandling = withTmuxSession "error handling" $
     liftIO $ step "error is cleared with next registered keybinding"
     sendKeys "Up" (Literal "Purebred: Item 1 of 3")
 
-    pure ()
-
 testSetsMailToRead :: TestCase
 testSetsMailToRead = withTmuxSession "user can toggle read tag" $
   \step -> do
@@ -673,7 +645,6 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
 
     liftIO $ step "toggle it back to unread (bold again)"
     sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
-    pure ()
 
 testCanToggleHeaders :: TestCase
 testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
@@ -728,8 +699,6 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
     liftIO $ step "go to previous mail with reset scroll state"
     sendKeys "k" (Regex "Subject:\\s.*WIP Refactor")
 
-    pure ()
-
 testUserCanManipulateNMQuery :: TestCase
 testUserCanManipulateNMQuery =
     withTmuxSession
@@ -761,7 +730,6 @@ testUserCanManipulateNMQuery =
 
           liftIO $ step "view currently selected mail"
           sendKeys "Enter" (Literal "HOLY PUREBRED")
-          pure ()
 
 testUserCanSwitchBackToIndex :: TestCase
 testUserCanSwitchBackToIndex =
@@ -796,8 +764,6 @@ testUserCanSwitchBackToIndex =
 
             liftIO $ step "switch back to the compose editor"
             sendKeys "Tab" (Literal "test subject")
-
-            pure ()
 
 testUserCanAbortMailComposition :: TestCase
 testUserCanAbortMailComposition =
@@ -851,7 +817,6 @@ testUserCanAbortMailComposition =
 
             liftIO $ step "edit body"
             sendKeys "e" (Regex "This is my second mail\\s+")
-            pure ()
 
 
 testSendMail :: TestCase
@@ -1071,13 +1036,14 @@ cleanUpTmuxSession sessionname =
 -- | Run all application steps in a session defined by session name.
 withTmuxSession
   :: TestName
-  -> ((String -> IO ()) -> ReaderT Env IO ())
+  -> ((String -> IO ()) -> ReaderT Env IO a)
   -> IO GlobalEnv
   -> Int  -- ^ session sequence number (will be appended to session name)
   -> TestTree
 withTmuxSession tcname testfx gEnv i =
   withResource (setUp gEnv i tcname) tearDown $
-      \env -> testCaseSteps tcname $ \stepfx -> env >>= runReaderT (testfx stepfx)
+      \env -> testCaseSteps tcname $
+        \stepfx -> env >>= runReaderT (void $ testfx stepfx)
 
 -- | Send keys into the program and wait for the condition to be
 -- met, failing the test if the condition is not met after some
