@@ -17,7 +17,7 @@ import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
 import System.Exit (ExitCode(..))
 
-import Data.MIME (contentTypeTextPlain)
+import Data.MIME (contentTypeTextPlain, matchContentType)
 
 import UI.FileBrowser.Keybindings
        (fileBrowserKeybindings, manageSearchPathKeybindings)
@@ -178,6 +178,10 @@ defaultConfig =
       , _mvMailListOfAttachmentsKeybindings = mailAttachmentsKeybindings
       , _mvOpenWithKeybindings = openWithKeybindings
       , _mvPipeToKeybindings = pipeToKeybindings
+      , _mvMailcap = [
+            ((matchContentType "text" (Just "html")), "elinks -force-html")
+          , (const True, "xdg-open")
+          ]
       }
     , _confIndexView = IndexViewSettings
       { _ivBrowseThreadsKeybindings = browseThreadsKeybindings
