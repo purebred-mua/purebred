@@ -3,14 +3,18 @@
 module UI.Draw.Main where
 
 import Brick.Types (Padding(..), Widget)
-import Brick.Widgets.Core (fill, txt, vLimit, padRight, (<+>), withAttr)
+import Brick.Widgets.Core
+       (fill, txt, vLimit, padRight, (<+>), withAttr, padLeft, hBox)
 import qualified Brick.Widgets.Edit as E
 import qualified Data.Text as T
 import Types
-import Config.Main (editorLabelAttr, editorAttr, editorFocusedAttr)
+import Config.Main (editorLabelAttr, editorAttr, editorFocusedAttr, statusbarAttr)
 
 fillLine :: Widget Name
 fillLine = vLimit 1 (fill ' ')
+
+attachmentsHeader :: Widget Name
+attachmentsHeader = withAttr statusbarAttr $ hBox [ padLeft (Pad 1) (txt "-- Attachments") , (vLimit 1 (fill '-'))]
 
 editorDrawContent :: [T.Text] -> Widget Name
 editorDrawContent st = txt $ T.unlines st

@@ -23,7 +23,7 @@ import Data.MIME
 import Storage.ParsedMail (chooseEntity, entityToText)
 
 import Types
-import UI.Draw.Main (renderEditorWithLabel)
+import UI.Draw.Main (renderEditorWithLabel, attachmentsHeader)
 import UI.Views (focusedViewWidget)
 import Config.Main (headerKeyAttr, headerValueAttr, mailViewAttr,
                     listSelectedAttr, listAttr)
@@ -71,7 +71,7 @@ renderAttachmentsList :: AppState -> Widget Name
 renderAttachmentsList s =
     let hasFocus = MailListOfAttachments == focusedViewWidget s
         attachmentsList = L.renderList renderPart hasFocus (view (asMailView . mvAttachments) s)
-    in attachmentsList
+    in attachmentsHeader <=> attachmentsList
 
 renderMailAttachmentOpenWithEditor :: AppState -> Widget Name
 renderMailAttachmentOpenWithEditor s =
