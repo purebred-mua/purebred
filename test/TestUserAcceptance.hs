@@ -503,7 +503,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
       >>= assertSubstrInOutput "This is a test mail"
 
     liftIO $ step "go back to list of mails"
-    sendKeys "Escape" (Literal "Item 1 of 1")
+    sendKeys "Escape" (Literal "List of Mails")
 
     liftIO $ step "go back to list of threads"
     sendKeys "Escape" (Literal "List of Threads")
