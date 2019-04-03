@@ -93,7 +93,7 @@ library
                      , typed-process >= 0.2.1.0
                      , directory >= 1.2.5.0
                      , bytestring
-                     , time
+                     , time >= 1.8
                      , case-insensitive
                      , optparse-applicative >= 0.13
                      , filepath
