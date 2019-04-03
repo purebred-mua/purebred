@@ -311,7 +311,7 @@ testFromAddressIsProperlyReset = withTmuxSession "from address is reset to confi
     sendKeys "m" (Literal "Joe Bloggs")
 
 testCanJumpToFirstListItem :: TestCase
-testCanJumpToFirstListItem = withTmuxSession "updates read state for mail and thread" $
+testCanJumpToFirstListItem = withTmuxSession "can jump to first and last mail" $
   \step -> do
     startApplication
 
