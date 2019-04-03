@@ -250,7 +250,7 @@ testUserCanMoveBetweenThreads = withTmuxSession "user can navigate between threa
     -- assert that the first mail is really the one we're later navigating back
     -- to
     out <- capture
-    assertRegex (buildAnsiRegex ["1"] ["37"] ["43"] <> "\\s17/Aug.*Testmail with whitespace") out
+    assertRegex (buildAnsiRegex ["1"] ["37"] ["43"] <> "\\sAug'17.*Testmail with whitespace") out
 
     liftIO $ step "View Mail"
     sendKeys "Enter" (Literal "This is a test mail for purebred")
@@ -336,7 +336,7 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
     sendKeys "Down" (Literal "2 of 2")
 
     liftIO $ step "go back to thread list which is read"
-    sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> " 08/Feb\\sRóman\\sJoost\\s+\\(2\\)"))
+    sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
 
     liftIO $ step "set one mail to unread"
     sendKeys "Enter" (Literal "Beginning of large text")
