@@ -30,6 +30,8 @@ import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty.Input.Events as Vty
 import Control.Lens (set, to, view)
 import qualified Data.Map as Map
+import Data.Time.Clock (UTCTime(..))
+import Data.Time.Calendar (fromGregorian)
 
 import UI.Keybindings
 import UI.GatherHeaders.Main (drawSubject, drawFrom, drawTo)
@@ -146,9 +148,9 @@ initialState conf =
          (L.list ListOfFiles mempty 1)
          (E.editor ManageFileBrowserSearchPath Nothing path)
     mailboxes = view (confComposeView . cvIdentities) conf
-    s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb
-  in
-    applySearch s
+    epoch = UTCTime (fromGregorian 2018 07 18) 1
+    s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch
+  in applySearch s
 
 theApp
   :: AppState               -- ^ initial state

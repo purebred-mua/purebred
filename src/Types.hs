@@ -473,6 +473,7 @@ data AppState = AppState
     , _asError     :: Maybe Error -- ^ in case of errors, show this error message
     , _asViews     :: ViewSettings -- ^ stores widget and focus information
     , _asFileBrowser :: FileBrowser
+    , _asLocalTime :: UTCTime
     }
 
 asConfig :: Lens' AppState InternalConfiguration
@@ -491,10 +492,13 @@ asError :: Lens' AppState (Maybe Error)
 asError = lens _asError (\appstate x -> appstate { _asError = x })
 
 asViews :: Lens' AppState ViewSettings
-asViews f (AppState a b c d e g h) = fmap (\g' -> AppState a b c d e g' h) (f g)
+asViews f (AppState a b c d e g h i) = fmap (\g' -> AppState a b c d e g' h i) (f g)
 
 asFileBrowser :: Lens' AppState FileBrowser
 asFileBrowser = lens _asFileBrowser (\as x -> as { _asFileBrowser = x })
+
+asLocalTime :: Lens' AppState UTCTime
+asLocalTime = lens _asLocalTime (\as x -> as { _asLocalTime = x })
 
 data Action (v :: ViewName) (ctx :: Name) a = Action
     { _aDescription :: [T.Text]

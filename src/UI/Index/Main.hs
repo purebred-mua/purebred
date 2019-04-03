@@ -29,7 +29,8 @@ import Brick.Widgets.Core
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import qualified Data.ByteString as B
-import Data.Time.Clock (UTCTime(..))
+import Data.Time.Clock
+       (UTCTime(..), NominalDiffTime, nominalDay, diffUTCTime)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Semigroup ((<>))
 import Data.Text as T (Text, pack, unwords)
@@ -73,7 +74,7 @@ listDrawMail s sel a =
         widget = hBox
           -- NOTE: I believe that inserting a `str " "` is more efficient than
           -- `padLeft/Right (Pad 1)`.  This hypothesis should be tested.
-          [ padLeft (Pad 1) (txt $ formatDate (view mailDate a))
+          [ padLeft (Pad 1) (txt $ formatDate (view mailDate a) (view asLocalTime s))
           , padLeft (Pad 1) (renderAuthors sel $ view mailFrom a)
           , padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings))
           , padLeft (Pad 1) (txt (view mailSubject a))
@@ -86,7 +87,7 @@ listDrawThread s sel a =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
         widget = hBox
-          [ padLeft (Pad 1) (txt $ formatDate (view thDate a))
+          [ padLeft (Pad 1) (txt $ formatDate (view thDate a) (view asLocalTime s))
           , padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a)
           , padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")")
           , padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings))
@@ -103,8 +104,16 @@ getListAttr True False = listNewMailAttr  -- new and not selected
 getListAttr False True = listSelectedAttr  -- not new but selected
 getListAttr False False = listAttr  -- not selected and not new
 
-formatDate :: UTCTime -> Text
-formatDate t = pack $ formatTime defaultTimeLocale "%d/%b" (utctDay t)
+calendarYear :: NominalDiffTime
+calendarYear = nominalDay * 365
+
+formatDate :: UTCTime -> UTCTime -> Text
+formatDate mail now =
+  let format =
+        if calendarYear < diffUTCTime now mail
+          then "%b'%y"  -- Apr'07
+          else "%d/%b"  -- 01/Apr
+   in pack $ formatTime defaultTimeLocale format (utctDay mail)
 
 renderAuthors :: Bool -> Text -> Widget Name
 renderAuthors isSelected authors =

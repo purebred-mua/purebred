@@ -104,6 +104,7 @@ import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper, TextZipper)
 import Data.Time.Clock (getCurrentTime)
+import Data.Time.LocalTime (getZonedTime, zonedTimeToUTC)
 
 import qualified Data.RFC5322.Address.Text as AddressText (renderMailboxes)
 import Data.MIME
@@ -844,9 +845,10 @@ updateBrowseFileContents contents s =
 applySearch :: (MonadIO m) => AppState -> m AppState
 applySearch s = do
   r <- runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
+  t <- liftIO (zonedTimeToUTC <$> getZonedTime)
   case r of
     Left e -> pure $ setError e s
-    Right threads -> updateList threads <$> notifyNumThreads s threads
+    Right threads -> set asLocalTime t . updateList threads <$> notifyNumThreads s threads
    where searchterms = currentLine $ view (asMailIndex . miSearchThreadsEditor . E.editContentsL) s
          updateList vec =
            over (asMailIndex . miThreads . listList) (L.listReplace vec (Just 0))
