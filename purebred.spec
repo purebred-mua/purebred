@@ -63,7 +63,9 @@ interface, but embracing the notmuch storage / search paradigm.
 
 = Requirements
 
-* GHC >= 8.0 * notmuch * a local mailer (e.g. 'sendmail')
+* GHC >= 8.2
+* notmuch
+* a local mailer (e.g. 'sendmail')
 
 = Status
 
