@@ -19,6 +19,8 @@ module Purebred.System.Process
   , handleIOException
   , handleExitCode
   , Purebred.System.Process.readProcess
+  , tmpfileResource
+  , emptyResource
 
   -- * Re-exports from @System.Process.Typed@
   , ProcessConfig
@@ -33,6 +35,9 @@ import System.Exit (ExitCode(..))
 import Control.Exception (try, IOException)
 import System.Process.Typed
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString as B
+import System.IO.Temp (emptySystemTempFile)
+import System.Directory (removeFile)
 import Control.Lens (set, (&))
 import Data.Semigroup ((<>))
 
@@ -74,3 +79,10 @@ readProcess
   => ProcessConfig stdin stdoutIgnored stderrIgnored
   -> m (ExitCode, Tainted LB.ByteString, Tainted LB.ByteString)
 readProcess = (fmap . fmap) (bimap taint taint) System.Process.Typed.readProcess
+
+
+tmpfileResource :: ResourceSpec FilePath
+tmpfileResource = ResourceSpec (emptySystemTempFile "purebred") removeFile B.writeFile
+
+emptyResource :: ResourceSpec ()
+emptyResource = ResourceSpec mempty (const mempty) (const mempty)

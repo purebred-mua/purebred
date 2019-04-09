@@ -31,6 +31,7 @@ import qualified Data.Vector as V
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
+import System.Process.Typed (ProcessConfig)
 
 import Notmuch (Tag)
 import Data.MIME
@@ -592,3 +593,46 @@ decodeLenient = T.decodeUtf8With T.lenientDecode
 -- | Tag operations
 data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
   deriving (Show, Eq)
+
+-- | A bracket-style type for creating and releasing acquired resources (e.g.
+-- temporary files). Note that extending this is perhaps not worth it and we
+-- should perhaps look at ResourceT if necessary.
+data ResourceSpec a = ResourceSpec
+ { _rsAcquire :: IO a
+ -- ^ acquire a resource (e.g. create temporary file)
+ , _rsFree :: a -> IO ()
+ -- ^ release a resource (e.g. remove temporary file)
+ , _rsUpdate :: a -> B.ByteString -> IO ()
+ -- ^ update the acquired resource with the ByteString obtained from serialising the WireEntity
+ }
+
+rsAcquire :: Lens' (ResourceSpec a) (IO a)
+rsAcquire = lens _rsAcquire (\rs x -> rs { _rsAcquire = x })
+
+rsFree :: Lens' (ResourceSpec a) (a -> IO ())
+rsFree = lens _rsFree (\rs x -> rs { _rsFree = x })
+
+rsUpdate :: Lens' (ResourceSpec a) (a -> B.ByteString -> IO ())
+rsUpdate = lens _rsUpdate (\rs x -> rs { _rsUpdate = x })
+
+-- | Command configuration which is bound to an acquired resource (e.g. a
+-- tempfile) which may or may not be cleaned up after exit of it's process.
+data EntityCommand a = EntityCommand
+  { _ccAfterExit :: AppState -> a -> IO AppState
+  , _ccResource :: ResourceSpec a
+  , _ccProcessConfig :: B.ByteString -> a -> ProcessConfig () () ()
+  , _ccEntity :: B.ByteString
+  -- ^ The decoded Entity
+  }
+
+ccAfterExit :: Lens' (EntityCommand a) (AppState -> a -> IO AppState)
+ccAfterExit = lens _ccAfterExit (\cc x -> cc { _ccAfterExit = x })
+
+ccEntity :: Lens' (EntityCommand a) B.ByteString
+ccEntity = lens _ccEntity (\cc x -> cc { _ccEntity = x })
+
+ccProcessConfig :: Lens' (EntityCommand a) (B.ByteString -> a -> ProcessConfig () () ())
+ccProcessConfig = lens _ccProcessConfig (\cc x -> cc { _ccProcessConfig = x })
+
+ccResource :: Lens' (EntityCommand a) (ResourceSpec a)
+ccResource = lens _ccResource (\cc x -> cc { _ccResource = x })

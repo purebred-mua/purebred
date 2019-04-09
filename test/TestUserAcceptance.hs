@@ -176,7 +176,7 @@ testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
     sendKeys "|" (Literal "Pipe to")
 
     liftIO $ step "use less"
-    _ <- sendLiteralKeys "less -e"
+    _ <- sendLiteralKeys "less"
     sendKeys "Enter" (Regex ("This is a test mail for purebred"
                              <> buildAnsiRegex [] ["37"] ["40"]
                              <> "\\s+"
@@ -197,7 +197,7 @@ testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
 
     liftIO $ step "open one entity"
     sendKeys "o" (Literal "Open With")
-    _ <- sendLiteralKeys "less -e"
+    _ <- sendLiteralKeys "less"
 
     sendKeys "Enter" (Regex ("This is a test mail for purebred"
                             <> buildAnsiRegex [] ["37"] ["40"]
