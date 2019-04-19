@@ -15,6 +15,7 @@ import qualified Data.Text as T
 import System.Environment (lookupEnv)
 import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
+import Data.List.NonEmpty (fromList)
 import System.Exit (ExitCode(..))
 
 import Data.MIME (contentTypeTextPlain, matchContentType)
@@ -178,9 +179,11 @@ defaultConfig =
       , _mvMailListOfAttachmentsKeybindings = mailAttachmentsKeybindings
       , _mvOpenWithKeybindings = openWithKeybindings
       , _mvPipeToKeybindings = pipeToKeybindings
-      , _mvMailcap = [
-            ((matchContentType "text" (Just "html")), "elinks -force-html")
-          , (const True, "xdg-open")
+      , _mvMailcap =
+          [ ( matchContentType "text" (Just "html")
+            , MailcapHandler (Shell (fromList "elinks -force-html")) False)
+          , ( const True
+            , MailcapHandler (Process (fromList "xdg-open") []) True)
           ]
       }
     , _confIndexView = IndexViewSettings

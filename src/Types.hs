@@ -31,6 +31,7 @@ import qualified Data.Vector as V
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
+import Data.List.NonEmpty (NonEmpty)
 import System.Process.Typed (ProcessConfig)
 
 import Notmuch (Tag)
@@ -348,7 +349,7 @@ data MailViewSettings = MailViewSettings
     , _mvMailListOfAttachmentsKeybindings :: [Keybinding 'ViewMail 'MailListOfAttachments]
     , _mvOpenWithKeybindings :: [Keybinding 'ViewMail 'MailAttachmentOpenWithEditor]
     , _mvPipeToKeybindings :: [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
-    , _mvMailcap :: [(ContentType -> Bool, String)]
+    , _mvMailcap :: [(ContentType -> Bool, MailcapHandler)]
     }
     deriving (Generic, NFData)
 
@@ -376,7 +377,7 @@ mvOpenWithKeybindings = lens _mvOpenWithKeybindings (\s x -> s { _mvOpenWithKeyb
 mvPipeToKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
 mvPipeToKeybindings = lens _mvPipeToKeybindings (\s x -> s { _mvPipeToKeybindings = x })
 
-mvMailcap :: Lens' MailViewSettings [(ContentType -> Bool, String)]
+mvMailcap :: Lens' MailViewSettings [(ContentType -> Bool, MailcapHandler)]
 mvMailcap = lens _mvMailcap (\s x -> s { _mvMailcap = x })
 
 data ViewName
@@ -614,6 +615,24 @@ rsFree = lens _rsFree (\rs x -> rs { _rsFree = x })
 
 rsUpdate :: Lens' (ResourceSpec a) (a -> B.ByteString -> IO ())
 rsUpdate = lens _rsUpdate (\rs x -> rs { _rsUpdate = x })
+
+data MakeProcess
+  = Shell (NonEmpty Char)
+  | Process (NonEmpty Char)
+            [String]
+  deriving (Generic, NFData)
+
+data MailcapHandler = MailcapHandler
+  { _mhMakeProcess :: MakeProcess
+  , _mhKeepTemp :: Bool
+  } deriving (Generic, NFData)
+
+mhMakeProcess :: Lens' MailcapHandler MakeProcess
+mhMakeProcess = lens _mhMakeProcess (\h x -> h { _mhMakeProcess = x })
+
+mhKeepTemp :: Lens' MailcapHandler Bool
+mhKeepTemp = lens _mhKeepTemp (\h x -> h { _mhKeepTemp = x })
+
 
 -- | Command configuration which is bound to an acquired resource (e.g. a
 -- tempfile) which may or may not be cleaned up after exit of it's process.

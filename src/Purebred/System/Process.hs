@@ -21,6 +21,7 @@ module Purebred.System.Process
   , Purebred.System.Process.readProcess
   , tmpfileResource
   , emptyResource
+  , toProcessConfigWithTempfile
 
   -- * Re-exports from @System.Process.Typed@
   , ProcessConfig
@@ -40,6 +41,7 @@ import System.IO.Temp (emptySystemTempFile)
 import System.Directory (removeFile)
 import Control.Lens (set, (&))
 import Data.Semigroup ((<>))
+import Data.Foldable (toList)
 
 import Control.Monad.IO.Class (MonadIO)
 import qualified Data.Text as T
@@ -81,8 +83,19 @@ readProcess
 readProcess = (fmap . fmap) (bimap taint taint) System.Process.Typed.readProcess
 
 
-tmpfileResource :: ResourceSpec FilePath
-tmpfileResource = ResourceSpec (emptySystemTempFile "purebred") removeFile B.writeFile
+tmpfileResource ::
+  Bool -- ^ removeFile upon cleanup?
+  -> ResourceSpec FilePath
+tmpfileResource keepTempfile =
+  let cleanUp =
+        if keepTempfile
+          then mempty
+          else removeFile
+   in ResourceSpec (emptySystemTempFile "purebred") cleanUp B.writeFile
 
 emptyResource :: ResourceSpec ()
 emptyResource = ResourceSpec mempty (const mempty) (const mempty)
+
+toProcessConfigWithTempfile :: MakeProcess -> FilePath -> ProcessConfig () () ()
+toProcessConfigWithTempfile (Shell cmd) fp = shell (toList cmd <> " " <> fp)
+toProcessConfigWithTempfile (Process cmd args) fp = proc (toList cmd) (args <> [fp])
