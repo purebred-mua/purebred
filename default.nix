@@ -35,7 +35,14 @@ let
   env = haskellPackages.ghcWithPackages (self: [
     self.purebred
   ]);
-  nativeBuildTools = with pkgs.haskellPackages; [ cabal-install ghcid hindent pkgs.notmuch pkgs.tmux ];
+  nativeBuildTools = with pkgs.haskellPackages; [
+    cabal-install
+    ghcid
+    hindent
+    hlint
+    pkgs.notmuch
+    pkgs.tmux
+  ];
   in
     if pkgs.lib.inNixShell
     then haskellPackages.shellFor {
