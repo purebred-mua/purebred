@@ -40,7 +40,7 @@ testRemovingTags = testProperty "remove tags" propRemoveTags
     propRemoveTags m as = removeTags as (removeTags as m) == removeTags as m
 
 testTagOpsWithReset :: TestTree
-testTagOpsWithReset = testCase "tag ops with reset" $ ["archive"] @=? (view mailTags actual)
+testTagOpsWithReset = testCase "tag ops with reset" $ ["archive"] @=? view mailTags actual
   where
     m = NotmuchMail "subject" "from" time ["foo", "bar"] "asdf"
     time = UTCTime (fromGregorian 2018 1 15) (secondsToDiffTime 123)

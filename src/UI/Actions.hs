@@ -18,7 +18,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -190,7 +189,7 @@ instance Completable 'SearchThreadsEditor where
   complete _ = applySearch
 
 instance Completable 'ManageMailTagsEditor where
-  complete _ s = liftIO $ completeMailTags s >>= pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+  complete _ s = liftIO $ over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper <$> completeMailTags s
 
 instance Completable 'ComposeListOfAttachments where
   complete _ = sendMail
@@ -223,9 +222,8 @@ instance Completable 'ManageThreadTagsEditor where
   complete _ s = case getEditorTagOps (asMailIndex . miThreadTagsEditor) s of
                       Left err -> pure $ setError err s
                       Right ops ->
-                        selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
-                        >>= pure
-                        . toggleLastVisibleWidget SearchThreadsEditor
+                        toggleLastVisibleWidget SearchThreadsEditor
+                        <$> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
 
 instance Completable 'ManageFileBrowserSearchPath where
   complete _ s =
@@ -495,7 +493,7 @@ class ViewTransition (v :: ViewName) (v' :: ViewName) where
 instance ViewTransition v v where
 
 instance ViewTransition 'Mails 'Threads where
-  transitionHook _ _ = set (asViews . vsViews . at Mails . _Just) listOfMailsView
+  transitionHook _ _ = set (asViews . vsViews . ix Mails) listOfMailsView
 
 instance ViewTransition 'Threads 'Mails where
 
@@ -512,10 +510,10 @@ instance ViewTransition 'ComposeView 'Threads where
 instance ViewTransition 'ComposeView 'FileBrowser where
 
 instance ViewTransition 'Mails 'ViewMail where
-  transitionHook _ _ = set (asViews . vsViews . at ViewMail . _Just) mailView
+  transitionHook _ _ = set (asViews . vsViews . ix ViewMail) mailView
 
 instance ViewTransition 'ViewMail 'Mails where
-  transitionHook _ _ = set (asViews . vsViews . at Mails . _Just) listOfMailsView
+  transitionHook _ _ = set (asViews . vsViews . ix Mails) listOfMailsView
 
 instance ViewTransition 'ViewMail 'ComposeView where
 
@@ -914,12 +912,13 @@ updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s
     setEntities m = L.list MailListOfAttachments (view vector $ toListOf entities m) 0
 
 updateReadState :: TagOp -> AppState -> IO AppState
-updateReadState op s = selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s [op])
-                       -- Also update the thread to reflect the change. We used
-                       -- to pull the thread out of the database again when we
-                       -- navigated back to the index of threads, but does not
-                       -- always garantee an updated tag list. See #249
-                       >>= pure . over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem [op]))
+updateReadState op s =
+  -- Also update the thread to reflect the change. We used
+  -- to pull the thread out of the database again when we
+  -- navigated back to the index of threads, but does not
+  -- always garantee an updated tag list. See #249
+  over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem [op]))
+  <$> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s [op])
 
 manageMailTags
     :: MonadIO m
@@ -936,10 +935,11 @@ setError = set asError . Just
 
 replyToMail :: AppState -> T.EventM Name AppState
 replyToMail s =
-  pure . ($ s)
-  =<< case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
+  ($ s) <$>
+  case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
     Just (_, m) -> either handleErr handleMail
-                   <$> (either Left (toQuotedMail preferredContentType) <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s)))
+                   <$> (either Left (toQuotedMail preferredContentType)
+                        <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s)))
     Nothing -> pure id
   where
     preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s

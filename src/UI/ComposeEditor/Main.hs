@@ -59,7 +59,7 @@ drawTableRows :: AppState -> Name -> Widget Name -> Widget Name
 drawTableRows s name w = w
                          <=> vLimit 1
                          (hLimit 15 (padLeft Max (makeLabel name))
-                          <+> (padLeft (Pad 1) $ txt (widgetValue name s)))
+                          <+> padLeft (Pad 1) (txt (widgetValue name s)))
 
 makeLabel :: Name -> Widget Name
 makeLabel ComposeFrom = txt "From:"

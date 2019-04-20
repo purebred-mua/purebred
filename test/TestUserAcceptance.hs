@@ -28,6 +28,8 @@ import qualified Data.Text.Encoding.Error as T
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
 import Data.Semigroup ((<>))
 import Data.Either (isRight)
+import Data.Foldable (traverse_)
+import Data.Functor (($>))
 import Control.Concurrent (threadDelay)
 import Control.Exception (catch, IOException)
 import System.IO (hPutStr, hPutStrLn, stderr)
@@ -139,7 +141,7 @@ testEditingMailHeaders = withTmuxSession "user can edit mail headers" $
 
     liftIO $ step "exit vim"
     sendKeys ": x\r" (Literal "text/plain")
-      >>= assertSubstrInOutput ("From: \"Joe Bloggs\" <joe@foo.test>")
+      >>= assertSubstrInOutput "From: \"Joe Bloggs\" <joe@foo.test>"
 
     liftIO $ step "user can change from header"
     sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
@@ -158,7 +160,7 @@ testEditingMailHeaders = withTmuxSession "user can edit mail headers" $
     sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> "")
 
     liftIO $ step "enter subject"
-    sendKeys ("foo subject\r") (Literal "Subject: foo subject")
+    sendKeys "foo subject\r" (Literal "Subject: foo subject")
 
 testPipeEntitiesSuccessfully :: TestCase
 testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
@@ -757,7 +759,7 @@ testUserCanSwitchBackToIndex =
             sendKeys "Escape" (Literal "body")
 
             liftIO $ step "exit vim"
-            sendKeys ": x\r" (Regex ("From: testuser@foo.test"))
+            sendKeys ": x\r" (Regex "From: testuser@foo.test")
 
             liftIO $ step "switch back to index"
             sendKeys "Tab" (Literal "Testmail")
@@ -925,7 +927,7 @@ envSessionName f (Env a b c d) = fmap (\d' -> Env a b c d') (f d)
 -- | Tear down a test session
 tearDown :: Env -> IO ()
 tearDown (Env _ dir mdir sessionName) = do
-  traverse removeDirectoryRecursive dir  -- remove session config dir if exists
+  traverse_ removeDirectoryRecursive dir  -- remove session config dir if exists
   removeDirectoryRecursive mdir
   cleanUpTmuxSession sessionName
 
@@ -997,7 +999,7 @@ setUpNotmuchCfg :: FilePath -> IO FilePath
 setUpNotmuchCfg dir = do
   let cfgData = "[database]\npath=" <> dir <> "\n"
       cfgFile = dir <> "/notmuch-config"
-  writeFile cfgFile cfgData *> pure cfgFile
+  writeFile cfgFile cfgData $> cfgFile
 
 -- | create a tmux session running in the background
 -- Note: the width and height are the default values tmux uses, but I thought

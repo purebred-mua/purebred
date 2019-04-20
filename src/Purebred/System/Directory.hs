@@ -15,7 +15,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TupleSections #-}
 module Purebred.System.Directory where
 
 import Control.Exception.Base (IOException)
@@ -32,7 +31,7 @@ import Types
 
 listDirectory' :: (MonadError Error m, MonadIO m) => FilePath -> m [FileSystemEntry]
 listDirectory' path = liftIO (try $ listDirectory path)
-                      >>= either (throwError . convertError) (traverse (filePathToEntry path) >>= pure . fmap sort)
+                      >>= either (throwError . convertError) (fmap sort <$> traverse (filePathToEntry path))
   where convertError :: IOException -> Error
         convertError = GenericError . show
 

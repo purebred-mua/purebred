@@ -15,6 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 module TestTagParser where
 
 import Data.List (isInfixOf)
@@ -46,7 +47,7 @@ testParseTags =
               , "=+foo   -foo"
               )
             , ( "wrong order"
-              , \r -> case r of
+              , \case
                   Left (GenericError msg) ->
                     assertBool "message indicates bad char"
                     $ "unexpected '='" `isInfixOf` msg

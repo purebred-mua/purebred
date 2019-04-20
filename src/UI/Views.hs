@@ -58,7 +58,7 @@ focusedViewName s =
     in fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
 
 resetView :: ViewName -> View -> AppState -> AppState
-resetView n = set (asViews . vsViews . at n . _Just)
+resetView n = set (asViews . vsViews . ix n)
 
 indexView :: View
 indexView =

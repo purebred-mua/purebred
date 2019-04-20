@@ -14,7 +14,7 @@ fillLine :: Widget Name
 fillLine = vLimit 1 (fill ' ')
 
 attachmentsHeader :: Widget Name
-attachmentsHeader = withAttr statusbarAttr $ hBox [ padLeft (Pad 1) (txt "-- Attachments") , (vLimit 1 (fill '-'))]
+attachmentsHeader = withAttr statusbarAttr $ hBox [ padLeft (Pad 1) (txt "-- Attachments") , vLimit 1 (fill '-')]
 
 editorDrawContent :: [T.Text] -> Widget Name
 editorDrawContent st = txt $ T.unlines st
