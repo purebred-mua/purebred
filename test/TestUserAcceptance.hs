@@ -501,7 +501,11 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     _ <- sendLiteralKeys "+inbox +foo +bar"
 
     liftIO $ step "apply"
-    sendKeys "Enter" (Literal "foo bar")
+    sendKeys "Enter" (Regex ("foo"
+                             <> buildAnsiRegex [] ["37"] []
+                             <> "\\s"
+                             <> buildAnsiRegex [] ["36"] []
+                             <> "bar"))
       >>= assertSubstrInOutput "This is a test mail"
 
     liftIO $ step "go back to list of mails"
@@ -572,7 +576,11 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "Escape" (Literal "Item 2 of 2")
 
     liftIO $ step "thread tags shows new tags"
-    sendKeys "Escape" (Literal "archive replied")
+    sendKeys "Escape" (Regex ("archive"
+                              <> buildAnsiRegex [] ["37"] []
+                              <> "\\s"
+                              <> buildAnsiRegex [] ["36"] []
+                              <> "replied"))
 
     liftIO $ step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -584,15 +592,23 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     _ <- sendLiteralKeys "+thread"
 
     liftIO $ step "apply"
-    sendKeys "Enter" (Literal "archive replied thread")
+    sendKeys "Enter" (Regex ("archive"
+                             <> buildAnsiRegex [] ["37"] []
+                             <> "\\s"
+                             <> buildAnsiRegex [] ["36"] [] <> "replied" <> buildAnsiRegex [] ["37"] []
+                             <> "\\s"
+                             <> buildAnsiRegex [] ["36"] [] <> "thread"))
 
     liftIO $ step "show thread mails"
     sendKeys "Enter" (Literal "ViewMail")
 
     liftIO $ step "navigate to second mail and assert shows old tag"
     sendKeys "Down" (Literal "Item 2 of 2")
-    sendKeys "Escape" (Regex (buildAnsiRegex [] ["36"] []
-                              <> "replied thread"
+    sendKeys "Escape" (Regex ("replied"
+                              <> buildAnsiRegex [] ["37"] []
+                              <> "\\s"
+                              <> buildAnsiRegex [] ["36"] []
+                              <> "thread"
                               <> buildAnsiRegex [] ["37"] []
                               <> "\\sRe: WIP Refactor"))
 

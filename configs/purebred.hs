@@ -21,6 +21,7 @@ Example configuration, currently used for testing which demonstrates various
 ways to overwrite the configuration.
 -}
 import Purebred
+import Data.Semigroup ((<>))
 import qualified Data.ByteString as B
 import System.Environment (lookupEnv)
 import System.Directory (getCurrentDirectory)
@@ -67,3 +68,12 @@ main = purebred $ tweak defaultConfig where
     . set (confComposeView . cvSendMailCmd) writeMailtoFile
     . set (confFileBrowserView . fbHomePath) getCurrentDirectory
     . set (confComposeView . cvIdentities) fromMail
+    . over confTheme (applyAttrMappings myColoredTags)
+
+myColoredTags :: [(AttrName, Attr)]
+myColoredTags =
+  [ (mailTagAttr <> "inbox", fg cyan)
+  , (mailTagAttr <> "archive", fg cyan)
+  , (mailTagAttr <> "signed", fg green)
+  , (mailTagAttr <> "attachment", fg brightRed)
+  ]

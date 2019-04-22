@@ -67,7 +67,7 @@ solarizedDark =
         , (listSelectedAttr, V.white `on` V.yellow)
         , (listNewMailAttr, fg V.white `V.withStyle` V.bold)
         , (listNewMailSelectedAttr, V.white `on` V.yellow `V.withStyle` V.bold)
-        , (mailTagsAttr, fg V.cyan)
+        , (mailTagAttr, fg V.cyan)
         , (mailAuthorsAttr, fg V.white)
         , (E.editFocusedAttr, V.white `on` V.brightBlack)
         , (editorAttr, V.brightBlue `on` V.brightBlack)
@@ -86,7 +86,7 @@ solarizedLight =
         , (listSelectedAttr, V.white `on` V.yellow)
         , (listNewMailAttr, fg V.brightGreen `V.withStyle` V.bold)
         , (listNewMailSelectedAttr, V.white `on` V.yellow `V.withStyle` V.bold)
-        , (mailTagsAttr, fg V.magenta)
+        , (mailTagAttr, fg V.magenta)
         , (mailAuthorsAttr, fg V.brightCyan)
         , (mailSelectedAuthorsAttr, fg V.brightWhite)
         , (E.editFocusedAttr, V.brightBlack `on` V.brightWhite)
@@ -132,8 +132,8 @@ listNewMailSelectedAttr = listNewMailAttr <> L.listSelectedAttr
 mailAttr :: A.AttrName
 mailAttr = "mail"
 
-mailTagsAttr :: A.AttrName
-mailTagsAttr = mailAttr <> "tags"
+mailTagAttr :: A.AttrName
+mailTagAttr = mailAttr <> "tag"
 
 mailAuthorsAttr :: A.AttrName
 mailAuthorsAttr = mailAttr <> "authors"

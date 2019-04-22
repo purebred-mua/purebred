@@ -23,17 +23,16 @@ module UI.Index.Main (
   , renderThreadTagsEditor) where
 
 import Brick.Types (Padding(..), Widget)
-import Brick.AttrMap (AttrName)
+import Brick.AttrMap (AttrName, attrName)
 import Brick.Widgets.Core
-  (hBox, hLimitPercent, padLeft, txt, vLimit, withAttr, (<+>))
+  (hBox, hLimitPercent, padRight, padLeft, txt, vLimit, withAttr, (<+>))
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
-import qualified Data.ByteString as B
 import Data.Time.Clock
        (UTCTime(..), NominalDiffTime, nominalDay, diffUTCTime)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import Data.Semigroup ((<>))
-import Data.Text as T (Text, pack, unwords)
+import Data.Text as T (Text, pack, unpack, unwords)
 
 import Notmuch (getTag)
 
@@ -42,7 +41,7 @@ import UI.Views (focusedViewWidget)
 import Storage.Notmuch (hasTag)
 import Types
 import Config.Main
-       (listNewMailAttr, listNewMailSelectedAttr, mailTagsAttr,
+       (listNewMailAttr, listNewMailSelectedAttr, mailTagAttr,
         listSelectedAttr, listAttr, mailAuthorsAttr,
         mailSelectedAuthorsAttr)
 
@@ -77,7 +76,7 @@ listDrawMail s sel a =
           [ padLeft (Pad 1) (txt $ formatDate (view mailDate a) (view asLocalTime s))
           , padLeft (Pad 1) (renderAuthors sel $ view mailFrom a)
           , padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings))
-          , padLeft (Pad 1) (txt (view mailSubject a))
+          , txt (view mailSubject a)
           , fillLine
           ]
     in withAttr (getListAttr isNewMail sel) widget
@@ -91,7 +90,7 @@ listDrawThread s sel a =
           , padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a)
           , padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")")
           , padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings))
-          , padLeft (Pad 1) (txt (view thSubject a))
+          , txt (view thSubject a)
           , fillLine
           ]
     in withAttr (getListAttr isNewMail sel) widget
@@ -126,4 +125,8 @@ renderAuthors isSelected authors =
 renderTagsWidget :: [Tag] -> Tag -> Widget Name
 renderTagsWidget tgs ignored =
     let ts = filter (/= ignored) tgs
-    in withAttr mailTagsAttr $ vLimit 1 $ txt $ decodeLenient $ B.intercalate " " $ fmap getTag ts
+        render tag = padRight (Pad 1) $ withAttr (toAttrName tag) $ txt (decodeLenient $ getTag tag)
+    in vLimit 1 $ hBox $ render  <$> ts
+
+toAttrName :: Tag -> AttrName
+toAttrName = (mailTagAttr <>) . attrName . unpack . decodeLenient . getTag
