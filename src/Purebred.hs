@@ -116,14 +116,21 @@ module Purebred (
   module UI.Actions,
   module UI.Index.Keybindings,
   module UI.Mail.Keybindings,
+  module Graphics.Vty.Attributes,
   Event(..),
   Key(..),
   Modifier(..),
   Next,
+  AttrName,
+  on,
+  fg,
+  bg,
+  applyAttrMappings,
   getDatabasePath,
   defaultConfig,
   solarizedDark,
   solarizedLight,
+  mailTagAttr,
   (</>),
   module Control.Lens,
   genBoundary,
@@ -152,16 +159,19 @@ import UI.Index.Keybindings
 import UI.Mail.Keybindings
 import UI.Actions
 import Storage.Notmuch (getDatabasePath)
-import Config.Main (defaultConfig, solarizedDark, solarizedLight)
+import Config.Main (defaultConfig, solarizedDark, solarizedLight, mailTagAttr)
 import Types
 import Error
 
 -- re-exports for configuration
 import qualified Graphics.Vty
+import Graphics.Vty.Attributes
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.BChan (BChan, newBChan)
 import Brick.Main (customMain)
 import Brick.Types (Next)
+import Brick.Util (on, fg, bg)
+import Brick.AttrMap (AttrName, applyAttrMappings)
 import Control.Lens ((&), _head, over, preview, set, view)
 import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 
