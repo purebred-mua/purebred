@@ -13,9 +13,9 @@ module Types
 
 import GHC.Generics (Generic)
 
+import Brick.AttrMap (AttrMap)
 import Brick.BChan (BChan)
 import qualified Brick.Focus as Brick
-import Brick.Themes (Theme)
 import Brick.Types (EventM, Next)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -211,7 +211,7 @@ fbHomePath :: Lens (FileBrowserSettings a) (FileBrowserSettings a') a a'
 fbHomePath = lens _fbHomePath (\s a -> s { _fbHomePath = a })
 
 data Configuration extra a b c = Configuration
-    { _confTheme :: Theme
+    { _confTheme :: AttrMap
     , _confNotmuch :: NotmuchSettings a
     , _confEditor :: b
     , _confMailView :: MailViewSettings
@@ -229,7 +229,7 @@ type InternalConfiguration = Configuration (BChan PurebredEvent, String) FilePat
 
 type ConfigurationLens v = forall z a b c. Lens' (Configuration z a b c) v
 
-confTheme :: ConfigurationLens Theme
+confTheme :: ConfigurationLens AttrMap
 confTheme = lens _confTheme (\c x -> c { _confTheme = x })
 
 confEditor :: Lens (Configuration z a b c) (Configuration z a b' c) b b'
