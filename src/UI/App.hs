@@ -23,12 +23,11 @@ import qualified Brick.Main as M
 import Brick.Types (Widget)
 import Brick.Focus (focusRing)
 import Brick.Widgets.Core (vBox, vLimit)
-import Brick.Themes (themeToAttrMap)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty.Input.Events as Vty
-import Control.Lens (set, to, view)
+import Control.Lens (set, view)
 import qualified Data.Map as Map
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
@@ -161,5 +160,5 @@ theApp s =
     , M.appChooseCursor = M.showFirstCursor
     , M.appHandleEvent = appEvent
     , M.appStartEvent = return
-    , M.appAttrMap = const (view (asConfig . confTheme . to themeToAttrMap) s)
+    , M.appAttrMap = const (view (asConfig . confTheme) s)
     }

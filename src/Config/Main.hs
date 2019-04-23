@@ -4,7 +4,6 @@ module Config.Main where
 
 import qualified Brick.AttrMap as A
 import qualified Brick.Widgets.List as L
-import Brick.Themes (Theme, newTheme)
 import Data.Monoid ((<>))
 import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
@@ -59,9 +58,9 @@ renderSendMail m = do
     config = setStdin (byteStringInput (LB.fromStrict m)) $ proc sendmailPath ["-t", "-v"]
     decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
-solarizedDark :: Theme
+solarizedDark :: A.AttrMap
 solarizedDark =
-    newTheme
+    A.attrMap
         V.defAttr
         [ (listAttr, V.brightBlue `on` V.brightBlack)
         , (listSelectedAttr, V.white `on` V.yellow)
@@ -78,9 +77,9 @@ solarizedDark =
         , (headerValueAttr, fg V.brightCyan)
         , (helpTitleAttr, fg V.cyan `V.withStyle` V.bold)]
 
-solarizedLight :: Theme
+solarizedLight :: A.AttrMap
 solarizedLight =
-    newTheme
+    A.attrMap
         V.defAttr
         [ (listAttr, V.brightCyan `on` V.brightWhite)
         , (listSelectedAttr, V.white `on` V.yellow)
