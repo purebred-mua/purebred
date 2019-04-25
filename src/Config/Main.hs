@@ -48,8 +48,8 @@ import Storage.Notmuch (getDatabasePath)
 sendmailPath :: FilePath
 sendmailPath = "/usr/sbin/sendmail"
 
-renderSendMail :: B.ByteString -> IO (Either Error ())
-renderSendMail m = do
+renderSendMail :: FilePath -> B.ByteString -> IO (Either Error ())
+renderSendMail sendmail m = do
   -- -t which extracts recipients from the mail
   result <- tryRunProcess config
   pure $ case result of
@@ -57,7 +57,7 @@ renderSendMail m = do
     Right (ExitFailure _, stderr) -> Left $ SendMailError (untaint decode stderr)
     Right (ExitSuccess, _) -> Right ()
   where
-    config = setStdin (byteStringInput (LB.fromStrict m)) $ proc sendmailPath ["-t", "-v"]
+    config = setStdin (byteStringInput (LB.fromStrict m)) $ proc sendmail ["-t", "-v"]
     decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
 solarizedDark :: Theme
@@ -201,6 +201,7 @@ defaultConfig =
       , _cvToKeybindings = composeToKeybindings
       , _cvSubjectKeybindings = composeSubjectKeybindings
       , _cvSendMailCmd = renderSendMail
+      , _cvSendMailPath = sendmailPath
       , _cvListOfAttachmentsKeybindings = listOfAttachmentsKeybindings
       , _cvIdentities = []
       }

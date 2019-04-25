@@ -43,8 +43,8 @@ myMailKeybindings =
     [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
     ]
 
-writeMailtoFile :: B.ByteString -> IO (Either Error ())
-writeMailtoFile m = do
+writeMailtoFile :: FilePath -> B.ByteString -> IO (Either Error ())
+writeMailtoFile _ m = do
   confdir <- lookupEnv "PUREBRED_CONFIG_DIR"
   currentdir <- getCurrentDirectory
   let fname = fromMaybe currentdir confdir </> "sentMail"
