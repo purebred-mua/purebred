@@ -21,10 +21,11 @@ module Purebred.System.Process
   , handleExitCode
   , Purebred.System.Process.readProcess
   , tmpfileResource
+  , draftFileResoure
   , emptyResource
   , toProcessConfigWithTempfile
   , runEntityCommand
-  , tryIO
+  , createDraftFilePath
   -- * Re-exports from @System.Process.Typed@
   , ProcessConfig
   , proc
@@ -36,22 +37,29 @@ module Purebred.System.Process
 import Data.Bifunctor (bimap)
 import Data.Functor (($>))
 import System.Exit (ExitCode(..))
-import Control.Exception (try, IOException)
+import Control.Exception (IOException)
 import Control.Monad.Catch (bracket, MonadMask)
-import Control.Monad.IO.Class (liftIO, MonadIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Except (MonadError)
+import Control.Lens ((&), _2, over, set, view)
+import Data.Semigroup ((<>))
 import System.Process.Typed
-import Control.Monad.Except (MonadError, throwError)
+import System.IO.Temp (emptyTempFile, emptySystemTempFile)
+import System.FilePath ((</>))
+import System.Directory (removeFile, createDirectoryIfMissing)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as B
-import System.IO.Temp (emptySystemTempFile)
-import System.Directory (removeFile)
-import Control.Lens ((&), _2, over, set, view)
+import Data.Char (isControl, isSpace)
 import Data.Foldable (toList)
+import Data.List (intercalate)
+import Data.Time.Clock (getCurrentTime)
+import Data.Time.Format (formatTime, defaultTimeLocale)
 
 import qualified Data.Text as T
 
 import Error
 import Types
+import Purebred.System (tryIO, exceptionToError)
 import Purebred.Types.IFC
 
 
@@ -65,9 +73,6 @@ handleExitCode s (ExitSuccess, _) = s
 -- | Handle only IOExceptions, everything else is fair game.
 handleIOException :: AppState -> IOException -> IO AppState
 handleIOException s = pure . flip setError s . exceptionToError
-
-exceptionToError :: IOException -> Error
-exceptionToError = ProcessError . show
 
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
@@ -107,10 +112,6 @@ runEntityCommand cmd s =
            tryReadProcess (view ccProcessConfig cmd (view ccEntity cmd) tmpfile) >>=
            (flip (view ccAfterExit cmd) tmpfile <$> handleExitCode s))
 
--- | "Try" a computation but return a Purebred error in the exception case
-tryIO :: (MonadError Error m, MonadIO m) => IO a -> m a
-tryIO m = liftIO (try m) >>= either (throwError . exceptionToError) pure
-
 tmpfileResource ::
      (MonadIO m, MonadError Error m)
   => Bool -- ^ removeFile upon cleanup?
@@ -129,6 +130,52 @@ emptyResource :: (MonadIO m, MonadError Error m) => ResourceSpec m ()
 emptyResource =
   ResourceSpec (pure mempty) (\_ -> pure mempty) (\_ _ -> pure mempty)
 
+-- | Uses a maildir filename template and stores the temporary file in
+-- the drafts folder.
+draftFileResoure ::
+     (MonadIO m, MonadError Error m)
+  => FilePath -- ^ maildir path
+  -> ResourceSpec m FilePath
+draftFileResoure maildir =
+  ResourceSpec
+    (createDraftFilePath maildir)
+    (tryIO . removeFile)
+    (\fp -> tryIO . B.writeFile fp)
+
 toProcessConfigWithTempfile :: MakeProcess -> FilePath -> ProcessConfig () () ()
 toProcessConfigWithTempfile (Shell cmd) fp = shell (toList cmd <> " " <> fp)
 toProcessConfigWithTempfile (Process cmd args) fp = proc (toList cmd) (args <> [fp])
+
+-- | Generates a Maildir filename
+-- see https://cr.yp.to/proto/maildir.html
+maildirMessageFileTemplate :: MonadIO m => m FilePath
+maildirMessageFileTemplate = do
+  left <- liftIO $ formatTime defaultTimeLocale "%s" <$> getCurrentTime
+  middle <- liftIO $ formatTime defaultTimeLocale "%p" <$> getCurrentTime
+  right <- getHostname
+  pure $ intercalate "." [left, middle, right]
+
+getHostname :: (MonadIO m) => m String
+getHostname = do
+  (exitc, out, _) <- Purebred.System.Process.readProcess (proc "hostname" [])
+  case exitc of
+    ExitSuccess -> pure (decode out)
+    ExitFailure _ -> pure "localhost"
+  where
+    decode =
+      untaint
+        (T.unpack .
+         T.filter (\x -> not (isControl x || isSpace x)) .
+         sanitiseText . decodeLenient . LB.toStrict)
+
+-- | Create a temporary file in the drafts directory as a maildir
+-- compliant filepath used for editing mail bodies.
+-- Assumption: We don't cater for the case that the maildir does not exist!
+-- The maildir is the notmuch database directory. If the maildir
+-- wouldn't exist the entire application wouldn't run.
+createDraftFilePath :: (MonadError Error m, MonadIO m) => FilePath -> m FilePath
+createDraftFilePath maildir =
+  let draftsDir = maildir </> "Drafts" </> "new"
+  in tryIO $ do
+    createDirectoryIfMissing True draftsDir
+    maildirMessageFileTemplate >>= emptyTempFile draftsDir

@@ -15,7 +15,10 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE FlexibleContexts #-}
-module Purebred.System.Directory where
+module Purebred.System.Directory
+  ( listDirectory'
+  , filePathToEntry
+  ) where
 
 import Control.Exception.Base (IOException)
 import Control.Monad.IO.Class (MonadIO, liftIO)
