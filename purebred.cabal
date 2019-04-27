@@ -72,6 +72,7 @@ library
                      , Purebred.Parsing.Text
                      , Purebred.System.Directory
                      , Purebred.System.Process
+                     , Purebred.System
                      , UI.FileBrowser.Main
                      , UI.FileBrowser.Keybindings
                      , Config.Main

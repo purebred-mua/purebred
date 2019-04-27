@@ -126,6 +126,7 @@ import Purebred.Events (nextGeneration)
 import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
+import Purebred.System (tryIO)
 import Purebred.System.Process
 
 class Scrollable (n :: Name) where
@@ -1050,6 +1051,7 @@ invokeEditor' :: AppState -> IO AppState
 invokeEditor' s =
   let maybeEntity = preview (asCompose . cAttachments . to L.listSelectedElement
                              . _Just . _2 . to getTextPlainPart . _Just) s
+      maildir = view (asConfig . confNotmuch . nmDatabase) s
       cmd = view (asConfig . confEditor) s
       updatePart s' tempfile = do
         contents <- tryIO $ T.readFile tempfile
@@ -1057,7 +1059,7 @@ invokeEditor' s =
         pure $ s' & over (asCompose . cAttachments) (upsertPart charsets mail)
       mkEntity :: (MonadError Error m) => m B.ByteString
       mkEntity = maybe (pure mempty) entityToBytes maybeEntity
-      entityCmd = EntityCommand updatePart (tmpfileResource True) (\_ fp -> proc cmd [fp])
+      entityCmd = EntityCommand updatePart (draftFileResoure maildir) (\_ fp -> proc cmd [fp])
       charsets = view (asConfig . confCharsets) s
   in
     either (`setError` s) id
