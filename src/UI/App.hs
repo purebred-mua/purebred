@@ -22,7 +22,7 @@ module UI.App where
 import qualified Brick.Main as M
 import Brick.Types (Widget)
 import Brick.Focus (focusRing)
-import Brick.Widgets.Core (vBox, vLimit)
+import Brick.Widgets.Core (vBox, vLimit, emptyWidget)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -45,13 +45,16 @@ import UI.Views
        (indexView, mailView, composeView, helpView, listOfMailsView,
         filebrowserView, focusedViewWidget, focusedViewWidgets,
         focusedViewName)
-import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders)
+import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
 import UI.Draw.Main (renderEditorWithLabel)
 import Purebred.Events (firstGeneration)
 import Types
 
 drawUI :: AppState -> [Widget Name]
-drawUI s = [vBox (renderWidget s (focusedViewName s) <$> focusedViewWidgets s)]
+drawUI s = let ui = vBox (renderWidget s (focusedViewName s) <$> focusedViewWidgets s)
+           in case focusedViewWidget s of
+                ConfirmDialog -> [renderConfirm s, ui]
+                _ -> [ui]
 
 renderWidget :: AppState -> ViewName -> Name -> Widget Name
 renderWidget s _ ListOfThreads = renderListOfThreads s
@@ -78,6 +81,7 @@ renderWidget s _ ComposeTo = renderEditorWithLabel (Proxy :: Proxy 'ComposeTo) "
 renderWidget s _ ComposeSubject = renderEditorWithLabel (Proxy :: Proxy 'ComposeSubject) "Subject:" s
 renderWidget s _ ComposeHeaders = drawHeaders s
 renderWidget s _ StatusBar = statusbar s
+renderWidget _ _ ConfirmDialog = emptyWidget
 
 handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
 handleViewEvent = f where
@@ -101,6 +105,7 @@ handleViewEvent = f where
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
   f _ ListOfFiles = dispatch eventHandlerComposeFileBrowser
   f _ ManageFileBrowserSearchPath = dispatch eventHandlerManageFileBrowserSearchPath
+  f _ ConfirmDialog = dispatch eventHandlerConfirm
   f _ _ = dispatch nullEventHandler
 
 

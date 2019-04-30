@@ -115,6 +115,7 @@ composeView =
           , Tile Hidden ComposeFrom
           , Tile Hidden ComposeTo
           , Tile Hidden ComposeSubject
+          , Tile Hidden ConfirmDialog
           ]
     , _vFocus = ComposeFrom
     }

@@ -8,6 +8,7 @@ import qualified Brick.Types as Brick
 import qualified Brick.Main as Brick
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import Brick.Widgets.Dialog (handleDialogEvent)
 import Graphics.Vty (Event (..))
 import Control.Lens (Getter, (&), _Left, preview, set, to, view)
 import Control.Monad.IO.Class (liftIO)
@@ -170,6 +171,11 @@ eventHandlerComposeSubject :: EventHandler 'ComposeView 'ComposeSubject
 eventHandlerComposeSubject = EventHandler
   (asConfig . confComposeView . cvSubjectKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cSubject) E.handleEditorEvent)
+
+eventHandlerConfirm :: EventHandler 'ComposeView 'ConfirmDialog
+eventHandlerConfirm = EventHandler
+  (asConfig . confComposeView . cvConfirmKeybindings)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cKeepDraft) handleDialogEvent)
 
 eventHandlerComposeListOfAttachments :: EventHandler 'ComposeView 'ComposeListOfAttachments
 eventHandlerComposeListOfAttachments = EventHandler

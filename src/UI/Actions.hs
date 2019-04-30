@@ -64,6 +64,7 @@ module UI.Actions (
   , openWithCommand
   , openAttachment
   , pipeToCommand
+  , handleConfirm
   ) where
 
 import Data.Functor.Identity (Identity(..))
@@ -74,6 +75,7 @@ import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import Brick.Widgets.Dialog (dialog, dialogSelection)
 import Network.Mime (defaultMimeLookup)
 import Data.Proxy
 import qualified Data.Text as T
@@ -95,6 +97,7 @@ import Control.Lens
         Getting, Lens')
 import Control.Concurrent (forkIO)
 import Control.Monad ((>=>))
+import Control.Monad.Catch (MonadMask)
 import Control.Monad.Except (runExceptT, MonadError, throwError)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
@@ -240,6 +243,9 @@ instance Completable 'ComposeFrom where
 
 instance Completable 'ComposeSubject where
   complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeSubject . veState) Hidden
+
+instance Completable 'ConfirmDialog where
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ConfirmDialog . veState) Hidden
 
 -- | Applying tag operations on threads
 -- Note: notmuch does not support adding tags to threads themselves, instead we'll
@@ -432,6 +438,10 @@ instance Focusable 'ComposeView 'ComposeSubject where
                       . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
                       . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeSubject . veState) Visible
 
+instance Focusable 'ComposeView 'ConfirmDialog where
+  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ConfirmDialog
+                      . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ConfirmDialog . veState) Visible
+
 instance Focusable 'FileBrowser 'ListOfFiles where
   switchFocus _ _ s = let path = view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine) s
                       in ($ s)
@@ -515,6 +525,9 @@ instance HasName 'MailAttachmentOpenWithEditor where
 
 instance HasName 'MailAttachmentPipeToEditor where
   name _ = MailAttachmentPipeToEditor
+
+instance HasName 'ConfirmDialog where
+  name _ = ConfirmDialog
 
 -- | Allow to change the view to a different view in order to put the focus on a widget there
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
@@ -845,6 +858,13 @@ createAttachments =
               then liftIO $ makeAttachmentsFromSelected s
               else pure s)
 
+handleConfirm :: Action 'ComposeView 'ConfirmDialog AppState
+handleConfirm =
+  Action
+    ["handle confirmation"]
+    (liftIO . keepOrDiscardDraft)
+
+
 -- Function definitions for actions
 --
 makeAttachmentsFromSelected :: AppState -> IO AppState
@@ -984,8 +1004,19 @@ replyToMail s =
       . set (asCompose . cSubject) (E.editor ComposeSubject Nothing (getSubject pmail))
       . over (asCompose . cAttachments) (upsertPart charsets pmail)
 
+-- | Build the MIMEMessage, sanitize filepaths, serialize and send it
+--
 sendMail :: AppState -> T.EventM Name AppState
 sendMail s = do
+  x <- runExceptT $ buildMail s
+  case x of
+    Left err -> pure $ setError err s
+    Right (m, l') -> liftIO $ trySendAndCatch l' (renderMessage $ sanitizeMail m) s
+
+-- | Build the MIMEMessage from the compose editor fields including Date and Boundary
+--
+buildMail :: (MonadError Error m, MonadIO m) => AppState -> m (MIMEMessage, String)
+buildMail s = do
     dateTimeNow <- liftIO getCurrentTime
     let to' = either (pure []) id $ parseOnly addressList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cTo) s
         from = either (pure []) id $ parseOnly mailboxList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cFrom) s
@@ -997,13 +1028,13 @@ sendMail s = do
                 else firstOf (asCompose . cAttachments . L.listElementsL . traversed) s
         charsets = view (asConfig . confCharsets) s
     case mail of
-        Nothing -> pure $ setError (GenericError "Black hole detected") s
+        Nothing -> throwError (GenericError "Black hole detected")
         (Just m) -> let m' = m
-                          & set (headers . at "Subject") (Just $ T.encodeUtf8 subject)
-                          . set (headers . at "From") (Just $ renderMailboxes from)
-                          . set (headers . at "To") (Just $ renderAddresses to')
-                          . set (headers . at "Date") (Just $ renderRFC5422Date dateTimeNow)
-                    in liftIO $ trySendAndCatch l' (renderMessage $ sanitizeMail charsets m') s
+                            & set (headers . at "Subject") (Just $ T.encodeUtf8 subject)
+                            . set (headers . at "From") (Just $ renderMailboxes from)
+                            . set (headers . at "To") (Just $ renderAddresses to')
+                            . set (headers . at "Date") (Just $ renderRFC5422Date dateTimeNow)
+                    in pure (m', l')
 
 -- Handler to send the mail, but catch and show an error if it happened. This is
 -- really a TODO to improve this, since ideally we can do this in the
@@ -1041,6 +1072,7 @@ initialCompose mailboxes =
         (E.editorText ComposeSubject (Just 1) "")
         T.empty
         (L.list ComposeListOfAttachments mempty 1)
+        (dialog (Just "Keep draft?") (Just (0, [("Keep", Keep), ("Discard", Discard)])) 50)
 
 -- | Serialise the WireEntity and write it to a temporary file. If no WireEntity
 -- exists (e.g. composing a new mail) just use the empty file. When the
@@ -1156,3 +1188,24 @@ getMailsForThread ts s =
   in
     either (const mempty) id
     <$> runExceptT (Notmuch.getThreadMessages dbpath ts)
+
+
+keepOrDiscardDraft :: AppState -> IO AppState
+keepOrDiscardDraft s =
+  case view (asCompose . cKeepDraft . to dialogSelection) s of
+    Just Keep ->
+      let maildir = view (asConfig . confNotmuch . nmDatabase) s
+       in either (`setError` s) (clearMailComposition . setError (GenericError "Draft saved")) <$>
+          runExceptT (keepDraft s maildir)
+    _ -> pure $ s & clearMailComposition . setError (GenericError "Draft discarded")
+
+keepDraft ::
+     (MonadMask m, MonadError Error m, MonadIO m)
+  => AppState
+  -> FilePath
+  -> m AppState
+keepDraft s maildir =
+  let mkCmd = EntityCommand (const . pure) (draftFileResoure maildir) (\_ _ -> proc "true" [])
+  in do
+    bs <- renderMessage . fst <$> buildMail s
+    runEntityCommand (mkCmd bs) s

@@ -5,14 +5,17 @@ module UI.ComposeEditor.Main
   ( attachmentsEditor
   , renderPart
   , drawHeaders
+  , renderConfirm
   ) where
 
 import Brick.Types (Padding(..), Widget)
 import Brick.Widgets.Core
        (hBox, padLeftRight, padLeft, padRight, padBottom, txt, withAttr, (<=>),
-       (<+>), vLimit, hLimit)
+       (<+>), vLimit, hLimit, emptyWidget)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import Brick.Widgets.Dialog (renderDialog)
+import Brick.Widgets.Center (hCenter)
 import Control.Lens (view, preview, to)
 import qualified Data.Text as T
 import Data.Text.Zipper (currentLine)
@@ -74,3 +77,6 @@ widgetValue ComposeFrom = view (asCompose . cFrom . E.editContentsL . to current
 widgetValue ComposeTo = view (asCompose . cTo . E.editContentsL . to currentLine)
 widgetValue ComposeSubject = view (asCompose . cSubject . E.editContentsL . to currentLine)
 widgetValue _ = const T.empty
+
+renderConfirm :: AppState -> Widget Name
+renderConfirm s = renderDialog (view (asCompose . cKeepDraft) s) $ hCenter emptyWidget

@@ -4,6 +4,7 @@ module Config.Main where
 
 import qualified Brick.AttrMap as A
 import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.Dialog as D
 import Data.Monoid ((<>))
 import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
@@ -37,7 +38,7 @@ import UI.Mail.Keybindings
 import UI.Help.Keybindings (helpKeybindings)
 import UI.ComposeEditor.Keybindings
        (listOfAttachmentsKeybindings, composeFromKeybindings,
-        composeToKeybindings, composeSubjectKeybindings)
+        composeToKeybindings, composeSubjectKeybindings, confirmKeybindings)
 
 import Error
 import Types
@@ -78,7 +79,11 @@ solarizedDark =
         , (statusbarAttr, V.black `on` V.brightYellow)
         , (headerKeyAttr, fg V.cyan)
         , (headerValueAttr, fg V.brightCyan)
-        , (helpTitleAttr, fg V.cyan `V.withStyle` V.bold)]
+        , (helpTitleAttr, fg V.cyan `V.withStyle` V.bold)
+        , (D.dialogAttr, V.yellow `on` V.white)
+        , (D.buttonAttr, V.black `on` V.white)
+        , (D.buttonSelectedAttr, bg V.green)
+        ]
 
 solarizedLight :: A.AttrMap
 solarizedLight =
@@ -209,6 +214,7 @@ defaultConfig =
       , _cvSendMailPath = sendmailPath
       , _cvListOfAttachmentsKeybindings = listOfAttachmentsKeybindings
       , _cvIdentities = []
+      , _cvConfirmKeybindings = confirmKeybindings
       }
     , _confHelpView = HelpViewSettings
       { _hvKeybindings = helpKeybindings
