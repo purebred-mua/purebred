@@ -19,6 +19,7 @@ import qualified Brick.Focus as Brick
 import Brick.Types (EventM, Next)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import Brick.Widgets.Dialog (Dialog)
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Lens
 import qualified Data.Map as Map
@@ -64,6 +65,7 @@ data Name =
     | MailAttachmentOpenWithEditor
     | MailAttachmentPipeToEditor
     | StatusBar
+    | ConfirmDialog
     deriving (Eq,Show,Ord)
 
 -- | A brick list, with a field that optionally contains its length.
@@ -152,6 +154,11 @@ mvOpenCommand = lens _mvOpenCommand (\mv hs -> mv { _mvOpenCommand = hs })
 mvPipeCommand :: Lens' MailView (E.Editor T.Text Name)
 mvPipeCommand = lens _mvPipeCommand (\mv hs -> mv { _mvPipeCommand = hs })
 
+data ConfirmDraft
+  = Keep
+  | Discard
+  deriving (Show)
+
 data Compose = Compose
     { _cMail :: B.ByteString
     , _cFrom :: E.Editor T.Text Name
@@ -159,6 +166,7 @@ data Compose = Compose
     , _cSubject :: E.Editor T.Text Name
     , _cTemp :: T.Text
     , _cAttachments :: L.List Name MIMEMessage
+    , _cKeepDraft :: Dialog ConfirmDraft
     }
 
 cMail :: Lens' Compose B.ByteString
@@ -178,6 +186,9 @@ cTemp = lens _cTemp (\c x -> c { _cTemp = x })
 
 cAttachments :: Lens' Compose (L.List Name MIMEMessage)
 cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
+
+cKeepDraft :: Lens' Compose (Dialog ConfirmDraft)
+cKeepDraft = lens _cKeepDraft (\c x -> c { _cKeepDraft = x })
 
 data NotmuchSettings a = NotmuchSettings
     { _nmSearch :: T.Text
@@ -280,6 +291,7 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvSendMailPath :: FilePath
     , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ComposeListOfAttachments]
     , _cvIdentities :: [Mailbox]
+    , _cvConfirmKeybindings :: [Keybinding 'ComposeView 'ConfirmDialog]
     }
     deriving (Generic, NFData)
 
@@ -303,6 +315,9 @@ cvListOfAttachmentsKeybindings = lens _cvListOfAttachmentsKeybindings (\cv x -> 
 
 cvIdentities :: Lens' ComposeViewSettings [Mailbox]
 cvIdentities = lens _cvIdentities (\cv x -> cv { _cvIdentities = x })
+
+cvConfirmKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ConfirmDialog]
+cvConfirmKeybindings = lens _cvConfirmKeybindings (\cv x -> cv { _cvConfirmKeybindings = x })
 
 newtype HelpViewSettings = HelpViewSettings
   { _hvKeybindings :: [Keybinding 'Help 'ScrollingHelpView]

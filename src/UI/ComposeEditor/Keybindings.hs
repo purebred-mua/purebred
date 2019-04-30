@@ -28,10 +28,29 @@ composeToKeybindings =
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain` continue)
     ]
 
+confirmKeybindings :: [Keybinding 'ComposeView 'ConfirmDialog]
+confirmKeybindings =
+  [ Keybinding
+      (V.EvKey V.KEnter [])
+      (handleConfirm `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain'`
+       reloadList `chain`
+       continue)
+  , Keybinding
+      (V.EvKey (V.KChar 'q') [])
+      (noop `chain'`
+       (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain`
+       continue)
+  , Keybinding
+      (V.EvKey V.KEsc [])
+      (noop `chain'`
+       (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain`
+       continue)
+  ]
+
 listOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ComposeListOfAttachments]
 listOfAttachmentsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'q') []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'ComposeView 'ConfirmDialog AppState) `chain` continue)
     , Keybinding (V.EvKey V.KDown []) (listDown `chain` continue)
     , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
