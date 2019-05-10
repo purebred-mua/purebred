@@ -1017,7 +1017,7 @@ invokeEditor' s =
                              . _Just . _2 . to getTextPlainPart . _Just) s
       cmd = view (asConfig . confEditor) s
       updatePart s' tempfile = do
-        contents <- T.readFile tempfile
+        contents <- tryIO $ T.readFile tempfile
         let mail = createTextPlainMessage contents
         pure $ s' & over (asCompose . cAttachments) (upsertPart mail)
       mkEntity :: Either Error B.ByteString
@@ -1028,11 +1028,10 @@ invokeEditor' s =
             case entityToBytes e of
               Left err -> Left err
               Right bytes -> Right bytes
-   in either
-        (pure . flip setError s)
-        (flip runEntityCommand s .
-         EntityCommand updatePart (tmpfileResource True) (\_ fp -> proc cmd [fp]))
-        mkEntity
+      entityCmd = EntityCommand updatePart (tmpfileResource True) (\_ fp -> proc cmd [fp])
+   in case mkEntity of
+    Left err -> pure $ setError err s
+    Right ent -> either (`setError` s) id <$> runExceptT (runEntityCommand (entityCmd ent) s)
 
 -- | Write the serialised WireEntity to a temporary file. Pass the FilePath of
 -- the temporary file to the command. Do not remove the temporary file, so
@@ -1041,8 +1040,11 @@ invokeEditor' s =
 -- not be serialised.
 openCommand' :: AppState -> MailcapHandler -> IO AppState
 openCommand' s cmd =
-  let maybeEntity = preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2) s
-      mkConfig :: Either Error (EntityCommand FilePath)
+  let maybeEntity =
+        preview
+          (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
+          s
+      mkConfig :: Either Error (EntityCommand m FilePath)
       mkConfig =
         case maybeEntity of
           Nothing -> Left (GenericError "No attachment selected")
@@ -1052,7 +1054,10 @@ openCommand' s cmd =
               (tmpfileResource (view mhKeepTemp cmd))
               (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp) <$>
             entityToBytes e
-   in either (pure . flip setError s) (`runEntityCommand` s) mkConfig
+   in either
+        (pure . flip setError s)
+        (\ec -> either (`setError` s) id <$> runExceptT (runEntityCommand ec s))
+        mkConfig
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
 -- temporary file is used. If either no WireEntity exists (e.g. none selected)
@@ -1061,8 +1066,11 @@ pipeCommand' :: AppState -> FilePath -> IO AppState
 pipeCommand' s cmd
   | null cmd = pure $ s & setError (GenericError "Empty command")
   | otherwise =
-    let maybeEntity = preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2) s
-        mkConfig :: Either Error (EntityCommand ())
+    let maybeEntity =
+          preview
+            (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
+            s
+        mkConfig :: Either Error (EntityCommand m ())
         mkConfig =
           case maybeEntity of
             Nothing -> Left (GenericError "No attachment selected")
@@ -1073,21 +1081,11 @@ pipeCommand' s cmd
                 (\b _ ->
                    setStdin (byteStringInput $ LB.fromStrict b) (proc cmd [])) <$>
               entityToBytes e
-     in either (pure . flip setError s) (`runEntityCommand` s) mkConfig
-
-runEntityCommand ::
-  EntityCommand a
-  -> AppState
-  -> IO AppState
-runEntityCommand cmd s = do
-  tmpfile <- view (ccResource . rsAcquire) cmd
-  view (ccResource . rsUpdate) cmd tmpfile (view ccEntity cmd)
-  s' <- tryRunProcess (view ccProcessConfig cmd (view ccEntity cmd) tmpfile) >>=
-    either
-      (handleIOException s)
-      (flip (view ccAfterExit cmd) tmpfile <$> handleExitCode s)
-  view (ccResource . rsFree) cmd tmpfile
-  pure s'
+     in either
+          (pure . flip setError s)
+          (\ec ->
+             either (`setError` s) id <$> runExceptT (runEntityCommand ec s))
+          mkConfig
 
 editAttachment :: AppState -> IO AppState
 editAttachment s =
