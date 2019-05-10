@@ -11,6 +11,7 @@ import qualified Graphics.Vty as V
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
+import Control.Monad.Except (runExceptT)
 import System.Environment (lookupEnv)
 import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
@@ -50,7 +51,7 @@ sendmailPath = "/usr/sbin/sendmail"
 renderSendMail :: FilePath -> B.ByteString -> IO (Either Error ())
 renderSendMail sendmail m = do
   -- -t which extracts recipients from the mail
-  result <- tryRunProcess config
+  result <- runExceptT $ tryReadProcess config
   pure $ case result of
     Left e -> Left $ SendMailError (show e)
     Right (ExitFailure _, stderr) -> Left $ SendMailError (untaint decode stderr)

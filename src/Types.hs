@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | Basic types for the UI used by this library
 module Types
@@ -22,6 +23,8 @@ import qualified Brick.Widgets.List as L
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Lens
 import qualified Data.Map as Map
+import Control.Monad.Except (MonadError)
+import Control.Monad.Reader (MonadIO)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -601,23 +604,29 @@ data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
 -- | A bracket-style type for creating and releasing acquired resources (e.g.
 -- temporary files). Note that extending this is perhaps not worth it and we
 -- should perhaps look at ResourceT if necessary.
-data ResourceSpec a = ResourceSpec
- { _rsAcquire :: IO a
+data ResourceSpec m a = ResourceSpec
+  { _rsAcquire :: (MonadIO m, MonadError Error m) =>
+                    m a
  -- ^ acquire a resource (e.g. create temporary file)
- , _rsFree :: a -> IO ()
+  , _rsFree :: (MonadIO m, MonadError Error m) =>
+                 a -> m ()
  -- ^ release a resource (e.g. remove temporary file)
- , _rsUpdate :: a -> B.ByteString -> IO ()
+  , _rsUpdate :: (MonadIO m, MonadError Error m) =>
+                   a -> B.ByteString -> m ()
  -- ^ update the acquired resource with the ByteString obtained from serialising the WireEntity
- }
+  }
 
-rsAcquire :: Lens' (ResourceSpec a) (IO a)
-rsAcquire = lens _rsAcquire (\rs x -> rs { _rsAcquire = x })
+rsAcquire :: (MonadError Error m, MonadIO m) => Lens' (ResourceSpec m a) (m a)
+rsAcquire = lens _rsAcquire (\rs x -> rs {_rsAcquire = x})
 
-rsFree :: Lens' (ResourceSpec a) (a -> IO ())
-rsFree = lens _rsFree (\rs x -> rs { _rsFree = x })
+rsFree ::
+     (MonadError Error m, MonadIO m) => Lens' (ResourceSpec m a) (a -> m ())
+rsFree = lens _rsFree (\rs x -> rs {_rsFree = x})
 
-rsUpdate :: Lens' (ResourceSpec a) (a -> B.ByteString -> IO ())
-rsUpdate = lens _rsUpdate (\rs x -> rs { _rsUpdate = x })
+rsUpdate ::
+     (MonadError Error m, MonadIO m)
+  => Lens' (ResourceSpec m a) (a -> B.ByteString -> m ())
+rsUpdate = lens _rsUpdate (\rs x -> rs {_rsUpdate = x})
 
 data MakeProcess
   = Shell (NonEmpty Char)
@@ -637,24 +646,33 @@ mhKeepTemp :: Lens' MailcapHandler Bool
 mhKeepTemp = lens _mhKeepTemp (\h x -> h { _mhKeepTemp = x })
 
 
--- | Command configuration which is bound to an acquired resource (e.g. a
--- tempfile) which may or may not be cleaned up after exit of it's process.
-data EntityCommand a = EntityCommand
-  { _ccAfterExit :: AppState -> a -> IO AppState
-  , _ccResource :: ResourceSpec a
+-- | Command configuration which is bound to an acquired resource
+-- (e.g. a tempfile) filtered through an external command. The
+-- resource may or may not be cleaned up after the external command
+-- exits.
+data EntityCommand m a = EntityCommand
+  { _ccAfterExit :: (MonadIO m, MonadError Error m) =>
+                      AppState -> a -> m AppState
+  , _ccResource :: (MonadIO m, MonadError Error m) =>
+                     ResourceSpec m a
   , _ccProcessConfig :: B.ByteString -> a -> ProcessConfig () () ()
   , _ccEntity :: B.ByteString
   -- ^ The decoded Entity
   }
 
-ccAfterExit :: Lens' (EntityCommand a) (AppState -> a -> IO AppState)
-ccAfterExit = lens _ccAfterExit (\cc x -> cc { _ccAfterExit = x })
+ccAfterExit ::
+     (MonadIO m, MonadError Error m)
+  => Lens' (EntityCommand m a) (AppState -> a -> m AppState)
+ccAfterExit = lens _ccAfterExit (\cc x -> cc {_ccAfterExit = x})
 
-ccEntity :: Lens' (EntityCommand a) B.ByteString
-ccEntity = lens _ccEntity (\cc x -> cc { _ccEntity = x })
+ccEntity :: Lens' (EntityCommand m a) B.ByteString
+ccEntity = lens _ccEntity (\cc x -> cc {_ccEntity = x})
 
-ccProcessConfig :: Lens' (EntityCommand a) (B.ByteString -> a -> ProcessConfig () () ())
-ccProcessConfig = lens _ccProcessConfig (\cc x -> cc { _ccProcessConfig = x })
+ccProcessConfig ::
+     Lens' (EntityCommand m a) (B.ByteString -> a -> ProcessConfig () () ())
+ccProcessConfig = lens _ccProcessConfig (\cc x -> cc {_ccProcessConfig = x})
 
-ccResource :: Lens' (EntityCommand a) (ResourceSpec a)
-ccResource = lens _ccResource (\cc x -> cc { _ccResource = x })
+ccResource ::
+     (MonadIO m, MonadError Error m)
+  => Lens' (EntityCommand m a) (ResourceSpec m a)
+ccResource = lens _ccResource (\cc x -> cc {_ccResource = x})
