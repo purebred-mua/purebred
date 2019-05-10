@@ -1,16 +1,11 @@
 { compiler ? null, nixpkgs ? null}:
 
 let
-  compilerVersion = if isNull compiler then "ghc863" else compiler;
+  compilerVersion = if isNull compiler then "ghc864" else compiler;
   haskellPackagesOverlay = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
         purebred = hsuper.callPackage ./purebred.nix { };
-        brick = hsuper.callPackage ./brick.nix {};
-        notmuch = hsuper.callPackage ./hs-notmuch.nix {
-          notmuch = self.pkgs.notmuch;
-          talloc = self.pkgs.talloc;
-        };
       };
     };
   };
@@ -18,8 +13,8 @@ let
     if isNull nixpkgs
     then
     builtins.fetchTarball {
-      url = "https://github.com/NixOS/nixpkgs/archive/e27e11480323db005ab62ef477eb1fd28b6b62f5.tar.gz";
-      sha256 = "0i64wsl20fl92bsqn900nxmmnr1v3088drbwhwpm9lvln42yf23s";
+      url = "https://github.com/NixOS/nixpkgs/archive/28edabd88ed231316f55de0c01d15fad56485cf0.tar.gz";
+      sha256 = "0gbksg3icp04iri5cbchgqiw3n1lfs7i9xzf3v8wsr2f7y8zx45b";
     }
     else
     nixpkgs;

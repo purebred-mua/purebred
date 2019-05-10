@@ -43,7 +43,7 @@ matrix:
       language: c
       env: NOTMUCHVER=0.28 GHCHEAD=true
       addons: {apt: {packages: [tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-head,ghc-head], sources: [hvr-ghc]}}
-    - compiler: "ghc863 (default)"
+    - compiler: "ghc864 (default)"
       language: nix
       before_install:
       install:
