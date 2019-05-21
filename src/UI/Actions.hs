@@ -1024,7 +1024,7 @@ invokeEditor' s =
       mkEntity = maybe (pure mempty) entityToBytes maybeEntity
       entityCmd = EntityCommand updatePart (tmpfileResource True) (\_ fp -> proc cmd [fp])
   in
-    either (flip setError s) id
+    either (`setError` s) id
     <$> runExceptT (mkEntity >>= flip runEntityCommand s . entityCmd)
 
 -- | Write the serialised WireEntity to a temporary file. Pass the FilePath of
@@ -1040,7 +1040,7 @@ openCommand' s cmd =
       let con = EntityCommand (const . pure) (tmpfileResource (view mhKeepTemp cmd))
             (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
       in fmap con . entityToBytes
-  in either (flip setError s) id
+  in either (`setError` s) id
       <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= flip runEntityCommand s)
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
@@ -1056,7 +1056,7 @@ pipeCommand' s cmd
         let con = EntityCommand (const . pure) emptyResource
               (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
         in fmap con . entityToBytes
-     in either (flip setError s) id
+     in either (`setError` s) id
         <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= flip runEntityCommand s)
 
 selectedAttachmentOrError :: MonadError Error m => AppState -> m WireEntity
