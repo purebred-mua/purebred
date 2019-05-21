@@ -1049,13 +1049,11 @@ openCommand' s cmd =
         case maybeEntity of
           Nothing -> throwError (GenericError "No attachment selected")
           Just e ->
-            either
-              throwError
-              (pure . EntityCommand
-                (const . pure)
-                (tmpfileResource (view mhKeepTemp cmd))
-                (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp))
-              (entityToBytes e)
+            EntityCommand
+              (const . pure)
+              (tmpfileResource (view mhKeepTemp cmd))
+              (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
+            <$> entityToBytes e
    in either (flip setError s) id <$> runExceptT (mkConfig >>= flip runEntityCommand s)
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
@@ -1074,13 +1072,11 @@ pipeCommand' s cmd
           case maybeEntity of
             Nothing -> throwError (GenericError "No attachment selected")
             Just e ->
-              either
-                throwError
-                (pure . EntityCommand
-                  (const . pure)
-                  emptyResource
-                  (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd [])))
-              (entityToBytes e)
+              EntityCommand
+                (const . pure)
+                emptyResource
+                (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
+              <$> entityToBytes e
      in either (flip setError s) id <$> runExceptT (mkConfig >>= flip runEntityCommand s)
 
 editAttachment :: AppState -> IO AppState
