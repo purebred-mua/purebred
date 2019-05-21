@@ -1040,21 +1040,14 @@ invokeEditor' s =
 -- not be serialised.
 openCommand' :: AppState -> MailcapHandler -> IO AppState
 openCommand' s cmd =
-  let maybeEntity =
-        preview
-          (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
-          s
-      mkConfig :: (MonadError Error m, MonadIO m) => m (EntityCommand m FilePath)
-      mkConfig =
-        case maybeEntity of
-          Nothing -> throwError (GenericError "No attachment selected")
-          Just e ->
-            EntityCommand
-              (const . pure)
-              (tmpfileResource (view mhKeepTemp cmd))
-              (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
-            <$> entityToBytes e
-   in either (flip setError s) id <$> runExceptT (mkConfig >>= flip runEntityCommand s)
+  let
+    mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m FilePath)
+    mkConfig =
+      let con = EntityCommand (const . pure) (tmpfileResource (view mhKeepTemp cmd))
+            (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
+      in fmap con . entityToBytes
+  in either (flip setError s) id
+      <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= flip runEntityCommand s)
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
 -- temporary file is used. If either no WireEntity exists (e.g. none selected)
@@ -1063,21 +1056,19 @@ pipeCommand' :: AppState -> FilePath -> IO AppState
 pipeCommand' s cmd
   | null cmd = pure $ s & setError (GenericError "Empty command")
   | otherwise =
-    let maybeEntity =
-          preview
-            (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
-            s
-        mkConfig :: (MonadError Error m, MonadIO m) => m (EntityCommand m ())
-        mkConfig =
-          case maybeEntity of
-            Nothing -> throwError (GenericError "No attachment selected")
-            Just e ->
-              EntityCommand
-                (const . pure)
-                emptyResource
-                (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
-              <$> entityToBytes e
-     in either (flip setError s) id <$> runExceptT (mkConfig >>= flip runEntityCommand s)
+    let
+      mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m ())
+      mkConfig =
+        let con = EntityCommand (const . pure) emptyResource
+              (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
+        in fmap con . entityToBytes
+     in either (flip setError s) id
+        <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= flip runEntityCommand s)
+
+selectedAttachmentOrError :: MonadError Error m => AppState -> m WireEntity
+selectedAttachmentOrError =
+  maybe (throwError $ GenericError "No attachment selected") pure
+  . preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
 
 editAttachment :: AppState -> IO AppState
 editAttachment s =
