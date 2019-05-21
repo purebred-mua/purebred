@@ -1020,18 +1020,12 @@ invokeEditor' s =
         contents <- tryIO $ T.readFile tempfile
         let mail = createTextPlainMessage contents
         pure $ s' & over (asCompose . cAttachments) (upsertPart mail)
-      mkEntity :: Either Error B.ByteString
-      mkEntity =
-        case maybeEntity of
-          Nothing -> Right B.empty
-          Just e ->
-            case entityToBytes e of
-              Left err -> Left err
-              Right bytes -> Right bytes
+      mkEntity :: (MonadError Error m) => m B.ByteString
+      mkEntity = maybe (pure mempty) entityToBytes maybeEntity
       entityCmd = EntityCommand updatePart (tmpfileResource True) (\_ fp -> proc cmd [fp])
-   in case mkEntity of
-    Left err -> pure $ setError err s
-    Right ent -> either (`setError` s) id <$> runExceptT (runEntityCommand (entityCmd ent) s)
+  in
+    either (flip setError s) id
+    <$> runExceptT (mkEntity >>= flip runEntityCommand s . entityCmd)
 
 -- | Write the serialised WireEntity to a temporary file. Pass the FilePath of
 -- the temporary file to the command. Do not remove the temporary file, so
