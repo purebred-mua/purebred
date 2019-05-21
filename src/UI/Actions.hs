@@ -94,7 +94,7 @@ import Control.Lens
         Getting, Lens')
 import Control.Concurrent (forkIO)
 import Control.Monad ((>=>))
-import Control.Monad.Except (runExceptT)
+import Control.Monad.Except (runExceptT, MonadError, throwError)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Text.Zipper
@@ -1044,20 +1044,19 @@ openCommand' s cmd =
         preview
           (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
           s
-      mkConfig :: Either Error (EntityCommand m FilePath)
+      mkConfig :: (MonadError Error m, MonadIO m) => m (EntityCommand m FilePath)
       mkConfig =
         case maybeEntity of
-          Nothing -> Left (GenericError "No attachment selected")
+          Nothing -> throwError (GenericError "No attachment selected")
           Just e ->
-            EntityCommand
-              (const . pure)
-              (tmpfileResource (view mhKeepTemp cmd))
-              (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp) <$>
-            entityToBytes e
-   in either
-        (pure . flip setError s)
-        (\ec -> either (`setError` s) id <$> runExceptT (runEntityCommand ec s))
-        mkConfig
+            either
+              throwError
+              (pure . EntityCommand
+                (const . pure)
+                (tmpfileResource (view mhKeepTemp cmd))
+                (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp))
+              (entityToBytes e)
+   in either (flip setError s) id <$> runExceptT (mkConfig >>= flip runEntityCommand s)
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
 -- temporary file is used. If either no WireEntity exists (e.g. none selected)
@@ -1070,22 +1069,19 @@ pipeCommand' s cmd
           preview
             (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
             s
-        mkConfig :: Either Error (EntityCommand m ())
+        mkConfig :: (MonadError Error m, MonadIO m) => m (EntityCommand m ())
         mkConfig =
           case maybeEntity of
-            Nothing -> Left (GenericError "No attachment selected")
+            Nothing -> throwError (GenericError "No attachment selected")
             Just e ->
-              EntityCommand
-                (const . pure)
-                emptyResource
-                (\b _ ->
-                   setStdin (byteStringInput $ LB.fromStrict b) (proc cmd [])) <$>
-              entityToBytes e
-     in either
-          (pure . flip setError s)
-          (\ec ->
-             either (`setError` s) id <$> runExceptT (runEntityCommand ec s))
-          mkConfig
+              either
+                throwError
+                (pure . EntityCommand
+                  (const . pure)
+                  emptyResource
+                  (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd [])))
+              (entityToBytes e)
+     in either (flip setError s) id <$> runExceptT (mkConfig >>= flip runEntityCommand s)
 
 editAttachment :: AppState -> IO AppState
 editAttachment s =
