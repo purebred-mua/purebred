@@ -107,3 +107,12 @@ toQuotedMail charsets ct msg =
                  . set (headers . at "references") (view (headers . replyHeaderReferences) msg)
                  . set (headers . at "subject") (("Re: " <>) <$> view (headers . at "subject") msg))
            contents
+
+toMIMEMessage :: CharsetLookup -> WireEntity -> MIMEMessage
+toMIMEMessage charsets m@(Message _ bs) =
+  let ct = view (headers . contentType) m
+      fp = preview (headers . contentDisposition . filename charsets . to T.unpack) m
+      cdType = preview (headers . contentDisposition . dispositionType) m
+  in case cdType of
+    (Just Inline) -> createTextPlainMessage (entityToText charsets m)
+    _ -> createAttachment ct fp bs
