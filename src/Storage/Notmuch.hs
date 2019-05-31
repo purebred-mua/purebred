@@ -16,8 +16,10 @@ import qualified Data.ByteString.Lazy as LB
 import Data.Traversable (traverse)
 import Data.List (union, notElem, nub, sort)
 import Data.Maybe (fromMaybe)
+import Data.Functor (($>))
 import qualified Data.Vector as Vec
 import System.Exit (ExitCode(..))
+import qualified System.Directory as Directory (removeFile)
 import qualified Data.Text as T
 import Control.Lens (view, over, set, firstOf, folded, Lens')
 
@@ -27,6 +29,7 @@ import Error
 import Types
 import Purebred.LazyVector
 import Purebred.System.Process (readProcess, proc)
+import Purebred.System (tryIO)
 import Purebred.Types.IFC (sanitiseText, untaint)
 
 
@@ -231,3 +234,24 @@ fixupWhitespace :: T.Text -> T.Text
 fixupWhitespace = T.map f . T.filter (/= '\n')
   where f '\t' = ' '
         f c = c
+
+indexFilePath ::
+     (MonadError Error m, MonadIO m)
+  => FilePath -- ^ database
+  -> FilePath -- ^ mail
+  -> [Tag]
+  -> m ()
+indexFilePath dbpath fp tgs =
+  withDatabase
+    dbpath
+    (\db -> Notmuch.indexFile db fp >>= Notmuch.messageSetTags tgs)
+
+unindexFilePath ::
+     (MonadError Error m, MonadIO m)
+  => FilePath -- ^ database
+  -> FilePath -- ^ mail
+  -> m ()
+unindexFilePath dbpath fp =
+  withDatabase
+    dbpath
+    (\db -> Notmuch.removeFile db fp *> tryIO (Directory.removeFile fp $> ()))

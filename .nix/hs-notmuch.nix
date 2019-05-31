@@ -1,14 +1,14 @@
-{ mkDerivation, base, bytestring, c2hs, deepseq, mtl, notmuch
-, profunctors, stdenv, tagged, talloc, text, time
+{ mkDerivation, base, bytestring, c2hs, deepseq, filepath, mtl
+, notmuch, profunctors, stdenv, tagged, talloc, text, time
 }:
 mkDerivation {
   pname = "notmuch";
-  version = "0.2.0.0";
-  sha256 = "feeafa5bdc00c1036755c92d72e7b69cb388ae9bab5064410655007cc8216ff0";
+  version = "0.3.0.0";
+  sha256 = "56d7dc29cd8925fd6088f66ac2d5724baf2fde1187fb4782692977a9f8c19a38";
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base bytestring deepseq mtl profunctors tagged text time
+    base bytestring deepseq filepath mtl profunctors tagged text time
   ];
   librarySystemDepends = [ notmuch talloc ];
   libraryToolDepends = [ c2hs ];

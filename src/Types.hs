@@ -194,18 +194,21 @@ data NotmuchSettings a = NotmuchSettings
     { _nmSearch :: T.Text
     , _nmDatabase :: a
     , _nmNewTag :: Tag
+    , _nmDraftTag :: Tag
     }
     deriving (Generic, NFData)
 
 nmSearch :: Lens' (NotmuchSettings a) T.Text
-nmSearch f (NotmuchSettings a b c) = fmap (\a' -> NotmuchSettings a' b c) (f a)
+nmSearch = lens _nmSearch (\nm x -> nm { _nmSearch = x })
 
 nmDatabase :: Lens (NotmuchSettings a) (NotmuchSettings b) a b
-nmDatabase f (NotmuchSettings a b c) = fmap (\b' -> NotmuchSettings a b' c) (f b)
+nmDatabase = lens _nmDatabase (\nm x -> nm { _nmDatabase = x })
 
 nmNewTag :: Lens' (NotmuchSettings a) Tag
-nmNewTag f (NotmuchSettings a b c) = fmap (\c' -> NotmuchSettings a b c') (f c)
+nmNewTag = lens _nmNewTag (\nm x -> nm { _nmNewTag = x })
 
+nmDraftTag :: Lens' (NotmuchSettings a) Tag
+nmDraftTag = lens _nmDraftTag (\nm x -> nm { _nmDraftTag = x })
 
 data FileBrowserSettings a = FileBrowserSettings
   { _fbKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]
