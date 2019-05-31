@@ -178,6 +178,7 @@ defaultConfig =
       { _nmSearch = "tag:inbox"
       , _nmDatabase = getDatabasePath
       , _nmNewTag = "unread"
+      , _nmDraftTag = "draft"
       }
     , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
     , _confMailView = MailViewSettings
