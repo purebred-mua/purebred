@@ -36,6 +36,7 @@ import Data.List (isInfixOf, sort)
 import qualified Data.ByteString as B
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
+import Control.Monad.State (MonadState)
 
 import Control.Lens (Getter, Lens', preview, to, view, _init, _last)
 import System.Directory
@@ -45,7 +46,7 @@ import System.Directory
 import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed (proc, runProcess_, readProcess_, setEnv)
 import Test.Tasty (defaultMain)
-import Test.Tasty.HUnit (assertBool)
+import Test.Tasty.HUnit (assertBool, assertEqual)
 
 import Data.MIME (parse, message, mime, MIMEMessage)
 
@@ -93,6 +94,8 @@ main = defaultMain $ testTmux pre post tests
       , testEditingMailHeaders
       , testShowsInvalidCompositionInput
       , testShowsInvalidTaggingInput
+      , testKeepDraftMail
+      , testDiscardsMail
       ]
 
 testShowsInvalidTaggingInput :: PurebredTestCase
@@ -177,6 +180,69 @@ testShowsInvalidCompositionInput = purebredTmuxSession "shows errors when compos
     step "abort editing"
     sendKeys "C-g" (Substring "ComposeView-Attachments")
   
+
+testDiscardsMail :: PurebredTestCase
+testDiscardsMail = purebredTmuxSession "discards draft mail" $
+  \step -> do
+    startApplication
+
+    composeNewMail step
+
+    step "abort composition"
+    sendKeys "q" (Substring "Keep draft?")
+
+    step "choose Discard"
+    sendKeys "Tab" (Substring "Discard")
+
+    step "confirm discard"
+    sendKeys "Enter" (Substring "Testmail")
+
+    step "no draft mail exists in Maildir"
+    maildir <- view envMaildir
+    assertFileAmountInMaildir (maildir </> "Drafts" </> "new") 0
+
+testKeepDraftMail :: PurebredTestCase
+testKeepDraftMail = purebredTmuxSession "compose mail from draft" $
+  \step -> do
+    startApplication
+
+    composeNewMail step
+
+    step "abort composition"
+    sendKeys "q" (Substring "Keep draft?")
+
+    step "confirm Keep"
+    sendKeys "Enter" (Substring "Draft saved")
+
+    step "assert draft exists"
+    maildir <- view envMaildir
+    assertFileAmountInMaildir (maildir </> "Drafts" </> "new") 1
+
+    step "search for draft"
+    sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+
+    step "enter new tag"
+    sendLine "tag:draft" (Substring "Item 1 of 1")
+
+    step "view mail"
+    sendKeys "Enter" (Substring "Draft mail subject")
+
+    step "edit as new"
+    sendKeys "e" (Regex "From: \"Joe Bloggs\" <joe@foo.test>\\s+To: user@to.test\\s+Subject:\\sDraft mail subject")
+
+    step "assert draft has been removed"
+    mdir <- view envMaildir
+    assertFileAmountInMaildir (mdir </> "Drafts" </> "new") 0
+
+    step "send mail"
+    sendKeys "y" (Substring "Query")
+
+    testdir <- view effectiveDir
+    let fpath = testdir </> "sentMail"
+    contents <- liftIO $ B.readFile fpath
+    let decoded = chr . fromEnum <$> B.unpack contents
+    assertSubstr "This is a test body" decoded
 
 testEditingMailHeaders :: PurebredTestCase
 testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
@@ -937,8 +1003,41 @@ testSendMail =
           assertMailSuccessfullyParsed (testdir </> "sentMail")
 
 
+composeNewMail ::
+     HasTmuxSession testEnv
+  => (MonadReader testEnv m, MonadState Capture m, MonadIO m) =>
+       (String -> m ()) -> m ()
+composeNewMail step = do
+    step "start composition"
+    sendKeys "m" (Substring "From")
+
+    step "accept default"
+    sendKeys "Enter" (Substring "To")
+
+    step "enter to: email"
+    sendKeys "user@to.test\r" (Substring "Subject")
+
+    step "leave default"
+    sendKeys "Draft mail subject\r" (Substring "~")
+
+    step "enter mail body"
+    sendKeys "iThis is a test body" (Substring "body")
+
+    step "exit insert mode in vim"
+    sendKeys "Escape" (Substring "body")
+
+    step "exit vim"
+    sendKeys ": x\r" (Substring "text/plain") >>= put
+    assertSubstringS "From: \"Joe Bloggs\" <joe@foo.test>"
+
+
 parseMail :: B.ByteString -> Either String MIMEMessage
 parseMail = parse (message mime)
+
+assertSubstr :: MonadIO m => String -> String -> m ()
+assertSubstr needle haystack = liftIO $ assertBool
+  (needle <> " not found in\n\n" <> haystack)
+  (needle `isInfixOf` haystack)
 
 assertMailSuccessfullyParsed :: (MonadIO m) => String -> m ()
 assertMailSuccessfullyParsed fp = do
@@ -946,10 +1045,18 @@ assertMailSuccessfullyParsed fp = do
   let result = parseMail contents
   liftIO $ assertBool "expected successful MIMEMessage" (isRight result)
 
-assertSubstr :: MonadIO m => String -> String -> m ()
-assertSubstr needle haystack = liftIO $ assertBool
-  (needle <> " not found in\n\n" <> haystack)
-  (needle `isInfixOf` haystack)
+assertFileAmountInMaildir :: (MonadIO m) => FilePath -> Int -> m ()
+assertFileAmountInMaildir maildir expected =
+  let errmsg fs = "expecting " <> show expected <> " file(s), dir contents: " <> show fs
+   in liftIO $ do
+    -- Wait a bit so we can be sure that the IO operation has
+    -- completed. If we don't wait here, the UI has most likely
+    -- repainted quicker than the deletion of the file ending in
+    -- flakyness. The test will most likely pass quicker on faster IO
+    -- machines than in our CI.
+    threadDelay 200000  -- 0.2 seconds
+    files <- listDirectory maildir
+    assertEqual (errmsg files) expected (length files)
 
 -- Global test environment (shared by all test cases)
 newtype GlobalEnv = GlobalEnv FilePath
