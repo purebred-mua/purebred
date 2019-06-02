@@ -513,27 +513,7 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
       secondLastFile = fromMaybe "MISSING" $ preview (_init . _last) files
 
     startApplication
-
-    step "start composition"
-    sendKeys "m" (Substring "From")
-
-    step "enter from email"
-    sendKeys "Enter" (Substring "To")
-
-    step "enter to: email"
-    sendKeys "user@to.test\r" (Substring "Subject")
-
-    step "enter subject"
-    sendKeys "test subject\r" (Substring "~")
-
-    step "enter mail body"
-    sendKeys "iThis is a test body" (Substring "body")
-
-    step "exit insert mode in vim"
-    sendKeys "Escape" (Substring "body")
-
-    step "exit vim"
-    sendKeys ": x\r" (Substring "Attachments")
+    composeNewMail step
 
     step "start file browser"
     cwd <- liftIO getCurrentDirectory
@@ -894,27 +874,8 @@ testUserCanAbortMailComposition =
   purebredTmuxSession "user can abort composing mail" $
         \step -> do
             startApplication
-            step "start composition"
-            sendKeys "m" (Substring "From")
 
-            step "enter from email"
-            sendKeys "Enter" (Substring "To")
-
-            step "enter to: email"
-            sendKeys "user@to.test\r" (Substring "Subject")
-
-            step "enter subject"
-            sendKeys "test subject\r" (Substring "~")
-
-            step "enter mail body"
-            sendKeys "iThis is a test body" (Substring "body")
-
-            step "exit insert mode in vim"
-            sendKeys "Escape" (Substring "body")
-
-            step "exit vim"
-            sendKeys ": x\r" (Regex $ "From: "
-                             <> "\"Joe Bloggs\" <joe@foo.test>")
+            composeNewMail step
 
             step "abort mail"
             sendKeys "q" (Substring "Keep draft?")
@@ -959,30 +920,7 @@ testSendMail =
         \step -> do
           testdir <- view effectiveDir
           startApplication
-
-          step "start composition"
-          sendKeys "m" (Substring "From")
-
-          step "append an additional from email"
-          sendKeys ", testuser@foo.test\r" (Substring "To")
-
-          step "enter to: email"
-          sendKeys "user@to.test\r" (Substring "Subject")
-
-          step "enter subject"
-          let subj = "test subject from directory " <> testdir
-          sendKeys (subj <> "\r") (Substring "~")
-
-          step "enter mail body"
-          sendKeys "iThis is a test body" (Substring "body")
-
-          step "exit insert mode in vim"
-          sendKeys "Escape" (Substring "body")
-
-          step "exit vim"
-          sendKeys ": x\r" (Substring "text/plain")
-            >>= assertRegex ("From: "
-                             <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
+          composeNewMail step
 
           step "user can re-edit body"
           sendKeys "e" (Substring "This is a test body")
