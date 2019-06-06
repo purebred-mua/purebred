@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2017-2019 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
