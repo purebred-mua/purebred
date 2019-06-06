@@ -1033,12 +1033,14 @@ replyToMail s =
 sendMail :: AppState -> T.EventM Name AppState
 sendMail s =
   let charsets = view (asConfig . confCharsets) s
-   in either (`setError` s) id <$>
-      runExceptT
-        (buildMail s >>=
-         (\(m, l') ->
-            liftIO $
-            trySendAndCatch l' (renderMessage $ sanitizeMail charsets m) s))
+      maildir = view (asConfig . confNotmuch . nmDatabase) s
+      sentTag = view (asConfig . confNotmuch . nmSentTag) s
+      send = do
+        (bs, randomg) <- over _1 (renderMessage . sanitizeMail charsets) <$> buildMail s
+        s' <- liftIO $ trySendAndCatch randomg bs s
+        Notmuch.indexMail bs maildir sentTag
+        pure s'
+   in either (`setError` s) id <$> runExceptT send
 
 -- | Build the MIMEMessage from the compose editor fields including Date and Boundary
 --
@@ -1255,7 +1257,5 @@ keepDraft s maildir =
   let draftTag = view (asConfig . confNotmuch . nmDraftTag) s
   in do
     bs <- renderMessage . fst <$> buildMail s
-    fp <- createDraftFilePath maildir
-    tryIO $ B.writeFile fp bs
-    Notmuch.indexFilePath maildir fp [draftTag]
+    Notmuch.indexMail bs maildir draftTag
     pure s

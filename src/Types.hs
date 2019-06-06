@@ -195,6 +195,7 @@ data NotmuchSettings a = NotmuchSettings
     , _nmDatabase :: a
     , _nmNewTag :: Tag
     , _nmDraftTag :: Tag
+    , _nmSentTag :: Tag
     }
     deriving (Generic, NFData)
 
@@ -209,6 +210,9 @@ nmNewTag = lens _nmNewTag (\nm x -> nm { _nmNewTag = x })
 
 nmDraftTag :: Lens' (NotmuchSettings a) Tag
 nmDraftTag = lens _nmDraftTag (\nm x -> nm { _nmDraftTag = x })
+
+nmSentTag :: Lens' (NotmuchSettings a) Tag
+nmSentTag = lens _nmSentTag (\nm x -> nm { _nmSentTag = x })
 
 data FileBrowserSettings a = FileBrowserSettings
   { _fbKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]

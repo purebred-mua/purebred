@@ -26,6 +26,7 @@ module Purebred.System.Process
   , toProcessConfigWithTempfile
   , runEntityCommand
   , createDraftFilePath
+  , createSentFilePath
   -- * Re-exports from @System.Process.Typed@
   , ProcessConfig
   , proc
@@ -174,8 +175,12 @@ getHostname = do
 -- The maildir is the notmuch database directory. If the maildir
 -- wouldn't exist the entire application wouldn't run.
 createDraftFilePath :: (MonadError Error m, MonadIO m) => FilePath -> m FilePath
-createDraftFilePath maildir =
-  let draftsDir = maildir </> "Drafts" </> "new"
-  in tryIO $ do
-    createDirectoryIfMissing True draftsDir
-    maildirMessageFileTemplate >>= emptyTempFile draftsDir
+createDraftFilePath maildir = touchMaildirFilePath (maildir </> "Drafts" </> "new")
+
+createSentFilePath :: (MonadError Error m, MonadIO m) => FilePath -> m FilePath
+createSentFilePath maildir = touchMaildirFilePath (maildir </> "Sent" </> "cur")
+
+touchMaildirFilePath :: (MonadError Error m, MonadIO m) => FilePath -> m FilePath
+touchMaildirFilePath maildir = tryIO $ do
+    createDirectoryIfMissing True maildir
+    maildirMessageFileTemplate >>= emptyTempFile maildir
