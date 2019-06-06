@@ -179,6 +179,7 @@ defaultConfig =
       , _nmDatabase = getDatabasePath
       , _nmNewTag = "unread"
       , _nmDraftTag = "draft"
+      , _nmSentTag = "sent"
       }
     , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
     , _confMailView = MailViewSettings

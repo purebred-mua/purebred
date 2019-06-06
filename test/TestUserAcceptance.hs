@@ -940,6 +940,15 @@ testSendMail =
           step "parse mail with purebred-email"
           assertMailSuccessfullyParsed (testdir </> "sentMail")
 
+          step "focus query"
+          sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
+
+          step "delete all input"
+          sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
+
+          step "enter sent tags"
+          sendLine "tag:sent" (Substring "Draft mail subject")
+
 
 composeNewMail ::
      HasTmuxSession testEnv

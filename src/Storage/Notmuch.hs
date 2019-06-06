@@ -28,7 +28,7 @@ import qualified Notmuch
 import Error
 import Types
 import Purebred.LazyVector
-import Purebred.System.Process (readProcess, proc)
+import Purebred.System.Process (readProcess, proc, createDraftFilePath)
 import Purebred.System (tryIO)
 import Purebred.Types.IFC (sanitiseText, untaint)
 
@@ -245,6 +245,19 @@ indexFilePath dbpath fp tgs =
   withDatabase
     dbpath
     (\db -> Notmuch.indexFile db fp >>= Notmuch.messageSetTags tgs)
+
+-- | Writes given mail as ByteString to a file and indexes it
+--
+indexMail ::
+     (MonadError Error m, MonadIO m)
+  => B.ByteString -- ^ rendered mail
+  -> FilePath -- ^ maildir under which we store the mail
+  -> Tag -- ^ tag to attach the mail
+  -> m ()
+indexMail bs maildir tag = do
+    fp <- createDraftFilePath maildir
+    tryIO $ B.writeFile fp bs
+    indexFilePath maildir fp [tag]
 
 unindexFilePath ::
      (MonadError Error m, MonadIO m)
