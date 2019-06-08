@@ -562,7 +562,7 @@ focusComposeFrom
     -> AppState
     -> f AppState
 focusComposeFrom _ _ s =
-    if nullOf (asCompose . cMail) s
+    if nullOf (asCompose . cAttachments) s
         then pure $
              over
                  (asViews . vsFocusedView)
@@ -1327,15 +1327,13 @@ sanitizeMail charsets =
 
 initialCompose :: [Mailbox] -> Compose
 initialCompose mailboxes =
-  let mail = B.empty
-  in Compose
-        mail
-        (E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
-        (E.editorText ComposeTo (Just 1) "")
-        (E.editorText ComposeSubject (Just 1) "")
-        T.empty
-        (L.list ComposeListOfAttachments mempty 1)
-        initialDraftConfirmDialog
+  Compose
+    (E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
+    (E.editorText ComposeTo (Just 1) "")
+    (E.editorText ComposeSubject (Just 1) "")
+    T.empty
+    (L.list ComposeListOfAttachments mempty 1)
+    initialDraftConfirmDialog
 
 -- | Set the compose state from an existing mail. This is typically
 -- used for re-editing draft mails.
@@ -1349,7 +1347,6 @@ newComposeFromMail charsets m =
         view vector $ toMIMEMessage charsets <$> toListOf (_Just . entities) m
       orEmpty = view (non "")
    in Compose
-        B.empty
         (E.editorText ComposeFrom (Just 1) (orEmpty from))
         (E.editorText ComposeTo (Just 1) (orEmpty to'))
         (E.editorText ComposeSubject (Just 1) (orEmpty subject))

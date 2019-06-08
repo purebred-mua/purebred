@@ -264,17 +264,13 @@ data ConfirmDraft
   deriving (Show)
 
 data Compose = Compose
-    { _cMail :: B.ByteString
-    , _cFrom :: E.Editor T.Text Name
+    { _cFrom :: E.Editor T.Text Name
     , _cTo :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
     , _cTemp :: T.Text
     , _cAttachments :: L.List Name MIMEMessage
     , _cKeepDraft :: Dialog ConfirmDraft
     }
-
-cMail :: Lens' Compose B.ByteString
-cMail = lens _cMail (\c x -> c { _cMail = x })
 
 cFrom :: Lens' Compose (E.Editor T.Text Name)
 cFrom = lens _cFrom (\c x -> c { _cFrom = x })
