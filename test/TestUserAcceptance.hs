@@ -342,7 +342,9 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
 
     liftIO $ step "set one mail to unread"
     sendKeys "Enter" (Literal "Beginning of large text")
-    sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s+" <> buildAnsiRegex ["0"] ["34"] ["40"]))
+    sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] []
+                           <> "\\sRe: WIP Refactor\\s+"
+                           <> buildAnsiRegex ["0"] ["34"] ["40"]))
 
     liftIO $ step "returning to thread list shows thread unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
@@ -541,7 +543,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
   \step -> do
     startApplication
 
-    -- setup: tag the mails in the thread with two different threads and then
+    -- setup: tag the mails in the thread with two different tags and then
     -- tag the thread as a whole with a new tag. All mails should keep their
     -- distinct tags, while having received a new tag.
     liftIO $ step "navigate to thread"
@@ -602,8 +604,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     liftIO $ step "show thread mails"
     sendKeys "Enter" (Literal "ViewMail")
 
-    liftIO $ step "navigate to second mail and assert shows old tag"
-    sendKeys "Down" (Literal "Item 2 of 2")
+    liftIO $ step "second mail shows old tag"
     sendKeys "Escape" (Regex ("replied"
                               <> buildAnsiRegex [] ["37"] []
                               <> "\\s"

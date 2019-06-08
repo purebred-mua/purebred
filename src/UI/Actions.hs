@@ -750,8 +750,9 @@ selectNextUnread =
            let
              -- find by unread tag...
              p = Notmuch.hasTag (view (asConfig . confNotmuch . nmNewTag) s)
-             -- but iff there is no resulting selection, move to 0
-             f l = maybe (L.listMoveTo 0 l) (const l) (view L.listSelectedL l)
+             -- but if there is no resulting selection, move to the
+             -- last element in the list
+             f l = maybe (L.listMoveTo (-1) l) (const l) (view L.listSelectedL l)
            in pure $ over (asMailIndex . miListOfMails) (f . L.listFindBy p) s
          }
 
