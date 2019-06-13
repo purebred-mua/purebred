@@ -232,6 +232,10 @@ defaultConfig =
       , _cvListOfAttachmentsKeybindings = listOfAttachmentsKeybindings
       , _cvIdentities = []
       , _cvConfirmKeybindings = confirmKeybindings
+      , _cvMailcap = [
+          ( const True
+          , MailcapHandler (Process (fromList "xdg-open") []) True)
+          ]
       }
     , _confHelpView = HelpViewSettings
       { _hvKeybindings = helpKeybindings

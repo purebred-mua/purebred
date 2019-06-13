@@ -1206,7 +1206,14 @@ editAttachment s =
         Nothing -> pure $ setError (GenericError "No file selected to edit") s
         Just (_, m) -> case preview (headers . contentDisposition . dispositionType) m of
           (Just Inline) -> invokeEditor' s
-          _ -> pure $ setError (GenericError "Not implemented. See #182") s
+          _ -> let match ct =
+                    firstOf (asConfig . confComposeView
+                             . cvMailcap . traversed . filtered (`fst` ct) . _2) s
+                   maybeCommand =
+                     match =<<
+                     preview (asCompose . cAttachments
+                             . to L.listSelectedElement . _Just . _2 . headers . contentType) s
+               in maybe (pure s) (openCommand' s) maybeCommand
 
 upsertPart :: CharsetLookup -> MIMEMessage -> L.List Name MIMEMessage -> L.List Name MIMEMessage
 upsertPart charsets newPart l =

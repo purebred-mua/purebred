@@ -304,6 +304,7 @@ confBChan = confExtra . _1
 confBoundary :: Lens' InternalConfiguration String
 confBoundary = confExtra . _2
 
+type Mailcap = [(ContentType -> Bool, MailcapHandler)]
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
@@ -314,6 +315,7 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ComposeListOfAttachments]
     , _cvIdentities :: [Mailbox]
     , _cvConfirmKeybindings :: [Keybinding 'ComposeView 'ConfirmDialog]
+    , _cvMailcap :: Mailcap
     }
     deriving (Generic, NFData)
 
@@ -340,6 +342,10 @@ cvIdentities = lens _cvIdentities (\cv x -> cv { _cvIdentities = x })
 
 cvConfirmKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ConfirmDialog]
 cvConfirmKeybindings = lens _cvConfirmKeybindings (\cv x -> cv { _cvConfirmKeybindings = x })
+
+cvMailcap :: Lens' ComposeViewSettings Mailcap
+cvMailcap = lens _cvMailcap (\cv x -> cv { _cvMailcap = x })
+
 
 newtype HelpViewSettings = HelpViewSettings
   { _hvKeybindings :: [Keybinding 'Help 'ScrollingHelpView]
@@ -395,7 +401,7 @@ data MailViewSettings = MailViewSettings
     , _mvMailListOfAttachmentsKeybindings :: [Keybinding 'ViewMail 'MailListOfAttachments]
     , _mvOpenWithKeybindings :: [Keybinding 'ViewMail 'MailAttachmentOpenWithEditor]
     , _mvPipeToKeybindings :: [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
-    , _mvMailcap :: [(ContentType -> Bool, MailcapHandler)]
+    , _mvMailcap :: Mailcap
     }
     deriving (Generic, NFData)
 
@@ -423,7 +429,7 @@ mvOpenWithKeybindings = lens _mvOpenWithKeybindings (\s x -> s { _mvOpenWithKeyb
 mvPipeToKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
 mvPipeToKeybindings = lens _mvPipeToKeybindings (\s x -> s { _mvPipeToKeybindings = x })
 
-mvMailcap :: Lens' MailViewSettings [(ContentType -> Bool, MailcapHandler)]
+mvMailcap :: Lens' MailViewSettings Mailcap
 mvMailcap = lens _mvMailcap (\s x -> s { _mvMailcap = x })
 
 data ViewName

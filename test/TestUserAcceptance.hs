@@ -93,6 +93,7 @@ main = defaultMain $ testTmux pre post tests
       , testShowsMailEntities
       , testOpenCommandDoesNotKillPurebred
       , testOpenEntitiesSuccessfully
+      , testEditEntitiesInCompose
       , testPipeEntitiesSuccessfully
       , testEditingMailHeaders
       , testShowsInvalidCompositionInput
@@ -314,6 +315,59 @@ testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" 
                              <> "\\s+"
                              <> buildAnsiRegex ["7"] ["39"] ["49"]
                              <> "\\(END\\)"))
+
+testEditEntitiesInCompose :: TestCase
+testEditEntitiesInCompose = withTmuxSession "edit entities during composition" $
+  \step -> do
+    setEnvVarInSession "LESS" ""
+    startApplication
+
+    files <- fmap sort $ liftIO $
+      getSourceDirectory >>= listDirectory
+      >>= filterM (fmap isRegularFile . getFileStatus)
+    let
+      lastFile = fromMaybe "MISSING" $ preview _last files
+
+    liftIO $ step "start composition"
+    sendKeys "m" (Literal "From")
+
+    liftIO $ step "enter from email"
+    sendKeys "Enter" (Literal "To")
+
+    liftIO $ step "enter to: email"
+    sendKeys "user@to.test\r" (Literal "Subject")
+
+    liftIO $ step "enter subject"
+    sendKeys "test subject\r" (Literal "~")
+
+    liftIO $ step "enter mail body"
+    sendKeys "iThis is a test body" (Literal "body")
+
+    liftIO $ step "exit insert mode in vim"
+    sendKeys "Escape" (Literal "body")
+
+    liftIO $ step "exit vim"
+    sendKeys ": x\r" (Regex $ "From: "
+                        <> "\"Joe Bloggs\" <joe@foo.test>")
+
+    cwd <- liftIO getCurrentDirectory
+    sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
+
+    liftIO $ step "jump to the end of the list"
+    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
+
+    liftIO $ step "add first selected file"
+    sendKeys "Enter" (Literal lastFile)
+
+    liftIO $ step "open attachment"
+    sendKeys "o" (Literal "Open With")
+
+    _ <- sendLiteralKeys "file"
+    sendKeys "Enter" (Regex ("This is a test mail for purebred"
+                            <> buildAnsiRegex [] ["37"] ["40"]
+                            <> "\\s+"
+                            <> buildAnsiRegex ["7"] ["39"] ["49"]
+                            <> ".*purebred.*END"))
 
 testOpenEntitiesSuccessfully :: PurebredTestCase
 testOpenEntitiesSuccessfully = purebredTmuxSession "open entities successfully" $

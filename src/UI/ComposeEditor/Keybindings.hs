@@ -53,6 +53,7 @@ listOfAttachmentsKeybindings =
     , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'ComposeView 'ConfirmDialog AppState) `chain` continue)
     , Keybinding (V.EvKey V.KDown []) (listDown `chain` continue)
     , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) openAttachment
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
