@@ -20,6 +20,7 @@ module UI.Status.Main where
 
 import Brick.Types (Widget)
 import Brick.Widgets.Core (hBox, txt, str, withAttr, (<+>), strWrap)
+import Brick.Widgets.Center (hCenter)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
 import Control.Lens (view, views)
@@ -31,6 +32,7 @@ import UI.Draw.Main (fillLine)
 import UI.Utils (titleize)
 import UI.Views (focusedViewWidget, focusedViewName)
 import Types
+import Error
 import Config.Main (statusbarAttr, statusbarErrorAttr)
 
 data StatusbarContext a
@@ -39,10 +41,16 @@ data StatusbarContext a
     | ErrorContext a
     deriving (Show)
 
+renderError :: Error -> Widget Name
+renderError = withAttr statusbarErrorAttr . hCenter . theError
+  where
+    theError (GenericError e) = strWrap e
+    theError e = strWrap (show e)
+
 statusbar :: AppState -> Widget Name
 statusbar s =
     case view asError s of
-        Just e -> withAttr statusbarErrorAttr $ strWrap (show e)
+        Just e -> renderError e
         Nothing ->
             case focusedViewWidget s of
                 SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s) s
