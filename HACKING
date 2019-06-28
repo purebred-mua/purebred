@@ -1,6 +1,7 @@
 # Contributing
 
-At this early stage we're going a bit fast and loose. There are currently no processes involved contributions.
+At this early stage we're going a bit fast and loose. There are
+currently no processes involving contributions. If in doubt, create an issue.
 
 If you'd like to hack on purebred, either pick an issue from the backlog and
 signal with a comment that you'd want to work on it. Most of the issues are very
@@ -32,6 +33,26 @@ communication is the key here rather than hacking away.
   tainted, indicating that it must be sanitised before use.
   (The test suite is excepted from this policy.)
 
+
+### Differences to Brick
+
+We use Brick heavily, but there are slight differences in Purebred to
+an application entirely written using Brick widgets only:
+
+- Keybindings are customizable: Purebred has abstracted the
+  Keybindings from widget specific to application specific. When a new
+  keystroke is passed as a `VtyEvent`, Purebred checks if a handler is
+  registered otherwise it falls back to the default event handler for
+  the which in focus. For example, editors which handle input mostly
+  fallback to the widgets event handling, since we don't want to
+  create an event handler for every input character on your keyboard.
+
+- Actions are composable: at least for the most. The `UI.Actions` tie
+  into the customizable keybindings and allow users to compose actions
+  for a widget in focus until the UI is repainted. One Keybinding can
+  perform one or more chained `Action`s. In order to work with moving
+  focus to other widgets, we use PhantomTypes to avoid registering
+  Keybindings for which no `Action` "matches".
 
 ### Style
 
