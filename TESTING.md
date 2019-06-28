@@ -2,8 +2,8 @@
 
 ## Framework
 
-Purebred comes with an extensive suite of user acceptance tests. It expects that
-the `purebred` binary can be found in the `$PATH` as well as can be recompiled.
+Purebred comes with an extensive suite of user acceptance tests. It
+expects that the `purebred` binary can be found in the `$PATH`.
 
 ## Writing new user acceptance tests
 
@@ -30,8 +30,45 @@ example:
     # would only run a user acceptance test with an "error" substring
     cabal test --show-details=streaming --test-option='-p "tests/user*/*error*"'
     
-    # On NixOS, keep in mind that you will need to build the binary first and then run the acceptance tests in a NIX shell
+    # On NixOS, keep in mind that you will need to build the binary
+    # first and then run the acceptance tests in a NIX shell
+    nix-build
     PATH=$PATH:result/bin cabal test --show-details=streaming --test-option='-p "tests/user*/*error*"'
+
+## Debugging test failures
+
+### Failure to start purebred
+
+When `purebred` can not be started, it typically is a hint that the
+environment is not correctly setup or interferes with the
+compilation. We've put in great effort to make the acceptance tests as
+environment independent as possible, but we can not rule out factors
+we haven't accounted for. Here are a few hints you can use to debug.
+
+* First isolate the test which fails (if all, pick one). See the
+  additional test arguments you can pass to run one single test above.
+
+* Usually temporary directories and tmux sessions are cleaned up. The
+  `withTmuxSession` function has a `setUp` and a `tearDown`. Replace
+  the `tearDown` with a `\_ -> pure ()` to avoid the cleanup being
+  run. Then use tmux to attach to the left over session for further
+  investigation:
+
+       $ tmux list-sessions
+       0: 5 windows (created Mon May 27 21:32:58 2019) [135x31] (attached)
+       keepalive: 1 windows (created Fri Jun 28 15:14:32 2019) [80x24]
+       purebredtest-7-error-handling: 1 windows (created Fri Jun 28 15:14:32 2019) [80x24]
+
+       $ tmux attach-session -t purebredtest-7-error-handling
+
+### Failures matching sub-strings
+
+When tests fail to match a screen shot check if the sub-string is not
+split up between new lines or colour codes. We match against the raw
+output (including colour codes).
+
+If you get flakyness, check if your sub-string is not too generic and
+appears unchanged between repaints of the screen.
 
 ## Running purebred with a custom config
 
