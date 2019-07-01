@@ -5,7 +5,7 @@
 -- | module for integrating notmuch within purebred
 module Storage.Notmuch where
 
-import Control.Monad (when)
+import Control.Monad ((>=>), when)
 import Data.Function (on)
 import System.IO.Unsafe (unsafeInterleaveIO)
 
@@ -178,12 +178,10 @@ getThreads
   -> NotmuchSettings FilePath
   -> m (V NotmuchThread)
 getThreads s settings =
-  withDatabaseReadOnly (view nmDatabase settings) go
-  where
-    go db = do
-        ts <- Notmuch.query db (Notmuch.Bare $ T.unpack s) >>= Notmuch.threads
-        t <- liftIO $ lazyTraverse threadToThread ts
-        pure $ fromList 128 {- chunk size -} t
+  withDatabaseReadOnly (view nmDatabase settings) $
+    flip Notmuch.query (Notmuch.Bare $ T.unpack s)
+    >=> Notmuch.threads
+    >=> liftIO . fmap (fromList 128) . lazyTraverse threadToThread
 
 lazyTraverse :: (a -> IO b) -> [a] -> IO [b]
 lazyTraverse f =
