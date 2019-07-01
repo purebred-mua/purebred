@@ -55,22 +55,23 @@ messageToMailView s msg =
     headerToWidget (k, v) =
       withAttr headerKeyAttr $
         txt (decodeLenient (CI.original k) <> ": ")
-        <+> withAttr headerValueAttr (txtWrap (decodeEncodedWords v))
+        <+> withAttr headerValueAttr (txtWrap (decodeEncodedWords charsets v))
 
     headerWidgets = headerToWidget <$> filteredHeaders
-    bodyWidget = padTop (Pad 1) (maybe (txt "No entity selected") entityToView ent)
+    bodyWidget = padTop (Pad 1)
+      (maybe (txt "No entity selected") (txtWrap . entityToText charsets) ent)
     preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
     ent = chooseEntity preferredContentType msg
+    charsets = view (asConfig . confCharsets) s
   in
     vBox headerWidgets <=> padTop (Pad 1) bodyWidget
-
-entityToView :: WireEntity -> Widget Name
-entityToView = txtWrap . entityToText
 
 renderAttachmentsList :: AppState -> Widget Name
 renderAttachmentsList s =
     let hasFocus = MailListOfAttachments == focusedViewWidget s
-        attachmentsList = L.renderList renderPart hasFocus (view (asMailView . mvAttachments) s)
+        attachmentsList =
+          L.renderList (renderPart charsets) hasFocus (view (asMailView . mvAttachments) s)
+        charsets = view (asConfig . confCharsets) s
     in attachmentsHeader <=> attachmentsList
 
 renderMailAttachmentOpenWithEditor :: AppState -> Widget Name
@@ -86,10 +87,10 @@ renderMailAttachmentPipeToEditor s =
 -- TODO: Both these functions are basically duplicates. Use classes for
 -- WireEntity and MIMEMessage to don't repeat our selfs?
 -- See #264
-renderPart :: Bool -> WireEntity -> Widget Name
-renderPart selected m =
+renderPart :: CharsetLookup -> Bool -> WireEntity -> Widget Name
+renderPart charsets selected m =
   let pType = showContentType $ view (headers . contentType) m
-      pFilename = fromMaybe "--" (preview (headers . contentDisposition . filename) m)
+      pFilename = fromMaybe "--" (preview (headers . contentDisposition . filename charsets) m)
       listItemAttr = if selected then listSelectedAttr else listAttr
       attachmentType = txt (if isAttachment' m then "A" else "I")
       widget = hBox

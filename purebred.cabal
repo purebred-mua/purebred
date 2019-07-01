@@ -99,7 +99,7 @@ library
                      , filepath
                      , mtl
                      , exceptions
-                     , purebred-email >= 0.1 && < 0.2
+                     , purebred-email >= 0.2
                      , attoparsec
                      , containers
                      , mime-types
@@ -147,7 +147,7 @@ test-suite uat
   other-modules:       UAT
   default-language:    Haskell2010
   build-depends:       base
-                     , purebred-email >= 0.1 && < 0.2
+                     , purebred-email >= 0.2
                      , tasty
                      , tasty-hunit
                      , directory

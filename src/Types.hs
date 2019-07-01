@@ -223,6 +223,7 @@ data Configuration extra a b c = Configuration
     , _confHelpView :: HelpViewSettings
     , _confDefaultView :: ViewName
     , _confFileBrowserView :: FileBrowserSettings c
+    , _confCharsets :: CharsetLookup
     , _confExtra :: extra  -- data specific to a particular "phase" of configuration
     }
     deriving (Generic, NFData)
@@ -258,6 +259,9 @@ confDefaultView = lens _confDefaultView (\conf x -> conf { _confDefaultView = x 
 
 confFileBrowserView :: Lens (Configuration z a b c) (Configuration z a b c') (FileBrowserSettings c) (FileBrowserSettings c')
 confFileBrowserView = lens _confFileBrowserView (\conf x -> conf { _confFileBrowserView = x })
+
+confCharsets :: ConfigurationLens CharsetLookup
+confCharsets = lens _confCharsets (\conf x -> conf { _confCharsets = x })
 
 confExtra :: Lens (Configuration extra a b c) (Configuration extra' a b c) extra extra'
 confExtra = lens _confExtra (\cfg x -> cfg { _confExtra = x })
