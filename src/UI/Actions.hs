@@ -110,7 +110,8 @@ import Data.MIME
         parseContentType, attachments, isAttachment, entities, matchContentType,
         contentType, mailboxList, renderMailboxes, addressList, renderAddresses,
         renderRFC5422Date, MIMEMessage, WireEntity, DispositionType(..),
-        ContentType(..), Mailbox(..))
+        ContentType(..), Mailbox(..),
+        CharsetLookup)
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
        (parseMail, getTo, getFrom, getSubject, toQuotedMail, entityToBytes)
@@ -824,7 +825,8 @@ makeAttachmentsFromSelected s = do
     . set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
   where
     go :: [MIMEMessage] -> L.List Name MIMEMessage -> L.List Name MIMEMessage
-    go parts l = foldr upsertPart l parts
+    go parts l = foldr (upsertPart charsets) l parts
+    charsets = view (asConfig . confCharsets) s
     makeFullPath path = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> path
 
 isFileUnderCursor :: Maybe (a, (b, FileSystemEntry)) -> Bool
@@ -936,20 +938,21 @@ setError = set asError . Just
 
 replyToMail :: AppState -> T.EventM Name AppState
 replyToMail s =
-  ($ s) <$>
-  case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
-    Just (_, m) -> either handleErr handleMail
-                   <$> (either Left (toQuotedMail preferredContentType)
-                        <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s)))
+  ($ s) <$> case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
+    Just (_, m) ->
+      either handleErr handleMail
+        . (>>= toQuotedMail charsets preferredContentType)
+      <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
     Nothing -> pure id
   where
+    charsets = view (asConfig . confCharsets) s
     preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
     handleErr e = over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) . setError e
     handleMail pmail s' = s' &
       set (asCompose . cTo) (E.editor ComposeTo Nothing $ getTo pmail)
       . set (asCompose . cFrom) (E.editor ComposeFrom Nothing $ getFrom pmail)
       . set (asCompose . cSubject) (E.editor ComposeSubject Nothing (getSubject pmail))
-      . over (asCompose . cAttachments) (upsertPart pmail)
+      . over (asCompose . cAttachments) (upsertPart charsets pmail)
 
 sendMail :: AppState -> T.EventM Name AppState
 sendMail s = do
@@ -962,6 +965,7 @@ sendMail s = do
         mail = if has (asCompose . cAttachments . L.listElementsL . traversed . filtered isAttachment) s
                 then Just $ createMultipartMixedMessage (C8.pack b) attachments'
                 else firstOf (asCompose . cAttachments . L.listElementsL . traversed) s
+        charsets = view (asConfig . confCharsets) s
     case mail of
         Nothing -> pure $ setError (GenericError "Black hole detected") s
         (Just m) -> let m' = m
@@ -969,7 +973,7 @@ sendMail s = do
                           . set (headers . at "From") (Just $ renderMailboxes from)
                           . set (headers . at "To") (Just $ renderAddresses to')
                           . set (headers . at "Date") (Just $ renderRFC5422Date dateTimeNow)
-                    in liftIO $ trySendAndCatch l' (renderMessage $ sanitizeMail m') s
+                    in liftIO $ trySendAndCatch l' (renderMessage $ sanitizeMail charsets m') s
 
 -- Handler to send the mail, but catch and show an error if it happened. This is
 -- really a TODO to improve this, since ideally we can do this in the
@@ -993,8 +997,9 @@ trySendAndCatch l' m s = do
 
 -- | santize the mail before we send it out
 -- Note: currently only strips away path names from files
-sanitizeMail :: MIMEMessage -> MIMEMessage
-sanitizeMail = over (attachments . headers . contentDisposition . filename) takeFileName
+sanitizeMail :: CharsetLookup -> MIMEMessage -> MIMEMessage
+sanitizeMail charsets =
+  over (attachments . headers . contentDisposition . filename charsets) takeFileName
 
 initialCompose :: [Mailbox] -> Compose
 initialCompose mailboxes =
@@ -1020,10 +1025,11 @@ invokeEditor' s =
       updatePart s' tempfile = do
         contents <- tryIO $ T.readFile tempfile
         let mail = createTextPlainMessage contents
-        pure $ s' & over (asCompose . cAttachments) (upsertPart mail)
+        pure $ s' & over (asCompose . cAttachments) (upsertPart charsets mail)
       mkEntity :: (MonadError Error m) => m B.ByteString
       mkEntity = maybe (pure mempty) entityToBytes maybeEntity
       entityCmd = EntityCommand updatePart (tmpfileResource True) (\_ fp -> proc cmd [fp])
+      charsets = view (asConfig . confCharsets) s
   in
     either (`setError` s) id
     <$> runExceptT (mkEntity >>= flip runEntityCommand s . entityCmd)
@@ -1073,12 +1079,14 @@ editAttachment s =
           (Just Inline) -> invokeEditor' s
           _ -> pure $ setError (GenericError "Not implemented. See #182") s
 
-upsertPart :: MIMEMessage -> L.List Name MIMEMessage -> L.List Name MIMEMessage
-upsertPart newPart l =
+upsertPart :: CharsetLookup -> MIMEMessage -> L.List Name MIMEMessage -> L.List Name MIMEMessage
+upsertPart charsets newPart l =
   case L.listSelectedElement l of
     Nothing -> L.listInsert 0 newPart l
     Just (_, part) ->
-      if view (headers . contentDisposition . filename) part == view (headers . contentDisposition . filename) newPart then
+      if view (headers . contentDisposition . filename charsets) part
+          == view (headers . contentDisposition . filename charsets) newPart
+      then
         -- replace
         L.listModify (const newPart) l
       else

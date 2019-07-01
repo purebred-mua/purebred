@@ -18,7 +18,7 @@ import qualified Data.Text as T
 import Data.Text.Zipper (currentLine)
 
 import Data.MIME
-       (MIMEMessage, headers, contentType,
+       (MIMEMessage, headers, contentType, CharsetLookup,
         filename, contentDisposition, isAttachment, showContentType)
 
 import Config.Main (listSelectedAttr, listAttr)
@@ -30,14 +30,17 @@ import Types
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
     let hasFocus = ComposeListOfAttachments == focusedViewWidget s
-        attachmentsList = L.renderList renderPart hasFocus (view (asCompose . cAttachments) s)
+        attachmentsList =
+          L.renderList (renderPart charsets) hasFocus (view (asCompose . cAttachments) s)
+        charsets = view (asConfig . confCharsets) s
     in attachmentsHeader <=> attachmentsList
 
-renderPart :: Bool -> MIMEMessage -> Widget Name
-renderPart selected m =
+renderPart :: CharsetLookup -> Bool -> MIMEMessage -> Widget Name
+renderPart charsets selected m =
   let pType = showContentType $ view (headers . contentType) m
       -- Only show the filename for now. See #253 for a discussion to fix this.
-      pFilename = maybe "--" takeFileName (preview (headers . contentDisposition . filename) m)
+      pFilename =
+        maybe "--" takeFileName (preview (headers . contentDisposition . filename charsets) m)
       listItemAttr = if selected then listSelectedAttr else listAttr
       attachmentType = txt (if isAttachment m then "A" else "I")
       widget = hBox

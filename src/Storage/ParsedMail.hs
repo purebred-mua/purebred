@@ -67,9 +67,9 @@ entityToBytes msg = either err pure (convert msg)
     convert :: WireEntity -> Either EncodingError B.ByteString
     convert m = view body <$> view transferDecoded m
 
-entityToText :: WireEntity -> T.Text
-entityToText msg = sanitiseText . either err (view body) $
-  view transferDecoded msg >>= view charsetDecoded
+entityToText :: CharsetLookup -> WireEntity -> T.Text
+entityToText charsets msg = sanitiseText . either err (view body) $
+  view transferDecoded msg >>= view (charsetDecoded charsets)
   where
     err :: EncodingError -> T.Text
     err e =
@@ -83,8 +83,12 @@ quoteText = T.unlines . fmap ("> " <>) . T.lines
 -- a) the preferred content type can be extracted
 -- b) the text entity can be successfully decoded
 -- otherwise an empty plain text body is created
-toQuotedMail :: ContentType -> MIMEMessage -> Either Error MIMEMessage
-toQuotedMail ct msg =
+toQuotedMail
+  :: CharsetLookup
+  -> ContentType
+  -> MIMEMessage
+  -> Either Error MIMEMessage
+toQuotedMail charsets ct msg =
     let contents =
             case chooseEntity ct msg of
                 Nothing ->
@@ -92,7 +96,7 @@ toQuotedMail ct msg =
                         (GenericError $
                          "Unable to find preferred content type: " <>
                          T.unpack (showContentType ct))
-                Just ent -> Right $ quoteText (entityToText ent)
+                Just ent -> Right $ quoteText (entityToText charsets ent)
         replyToAddress m =
             firstOf (headers . header "reply-to") m
             <|> firstOf (headers . header "from") m

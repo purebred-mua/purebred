@@ -18,7 +18,7 @@ import Data.Maybe (fromMaybe)
 import Data.List.NonEmpty (fromList)
 import System.Exit (ExitCode(..))
 
-import Data.MIME (contentTypeTextPlain, matchContentType)
+import Data.MIME (contentTypeTextPlain, defaultCharsets, matchContentType)
 
 import UI.FileBrowser.Keybindings
        (fileBrowserKeybindings, manageSearchPathKeybindings)
@@ -214,5 +214,6 @@ defaultConfig =
       , _fbSearchPathKeybindings = manageSearchPathKeybindings
       , _fbHomePath = getHomeDirectory
       }
+    , _confCharsets = defaultCharsets
     , _confExtra = ()
     }
