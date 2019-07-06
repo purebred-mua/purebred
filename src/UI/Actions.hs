@@ -617,7 +617,7 @@ invokeEditor = Action ["invoke external editor"] (Brick.suspendAndResume . liftI
 edit :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
 edit = Action ["edit file"] (Brick.suspendAndResume . liftIO . editAttachment)
 
-openAttachment :: Action 'ViewMail ctx (T.Next AppState)
+openAttachment :: Action v ctx (T.Next AppState)
 openAttachment =
   Action
   { _aDescription = ["open attachment with external command"]
@@ -1171,13 +1171,11 @@ invokeEditor' s =
 openCommand' :: AppState -> MailcapHandler -> IO AppState
 openCommand' s cmd =
   let
-    mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m FilePath)
-    mkConfig =
-      let con = EntityCommand (const . pure) (tmpfileResource (view mhKeepTemp cmd))
+    mkConfig :: (MonadError Error m, MonadIO m) => B.ByteString -> m (EntityCommand m FilePath)
+    mkConfig = pure . EntityCommand (const . pure) (tmpfileResource (view mhKeepTemp cmd))
             (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
-      in fmap con . entityToBytes
   in either (`setError` s) id
-      <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= flip runEntityCommand s)
+      <$> runExceptT (selectedAttachmentOrError (Proxy :: Proxy 'MailListOfAttachments) s >>= mkConfig >>= flip runEntityCommand s)
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
 -- temporary file is used. If either no WireEntity exists (e.g. none selected)
@@ -1187,18 +1185,38 @@ pipeCommand' s cmd
   | null cmd = pure $ s & setError (GenericError "Empty command")
   | otherwise =
     let
-      mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m ())
-      mkConfig =
-        let con = EntityCommand (const . pure) emptyResource
-              (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
-        in fmap con . entityToBytes
+      mkConfig :: (MonadError Error m, MonadIO m) => B.ByteString -> m (EntityCommand m ())
+      mkConfig bs =
+        pure $ EntityCommand (const . pure) emptyResource
+              (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd [])) bs
      in either (`setError` s) id
-        <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= flip runEntityCommand s)
+        <$> runExceptT (selectedAttachmentOrError (Proxy :: Proxy 'ComposeListOfAttachments) s >>= mkConfig >>= flip runEntityCommand s)
 
-selectedAttachmentOrError :: MonadError Error m => AppState -> m WireEntity
-selectedAttachmentOrError =
-  maybe (throwError $ GenericError "No attachment selected") pure
-  . preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
+class Foo a where
+  toByteString :: a -> Maybe B.ByteString
+
+instance Foo WireEntity where
+  toByteString = undefined
+
+instance Foo MIMEMessage where
+  toByteString = undefined
+
+selectedAttachmentOrError ::
+     ( HasList ctx
+     , Foldable (T ctx)
+     , L.Splittable (T ctx)
+     , MonadError Error m
+     , MonadIO m
+     )
+  => Proxy ctx
+  -> AppState
+  -> m B.ByteString
+selectedAttachmentOrError proxy s =
+  let convert = maybe (throwError $ GenericError "No attachment selected") pure
+   in convert $
+      view
+        (list proxy . to L.listSelectedElement . _Just . _2 . to toByteString)
+        s
 
 editAttachment :: AppState -> IO AppState
 editAttachment s =
