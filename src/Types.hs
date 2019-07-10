@@ -452,33 +452,36 @@ veName f (Tile a b) = fmap (\b' -> Tile a b') (f b)
 veState :: Lens' Tile ViewState
 veState f (Tile a b) = fmap (\a' -> Tile a' b) (f a)
 
+type Layers = V.Vector Layer
+
 data View = View
     { _vFocus :: Name
-    , _vWidgets :: Tiles
+    , _vLayers :: Layers
     }
 
--- A tile is a view element with a widget and it's view state
-newtype Tiles =
-  Tiles (V.Vector Tile)
-  deriving (Eq, Show)
-
-type instance Index Tiles = Name
-type instance IxValue Tiles = Tile
-
-instance Ixed Tiles where
-  ix = tile
-
-tileiso :: Iso' Tiles (V.Vector Tile)
-tileiso = iso (\(Tiles xs) -> xs) Tiles
-
-tile :: Name -> Traversal' Tiles Tile
-tile k = tileiso . traversed . filtered (\x -> k == view veName x)
-
-vWidgets :: Lens' View Tiles
-vWidgets = lens _vWidgets (\settings x -> settings { _vWidgets = x })
+vLayers :: Lens' View Layers
+vLayers = lens _vLayers (\settings x -> settings { _vLayers = x })
 
 vFocus :: Lens' View Name
 vFocus = lens _vFocus (\settings x -> settings { _vFocus = x})
+
+-- A layer is a view element with a list of widgets and their view
+-- state
+newtype Layer =
+  Layer (V.Vector Tile)
+  deriving (Eq, Show)
+
+type instance Index Layer = Name
+type instance IxValue Layer = Tile
+
+instance Ixed Layer where
+  ix = tile
+
+layeriso :: Iso' Layer (V.Vector Tile)
+layeriso = iso (\(Layer xs) -> xs) Layer
+
+tile :: Name -> Traversal' Layer Tile
+tile k = layeriso . traversed . filtered (\x -> k == view veName x)
 
 data ViewSettings = ViewSettings
     { _vsViews :: Map.Map ViewName View

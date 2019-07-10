@@ -237,16 +237,16 @@ completeMailTags s =
                       <$> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops')
 
 instance Completable 'ComposeTo where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeTo . veState) Hidden
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ComposeTo . veState) Hidden
 
 instance Completable 'ComposeFrom where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeFrom . veState) Hidden
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ComposeFrom . veState) Hidden
 
 instance Completable 'ComposeSubject where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeSubject . veState) Hidden
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ComposeSubject . veState) Hidden
 
 instance Completable 'ConfirmDialog where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ConfirmDialog . veState) Hidden
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ConfirmDialog . veState) Hidden
 
 -- | Applying tag operations on threads
 -- Note: notmuch does not support adding tags to threads themselves, instead we'll
@@ -271,11 +271,13 @@ instance Completable 'ManageFileBrowserSearchPath where
 
 instance Completable 'MailAttachmentOpenWithEditor where
   complete _ = pure
-               . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Hidden
+               . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                      . ix MailAttachmentOpenWithEditor . veState) Hidden
 
 instance Completable 'MailAttachmentPipeToEditor where
   complete _ = pure
-               . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentPipeToEditor . veState) Hidden
+               . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                      . ix MailAttachmentPipeToEditor . veState) Hidden
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
@@ -308,15 +310,18 @@ instance Resetable 'Threads 'ComposeTo where
 
 instance Resetable 'ComposeView 'ComposeFrom where
   reset _ _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
-                . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeFrom . veState) Hidden
+                . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
+                       . ix ComposeFrom . veState) Hidden
 
 instance Resetable 'ComposeView 'ComposeTo where
   reset _ _ s = pure $ s & over (asCompose . cTo . E.editContentsL) (revertEditorContents s)
-                . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeTo . veState) Hidden
+                . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
+                       . ix ComposeTo . veState) Hidden
 
 instance Resetable 'ComposeView 'ComposeSubject where
   reset _ _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
-                . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeTo . veState) Hidden
+                . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
+                       . ix ComposeTo . veState) Hidden
 
 revertEditorContents :: AppState -> TextZipper T.Text -> TextZipper T.Text
 revertEditorContents s z = let saved = view (asCompose . cTemp) s
@@ -330,15 +335,18 @@ instance Resetable 'FileBrowser 'ManageFileBrowserSearchPath where
   reset _ _ = pure . over (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
 
 instance Resetable 'ViewMail 'MailListOfAttachments where
-  reset _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailListOfAttachments . veState) Hidden
+  reset _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                          . ix MailListOfAttachments . veState) Hidden
 
 instance Resetable 'ViewMail 'MailAttachmentOpenWithEditor where
   reset _ _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
-            . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Hidden
+            . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                   . ix MailAttachmentOpenWithEditor . veState) Hidden
 
 instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
   reset _ _ = pure . over (asMailView . mvPipeCommand . E.editContentsL) clearZipper
-            . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentPipeToEditor . veState) Hidden
+            . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                   . ix MailAttachmentPipeToEditor . veState) Hidden
 
 clearMailComposition :: AppState -> AppState
 clearMailComposition s =
@@ -390,7 +398,8 @@ instance Focusable 'Mails 'ManageMailTagsEditor where
 
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
   switchFocus _ _ s = pure $ s &
-                      set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix ManageMailTagsEditor . veState) Visible
+                      set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                           . ix ManageMailTagsEditor . veState) Visible
                       . set (asViews . vsViews . at ViewMail . _Just . vFocus) ManageMailTagsEditor
 
 instance Focusable 'ViewMail 'ScrollingMailView where
@@ -407,15 +416,18 @@ instance Focusable 'ViewMail 'ListOfMails where
 
 instance Focusable 'ViewMail 'MailListOfAttachments where
   switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailListOfAttachments
-                    . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailListOfAttachments . veState) Visible
+                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                           . ix MailListOfAttachments . veState) Visible
 
 instance Focusable 'ViewMail 'MailAttachmentOpenWithEditor where
   switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentOpenWithEditor
-                    . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Visible
+                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                           . ix MailAttachmentOpenWithEditor . veState) Visible
 
 instance Focusable 'ViewMail 'MailAttachmentPipeToEditor where
   switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentPipeToEditor
-                    . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentPipeToEditor . veState) Visible
+                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                           . ix MailAttachmentPipeToEditor . veState) Visible
 
 instance Focusable 'Help 'ScrollingHelpView where
   switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
@@ -427,21 +439,25 @@ instance Focusable 'ComposeView 'ComposeListOfAttachments where
 instance Focusable 'ComposeView 'ComposeFrom where
   switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeFrom
                       . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
-                      . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeFrom . veState) Visible
+                      . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
+                             . ix ComposeFrom . veState) Visible
 
 instance Focusable 'ComposeView 'ComposeTo where
   switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeTo
                       . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
-                      . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeTo . veState) Visible
+                      . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
+                             . ix ComposeTo . veState) Visible
 
 instance Focusable 'ComposeView 'ComposeSubject where
   switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeSubject
                       . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
-                      . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ComposeSubject . veState) Visible
+                      . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
+                             . ix ComposeSubject . veState) Visible
 
 instance Focusable 'ComposeView 'ConfirmDialog where
   switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ConfirmDialog
-                      . set (asViews . vsViews . at ComposeView . _Just . vWidgets . ix ConfirmDialog . veState) Visible
+                      . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0
+                             . ix ConfirmDialog . veState) Visible
 
 instance Focusable 'FileBrowser 'ListOfFiles where
   switchFocus _ _ s = let path = view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine) s
@@ -618,7 +634,8 @@ openAttachment =
            Nothing ->
              Brick.continue
              $ s & set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentOpenWithEditor
-             . set (asViews . vsViews . at ViewMail . _Just . vWidgets . ix MailAttachmentOpenWithEditor . veState) Visible
+             . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                    . ix MailAttachmentOpenWithEditor . veState) Visible
   }
 
 openWithCommand :: Action 'ViewMail 'MailAttachmentOpenWithEditor (T.Next AppState)
