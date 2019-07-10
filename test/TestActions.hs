@@ -61,7 +61,7 @@ testSwapBottom :: TestTree
 testSwapBottom = testCase "swaps last visible widget" $ swapWidget ListOfThreads ManageThreadTagsEditor tiles @?= expected
   where
     tiles =
-        Tiles $ Vector.fromList
+        Layer $ Vector.fromList
           [ Tile Visible ListOfThreads
           , Tile Visible StatusBar
           , Tile Visible SearchThreadsEditor
@@ -69,7 +69,7 @@ testSwapBottom = testCase "swaps last visible widget" $ swapWidget ListOfThreads
           , Tile Hidden ComposeFrom
           ]
     expected =
-        Tiles $ Vector.fromList
+        Layer $ Vector.fromList
           [ Tile Visible ListOfThreads
           , Tile Visible StatusBar
           , Tile Hidden SearchThreadsEditor

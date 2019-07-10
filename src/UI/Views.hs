@@ -24,13 +24,17 @@ import Control.Lens
 import Brick.Focus (focusGetCurrent)
 import Types
 
+import Data.Foldable (toList)
 
-focusedViewWidgets :: AppState -> [Name]
+
+focusedViewWidgets :: AppState -> [[Name]]
 focusedViewWidgets s =
-    let defaultV = view (asConfig . confDefaultView) s
-        focused = fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
-    in toListOf (asViews . vsViews . at focused . _Just . vWidgets . tileiso . traversed
-                 . filtered (\ve -> view veState ve == Visible) . veName) s
+  let defaultV = view (asConfig . confDefaultView) s
+      focused = fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
+      allLayers = view (asViews . vsViews . at focused . _Just . vLayers) s
+   in toList $ toListOf
+        (layeriso . traversed . filtered (\t -> view veState t == Visible) . veName)
+        <$> allLayers
 
 focusedViewWidget :: AppState -> Name
 focusedViewWidget s = view vFocus (focusedView s)
@@ -43,13 +47,16 @@ focusedView s = let focused = view (asViews . vsViews . at (focusedViewName s)) 
 toggleLastVisibleWidget :: Name -> AppState -> AppState
 toggleLastVisibleWidget n s =
   let fallback = focusedViewWidget s
-  in s
-     & over (asViews . vsViews . at (focusedViewName s) . _Just . vWidgets) (swapWidget fallback n)
-     . set (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) n
+   in s &
+      over
+        (asViews .
+         vsViews . at (focusedViewName s) . _Just . vLayers . ix 0)
+        (swapWidget fallback n) .
+      set (asViews . vsViews . at (focusedViewName s) . _Just . vFocus) n
 
-swapWidget :: Name -> Name -> Tiles -> Tiles
+swapWidget :: Name -> Name -> Layer -> Layer
 swapWidget fallback n m =
-  let lastWidget = fromMaybe fallback $ lastOf (tileiso . traverse . filtered (\x -> view veState x == Visible) . veName) m
+  let lastWidget = fromMaybe fallback $ lastOf (layeriso . traverse . filtered (\x -> view veState x == Visible) . veName) m
    in m & set (ix lastWidget . veState) Hidden . set (ix n . veState) Visible
 
 focusedViewName :: AppState -> ViewName
@@ -63,15 +70,18 @@ resetView n = set (asViews . vsViews . ix n)
 indexView :: View
 indexView =
   View
-    { _vWidgets =
-        Tiles $ fromList
-          [ Tile Visible ListOfThreads
-          , Tile Visible StatusBar
-          , Tile Visible SearchThreadsEditor
-          , Tile Hidden ManageThreadTagsEditor
-          , Tile Hidden ComposeFrom
-          , Tile Hidden ComposeTo
-          , Tile Hidden ComposeSubject
+    { _vLayers =
+        fromList
+          [ Layer $
+            fromList
+              [ Tile Visible ListOfThreads
+              , Tile Visible StatusBar
+              , Tile Visible SearchThreadsEditor
+              , Tile Hidden ManageThreadTagsEditor
+              , Tile Hidden ComposeFrom
+              , Tile Hidden ComposeTo
+              , Tile Hidden ComposeSubject
+              ]
           ]
     , _vFocus = ListOfThreads
     }
@@ -79,11 +89,14 @@ indexView =
 listOfMailsView :: View
 listOfMailsView =
   View
-    { _vWidgets =
-        Tiles $ fromList
-          [ Tile Visible ListOfMails
-          , Tile Visible StatusBar
-          , Tile Visible ManageMailTagsEditor
+    { _vLayers =
+        fromList
+          [ Layer $
+            fromList
+              [ Tile Visible ListOfMails
+              , Tile Visible StatusBar
+              , Tile Visible ManageMailTagsEditor
+              ]
           ]
     , _vFocus = ListOfMails
     }
@@ -91,15 +104,18 @@ listOfMailsView =
 mailView :: View
 mailView =
   View
-    { _vWidgets =
-        Tiles $ fromList
-          [ Tile Visible ListOfMails
-          , Tile Visible StatusBar
-          , Tile Visible ScrollingMailView
-          , Tile Hidden ManageMailTagsEditor
-          , Tile Hidden MailListOfAttachments
-          , Tile Hidden MailAttachmentOpenWithEditor
-          , Tile Hidden MailAttachmentPipeToEditor
+    { _vLayers =
+        fromList
+          [ Layer $
+            fromList
+              [ Tile Visible ListOfMails
+              , Tile Visible StatusBar
+              , Tile Visible ScrollingMailView
+              , Tile Hidden ManageMailTagsEditor
+              , Tile Hidden MailListOfAttachments
+              , Tile Hidden MailAttachmentOpenWithEditor
+              , Tile Hidden MailAttachmentPipeToEditor
+              ]
           ]
     , _vFocus = ListOfMails
     }
@@ -107,15 +123,18 @@ mailView =
 composeView :: View
 composeView =
   View
-    { _vWidgets =
-        Tiles $ fromList
-          [ Tile Visible ComposeHeaders
-          , Tile Visible ComposeListOfAttachments
-          , Tile Visible StatusBar
-          , Tile Hidden ComposeFrom
-          , Tile Hidden ComposeTo
-          , Tile Hidden ComposeSubject
-          , Tile Hidden ConfirmDialog
+    { _vLayers =
+        fromList
+          [ Layer $ fromList [Tile Hidden ConfirmDialog]
+          , Layer $
+            fromList
+              [ Tile Visible ComposeHeaders
+              , Tile Visible ComposeListOfAttachments
+              , Tile Visible StatusBar
+              , Tile Hidden ComposeFrom
+              , Tile Hidden ComposeTo
+              , Tile Hidden ComposeSubject
+              ]
           ]
     , _vFocus = ComposeFrom
     }
@@ -123,18 +142,21 @@ composeView =
 helpView :: View
 helpView =
   View
-    { _vWidgets = Tiles $ fromList [Tile Visible ScrollingHelpView]
+    { _vLayers = fromList [Layer $ fromList [Tile Visible ScrollingHelpView]]
     , _vFocus = ScrollingHelpView
     }
 
 filebrowserView :: View
 filebrowserView =
   View
-    { _vWidgets =
-        Tiles $ fromList
-          [ Tile Visible ListOfFiles
-          , Tile Visible StatusBar
-          , Tile Visible ManageFileBrowserSearchPath
+    { _vLayers =
+        fromList
+          [ Layer $
+            fromList
+              [ Tile Visible ListOfFiles
+              , Tile Visible StatusBar
+              , Tile Visible ManageFileBrowserSearchPath
+              ]
           ]
     , _vFocus = ListOfFiles
     }
