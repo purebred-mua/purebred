@@ -67,27 +67,21 @@ data Condition
   | Regex String
   deriving (Show)
 
-type TestCase = IO GlobalEnv -> Int -> TestTree
+-- | A test case that will be executed in a dedicated tmux session.
+-- Parameterised over the "global" environment (c.f. the "session"
+-- environment).
+type TestCase a = IO a -> Int -> TestTree
+
+type PurebredTestCase = TestCase GlobalEnv
 
 main :: IO ()
-main = defaultMain $
-  withResource (frameworkPre *> pre) (\a -> frameworkPost <* post a) $ \env ->
-    testGroup "user acceptance tests" $ zipWith ($ env) tests [0..]
+main = defaultMain $ testTmux pre post tests
   where
-    -- Create the tmux keepalive session and a config dir, with
-    -- precompiled custom binary, that all test cases can use
-    keepaliveSessionName = "keepalive"
-
-    frameworkPre = setUpTmuxSession keepaliveSessionName
-
     pre = do
       dir <- mkTempDir
       setUpPurebredConfig dir
-      precompileConfig dir
+      precompileConfig dir  -- all tests can use same precompiled binary
       pure (GlobalEnv dir)
-
-    -- Remove the shared config dir and kill the keepalive session
-    frameworkPost = cleanUpTmuxSession keepaliveSessionName
 
     post (GlobalEnv dir) =
       removeDirectoryRecursive dir
@@ -118,7 +112,35 @@ main = defaultMain $
       , testEditingMailHeaders
       ]
 
-testEditingMailHeaders :: TestCase
+-- | Run a series of tests in tmux sessions.
+--
+-- Tests are executed sequentially.  Each test case is executed in a
+-- new tmux session.  The name of the session is derived from the
+-- name of the test and prepended with the sequence number.
+--
+-- A session called "keepalive" is created before any test cases are
+-- run, and killed after all the test cases have finished.  This
+-- session ensures that the server remains alive, avoiding some race
+-- conditions.
+--
+testTmux
+  :: IO a
+  -- ^ Set-up action.  Executed one time, after the keepalive
+  -- session is created but before any test cases are executed.
+  -> (a -> IO ())
+  -- ^ Tear-down action.  Executed after all test cases have
+  -- finished but before the keepalive session gets killed.
+  -> [TestCase a]
+  -> TestTree
+testTmux pre post tests =
+  withResource (frameworkPre *> pre) (\a -> post a *> frameworkPost) $ \env ->
+    testGroup "user acceptance tests" $ zipWith ($ env) tests [0..]
+  where
+    keepaliveSessionName = "keepalive"
+    frameworkPre = setUpTmuxSession keepaliveSessionName
+    frameworkPost = cleanUpTmuxSession keepaliveSessionName
+
+testEditingMailHeaders :: PurebredTestCase
 testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
   \step -> do
     startApplication
@@ -164,7 +186,7 @@ testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
     step "enter subject"
     sendKeys "foo subject\r" (Literal "Subject: foo subject")
 
-testPipeEntitiesSuccessfully :: TestCase
+testPipeEntitiesSuccessfully :: PurebredTestCase
 testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" $
   \step -> do
     setEnvVarInSession "LESS" ""
@@ -187,7 +209,7 @@ testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" 
                              <> buildAnsiRegex ["7"] ["39"] ["49"]
                              <> "\\(END\\)"))
 
-testOpenEntitiesSuccessfully :: TestCase
+testOpenEntitiesSuccessfully :: PurebredTestCase
 testOpenEntitiesSuccessfully = purebredTmuxSession "open entities successfully" $
   \step -> do
     setEnvVarInSession "LESS" ""
@@ -209,7 +231,7 @@ testOpenEntitiesSuccessfully = purebredTmuxSession "open entities successfully" 
                             <> buildAnsiRegex ["7"] ["39"] ["49"]
                             <> ".*purebred.*END"))
 
-testOpenCommandDoesNotKillPurebred :: TestCase
+testOpenCommandDoesNotKillPurebred :: PurebredTestCase
 testOpenCommandDoesNotKillPurebred = purebredTmuxSession "open attachment does not kill purebred" $
   \step -> do
     startApplication
@@ -227,7 +249,7 @@ testOpenCommandDoesNotKillPurebred = purebredTmuxSession "open attachment does n
     _ <- sendLiteralKeys "asdfasdfasdf"
     sendKeys "Enter" (Literal "ProcessError")
 
-testShowsMailEntities :: TestCase
+testShowsMailEntities :: PurebredTestCase
 testShowsMailEntities = purebredTmuxSession "shows mail entities successfully" $
   \step -> do
     startApplication
@@ -247,7 +269,7 @@ testShowsMailEntities = purebredTmuxSession "shows mail entities successfully" $
     -- poor mans (?!text)
     assertRegex "[^t][^e][^x][^t]" out
 
-testUserCanMoveBetweenThreads :: TestCase
+testUserCanMoveBetweenThreads :: PurebredTestCase
 testUserCanMoveBetweenThreads = purebredTmuxSession "user can navigate between threads" $
   \step -> do
     startApplication
@@ -265,7 +287,7 @@ testUserCanMoveBetweenThreads = purebredTmuxSession "user can navigate between t
     step "Navigate up the threads list"
     sendKeys "K" (Literal "This is a test mail for purebred")
 
-testRepliesToMailSuccessfully :: TestCase
+testRepliesToMailSuccessfully :: PurebredTestCase
 testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfully" $
   \step -> do
     let subject = "Testmail with whitespace in the subject"
@@ -300,7 +322,7 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     assertSubstrInOutput "To: roman@host.example" decoded
     assertSubstrInOutput "> This is a test mail for purebred" decoded
 
-testFromAddressIsProperlyReset :: TestCase
+testFromAddressIsProperlyReset :: PurebredTestCase
 testFromAddressIsProperlyReset = purebredTmuxSession "from address is reset to configured identity" $
   \step -> do
     startApplication
@@ -314,7 +336,7 @@ testFromAddressIsProperlyReset = purebredTmuxSession "from address is reset to c
     step "Start composing again"
     sendKeys "m" (Literal "Joe Bloggs")
 
-testCanJumpToFirstListItem :: TestCase
+testCanJumpToFirstListItem :: PurebredTestCase
 testCanJumpToFirstListItem = purebredTmuxSession "can jump to first and last mail" $
   \step -> do
     startApplication
@@ -325,7 +347,7 @@ testCanJumpToFirstListItem = purebredTmuxSession "can jump to first and last mai
     step "Jump to first mail"
     sendKeys "1" (Literal "1 of 3")
 
-testUpdatesReadState :: TestCase
+testUpdatesReadState :: PurebredTestCase
 testUpdatesReadState = purebredTmuxSession "updates read state for mail and thread" $
   \step -> do
     startApplication
@@ -351,7 +373,7 @@ testUpdatesReadState = purebredTmuxSession "updates read state for mail and thre
     step "returning to thread list shows thread unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
 
-testConfig :: TestCase
+testConfig :: PurebredTestCase
 testConfig = purebredTmuxSession "test custom config" $
   \step -> do
     -- Set a short command prompt, to a value otherwise unlikely to
@@ -374,7 +396,7 @@ testConfig = purebredTmuxSession "test custom config" $
     -- column 0, which could cause target string to be split.
     sendKeys "Enter" (Literal unlikelyString)
 
-testAddAttachments :: TestCase
+testAddAttachments :: PurebredTestCase
 testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
   \step -> do
     testdir <- view effectiveDir
@@ -490,7 +512,7 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     assertSubstrInOutput lastFile decoded
     assertSubstrInOutput "This is a test body" decoded
 
-testManageTagsOnMails :: TestCase
+testManageTagsOnMails :: PurebredTestCase
 testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
   \step -> do
     startApplication
@@ -540,7 +562,7 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
     -- last visible "item" in the UI followed by whitespace.
     sendKeys "Escape" (Regex "This is a test mail for purebred\\s+$")
 
-testManageTagsOnThreads :: TestCase
+testManageTagsOnThreads :: PurebredTestCase
 testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
   \step -> do
     startApplication
@@ -624,7 +646,7 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     step "abort editing"
     sendKeys "Escape" (Literal "Query")
 
-testHelp :: TestCase
+testHelp :: PurebredTestCase
 testHelp = purebredTmuxSession "help view" $
   \step -> do
     startApplication
@@ -634,7 +656,7 @@ testHelp = purebredTmuxSession "help view" $
 
     sendKeys "Escape" (Literal "Purebred")
 
-testErrorHandling :: TestCase
+testErrorHandling :: PurebredTestCase
 testErrorHandling = purebredTmuxSession "error handling" $
   \step -> do
     startApplication
@@ -652,7 +674,7 @@ testErrorHandling = purebredTmuxSession "error handling" $
     step "error is cleared with next registered keybinding"
     sendKeys "Up" (Literal "Purebred: Item 1 of 3")
 
-testSetsMailToRead :: TestCase
+testSetsMailToRead :: PurebredTestCase
 testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
   \step -> do
     startApplication
@@ -667,7 +689,7 @@ testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
     step "toggle it back to unread (bold again)"
     sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
 
-testCanToggleHeaders :: TestCase
+testCanToggleHeaders :: PurebredTestCase
 testCanToggleHeaders = purebredTmuxSession "user can toggle Headers" $
   \step -> do
     startApplication
@@ -684,7 +706,7 @@ testCanToggleHeaders = purebredTmuxSession "user can toggle Headers" $
     out <- sendKeys "h" (Literal "This is a test mail")
     assertRegex "Purebred.*\n.*[Ff]rom" out
 
-testUserViewsMailSuccessfully :: TestCase
+testUserViewsMailSuccessfully :: PurebredTestCase
 testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
   \step -> do
     startApplication
@@ -720,7 +742,7 @@ testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
     step "go to previous mail with reset scroll state"
     sendKeys "k" (Regex "Subject:\\s.*WIP Refactor")
 
-testUserCanManipulateNMQuery :: TestCase
+testUserCanManipulateNMQuery :: PurebredTestCase
 testUserCanManipulateNMQuery =
    purebredTmuxSession
         "manipulating notmuch search query results in empty index" $
@@ -752,7 +774,7 @@ testUserCanManipulateNMQuery =
           step "view currently selected mail"
           sendKeys "Enter" (Literal "HOLY PUREBRED")
 
-testUserCanSwitchBackToIndex :: TestCase
+testUserCanSwitchBackToIndex :: PurebredTestCase
 testUserCanSwitchBackToIndex =
   purebredTmuxSession "user can switch back to mail index during composition" $
         \step -> do
@@ -786,7 +808,7 @@ testUserCanSwitchBackToIndex =
             step "switch back to the compose editor"
             sendKeys "Tab" (Literal "test subject")
 
-testUserCanAbortMailComposition :: TestCase
+testUserCanAbortMailComposition :: PurebredTestCase
 testUserCanAbortMailComposition =
   purebredTmuxSession "user can abort composing mail" $
         \step -> do
@@ -840,7 +862,7 @@ testUserCanAbortMailComposition =
             sendKeys "e" (Regex "This is my second mail\\s+")
 
 
-testSendMail :: TestCase
+testSendMail :: PurebredTestCase
 testSendMail =
   purebredTmuxSession "sending mail successfully" $
         \step -> do
@@ -1081,9 +1103,7 @@ withTmuxSession
   -- ^ The main test function.  The argument is the "step" function
   -- which can be called with a description to label the steps of
   -- the test procedure.
-  -> IO globalEnv
-  -> Int
-  -> TestTree
+  -> TestCase globalEnv
 withTmuxSession pre post desc f getGEnv i =
   withResource
     (getGEnv >>= \gEnv -> frameworkPre >>= pre gEnv)
