@@ -121,45 +121,45 @@ testEditingMailHeaders = withTmuxSession "user can edit mail headers" $
   \step -> do
     startApplication
 
-    liftIO $ step "start composition"
+    step "start composition"
     sendKeys "m" (Literal "From")
 
-    liftIO $ step "accept default"
+    step "accept default"
     sendKeys "Enter" (Literal "To")
 
-    liftIO $ step "enter to: email"
+    step "enter to: email"
     sendKeys "user@to.test\r" (Literal "Subject")
 
-    liftIO $ step "leave default"
+    step "leave default"
     sendKeys "Enter" (Literal "~")
 
-    liftIO $ step "enter mail body"
+    step "enter mail body"
     sendKeys "iThis is a test body" (Literal "body")
 
-    liftIO $ step "exit insert mode in vim"
+    step "exit insert mode in vim"
     sendKeys "Escape" (Literal "body")
 
-    liftIO $ step "exit vim"
+    step "exit vim"
     sendKeys ": x\r" (Literal "text/plain")
       >>= assertSubstrInOutput "From: \"Joe Bloggs\" <joe@foo.test>"
 
-    liftIO $ step "user can change from header"
+    step "user can change from header"
     sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
 
-    liftIO $ step "append an email"
+    step "append an email"
     sendKeys ", testuser@foo.test\r" (Literal $ "From: "
                                       <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
 
-    liftIO $ step "user can change to header"
+    step "user can change to header"
     sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "user@to.test")
 
-    liftIO $ step "append an additional from email"
+    step "append an additional from email"
     sendKeys ", testuser@foo.test\r" (Literal "To: user@to.test, testuser@foo.test")
 
-    liftIO $ step "change subject"
+    step "change subject"
     sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> "")
 
-    liftIO $ step "enter subject"
+    step "enter subject"
     sendKeys "foo subject\r" (Literal "Subject: foo subject")
 
 testPipeEntitiesSuccessfully :: TestCase
@@ -168,16 +168,16 @@ testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
     setEnvVarInSession "LESS" ""
     startApplication
 
-    liftIO $ step "open thread"
+    step "open thread"
     sendKeys "Enter" (Literal "This is a test mail for purebred")
 
-    liftIO $ step "show entities"
+    step "show entities"
     sendKeys "v" (Literal "text/plain")
 
-    liftIO $ step "pipe to"
+    step "pipe to"
     sendKeys "|" (Literal "Pipe to")
 
-    liftIO $ step "use less"
+    step "use less"
     _ <- sendLiteralKeys "less"
     sendKeys "Enter" (Regex ("This is a test mail for purebred"
                              <> buildAnsiRegex [] ["37"] ["40"]
@@ -191,13 +191,13 @@ testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
     setEnvVarInSession "LESS" ""
     startApplication
 
-    liftIO $ step "open thread"
+    step "open thread"
     sendKeys "Enter" (Literal "This is a test mail for purebred")
 
-    liftIO $ step "show entities"
+    step "show entities"
     sendKeys "v" (Literal "text/plain")
 
-    liftIO $ step "open one entity"
+    step "open one entity"
     sendKeys "o" (Literal "Open With")
     _ <- sendLiteralKeys "less"
 
@@ -212,16 +212,16 @@ testOpenCommandDoesNotKillPurebred = withTmuxSession "open attachment does not k
   \step -> do
     startApplication
 
-    liftIO $ step "open thread"
+    step "open thread"
     sendKeys "Enter" (Literal "This is a test mail for purebred")
 
-    liftIO $ step "show entities"
+    step "show entities"
     sendKeys "v" (Literal "text/plain")
 
-    liftIO $ step "open with"
+    step "open with"
     sendKeys "o" (Literal "Open With")
 
-    liftIO $ step "Open with bogus command"
+    step "Open with bogus command"
     _ <- sendLiteralKeys "asdfasdfasdf"
     sendKeys "Enter" (Literal "ProcessError")
 
@@ -230,16 +230,16 @@ testShowsMailEntities = withTmuxSession "shows mail entities successfully" $
   \step -> do
     startApplication
 
-    liftIO $ step "open thread"
+    step "open thread"
     sendKeys "Enter" (Literal "This is a test mail for purebred")
 
-    liftIO $ step "show entities"
+    step "show entities"
     sendKeys "v" (Literal "text/plain")
 
-    liftIO $ step "select the second entity"
+    step "select the second entity"
     sendKeys "j" (Literal "text/html")
 
-    liftIO $ step "close the list of entities"
+    step "close the list of entities"
     out <- sendKeys "q" (Literal "This is a test mail for purebred")
 
     -- poor mans (?!text)
@@ -254,13 +254,13 @@ testUserCanMoveBetweenThreads = withTmuxSession "user can navigate between threa
     out <- capture
     assertRegex (buildAnsiRegex ["1"] ["37"] ["43"] <> "\\sAug'17.*Testmail with whitespace") out
 
-    liftIO $ step "View Mail"
+    step "View Mail"
     sendKeys "Enter" (Literal "This is a test mail for purebred")
 
-    liftIO $ step "Navigate down the threads list"
+    step "Navigate down the threads list"
     sendKeys "J" (Literal "HOLY PUREBRED")
 
-    liftIO $ step "Navigate up the threads list"
+    step "Navigate up the threads list"
     sendKeys "K" (Literal "This is a test mail for purebred")
 
 testRepliesToMailSuccessfully :: TestCase
@@ -270,24 +270,24 @@ testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
     testdir <- view effectiveDir
     startApplication
 
-    liftIO $ step "pick first mail"
+    step "pick first mail"
     out <- sendKeys "Enter" (Literal "This is a test mail for purebred")
 
     assertSubstrInOutput "From: <roman@host.example>" out
     assertSubstrInOutput "To: <frase@host.example>" out
     assertSubstrInOutput ("Subject: " <> subject) out
 
-    liftIO $ step "start replying"
+    step "start replying"
     sendKeys "r" (Literal "> This is a test mail for purebred")
 
-    liftIO $ step "exit vim"
+    step "exit vim"
     out' <- sendKeys ": x\r" (Literal "Attachments")
 
     assertSubstrInOutput "From: <frase@host.example>" out'
     assertSubstrInOutput "To: <roman@host.example>" out'
     assertSubstrInOutput ("Subject: Re: " <> subject) out'
 
-    liftIO $ step "send mail"
+    step "send mail"
     sendKeys "y" (Literal "Query")
 
     let fpath = testdir </> "sentMail"
@@ -303,13 +303,13 @@ testFromAddressIsProperlyReset = withTmuxSession "from address is reset to confi
   \step -> do
     startApplication
 
-    liftIO $ step "Start composing"
+    step "Start composing"
     sendKeys "m" (Literal "Joe Bloggs")
 
-    liftIO $ step "abort editing"
+    step "abort editing"
     sendKeys "Escape" (Literal "tag:inbox")
 
-    liftIO $ step "Start composing again"
+    step "Start composing again"
     sendKeys "m" (Literal "Joe Bloggs")
 
 testCanJumpToFirstListItem :: TestCase
@@ -317,10 +317,10 @@ testCanJumpToFirstListItem = withTmuxSession "can jump to first and last mail" $
   \step -> do
     startApplication
 
-    liftIO $ step "Jump to last mail"
+    step "Jump to last mail"
     sendKeys "G" (Literal "3 of 3")
 
-    liftIO $ step "Jump to first mail"
+    step "Jump to first mail"
     sendKeys "1" (Literal "1 of 3")
 
 testUpdatesReadState :: TestCase
@@ -328,25 +328,25 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
   \step -> do
     startApplication
 
-    liftIO $ step "navigate to thread mails"
+    step "navigate to thread mails"
     sendKeys "G" (Literal "3 of 3")
 
-    liftIO $ step "view unread mail in thread"
+    step "view unread mail in thread"
     sendKeys "Enter" (Literal "WIP Refactor")
 
-    liftIO $ step "view next unread in thread"
+    step "view next unread in thread"
     sendKeys "Down" (Literal "2 of 2")
 
-    liftIO $ step "go back to thread list which is read"
+    step "go back to thread list which is read"
     sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
 
-    liftIO $ step "set one mail to unread"
+    step "set one mail to unread"
     sendKeys "Enter" (Literal "Beginning of large text")
     sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] []
                            <> "\\sRe: WIP Refactor\\s+"
                            <> buildAnsiRegex ["0"] ["34"] ["40"]))
 
-    liftIO $ step "returning to thread list shows thread unread"
+    step "returning to thread list shows thread unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
 
 testConfig :: TestCase
@@ -358,10 +358,10 @@ testConfig = withTmuxSession "test custom config" $
     sendKeys ("PS1=" <> unlikelyString <> "$ \r") (Literal unlikelyString)
     startApplication
 
-    liftIO $ step "archive thread"
+    step "archive thread"
     sendKeys "a" (Literal "archive")
 
-    liftIO $ step "quit"
+    step "quit"
     sendKeys "q" Unconditional
 
     -- Wait a bit so that purebred, which may not yet have
@@ -390,94 +390,94 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
 
     startApplication
 
-    liftIO $ step "start composition"
+    step "start composition"
     sendKeys "m" (Literal "From")
 
-    liftIO $ step "enter from email"
+    step "enter from email"
     sendKeys "Enter" (Literal "To")
 
-    liftIO $ step "enter to: email"
+    step "enter to: email"
     sendKeys "user@to.test\r" (Literal "Subject")
 
-    liftIO $ step "enter subject"
+    step "enter subject"
     sendKeys "test subject\r" (Literal "~")
 
-    liftIO $ step "enter mail body"
+    step "enter mail body"
     sendKeys "iThis is a test body" (Literal "body")
 
-    liftIO $ step "exit insert mode in vim"
+    step "exit insert mode in vim"
     sendKeys "Escape" (Literal "body")
 
-    liftIO $ step "exit vim"
+    step "exit vim"
     sendKeys ": x\r" (Literal "Attachments")
 
-    liftIO $ step "start file browser"
+    step "start file browser"
     cwd <- liftIO getCurrentDirectory
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
-    liftIO $ step "jump to the end of the list"
+    step "jump to the end of the list"
     sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
 
-    liftIO $ step "add first selected file"
+    step "add first selected file"
     sendKeys "Enter" (Literal lastFile)
 
-    liftIO $ step "up to select mail body"
+    step "up to select mail body"
     sendKeys "Up" (Literal "Item 1 of 2")
 
     -- edit the mail body a few times to check if the code not mistakenly adds
     -- the same mail body as an attachment
-    liftIO $ step "edit mail body text"
+    step "edit mail body text"
     sendKeys "e" (Literal "test body")
 
-    liftIO $ step "append to mail body"
+    step "append to mail body"
     sendKeys "i. foo" (Literal "foo")
 
-    liftIO $ step "exit insert mode in vim"
+    step "exit insert mode in vim"
     sendKeys "Escape" (Literal "foo")
 
-    liftIO $ step "exit vim"
+    step "exit vim"
     sendKeys ": x\r" (Literal "Attachments")
 
-    liftIO $ step "edit mail body text"
+    step "edit mail body text"
     sendKeys "e" (Literal "test body")
 
-    liftIO $ step "append to mail body"
+    step "append to mail body"
     sendKeys "i. foo" (Literal "foo")
 
-    liftIO $ step "exit insert mode in vim"
+    step "exit insert mode in vim"
     sendKeys "Escape" (Literal "foo")
 
-    liftIO $ step "exit vim"
+    step "exit vim"
     sendKeys ": x\r" (Literal "Item 1 of 2")
 
     -- try removing attachments
-    liftIO $ step "select the attachment"
+    step "select the attachment"
     sendKeys "Down" (Literal "Item 2 of 2")
 
-    liftIO $ step "remove the attachment"
+    step "remove the attachment"
     sendKeys "D" (Literal "Item 1 of 1")
 
-    liftIO $ step "try to remove the last attachment"
+    step "try to remove the last attachment"
     sendKeys "D" (Literal "You may not remove the only attachment")
 
     -- add the attachment again and send it
-    liftIO $ step "start file browser"
+    step "start file browser"
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
-    liftIO $ step "jump to the end of the list"
+    step "jump to the end of the list"
     sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
 
-    liftIO $ step "select the file"
+    step "select the file"
     sendKeys "Space" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9745 - " <> lastFile)
 
-    liftIO $ step "move one item up"
+    step "move one item up"
     sendKeys "Up" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> secondLastFile)
 
-    liftIO $ step "add selected files"
+    step "add selected files"
     out <- sendKeys "Enter" (Literal "Item 3 of 3")
     assertSubstrInOutput secondLastFile out
 
-    liftIO $ step "send mail"
+    step "send mail"
     sendKeys "y" (Literal "Query")
 
     let fpath = testdir </> "sentMail"
@@ -493,16 +493,16 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
   \step -> do
     startApplication
 
-    liftIO $ step "view mail in thread"
+    step "view mail in thread"
     sendKeys "Enter" (Literal "Testmail")
 
-    liftIO $ step "focus command to show mail tags"
+    step "focus command to show mail tags"
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] []))
 
-    liftIO $ step "enter new tag"
+    step "enter new tag"
     _ <- sendLiteralKeys "+inbox +foo +bar"
 
-    liftIO $ step "apply"
+    step "apply"
     sendKeys "Enter" (Regex ("foo"
                              <> buildAnsiRegex [] ["37"] []
                              <> "\\s"
@@ -510,30 +510,30 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
                              <> "bar"))
       >>= assertSubstrInOutput "This is a test mail"
 
-    liftIO $ step "go back to list of mails"
+    step "go back to list of mails"
     sendKeys "Escape" (Literal "List of Mails")
 
-    liftIO $ step "go back to list of threads"
+    step "go back to list of threads"
     sendKeys "Escape" (Literal "List of Threads")
 
     -- find newly tagged mail
-    liftIO $ step "focus tag search"
+    step "focus tag search"
     sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
     sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
 
-    liftIO $ step "enter tag to search `foo and bar`"
+    step "enter tag to search `foo and bar`"
     _ <- sendLiteralKeys "tag:foo and tag:bar"
 
-    liftIO $ step "apply"
+    step "apply"
     sendKeys "Enter" (Literal "tag:foo and tag:bar")
 
-    liftIO $ step "view mail in thread"
+    step "view mail in thread"
     sendKeys "Enter" (Literal "Testmail")
 
-    liftIO $ step "attempt to add a new tag"
+    step "attempt to add a new tag"
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] []))
 
-    liftIO $ step "cancel tagging and expect old UI"
+    step "cancel tagging and expect old UI"
     -- instead of asserting the absence of the tagging editor, we assert the
     -- last visible "item" in the UI followed by whitespace.
     sendKeys "Escape" (Regex "This is a test mail for purebred\\s+$")
@@ -546,54 +546,54 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     -- setup: tag the mails in the thread with two different tags and then
     -- tag the thread as a whole with a new tag. All mails should keep their
     -- distinct tags, while having received a new tag.
-    liftIO $ step "navigate to thread"
+    step "navigate to thread"
     sendKeys "Down" (Literal "Item 2 of 3")
     sendKeys "Down" (Literal "Item 3 of 3")
 
-    liftIO $ step "show thread mails"
+    step "show thread mails"
     sendKeys "Enter" (Literal "ViewMail")
 
-    liftIO $ step "open mail tag editor"
+    step "open mail tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
-    liftIO $ step "add new tag"
+    step "add new tag"
     _ <- sendLiteralKeys "+archive"
 
-    liftIO $ step "apply"
+    step "apply"
     sendKeys "Enter" (Literal "archive")
 
-    liftIO $ step "move to second mail"
+    step "move to second mail"
     sendKeys "Down" (Literal "Item 2 of 2")
 
-    liftIO $ step "open mail tag editor"
+    step "open mail tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
-    liftIO $ step "add new tag"
+    step "add new tag"
     _ <- sendLiteralKeys "+replied -inbox"
 
-    liftIO $ step "apply"
+    step "apply"
     sendKeys "Enter" (Literal "replied")
 
-    liftIO $ step "go back to list of mails"
+    step "go back to list of mails"
     sendKeys "Escape" (Literal "Item 2 of 2")
 
-    liftIO $ step "thread tags shows new tags"
+    step "thread tags shows new tags"
     sendKeys "Escape" (Regex ("archive"
                               <> buildAnsiRegex [] ["37"] []
                               <> "\\s"
                               <> buildAnsiRegex [] ["36"] []
                               <> "replied"))
 
-    liftIO $ step "open thread tag editor"
+    step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
-    liftIO $ step "remove tag"
+    step "remove tag"
     -- "cheating" here a bit, since just invoking tmux with sending literally
     -- "-only" will fail due to tmux parsing it as an argument, but the mail is
     -- already tagged with "thread" so the additional adding won't do anything
     _ <- sendLiteralKeys "+thread"
 
-    liftIO $ step "apply"
+    step "apply"
     sendKeys "Enter" (Regex ("archive"
                              <> buildAnsiRegex [] ["37"] []
                              <> "\\s"
@@ -601,10 +601,10 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
                              <> "\\s"
                              <> buildAnsiRegex [] ["36"] [] <> "thread"))
 
-    liftIO $ step "show thread mails"
+    step "show thread mails"
     sendKeys "Enter" (Literal "ViewMail")
 
-    liftIO $ step "second mail shows old tag"
+    step "second mail shows old tag"
     sendKeys "Escape" (Regex ("replied"
                               <> buildAnsiRegex [] ["37"] []
                               <> "\\s"
@@ -613,13 +613,13 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
                               <> buildAnsiRegex [] ["37"] []
                               <> "\\sRe: WIP Refactor"))
 
-    liftIO $ step "go back to list of threads"
+    step "go back to list of threads"
     sendKeys "Escape" (Literal "List of Threads")
 
-    liftIO $ step "open thread tag editor"
+    step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
-    liftIO $ step "abort editing"
+    step "abort editing"
     sendKeys "Escape" (Literal "Query")
 
 testHelp :: TestCase
@@ -627,7 +627,7 @@ testHelp = withTmuxSession "help view" $
   \step -> do
     startApplication
 
-    liftIO $ step "shows Keybindings"
+    step "shows Keybindings"
     sendKeys "?" (Literal "quit the application")
 
     sendKeys "Escape" (Literal "Purebred")
@@ -640,14 +640,14 @@ testErrorHandling = withTmuxSession "error handling" $
     testmdir <- view envMaildir
     liftIO $ removeFile (testmdir <> "/Maildir/new/1502941827.R15455991756849358775.url")
 
-    liftIO $ step "open thread"
+    step "open thread"
     sendKeys "Enter" (Literal "Testmail")
 
-    liftIO $ step "shows error message"
+    step "shows error message"
     sendKeys "Enter" (Literal "FileReadError")
       >>= assertRegex "open(Binary)?File:.*does not exist"
 
-    liftIO $ step "error is cleared with next registered keybinding"
+    step "error is cleared with next registered keybinding"
     sendKeys "Up" (Literal "Purebred: Item 1 of 3")
 
 testSetsMailToRead :: TestCase
@@ -655,30 +655,30 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
   \step -> do
     startApplication
 
-    liftIO $ step "open thread"
+    step "open thread"
     sendKeys "Enter" (Literal "This is a test mail for purebred")
 
-    liftIO $ step "first unread mail is opened"
+    step "first unread mail is opened"
     sendKeys "Escape" (Literal "List of Mails")
       >>= assertRegex (buildAnsiRegex [] ["37"] ["43"] <> ".*Testmail")
 
-    liftIO $ step "toggle it back to unread (bold again)"
+    step "toggle it back to unread (bold again)"
     sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
 
 testCanToggleHeaders :: TestCase
 testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
   \step -> do
     startApplication
-    liftIO $ step "open thread"
+    step "open thread"
     sendKeys "Enter" (Literal "Testmail")
 
-    liftIO $ step "view mail"
+    step "view mail"
     sendKeys "Enter" (Literal "This is a test mail")
 
-    liftIO $ step "toggle to show all headers"
+    step "toggle to show all headers"
     sendKeys "h" (Regex "[Rr]eturn-[Pp]ath")
 
-    liftIO $ step "toggle filtered headers"
+    step "toggle filtered headers"
     out <- sendKeys "h" (Literal "This is a test mail")
     assertRegex "Purebred.*\n.*[Ff]rom" out
 
@@ -686,36 +686,36 @@ testUserViewsMailSuccessfully :: TestCase
 testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
   \step -> do
     startApplication
-    liftIO $ step "shows tag"
+    step "shows tag"
     out <- capture
     assertSubstrInOutput "inbox" out
     assertSubstrInOutput "Testmail with whitespace in the subject" out
 
-    liftIO $ step "open thread"
+    step "open thread"
     sendKeys "Enter" (Literal "Testmail with whitespace in the subject")
 
-    liftIO $ step "view mail"
+    step "view mail"
     sendKeys "Enter" (Literal "This is a test mail")
 
-    liftIO $ step "go back to thread list"
+    step "go back to thread list"
     sendKeys "q q" (Literal "WIP Refactor")
 
-    liftIO $ step "Move down to threaded mails"
+    step "Move down to threaded mails"
     sendKeys "Down" (Literal "Purebred: Item 2 of 3")
     sendKeys "Down" (Literal "Purebred: Item 3 of 3")
     sendKeys "Enter" (Literal "Re: WIP Refactor")
 
-    liftIO $ step "Scroll down"
+    step "Scroll down"
     sendKeys "Enter" (Literal "Beginning of large text")
     sendKeys "Space" (Literal "Sed ut perspiciatis")
 
-    liftIO $ step "go to next unread mail"
+    step "go to next unread mail"
     sendKeys "j" (Literal "Re: WIP Refactor")
 
-    liftIO $ step "Scroll down (again)"
+    step "Scroll down (again)"
     sendKeys "Space" (Literal "Sed ut perspiciatis")
 
-    liftIO $ step "go to previous mail with reset scroll state"
+    step "go to previous mail with reset scroll state"
     sendKeys "k" (Regex "Subject:\\s.*WIP Refactor")
 
 testUserCanManipulateNMQuery :: TestCase
@@ -724,30 +724,30 @@ testUserCanManipulateNMQuery =
         "manipulating notmuch search query results in empty index" $
         \step -> do
           startApplication
-          liftIO $ step "focus command"
+          step "focus command"
           sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
 
-          liftIO $ step "delete all input"
+          step "delete all input"
           sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
 
-          liftIO $ step "search for non existing tags yielding no results"
+          step "search for non existing tags yielding no results"
           _ <- sendLiteralKeys "does not match anything"
           sendKeys "Enter" (Literal "No items")
 
-          liftIO $ step "search for mail correctly tagged"
+          step "search for mail correctly tagged"
           sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "does"))
           sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
 
-          liftIO $ step "enter new tag"
+          step "enter new tag"
           _ <- sendLiteralKeys "tag:replied"
 
-          liftIO $ step "apply"
+          step "apply"
           sendKeys "Enter" (Literal "Item 1 of 1")
 
-          liftIO $ step "open thread"
+          step "open thread"
           sendKeys "Enter" (Literal "This is Purebred")
 
-          liftIO $ step "view currently selected mail"
+          step "view currently selected mail"
           sendKeys "Enter" (Literal "HOLY PUREBRED")
 
 testUserCanSwitchBackToIndex :: TestCase
@@ -755,33 +755,33 @@ testUserCanSwitchBackToIndex =
   withTmuxSession "user can switch back to mail index during composition" $
         \step -> do
             startApplication
-            liftIO $ step "start composition"
+            step "start composition"
             sendKeys "m" (Literal "From")
 
-            liftIO $ step "enter from email"
+            step "enter from email"
             sendKeys "C-a" Unconditional
             sendKeys "C-k" Unconditional
             sendKeys "testuser@foo.test\r" (Literal "To")
 
-            liftIO $ step "enter to: email"
+            step "enter to: email"
             sendKeys "user@to.test\r" (Literal "Subject")
 
-            liftIO $ step "enter subject"
+            step "enter subject"
             sendKeys "test subject\r" (Literal "~")
 
-            liftIO $ step "enter mail body"
+            step "enter mail body"
             sendKeys "iThis is a test body" (Literal "body")
 
-            liftIO $ step "exit insert mode in vim"
+            step "exit insert mode in vim"
             sendKeys "Escape" (Literal "body")
 
-            liftIO $ step "exit vim"
+            step "exit vim"
             sendKeys ": x\r" (Regex "From: testuser@foo.test")
 
-            liftIO $ step "switch back to index"
+            step "switch back to index"
             sendKeys "Tab" (Literal "Testmail")
 
-            liftIO $ step "switch back to the compose editor"
+            step "switch back to the compose editor"
             sendKeys "Tab" (Literal "test subject")
 
 testUserCanAbortMailComposition :: TestCase
@@ -789,52 +789,52 @@ testUserCanAbortMailComposition =
   withTmuxSession "user can abort composing mail" $
         \step -> do
             startApplication
-            liftIO $ step "start composition"
+            step "start composition"
             sendKeys "m" (Literal "From")
 
-            liftIO $ step "enter from email"
+            step "enter from email"
             sendKeys "Enter" (Literal "To")
 
-            liftIO $ step "enter to: email"
+            step "enter to: email"
             sendKeys "user@to.test\r" (Literal "Subject")
 
-            liftIO $ step "enter subject"
+            step "enter subject"
             sendKeys "test subject\r" (Literal "~")
 
-            liftIO $ step "enter mail body"
+            step "enter mail body"
             sendKeys "iThis is a test body" (Literal "body")
 
-            liftIO $ step "exit insert mode in vim"
+            step "exit insert mode in vim"
             sendKeys "Escape" (Literal "body")
 
-            liftIO $ step "exit vim"
+            step "exit vim"
             sendKeys ": x\r" (Regex $ "From: "
                              <> "\"Joe Bloggs\" <joe@foo.test>")
 
-            liftIO $ step "abort mail"
+            step "abort mail"
             sendKeys "q" (Literal "Testmail")
 
-            liftIO $ step "start composition again"
+            step "start composition again"
             sendKeys "m" (Literal "From")
             sendKeys "Enter" (Regex ("To:\\s" <> buildAnsiRegex [] ["37"] []))
 
-            liftIO $ step "enter to: email"
+            step "enter to: email"
             sendKeys "new@second.test\r" (Regex ("Subject:\\s" <> buildAnsiRegex [] ["37"] []))
 
-            liftIO $ step "enter subject"
+            step "enter subject"
             sendKeys "test subject\r" (Regex "~\\s+")
 
-            liftIO $ step "enter mail body"
+            step "enter mail body"
             sendKeys "iThis is my second mail" Unconditional
 
-            liftIO $ step "exit insert mode in vim"
+            step "exit insert mode in vim"
             sendKeys "Escape" Unconditional
 
-            liftIO $ step "exit vim"
+            step "exit vim"
             sendKeys ": x\r" (Regex ("To: new@second.test\\s+"
                                      <> "Subject: test subject"))
 
-            liftIO $ step "edit body"
+            step "edit body"
             sendKeys "e" (Regex "This is my second mail\\s+")
 
 
@@ -845,46 +845,46 @@ testSendMail =
           testdir <- view effectiveDir
           startApplication
 
-          liftIO $ step "start composition"
+          step "start composition"
           sendKeys "m" (Literal "From")
 
-          liftIO $ step "append an additional from email"
+          step "append an additional from email"
           sendKeys ", testuser@foo.test\r" (Literal "To")
 
-          liftIO $ step "enter to: email"
+          step "enter to: email"
           sendKeys "user@to.test\r" (Literal "Subject")
 
-          liftIO $ step "enter subject"
+          step "enter subject"
           let subj = "test subject from directory " <> testdir
           sendKeys (subj <> "\r") (Literal "~")
 
-          liftIO $ step "enter mail body"
+          step "enter mail body"
           sendKeys "iThis is a test body" (Literal "body")
 
-          liftIO $ step "exit insert mode in vim"
+          step "exit insert mode in vim"
           sendKeys "Escape" (Literal "body")
 
-          liftIO $ step "exit vim"
+          step "exit vim"
           sendKeys ": x\r" (Literal "text/plain")
             >>= assertRegex ("From: "
                              <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
 
-          liftIO $ step "user can re-edit body"
+          step "user can re-edit body"
           sendKeys "e" (Literal "This is a test body")
 
-          liftIO $ step "Writes more text"
+          step "Writes more text"
           sendKeys "i. More text" (Literal "text")
 
-          liftIO $ step "exit insert mode in vim"
+          step "exit insert mode in vim"
           sendKeys "Escape" (Literal "body")
 
-          liftIO $ step "exit vim"
+          step "exit vim"
           sendKeys ": x\r" (Regex ("text/plain\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
 
-          liftIO $ step "send mail and go back to threads"
+          step "send mail and go back to threads"
           sendKeys "y" (Regex ("Query:\\s" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
 
-          liftIO $ step "parse mail with purebred-email"
+          step "parse mail with purebred-email"
           assertMailSuccessfullyParsed (testdir </> "sentMail")
 
 
@@ -1055,14 +1055,14 @@ cleanUpTmuxSession sessionname =
 -- | Run all application steps in a session defined by session name.
 withTmuxSession
   :: TestName
-  -> ((String -> IO ()) -> ReaderT Env IO a)
+  -> ((String -> ReaderT Env IO ()) -> ReaderT Env IO a)
   -> IO GlobalEnv
   -> Int  -- ^ session sequence number (will be appended to session name)
   -> TestTree
 withTmuxSession tcname testfx gEnv i =
   withResource (setUp gEnv i tcname) tearDown $
       \env -> testCaseSteps tcname $
-        \stepfx -> env >>= runReaderT (void $ testfx stepfx)
+        \step -> env >>= runReaderT (void $ testfx (liftIO . step))
 
 -- | Send keys into the program and wait for the condition to be
 -- met, failing the test if the condition is not met after some
