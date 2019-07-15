@@ -923,6 +923,14 @@ data Env = Env
   , _envSessionName :: String
   }
 
+type TmuxSession = String
+
+class HasTmuxSession a where
+  tmuxSession :: Lens' a TmuxSession
+
+instance HasTmuxSession Env where
+  tmuxSession = envSessionName
+
 globalEnv :: Lens' Env GlobalEnv
 globalEnv f (Env a b c d) = fmap (\a' -> Env a' b c d) (f a)
 
@@ -1067,17 +1075,21 @@ withTmuxSession tcname testfx gEnv i =
 -- | Send keys into the program and wait for the condition to be
 -- met, failing the test if the condition is not met after some
 -- time.
-sendKeys :: String -> Condition -> ReaderT Env IO String
+sendKeys
+  :: (HasTmuxSession a, MonadReader a m, MonadIO m)
+  => String -> Condition -> m String
 sendKeys keys expect = do
     tmuxSendKeys InterpretKeys keys
     waitForCondition expect defaultCountdown initialBackoffMicroseconds
 
-sendLiteralKeys :: String -> ReaderT Env IO String
+sendLiteralKeys
+  :: (HasTmuxSession a, MonadReader a m, MonadIO m)
+  => String -> m String
 sendLiteralKeys keys = do
     tmuxSendKeys LiteralKeys keys
     waitForString keys defaultCountdown
 
-capture :: ReaderT Env IO String
+capture :: (HasTmuxSession a, MonadReader a m, MonadIO m) => m String
 capture = T.unpack . decodeLenient . LB.toStrict
   <$> (tmuxSessionProc "capture-pane"
     [ "-e"  -- include escape sequences
@@ -1101,11 +1113,12 @@ debugOutput out = do
 --   a given condition. We wait a short duration and increase the wait time
 --   exponentially until the count down reaches 0. We fail if until then the
 --   condition is not met.
-waitForCondition ::
- Condition
- -> Int  -- ^ count down value
- -> Int  -- ^ milliseconds to back off
- -> ReaderT Env IO String
+waitForCondition
+  :: (HasTmuxSession a, MonadReader a m, MonadIO m)
+  => Condition
+  -> Int  -- ^ count down value
+  -> Int  -- ^ milliseconds to back off
+  -> m String
 waitForCondition cond n backOff = do
   out <- capture >>= checkPane
   liftIO $ assertBool
@@ -1114,7 +1127,6 @@ waitForCondition cond n backOff = do
     (checkCondition cond out)
   pure out
   where
-    checkPane :: String -> ReaderT Env IO String
     checkPane out
       | checkCondition cond out = pure out
       | n <= 0 = pure out
@@ -1130,7 +1142,9 @@ checkCondition (Regex re) = (=~ re)
 -- | Convenience version of 'waitForCondition' that checks for a
 -- literal string.
 --
-waitForString :: String -> Int -> ReaderT Env IO String
+waitForString
+  :: (HasTmuxSession a, MonadReader a m, MonadIO m)
+  => String -> Int -> m String
 waitForString substr n = waitForCondition (Literal substr) n initialBackoffMicroseconds
 
 defaultCountdown :: Int
@@ -1150,7 +1164,9 @@ startApplication = do
 -- | Sets a shell environment variable
 -- Note: The tmux program provides a command to set environment variables for
 -- running sessions, yet they seem to be not inherited by the shell.
-setEnvVarInSession :: String -> String -> ReaderT Env IO ()
+setEnvVarInSession
+  :: (HasTmuxSession a, MonadReader a m, MonadIO m)
+  => String -> String -> m ()
 setEnvVarInSession name value = do
   void $ sendLiteralKeys ("export " <> name <> "=" <> value)
   void $ sendKeys "Enter" (Literal name)
@@ -1164,21 +1180,27 @@ data TmuxKeysMode = LiteralKeys | InterpretKeys
 -- | Run a tmux command via 'runProcess_'.  The session name is read
 -- from the 'MonadReader' environment
 --
-tmuxSendKeys :: (MonadReader Env m, MonadIO m) => TmuxKeysMode -> String -> m ()
+tmuxSendKeys
+  :: (HasTmuxSession a, MonadReader a m, MonadIO m)
+  => TmuxKeysMode -> String -> m ()
 tmuxSendKeys mode keys = tmuxSendKeysProc mode keys >>= runProcess_
 
 -- | Construct the 'ProcessConfig' for a tmux command.  The session
 -- name is read from the 'MonadReader' environment.
 --
-tmuxSendKeysProc :: (MonadReader Env m) => TmuxKeysMode -> String -> m (ProcessConfig () () ())
+tmuxSendKeysProc
+  :: (HasTmuxSession a, MonadReader a m)
+  => TmuxKeysMode -> String -> m (ProcessConfig () () ())
 tmuxSendKeysProc mode keys = tmuxSessionProc "send-keys" (["-l" | mode == LiteralKeys] <> [keys])
 
 -- | Create a 'ProcessConfig' for a tmux command, taking the session
 -- name from the 'MonadReader' environment.
 --
-tmuxSessionProc :: (MonadReader Env m) => String -> [String] -> m (ProcessConfig () () ())
+tmuxSessionProc
+  :: (HasTmuxSession a, MonadReader a m)
+  => String -> [String] -> m (ProcessConfig () () ())
 tmuxSessionProc cmd args = do
-  sessionName <- view envSessionName
+  sessionName <- view tmuxSession
   pure $ proc "tmux" (cmd : "-t" : sessionName : args)
 
 
