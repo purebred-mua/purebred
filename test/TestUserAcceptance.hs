@@ -76,18 +76,18 @@ main = defaultMain $
   where
     -- Create the tmux keepalive session and a config dir, with
     -- precompiled custom binary, that all test cases can use
-    pre =
-      let n = "keepalive"
-      in do
-        setUpTmuxSession n
-        dir <- mkTempDir
-        setUpPurebredConfig dir
-        precompileConfig dir
-        pure (GlobalEnv n dir)
+    keepaliveSessionName = "keepalive"
+
+    pre = do
+      setUpTmuxSession keepaliveSessionName
+      dir <- mkTempDir
+      setUpPurebredConfig dir
+      precompileConfig dir
+      pure (GlobalEnv dir)
 
     -- Remove the shared config dir and kill the keepalive session
-    post (GlobalEnv n dir) = do
-      cleanUpTmuxSession n
+    post (GlobalEnv dir) = do
+      cleanUpTmuxSession keepaliveSessionName
       removeDirectoryRecursive dir
 
     tests =
@@ -910,10 +910,10 @@ sessionNamePrefix :: String
 sessionNamePrefix = "purebredtest"
 
 -- Global test environment (shared by all test cases)
-data GlobalEnv = GlobalEnv String FilePath
+newtype GlobalEnv = GlobalEnv FilePath
 
 globalEnvDir :: Lens' GlobalEnv FilePath
-globalEnvDir f (GlobalEnv a b) = fmap (GlobalEnv a) (f b)
+globalEnvDir f (GlobalEnv a) = fmap GlobalEnv (f a)
 
 -- Session test environment
 data Env = Env
