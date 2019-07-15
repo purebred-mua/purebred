@@ -99,7 +99,7 @@ library
                      , filepath
                      , mtl
                      , exceptions
-                     , purebred-email
+                     , purebred-email >= 0.1 && < 0.2
                      , attoparsec
                      , containers
                      , mime-types
