@@ -953,21 +953,14 @@ envSessionName f (Env a b c d) = fmap (\d' -> Env a b c d') (f d)
 
 -- | Tear down a test session
 tearDown :: Env -> IO ()
-tearDown (Env _ dir mdir sessionName) = do
+tearDown (Env _ dir mdir _) = do
   traverse_ removeDirectoryRecursive dir  -- remove session config dir if exists
   removeDirectoryRecursive mdir
-  cleanUpTmuxSession sessionName
 
 -- | Set up a test session.
-setUp :: IO GlobalEnv -> Int -> String -> IO Env
-setUp getGEnv i desc = do
-  let
-    sessionName = intercalate "-" (sessionNamePrefix : show i : descWords)
-    descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
-  setUpTmuxSession sessionName
+setUp :: GlobalEnv -> TmuxSession -> IO Env
+setUp gEnv sessionName = do
   maildir <- setUpTempMaildir
-
-  gEnv <- getGEnv
 
   let
     -- For now, we never need to override the global config dir.
@@ -1031,8 +1024,10 @@ setUpNotmuchCfg dir = do
 -- | create a tmux session running in the background
 -- Note: the width and height are the default values tmux uses, but I thought
 -- it's better to be explicit.
-setUpTmuxSession :: String -> IO ()
-setUpTmuxSession sessionname =
+--
+-- Returns the session name (whatever the input was) for convenience.
+setUpTmuxSession :: TmuxSession -> IO TmuxSession
+setUpTmuxSession sessionname = sessionname <$
     catch
         (runProcess_ $ proc
              "tmux"
@@ -1069,10 +1064,19 @@ withTmuxSession
   -> IO GlobalEnv
   -> Int  -- ^ session sequence number (will be appended to session name)
   -> TestTree
-withTmuxSession tcname testfx gEnv i =
-  withResource (setUp gEnv i tcname) tearDown $
-      \env -> testCaseSteps tcname $
-        \step -> env >>= runReaderT (void $ testfx (liftIO . step))
+withTmuxSession desc f getGEnv i =
+  withResource
+    (getGEnv >>= \gEnv -> frameworkPre >>= setUp gEnv)
+    (\env -> cleanUpTmuxSession (view tmuxSession env) *> tearDown env)
+    $ \env -> testCaseSteps desc $
+        \step -> env >>= runReaderT (void $ f (liftIO . step))
+  where
+    frameworkPre =
+      let
+        sessionName = intercalate "-" (sessionNamePrefix : show i : descWords)
+        descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
+      in
+        setUpTmuxSession sessionName
 
 -- | Send keys into the program and wait for the condition to be
 -- met, failing the test if the condition is not met after some
