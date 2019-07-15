@@ -119,7 +119,7 @@ main = defaultMain $
       ]
 
 testEditingMailHeaders :: TestCase
-testEditingMailHeaders = withTmuxSession "user can edit mail headers" $
+testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
   \step -> do
     startApplication
 
@@ -165,7 +165,7 @@ testEditingMailHeaders = withTmuxSession "user can edit mail headers" $
     sendKeys "foo subject\r" (Literal "Subject: foo subject")
 
 testPipeEntitiesSuccessfully :: TestCase
-testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
+testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" $
   \step -> do
     setEnvVarInSession "LESS" ""
     startApplication
@@ -188,7 +188,7 @@ testPipeEntitiesSuccessfully = withTmuxSession "pipe entities successfully" $
                              <> "\\(END\\)"))
 
 testOpenEntitiesSuccessfully :: TestCase
-testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
+testOpenEntitiesSuccessfully = purebredTmuxSession "open entities successfully" $
   \step -> do
     setEnvVarInSession "LESS" ""
     startApplication
@@ -210,7 +210,7 @@ testOpenEntitiesSuccessfully = withTmuxSession "open entities successfully" $
                             <> ".*purebred.*END"))
 
 testOpenCommandDoesNotKillPurebred :: TestCase
-testOpenCommandDoesNotKillPurebred = withTmuxSession "open attachment does not kill purebred" $
+testOpenCommandDoesNotKillPurebred = purebredTmuxSession "open attachment does not kill purebred" $
   \step -> do
     startApplication
 
@@ -228,7 +228,7 @@ testOpenCommandDoesNotKillPurebred = withTmuxSession "open attachment does not k
     sendKeys "Enter" (Literal "ProcessError")
 
 testShowsMailEntities :: TestCase
-testShowsMailEntities = withTmuxSession "shows mail entities successfully" $
+testShowsMailEntities = purebredTmuxSession "shows mail entities successfully" $
   \step -> do
     startApplication
 
@@ -248,7 +248,7 @@ testShowsMailEntities = withTmuxSession "shows mail entities successfully" $
     assertRegex "[^t][^e][^x][^t]" out
 
 testUserCanMoveBetweenThreads :: TestCase
-testUserCanMoveBetweenThreads = withTmuxSession "user can navigate between threads" $
+testUserCanMoveBetweenThreads = purebredTmuxSession "user can navigate between threads" $
   \step -> do
     startApplication
     -- assert that the first mail is really the one we're later navigating back
@@ -266,7 +266,7 @@ testUserCanMoveBetweenThreads = withTmuxSession "user can navigate between threa
     sendKeys "K" (Literal "This is a test mail for purebred")
 
 testRepliesToMailSuccessfully :: TestCase
-testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
+testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfully" $
   \step -> do
     let subject = "Testmail with whitespace in the subject"
     testdir <- view effectiveDir
@@ -301,7 +301,7 @@ testRepliesToMailSuccessfully = withTmuxSession "replies to mail successfully" $
     assertSubstrInOutput "> This is a test mail for purebred" decoded
 
 testFromAddressIsProperlyReset :: TestCase
-testFromAddressIsProperlyReset = withTmuxSession "from address is reset to configured identity" $
+testFromAddressIsProperlyReset = purebredTmuxSession "from address is reset to configured identity" $
   \step -> do
     startApplication
 
@@ -315,7 +315,7 @@ testFromAddressIsProperlyReset = withTmuxSession "from address is reset to confi
     sendKeys "m" (Literal "Joe Bloggs")
 
 testCanJumpToFirstListItem :: TestCase
-testCanJumpToFirstListItem = withTmuxSession "can jump to first and last mail" $
+testCanJumpToFirstListItem = purebredTmuxSession "can jump to first and last mail" $
   \step -> do
     startApplication
 
@@ -326,7 +326,7 @@ testCanJumpToFirstListItem = withTmuxSession "can jump to first and last mail" $
     sendKeys "1" (Literal "1 of 3")
 
 testUpdatesReadState :: TestCase
-testUpdatesReadState = withTmuxSession "updates read state for mail and thread" $
+testUpdatesReadState = purebredTmuxSession "updates read state for mail and thread" $
   \step -> do
     startApplication
 
@@ -352,7 +352,7 @@ testUpdatesReadState = withTmuxSession "updates read state for mail and thread" 
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
 
 testConfig :: TestCase
-testConfig = withTmuxSession "test custom config" $
+testConfig = purebredTmuxSession "test custom config" $
   \step -> do
     -- Set a short command prompt, to a value otherwise unlikely to
     -- appear, so that we can easily check for program termination.
@@ -375,7 +375,7 @@ testConfig = withTmuxSession "test custom config" $
     sendKeys "Enter" (Literal unlikelyString)
 
 testAddAttachments :: TestCase
-testAddAttachments = withTmuxSession "use file browser to add attachments" $
+testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
   \step -> do
     testdir <- view effectiveDir
 
@@ -491,7 +491,7 @@ testAddAttachments = withTmuxSession "use file browser to add attachments" $
     assertSubstrInOutput "This is a test body" decoded
 
 testManageTagsOnMails :: TestCase
-testManageTagsOnMails = withTmuxSession "manage tags on mails" $
+testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
   \step -> do
     startApplication
 
@@ -541,7 +541,7 @@ testManageTagsOnMails = withTmuxSession "manage tags on mails" $
     sendKeys "Escape" (Regex "This is a test mail for purebred\\s+$")
 
 testManageTagsOnThreads :: TestCase
-testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
+testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
   \step -> do
     startApplication
 
@@ -625,7 +625,7 @@ testManageTagsOnThreads = withTmuxSession "manage tags on threads" $
     sendKeys "Escape" (Literal "Query")
 
 testHelp :: TestCase
-testHelp = withTmuxSession "help view" $
+testHelp = purebredTmuxSession "help view" $
   \step -> do
     startApplication
 
@@ -635,7 +635,7 @@ testHelp = withTmuxSession "help view" $
     sendKeys "Escape" (Literal "Purebred")
 
 testErrorHandling :: TestCase
-testErrorHandling = withTmuxSession "error handling" $
+testErrorHandling = purebredTmuxSession "error handling" $
   \step -> do
     startApplication
 
@@ -653,7 +653,7 @@ testErrorHandling = withTmuxSession "error handling" $
     sendKeys "Up" (Literal "Purebred: Item 1 of 3")
 
 testSetsMailToRead :: TestCase
-testSetsMailToRead = withTmuxSession "user can toggle read tag" $
+testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
   \step -> do
     startApplication
 
@@ -668,7 +668,7 @@ testSetsMailToRead = withTmuxSession "user can toggle read tag" $
     sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
 
 testCanToggleHeaders :: TestCase
-testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
+testCanToggleHeaders = purebredTmuxSession "user can toggle Headers" $
   \step -> do
     startApplication
     step "open thread"
@@ -685,7 +685,7 @@ testCanToggleHeaders = withTmuxSession "user can toggle Headers" $
     assertRegex "Purebred.*\n.*[Ff]rom" out
 
 testUserViewsMailSuccessfully :: TestCase
-testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
+testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
   \step -> do
     startApplication
     step "shows tag"
@@ -722,7 +722,7 @@ testUserViewsMailSuccessfully = withTmuxSession "user can view mail" $
 
 testUserCanManipulateNMQuery :: TestCase
 testUserCanManipulateNMQuery =
-    withTmuxSession
+   purebredTmuxSession
         "manipulating notmuch search query results in empty index" $
         \step -> do
           startApplication
@@ -754,7 +754,7 @@ testUserCanManipulateNMQuery =
 
 testUserCanSwitchBackToIndex :: TestCase
 testUserCanSwitchBackToIndex =
-  withTmuxSession "user can switch back to mail index during composition" $
+  purebredTmuxSession "user can switch back to mail index during composition" $
         \step -> do
             startApplication
             step "start composition"
@@ -788,7 +788,7 @@ testUserCanSwitchBackToIndex =
 
 testUserCanAbortMailComposition :: TestCase
 testUserCanAbortMailComposition =
-  withTmuxSession "user can abort composing mail" $
+  purebredTmuxSession "user can abort composing mail" $
         \step -> do
             startApplication
             step "start composition"
@@ -842,7 +842,7 @@ testUserCanAbortMailComposition =
 
 testSendMail :: TestCase
 testSendMail =
-  withTmuxSession "sending mail successfully" $
+  purebredTmuxSession "sending mail successfully" $
         \step -> do
           testdir <- view effectiveDir
           startApplication
@@ -1056,18 +1056,38 @@ cleanUpTmuxSession sessionname =
                  hPutStrLn stderr ("\nException when killing session: " <> err)
                  pure ())
 
-
--- | Run all application steps in a session defined by session name.
-withTmuxSession
+purebredTmuxSession
   :: TestName
   -> ((String -> ReaderT Env IO ()) -> ReaderT Env IO a)
   -> IO GlobalEnv
   -> Int  -- ^ session sequence number (will be appended to session name)
   -> TestTree
-withTmuxSession desc f getGEnv i =
+purebredTmuxSession = withTmuxSession setUp tearDown
+
+-- | Run all application steps in a session defined by session name.
+withTmuxSession
+  :: (HasTmuxSession sessionEnv)
+  => (globalEnv -> TmuxSession -> IO sessionEnv)
+  -- ^ Set up session.  The tmux session is established before this
+  -- action is run.  Takes the global environment and Tmux session
+  -- and constructs a session environment value (which must make the
+  -- 'TmuxSession' available via its 'HasTmuxSession' instance).
+  -> (sessionEnv -> IO ())
+  -- ^ Tear down the session.  The tmux session will be torn down
+  -- /after/ this action.
+  -> TestName
+  -- ^ Name of the test (a string).
+  -> ((String -> ReaderT sessionEnv IO ()) -> ReaderT sessionEnv IO a)
+  -- ^ The main test function.  The argument is the "step" function
+  -- which can be called with a description to label the steps of
+  -- the test procedure.
+  -> IO globalEnv
+  -> Int
+  -> TestTree
+withTmuxSession pre post desc f getGEnv i =
   withResource
-    (getGEnv >>= \gEnv -> frameworkPre >>= setUp gEnv)
-    (\env -> cleanUpTmuxSession (view tmuxSession env) *> tearDown env)
+    (getGEnv >>= \gEnv -> frameworkPre >>= pre gEnv)
+    (\env -> post env *> cleanUpTmuxSession (view tmuxSession env))
     $ \env -> testCaseSteps desc $
         \step -> env >>= runReaderT (void $ f (liftIO . step))
   where
