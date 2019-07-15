@@ -71,23 +71,25 @@ type TestCase = IO GlobalEnv -> Int -> TestTree
 
 main :: IO ()
 main = defaultMain $
-  withResource pre post $ \env ->
+  withResource (frameworkPre *> pre) (\a -> frameworkPost <* post a) $ \env ->
     testGroup "user acceptance tests" $ zipWith ($ env) tests [0..]
   where
     -- Create the tmux keepalive session and a config dir, with
     -- precompiled custom binary, that all test cases can use
     keepaliveSessionName = "keepalive"
 
+    frameworkPre = setUpTmuxSession keepaliveSessionName
+
     pre = do
-      setUpTmuxSession keepaliveSessionName
       dir <- mkTempDir
       setUpPurebredConfig dir
       precompileConfig dir
       pure (GlobalEnv dir)
 
     -- Remove the shared config dir and kill the keepalive session
-    post (GlobalEnv dir) = do
-      cleanUpTmuxSession keepaliveSessionName
+    frameworkPost = cleanUpTmuxSession keepaliveSessionName
+
+    post (GlobalEnv dir) =
       removeDirectoryRecursive dir
 
     tests =
