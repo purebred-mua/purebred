@@ -67,7 +67,7 @@ test1 = withTmuxSession setup teardown "putFile" $ \\step -> do
   TestEnv _ sharedDir testDir <- 'ask'
 
   -- send a command to the tmux session and wait for \"Done\"
-  'sendLine' ("myProg putFile " <> sharedDir) (Literal "Done.")
+  'sendLine' ("myProg putFile " <> sharedDir) (Substring "Done.")
 
   -- save a snapshot of the terminal state and make some assertions
   'snapshot'
@@ -80,10 +80,10 @@ test2 = withTmuxSession setup teardown "checkFile" $ \\step -> do
 
   -- use 'step' to label different stages of the test
   step "Run program"
-  sendLine ("myProg checkFile " <> sharedDir) (Literal "Yep, it's there.")
+  sendLine ("myProg checkFile " <> sharedDir) (Substring "Yep, it's there.")
 
   step "Check exit code"
-  sendLine "echo status $?" (Literal "status 0")
+  sendLine "echo status $?" (Substring "status 0")
 @
 
 Further discussion of the setup action is warranted.  This function,
@@ -196,7 +196,7 @@ import Test.Tasty.HUnit (assertBool, testCaseSteps)
 -- | A condition to check for in the output of the program
 data Condition
   = Unconditional
-  | Literal String
+  | Substring String
   | Regex String
   deriving (Show)
 
@@ -390,7 +390,7 @@ waitForCondition cond n backOff = do
 
 checkCondition :: Condition -> String -> Bool
 checkCondition Unconditional = const True
-checkCondition (Literal s) = (s `isInfixOf`)
+checkCondition (Substring s) = (s `isInfixOf`)
 checkCondition (Regex re) = (=~ re)
 
 -- | Assert that the capture satisfies a condition
@@ -404,7 +404,7 @@ assertCondition cond cap =
 
 -- | Substring assertion.
 assertSubstring :: (MonadIO m) => String -> Capture -> m ()
-assertSubstring = assertCondition . Literal
+assertSubstring = assertCondition . Substring
 
 -- | Regex assertion.
 assertRegex :: (MonadIO m) => String -> Capture -> m ()
@@ -424,7 +424,7 @@ assertRegex = assertCondition . Regex
 --
 -- @
 -- 'sendKeys' "Enter" Unconditional >>= 'put'
--- assertConditionS (Literal "Doing thing...")
+-- assertConditionS (Substring "Doing thing...")
 -- @
 --
 -- See also 'assertSubstringS' and 'assertRegexS'.

@@ -100,45 +100,45 @@ testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
     startApplication
 
     step "start composition"
-    sendKeys "m" (Literal "From")
+    sendKeys "m" (Substring "From")
 
     step "accept default"
-    sendKeys "Enter" (Literal "To")
+    sendKeys "Enter" (Substring "To")
 
     step "enter to: email"
-    sendKeys "user@to.test\r" (Literal "Subject")
+    sendKeys "user@to.test\r" (Substring "Subject")
 
     step "leave default"
-    sendKeys "Enter" (Literal "~")
+    sendKeys "Enter" (Substring "~")
 
     step "enter mail body"
-    sendKeys "iThis is a test body" (Literal "body")
+    sendKeys "iThis is a test body" (Substring "body")
 
     step "exit insert mode in vim"
-    sendKeys "Escape" (Literal "body")
+    sendKeys "Escape" (Substring "body")
 
     step "exit vim"
-    sendKeys ": x\r" (Literal "text/plain")
+    sendKeys ": x\r" (Substring "text/plain")
       >>= assertSubstring "From: \"Joe Bloggs\" <joe@foo.test>"
 
     step "user can change from header"
     sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
 
     step "append an email"
-    sendKeys ", testuser@foo.test\r" (Literal $ "From: "
+    sendKeys ", testuser@foo.test\r" (Substring $ "From: "
                                       <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
 
     step "user can change to header"
     sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "user@to.test")
 
     step "append an additional from email"
-    sendKeys ", testuser@foo.test\r" (Literal "To: user@to.test, testuser@foo.test")
+    sendKeys ", testuser@foo.test\r" (Substring "To: user@to.test, testuser@foo.test")
 
     step "change subject"
     sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> "")
 
     step "enter subject"
-    sendKeys "foo subject\r" (Literal "Subject: foo subject")
+    sendKeys "foo subject\r" (Substring "Subject: foo subject")
 
 testPipeEntitiesSuccessfully :: PurebredTestCase
 testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" $
@@ -147,13 +147,13 @@ testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" 
     startApplication
 
     step "open thread"
-    sendKeys "Enter" (Literal "This is a test mail for purebred")
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
 
     step "show entities"
-    sendKeys "v" (Literal "text/plain")
+    sendKeys "v" (Substring "text/plain")
 
     step "pipe to"
-    sendKeys "|" (Literal "Pipe to")
+    sendKeys "|" (Substring "Pipe to")
 
     step "use less"
     sendLine "less" (Regex ("This is a test mail for purebred"
@@ -169,13 +169,13 @@ testOpenEntitiesSuccessfully = purebredTmuxSession "open entities successfully" 
     startApplication
 
     step "open thread"
-    sendKeys "Enter" (Literal "This is a test mail for purebred")
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
 
     step "show entities"
-    sendKeys "v" (Literal "text/plain")
+    sendKeys "v" (Substring "text/plain")
 
     step "open one entity"
-    sendKeys "o" (Literal "Open With")
+    sendKeys "o" (Substring "Open With")
     sendLine "less" (Regex ("This is a test mail for purebred"
                             <> buildAnsiRegex [] ["37"] ["40"]
                             <> "\\s+"
@@ -188,16 +188,16 @@ testOpenCommandDoesNotKillPurebred = purebredTmuxSession "open attachment does n
     startApplication
 
     step "open thread"
-    sendKeys "Enter" (Literal "This is a test mail for purebred")
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
 
     step "show entities"
-    sendKeys "v" (Literal "text/plain")
+    sendKeys "v" (Substring "text/plain")
 
     step "open with"
-    sendKeys "o" (Literal "Open With")
+    sendKeys "o" (Substring "Open With")
 
     step "Open with bogus command"
-    sendLine "asdfasdfasdf" (Literal "ProcessError")
+    sendLine "asdfasdfasdf" (Substring "ProcessError")
 
 testShowsMailEntities :: PurebredTestCase
 testShowsMailEntities = purebredTmuxSession "shows mail entities successfully" $
@@ -205,16 +205,16 @@ testShowsMailEntities = purebredTmuxSession "shows mail entities successfully" $
     startApplication
 
     step "open thread"
-    sendKeys "Enter" (Literal "This is a test mail for purebred")
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
 
     step "show entities"
-    sendKeys "v" (Literal "text/plain")
+    sendKeys "v" (Substring "text/plain")
 
     step "select the second entity"
-    sendKeys "j" (Literal "text/html")
+    sendKeys "j" (Substring "text/html")
 
     step "close the list of entities"
-    out <- sendKeys "q" (Literal "This is a test mail for purebred")
+    out <- sendKeys "q" (Substring "This is a test mail for purebred")
 
     -- poor mans (?!text)
     assertRegex "[^t][^e][^x][^t]" out
@@ -229,13 +229,13 @@ testUserCanMoveBetweenThreads = purebredTmuxSession "user can navigate between t
     assertRegexS (buildAnsiRegex ["1"] ["37"] ["43"] <> "\\sAug'17.*Testmail with whitespace")
 
     step "View Mail"
-    sendKeys "Enter" (Literal "This is a test mail for purebred")
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
 
     step "Navigate down the threads list"
-    sendKeys "J" (Literal "HOLY PUREBRED")
+    sendKeys "J" (Substring "HOLY PUREBRED")
 
     step "Navigate up the threads list"
-    sendKeys "K" (Literal "This is a test mail for purebred")
+    sendKeys "K" (Substring "This is a test mail for purebred")
 
 testRepliesToMailSuccessfully :: PurebredTestCase
 testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfully" $
@@ -245,24 +245,24 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     startApplication
 
     step "pick first mail"
-    sendKeys "Enter" (Literal "This is a test mail for purebred") >>= put
+    sendKeys "Enter" (Substring "This is a test mail for purebred") >>= put
 
     assertSubstringS "From: <roman@host.example>"
     assertSubstringS "To: <frase@host.example>"
     assertSubstringS ("Subject: " <> subject)
 
     step "start replying"
-    sendKeys "r" (Literal "> This is a test mail for purebred")
+    sendKeys "r" (Substring "> This is a test mail for purebred")
 
     step "exit vim"
-    sendKeys ": x\r" (Literal "Attachments") >>= put
+    sendKeys ": x\r" (Substring "Attachments") >>= put
 
     assertSubstringS "From: <frase@host.example>"
     assertSubstringS "To: <roman@host.example>"
     assertSubstringS ("Subject: Re: " <> subject)
 
     step "send mail"
-    sendKeys "y" (Literal "Query")
+    sendKeys "y" (Substring "Query")
 
     let fpath = testdir </> "sentMail"
     contents <- liftIO $ B.readFile fpath
@@ -278,13 +278,13 @@ testFromAddressIsProperlyReset = purebredTmuxSession "from address is reset to c
     startApplication
 
     step "Start composing"
-    sendKeys "m" (Literal "Joe Bloggs")
+    sendKeys "m" (Substring "Joe Bloggs")
 
     step "abort editing"
-    sendKeys "Escape" (Literal "tag:inbox")
+    sendKeys "Escape" (Substring "tag:inbox")
 
     step "Start composing again"
-    sendKeys "m" (Literal "Joe Bloggs")
+    sendKeys "m" (Substring "Joe Bloggs")
 
 testCanJumpToFirstListItem :: PurebredTestCase
 testCanJumpToFirstListItem = purebredTmuxSession "can jump to first and last mail" $
@@ -292,10 +292,10 @@ testCanJumpToFirstListItem = purebredTmuxSession "can jump to first and last mai
     startApplication
 
     step "Jump to last mail"
-    sendKeys "G" (Literal "3 of 3")
+    sendKeys "G" (Substring "3 of 3")
 
     step "Jump to first mail"
-    sendKeys "1" (Literal "1 of 3")
+    sendKeys "1" (Substring "1 of 3")
 
 testUpdatesReadState :: PurebredTestCase
 testUpdatesReadState = purebredTmuxSession "updates read state for mail and thread" $
@@ -303,19 +303,19 @@ testUpdatesReadState = purebredTmuxSession "updates read state for mail and thre
     startApplication
 
     step "navigate to thread mails"
-    sendKeys "G" (Literal "3 of 3")
+    sendKeys "G" (Substring "3 of 3")
 
     step "view unread mail in thread"
-    sendKeys "Enter" (Literal "WIP Refactor")
+    sendKeys "Enter" (Substring "WIP Refactor")
 
     step "view next unread in thread"
-    sendKeys "Down" (Literal "2 of 2")
+    sendKeys "Down" (Substring "2 of 2")
 
     step "go back to thread list which is read"
     sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
 
     step "set one mail to unread"
-    sendKeys "Enter" (Literal "Beginning of large text")
+    sendKeys "Enter" (Substring "Beginning of large text")
     sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] []
                            <> "\\sRe: WIP Refactor\\s+"
                            <> buildAnsiRegex ["0"] ["34"] ["40"]))
@@ -329,11 +329,11 @@ testConfig = purebredTmuxSession "test custom config" $
     -- Set a short command prompt, to a value otherwise unlikely to
     -- appear, so that we can easily check for program termination.
     let unlikelyString = "unlikely"
-    sendKeys ("PS1=" <> unlikelyString <> "$ \r") (Literal unlikelyString)
+    sendKeys ("PS1=" <> unlikelyString <> "$ \r") (Substring unlikelyString)
     startApplication
 
     step "archive thread"
-    sendKeys "a" (Literal "archive")
+    sendKeys "a" (Substring "archive")
 
     step "quit"
     sendKeys "q" Unconditional
@@ -344,7 +344,7 @@ testConfig = purebredTmuxSession "test custom config" $
 
     -- Press Enter again to deal with case where cursor is not at
     -- column 0, which could cause target string to be split.
-    sendKeys "Enter" (Literal unlikelyString)
+    sendKeys "Enter" (Substring unlikelyString)
 
 testAddAttachments :: PurebredTestCase
 testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
@@ -365,25 +365,25 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     startApplication
 
     step "start composition"
-    sendKeys "m" (Literal "From")
+    sendKeys "m" (Substring "From")
 
     step "enter from email"
-    sendKeys "Enter" (Literal "To")
+    sendKeys "Enter" (Substring "To")
 
     step "enter to: email"
-    sendKeys "user@to.test\r" (Literal "Subject")
+    sendKeys "user@to.test\r" (Substring "Subject")
 
     step "enter subject"
-    sendKeys "test subject\r" (Literal "~")
+    sendKeys "test subject\r" (Substring "~")
 
     step "enter mail body"
-    sendKeys "iThis is a test body" (Literal "body")
+    sendKeys "iThis is a test body" (Substring "body")
 
     step "exit insert mode in vim"
-    sendKeys "Escape" (Literal "body")
+    sendKeys "Escape" (Substring "body")
 
     step "exit vim"
-    sendKeys ": x\r" (Literal "Attachments")
+    sendKeys ": x\r" (Substring "Attachments")
 
     step "start file browser"
     cwd <- liftIO getCurrentDirectory
@@ -393,46 +393,46 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
 
     step "add first selected file"
-    sendKeys "Enter" (Literal lastFile)
+    sendKeys "Enter" (Substring lastFile)
 
     step "up to select mail body"
-    sendKeys "Up" (Literal "Item 1 of 2")
+    sendKeys "Up" (Substring "Item 1 of 2")
 
     -- edit the mail body a few times to check if the code not mistakenly adds
     -- the same mail body as an attachment
     step "edit mail body text"
-    sendKeys "e" (Literal "test body")
+    sendKeys "e" (Substring "test body")
 
     step "append to mail body"
-    sendKeys "i. foo" (Literal "foo")
+    sendKeys "i. foo" (Substring "foo")
 
     step "exit insert mode in vim"
-    sendKeys "Escape" (Literal "foo")
+    sendKeys "Escape" (Substring "foo")
 
     step "exit vim"
-    sendKeys ": x\r" (Literal "Attachments")
+    sendKeys ": x\r" (Substring "Attachments")
 
     step "edit mail body text"
-    sendKeys "e" (Literal "test body")
+    sendKeys "e" (Substring "test body")
 
     step "append to mail body"
-    sendKeys "i. foo" (Literal "foo")
+    sendKeys "i. foo" (Substring "foo")
 
     step "exit insert mode in vim"
-    sendKeys "Escape" (Literal "foo")
+    sendKeys "Escape" (Substring "foo")
 
     step "exit vim"
-    sendKeys ": x\r" (Literal "Item 1 of 2")
+    sendKeys ": x\r" (Substring "Item 1 of 2")
 
     -- try removing attachments
     step "select the attachment"
-    sendKeys "Down" (Literal "Item 2 of 2")
+    sendKeys "Down" (Substring "Item 2 of 2")
 
     step "remove the attachment"
-    sendKeys "D" (Literal "Item 1 of 1")
+    sendKeys "D" (Substring "Item 1 of 1")
 
     step "try to remove the last attachment"
-    sendKeys "D" (Literal "You may not remove the only attachment")
+    sendKeys "D" (Substring "You may not remove the only attachment")
 
     -- add the attachment again and send it
     step "start file browser"
@@ -448,11 +448,11 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     sendKeys "Up" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> secondLastFile)
 
     step "add selected files"
-    out <- sendKeys "Enter" (Literal "Item 3 of 3")
+    out <- sendKeys "Enter" (Substring "Item 3 of 3")
     assertSubstring secondLastFile out
 
     step "send mail"
-    sendKeys "y" (Literal "Query")
+    sendKeys "y" (Substring "Query")
 
     let fpath = testdir </> "sentMail"
     contents <- liftIO $ B.readFile fpath
@@ -468,7 +468,7 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
     startApplication
 
     step "view mail in thread"
-    sendKeys "Enter" (Literal "Testmail")
+    sendKeys "Enter" (Substring "Testmail")
 
     step "focus command to show mail tags"
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] []))
@@ -482,10 +482,10 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
       >>= assertSubstring "This is a test mail"
 
     step "go back to list of mails"
-    sendKeys "Escape" (Literal "List of Mails")
+    sendKeys "Escape" (Substring "List of Mails")
 
     step "go back to list of threads"
-    sendKeys "Escape" (Literal "List of Threads")
+    sendKeys "Escape" (Substring "List of Threads")
 
     -- find newly tagged mail
     step "focus tag search"
@@ -493,10 +493,10 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
     sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
 
     step "enter tag to search `foo and bar`"
-    sendLine "tag:foo and tag:bar" (Literal "tag:foo and tag:bar")
+    sendLine "tag:foo and tag:bar" (Substring "tag:foo and tag:bar")
 
     step "view mail in thread"
-    sendKeys "Enter" (Literal "Testmail")
+    sendKeys "Enter" (Substring "Testmail")
 
     step "attempt to add a new tag"
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] []))
@@ -515,29 +515,29 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     -- tag the thread as a whole with a new tag. All mails should keep their
     -- distinct tags, while having received a new tag.
     step "navigate to thread"
-    sendKeys "Down" (Literal "Item 2 of 3")
-    sendKeys "Down" (Literal "Item 3 of 3")
+    sendKeys "Down" (Substring "Item 2 of 3")
+    sendKeys "Down" (Substring "Item 3 of 3")
 
     step "show thread mails"
-    sendKeys "Enter" (Literal "ViewMail")
+    sendKeys "Enter" (Substring "ViewMail")
 
     step "open mail tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     step "add new tag"
-    sendLine "+archive" (Literal "archive")
+    sendLine "+archive" (Substring "archive")
 
     step "move to second mail"
-    sendKeys "Down" (Literal "Item 2 of 2")
+    sendKeys "Down" (Substring "Item 2 of 2")
 
     step "open mail tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     step "add new tag"
-    sendLine "+replied -inbox" (Literal "replied")
+    sendLine "+replied -inbox" (Substring "replied")
 
     step "go back to list of mails"
-    sendKeys "Escape" (Literal "Item 2 of 2")
+    sendKeys "Escape" (Substring "Item 2 of 2")
 
     step "thread tags shows new tags"
     sendKeys "Escape" (Regex ("archive"
@@ -561,7 +561,7 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
                              <> buildAnsiRegex [] ["36"] [] <> "thread"))
 
     step "show thread mails"
-    sendKeys "Enter" (Literal "ViewMail")
+    sendKeys "Enter" (Substring "ViewMail")
 
     step "second mail shows old tag"
     sendKeys "Escape" (Regex ("replied"
@@ -573,13 +573,13 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
                               <> "\\sRe: WIP Refactor"))
 
     step "go back to list of threads"
-    sendKeys "Escape" (Literal "List of Threads")
+    sendKeys "Escape" (Substring "List of Threads")
 
     step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     step "abort editing"
-    sendKeys "Escape" (Literal "Query")
+    sendKeys "Escape" (Substring "Query")
 
 testHelp :: PurebredTestCase
 testHelp = purebredTmuxSession "help view" $
@@ -587,9 +587,9 @@ testHelp = purebredTmuxSession "help view" $
     startApplication
 
     step "shows Keybindings"
-    sendKeys "?" (Literal "quit the application")
+    sendKeys "?" (Substring "quit the application")
 
-    sendKeys "Escape" (Literal "Purebred")
+    sendKeys "Escape" (Substring "Purebred")
 
 testErrorHandling :: PurebredTestCase
 testErrorHandling = purebredTmuxSession "error handling" $
@@ -600,14 +600,14 @@ testErrorHandling = purebredTmuxSession "error handling" $
     liftIO $ removeFile (testmdir <> "/Maildir/new/1502941827.R15455991756849358775.url")
 
     step "open thread"
-    sendKeys "Enter" (Literal "Testmail")
+    sendKeys "Enter" (Substring "Testmail")
 
     step "shows error message"
-    sendKeys "Enter" (Literal "FileReadError")
+    sendKeys "Enter" (Substring "FileReadError")
       >>= assertRegex "open(Binary)?File:.*does not exist"
 
     step "error is cleared with next registered keybinding"
-    sendKeys "Up" (Literal "Purebred: Item 1 of 3")
+    sendKeys "Up" (Substring "Purebred: Item 1 of 3")
 
 testSetsMailToRead :: PurebredTestCase
 testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
@@ -615,10 +615,10 @@ testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
     startApplication
 
     step "open thread"
-    sendKeys "Enter" (Literal "This is a test mail for purebred")
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
 
     step "first unread mail is opened"
-    sendKeys "Escape" (Literal "List of Mails")
+    sendKeys "Escape" (Substring "List of Mails")
       >>= assertRegex (buildAnsiRegex [] ["37"] ["43"] <> ".*Testmail")
 
     step "toggle it back to unread (bold again)"
@@ -629,16 +629,16 @@ testCanToggleHeaders = purebredTmuxSession "user can toggle Headers" $
   \step -> do
     startApplication
     step "open thread"
-    sendKeys "Enter" (Literal "Testmail")
+    sendKeys "Enter" (Substring "Testmail")
 
     step "view mail"
-    sendKeys "Enter" (Literal "This is a test mail")
+    sendKeys "Enter" (Substring "This is a test mail")
 
     step "toggle to show all headers"
     sendKeys "h" (Regex "[Rr]eturn-[Pp]ath")
 
     step "toggle filtered headers"
-    out <- sendKeys "h" (Literal "This is a test mail")
+    out <- sendKeys "h" (Substring "This is a test mail")
     assertRegex "Purebred.*\n.*[Ff]rom" out
 
 testUserViewsMailSuccessfully :: PurebredTestCase
@@ -651,28 +651,28 @@ testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
     assertSubstringS "Testmail with whitespace in the subject"
 
     step "open thread"
-    sendKeys "Enter" (Literal "Testmail with whitespace in the subject")
+    sendKeys "Enter" (Substring "Testmail with whitespace in the subject")
 
     step "view mail"
-    sendKeys "Enter" (Literal "This is a test mail")
+    sendKeys "Enter" (Substring "This is a test mail")
 
     step "go back to thread list"
-    sendKeys "q q" (Literal "WIP Refactor")
+    sendKeys "q q" (Substring "WIP Refactor")
 
     step "Move down to threaded mails"
-    sendKeys "Down" (Literal "Purebred: Item 2 of 3")
-    sendKeys "Down" (Literal "Purebred: Item 3 of 3")
-    sendKeys "Enter" (Literal "Re: WIP Refactor")
+    sendKeys "Down" (Substring "Purebred: Item 2 of 3")
+    sendKeys "Down" (Substring "Purebred: Item 3 of 3")
+    sendKeys "Enter" (Substring "Re: WIP Refactor")
 
     step "Scroll down"
-    sendKeys "Enter" (Literal "Beginning of large text")
-    sendKeys "Space" (Literal "Sed ut perspiciatis")
+    sendKeys "Enter" (Substring "Beginning of large text")
+    sendKeys "Space" (Substring "Sed ut perspiciatis")
 
     step "go to next unread mail"
-    sendKeys "j" (Literal "Re: WIP Refactor")
+    sendKeys "j" (Substring "Re: WIP Refactor")
 
     step "Scroll down (again)"
-    sendKeys "Space" (Literal "Sed ut perspiciatis")
+    sendKeys "Space" (Substring "Sed ut perspiciatis")
 
     step "go to previous mail with reset scroll state"
     sendKeys "k" (Regex "Subject:\\s.*WIP Refactor")
@@ -690,20 +690,20 @@ testUserCanManipulateNMQuery =
           sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
 
           step "search for non existing tags yielding no results"
-          sendLine "does not match anything" (Literal "No items")
+          sendLine "does not match anything" (Substring "No items")
 
           step "search for mail correctly tagged"
           sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "does"))
           sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
 
           step "enter new tag"
-          sendLine "tag:replied" (Literal "Item 1 of 1")
+          sendLine "tag:replied" (Substring "Item 1 of 1")
 
           step "open thread"
-          sendKeys "Enter" (Literal "This is Purebred")
+          sendKeys "Enter" (Substring "This is Purebred")
 
           step "view currently selected mail"
-          sendKeys "Enter" (Literal "HOLY PUREBRED")
+          sendKeys "Enter" (Substring "HOLY PUREBRED")
 
 testUserCanSwitchBackToIndex :: PurebredTestCase
 testUserCanSwitchBackToIndex =
@@ -711,33 +711,33 @@ testUserCanSwitchBackToIndex =
         \step -> do
             startApplication
             step "start composition"
-            sendKeys "m" (Literal "From")
+            sendKeys "m" (Substring "From")
 
             step "enter from email"
             sendKeys "C-a" Unconditional
             sendKeys "C-k" Unconditional
-            sendKeys "testuser@foo.test\r" (Literal "To")
+            sendKeys "testuser@foo.test\r" (Substring "To")
 
             step "enter to: email"
-            sendKeys "user@to.test\r" (Literal "Subject")
+            sendKeys "user@to.test\r" (Substring "Subject")
 
             step "enter subject"
-            sendKeys "test subject\r" (Literal "~")
+            sendKeys "test subject\r" (Substring "~")
 
             step "enter mail body"
-            sendKeys "iThis is a test body" (Literal "body")
+            sendKeys "iThis is a test body" (Substring "body")
 
             step "exit insert mode in vim"
-            sendKeys "Escape" (Literal "body")
+            sendKeys "Escape" (Substring "body")
 
             step "exit vim"
             sendKeys ": x\r" (Regex "From: testuser@foo.test")
 
             step "switch back to index"
-            sendKeys "Tab" (Literal "Testmail")
+            sendKeys "Tab" (Substring "Testmail")
 
             step "switch back to the compose editor"
-            sendKeys "Tab" (Literal "test subject")
+            sendKeys "Tab" (Substring "test subject")
 
 testUserCanAbortMailComposition :: PurebredTestCase
 testUserCanAbortMailComposition =
@@ -745,32 +745,32 @@ testUserCanAbortMailComposition =
         \step -> do
             startApplication
             step "start composition"
-            sendKeys "m" (Literal "From")
+            sendKeys "m" (Substring "From")
 
             step "enter from email"
-            sendKeys "Enter" (Literal "To")
+            sendKeys "Enter" (Substring "To")
 
             step "enter to: email"
-            sendKeys "user@to.test\r" (Literal "Subject")
+            sendKeys "user@to.test\r" (Substring "Subject")
 
             step "enter subject"
-            sendKeys "test subject\r" (Literal "~")
+            sendKeys "test subject\r" (Substring "~")
 
             step "enter mail body"
-            sendKeys "iThis is a test body" (Literal "body")
+            sendKeys "iThis is a test body" (Substring "body")
 
             step "exit insert mode in vim"
-            sendKeys "Escape" (Literal "body")
+            sendKeys "Escape" (Substring "body")
 
             step "exit vim"
             sendKeys ": x\r" (Regex $ "From: "
                              <> "\"Joe Bloggs\" <joe@foo.test>")
 
             step "abort mail"
-            sendKeys "q" (Literal "Testmail")
+            sendKeys "q" (Substring "Testmail")
 
             step "start composition again"
-            sendKeys "m" (Literal "From")
+            sendKeys "m" (Substring "From")
             sendKeys "Enter" (Regex ("To:\\s" <> buildAnsiRegex [] ["37"] []))
 
             step "enter to: email"
@@ -801,37 +801,37 @@ testSendMail =
           startApplication
 
           step "start composition"
-          sendKeys "m" (Literal "From")
+          sendKeys "m" (Substring "From")
 
           step "append an additional from email"
-          sendKeys ", testuser@foo.test\r" (Literal "To")
+          sendKeys ", testuser@foo.test\r" (Substring "To")
 
           step "enter to: email"
-          sendKeys "user@to.test\r" (Literal "Subject")
+          sendKeys "user@to.test\r" (Substring "Subject")
 
           step "enter subject"
           let subj = "test subject from directory " <> testdir
-          sendKeys (subj <> "\r") (Literal "~")
+          sendKeys (subj <> "\r") (Substring "~")
 
           step "enter mail body"
-          sendKeys "iThis is a test body" (Literal "body")
+          sendKeys "iThis is a test body" (Substring "body")
 
           step "exit insert mode in vim"
-          sendKeys "Escape" (Literal "body")
+          sendKeys "Escape" (Substring "body")
 
           step "exit vim"
-          sendKeys ": x\r" (Literal "text/plain")
+          sendKeys ": x\r" (Substring "text/plain")
             >>= assertRegex ("From: "
                              <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
 
           step "user can re-edit body"
-          sendKeys "e" (Literal "This is a test body")
+          sendKeys "e" (Substring "This is a test body")
 
           step "Writes more text"
-          sendKeys "i. More text" (Literal "text")
+          sendKeys "i. More text" (Substring "text")
 
           step "exit insert mode in vim"
-          sendKeys "Escape" (Literal "body")
+          sendKeys "Escape" (Substring "body")
 
           step "exit vim"
           sendKeys ": x\r" (Regex ("text/plain\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
@@ -979,4 +979,4 @@ startApplication = do
   tmuxSendKeys LiteralKeys ("cd " <> srcdir <> "\r")
   testmdir <- view envMaildir
   tmuxSendKeys InterpretKeys ("purebred --database " <> testmdir <> "\r")
-  void $ waitForCondition (Literal "Purebred: Item") defaultRetries defaultBackoff
+  void $ waitForCondition (Substring "Purebred: Item") defaultRetries defaultBackoff
