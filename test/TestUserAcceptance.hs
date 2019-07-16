@@ -16,6 +16,9 @@
 
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
+
 module Main where
 
 import Data.Char (chr)
@@ -33,7 +36,7 @@ import Data.Maybe (fromMaybe, isJust)
 import Data.List (isInfixOf, sort)
 import qualified Data.ByteString as B
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (runReaderT, ReaderT)
+import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
 
 import Control.Lens (Getter, Lens', preview, to, view, _init, _last)
 import System.Directory
@@ -42,7 +45,7 @@ import System.Directory
   )
 import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed (proc, runProcess_, readProcess_, setEnv)
-import Test.Tasty (TestTree, TestName, defaultMain)
+import Test.Tasty (TestName, defaultMain)
 import Test.Tasty.HUnit (assertBool)
 
 import Data.MIME (parse, message, mime, MIMEMessage)
@@ -866,16 +869,16 @@ testSendMail =
 parseMail :: B.ByteString -> Either String MIMEMessage
 parseMail = parse (message mime)
 
-assertMailSuccessfullyParsed :: String -> ReaderT a IO ()
+assertMailSuccessfullyParsed :: (MonadIO m) => String -> m ()
 assertMailSuccessfullyParsed fp = do
   contents <- liftIO $ B.readFile fp
   let result = parseMail contents
   liftIO $ assertBool "expected successful MIMEMessage" (isRight result)
 
-assertSubstrInOutput :: String -> String -> ReaderT a IO ()
+assertSubstrInOutput :: (MonadIO m) => String -> String -> m ()
 assertSubstrInOutput substr out = liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
 
-assertRegex :: String -> String -> ReaderT a IO ()
+assertRegex :: (MonadIO m) => String -> String -> m ()
 assertRegex regex out = liftIO $ assertBool
   (show regex <> " does not match out\n\n" <> out
     <> "\n\n raw:\n\n" <> show out)
@@ -988,10 +991,8 @@ setUpNotmuchCfg dir = do
 
 purebredTmuxSession
   :: TestName
-  -> ((String -> ReaderT Env IO ()) -> ReaderT Env IO a)
-  -> IO GlobalEnv
-  -> Int  -- ^ session sequence number (will be appended to session name)
-  -> TestTree
+  -> (forall m. (MonadReader Env m, MonadIO m) => (String -> m ()) -> m a)
+  -> TestCase GlobalEnv
 purebredTmuxSession = withTmuxSession setUp tearDown
 
 -- | convenience function to print captured output to STDERR
@@ -1003,7 +1004,7 @@ debugOutput out = do
 -- | start the application
 -- Note: this is currently defined as an additional test step for no good
 -- reason.
-startApplication :: ReaderT Env IO ()
+startApplication :: (MonadReader Env m, MonadIO m) => m ()
 startApplication = do
   srcdir <- liftIO getSourceDirectory
   tmuxSendKeys LiteralKeys ("cd " <> srcdir <> "\r")

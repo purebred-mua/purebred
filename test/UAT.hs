@@ -14,6 +14,8 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE RankNTypes #-}
+
 module UAT
   (
   -- * Creating tmux test cases
@@ -47,7 +49,7 @@ import Control.Concurrent (threadDelay)
 import Control.Exception (catch, IOException)
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (MonadIO, MonadReader, runReaderT, ReaderT)
+import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
 import qualified Data.ByteString.Lazy as L
 import Data.Char (isAscii, isAlphaNum)
 import Data.List (intercalate, isInfixOf)
@@ -255,7 +257,7 @@ withTmuxSession
   -- /after/ this action.
   -> TestName
   -- ^ Name of the test (a string).
-  -> ((String -> ReaderT sessionEnv IO ()) -> ReaderT sessionEnv IO a)
+  -> (forall m. (MonadReader sessionEnv m, MonadIO m) => (String -> m ()) -> m a)
   -- ^ The main test function.  The argument is the "step" function
   -- which can be called with a description to label the steps of
   -- the test procedure.
