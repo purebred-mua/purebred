@@ -18,6 +18,102 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes #-}
 
+{- |
+
+This module provides a test framework for user acceptance testing
+(UAT) of command line or console applications.  The framework
+establishes <https://github.com/tmux/tmux/wiki tmux> sessions for
+test cases and provides functions for sending input to the tmux
+session and making assertions about the state of the terminal (i.e.
+what is on the screen).
+
+At a glance, the library works like this.  Test cases ('TestCase')
+are defined using 'withTmuxSession'.  The 'testTmux' function groups
+test cases into a /Tasty/ 'TestTree'.  Test cases are executed
+sequentially, each in a separate tmux session.  Each test case can
+have a setup and teardown action, and there can also be a setup and
+teardown around the whole group of tests.
+
+Let's look at a specific usage example.  You want to test some
+program.  There are two tests.  Each test needs a dedicated
+temporary directory, but they also need a separate, shared temporary
+directory.  We want the setup routines to create these directories
+and the teardown routines to remove them.  Assume the
+existence of @mkTempDir :: IO FilePath@ and @rmDir :: FilePath
+-> IO ()@.
+
+Looking first at 'testTmux':
+
+@
+data SharedEnv = SharedEnv FilePath
+
+myTests :: TestTree
+myTests = 'testTmux' pre post [test1, test2]
+  where
+  pre = SharedEnv \<$\> mkTempDir
+  post (SharedEnv path) = rmDir path
+@
+
+The shared setup action @pre@ returns a @SharedEnv@ value that will
+be propagated to each test case, as well as the @teardown@ action,
+after all test cases have run.
+
+@test1@ and @test2@ are defined thus:
+
+@
+test1 :: TestCase SharedEnv
+test1 = withTmuxSession setup teardown "putFile" $ \\step -> do
+  -- test environment is availabe via 'ask'
+  TestEnv _ sharedDir testDir <- 'ask'
+
+  -- send a command to the tmux session and wait for \"Done\"
+  'sendLine' ("myProg putFile " <> sharedDir) (Literal "Done.")
+
+  -- save a snapshot of the terminal state and make some assertions
+  'snapshot'
+  'assertSubstringS' "The output should contain this substring"
+  'assertRegexS' "The output should match this [Rr]eg[Ee]x"
+
+test2 :: TestCase SharedEnv
+test2 = withTmuxSession setup teardown "checkFile" $ \\step -> do
+  TestEnv _ sharedDir testDir <- 'ask'
+
+  -- use 'step' to label different stages of the test
+  step "Run program"
+  sendLine ("myProg checkFile " <> sharedDir) (Literal "Yep, it's there.")
+
+  step "Check exit code"
+  sendLine "echo status $?" (Literal "status 0")
+@
+
+Further discussion of the setup action is warranted.  This function,
+at minimum, must incorporate the 'TmuxSession' argument into the
+value it returns.  The type it returns must have an instance of
+'HasTmuxSession'; this provides the name of the tmux session to the
+framework functions that interact with tmux.
+
+In our example, it also creates a per-test case temporary directory.
+The value returned by the setup action is provided to the teardown
+action.
+
+@
+data TestEnv = TestEnv
+  { _session    :: 'TmuxSession'
+  , _sharedDir  :: FilePath
+  , _testDir    :: FilePath
+  }
+
+instance 'HasTmuxSession' TestEnv where
+  'tmuxSession' = 'lens' _session (\\s b -> s { _session = b })
+
+setup :: SharedEnv -> TmuxSession -> IO TestEnv
+setup (SharedEnv sharedDir) session = TestEnv session sharedDir \<$\> mkTempDir
+
+teardown :: TestEnv -> IO ()
+teardown (TestEnv _ _ testDir) = rmDir testDir
+@
+
+-}
 module UAT
   (
   -- * Creating tmux test cases
@@ -126,7 +222,7 @@ instance HasTmuxSession TmuxSession where
 --
 -- A session called "keepalive" is created before any test cases are
 -- run, and killed after all the test cases have finished.  This
--- session ensures that the server remains alive, avoiding some race
+-- session ensures that the tmux server remains alive, avoiding some race
 -- conditions.
 --
 testTmux
