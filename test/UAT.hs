@@ -204,9 +204,13 @@ captureString = _captureString
 -- Parameterised over the shared environment type.
 type TestCase a = IO a -> Int -> TestTree
 
+-- | tmux session name
 type TmuxSession = String
 
+-- | This class provides access to a tmux session name.  Test
+-- environment types must have an instance of this class.
 class HasTmuxSession a where
+  -- | Lens to the 'TmuxSession'
   tmuxSession :: Lens' a TmuxSession
 
 instance HasTmuxSession TmuxSession where
@@ -378,9 +382,11 @@ assertCondition cond cap =
     <> "'.  Last capture:\n\n " <> s <> "\n\n" <> " raw: " <> show s )
     (checkCondition cond s)
 
+-- | Substring assertion.
 assertSubstring :: (MonadIO m) => String -> Capture -> m ()
 assertSubstring = assertCondition . Literal
 
+-- | Regex assertion.
 assertRegex :: (MonadIO m) => String -> Capture -> m ()
 assertRegex = assertCondition . Regex
 
@@ -406,9 +412,11 @@ assertRegex = assertCondition . Regex
 assertConditionS :: (MonadIO m, MonadState Capture m) => Condition -> m ()
 assertConditionS cond = get >>= assertCondition cond
 
+-- | State-aware substring assertion.
 assertSubstringS :: (MonadIO m, MonadState Capture m) => String -> m ()
 assertSubstringS s = get >>= assertSubstring s
 
+-- | State-aware regex assertion.
 assertRegexS :: (MonadIO m, MonadState Capture m) => String -> m ()
 assertRegexS s = get >>= assertRegex s
 
