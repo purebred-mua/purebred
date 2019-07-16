@@ -113,12 +113,18 @@ teardown :: TestEnv -> IO ()
 teardown (TestEnv _ _ testDir) = rmDir testDir
 @
 
+If either shared or test-specific setup and teardown are not needed,
+the 'testTmux'' and 'withTmuxSession'' functions are provided for
+convenience.
+
 -}
 module UAT
   (
   -- * Creating test cases
     testTmux
+  , testTmux'
   , withTmuxSession
+  , withTmuxSession'
   , TestCase
 
   -- ** Test environment
@@ -247,6 +253,10 @@ testTmux pre post tests =
     keepaliveSessionName = "keepalive"
     frameworkPre = setUpTmuxSession keepaliveSessionName
     frameworkPost = cleanUpTmuxSession keepaliveSessionName
+
+-- | Like 'testTmux' but with no setup or teardown
+testTmux' :: [TestCase ()] -> TestTree
+testTmux' = testTmux (pure ()) (const $ pure ())
 
 
 type AnsiAttrParam = String
@@ -462,6 +472,19 @@ withTmuxSession pre post desc f getGEnv i =
         descWords = words $ filter (\c -> isAscii c && (isAlphaNum c || c == ' ')) desc
       in
         setUpTmuxSession sessionName
+
+-- | Like 'withTmuxSession' but without setup and teardown.  Shared
+-- environment value (and its type) is ignored.
+withTmuxSession'
+  :: TestName
+  -> ( forall m. (MonadReader TmuxSession m, MonadState Capture m, MonadIO m)
+       => (String -> m ()) -> m a
+     )
+  -- ^ The main test function.  The argument is the "step" function
+  -- which can be called with a description to label the steps of
+  -- the test procedure.
+  -> TestCase sharedEnv
+withTmuxSession' = withTmuxSession (const pure) (const $ pure ())
 
 -- | Capture the current terminal state.
 capture :: (HasTmuxSession a, MonadReader a m, MonadIO m) => m Capture
