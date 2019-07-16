@@ -157,8 +157,8 @@ setEnvVarInSession
   :: (HasTmuxSession a, MonadReader a m, MonadIO m)
   => String -> String -> m ()
 setEnvVarInSession name value = do
-  void $ sendLiteralKeys ("export " <> name <> "=" <> value)
-  void $ sendKeys "Enter" (Literal name)
+  void $ sendLiteralKeys ("export " <> name <> "=" <> value) Unconditional
+  void $ sendKeys "Enter" Unconditional
 
 -- | Send interpreted keys into the program and wait for the
 -- condition to be met, failing the test if the condition is not met
@@ -170,15 +170,14 @@ sendKeys keys expect = do
     tmuxSendKeys InterpretKeys keys
     waitForCondition expect defaultRetries defaultBackoff
 
--- | Send literal keys into the program and wait for the string to
--- appear.
+-- | Send literal keys to the terminal and wait for the condition to
+-- be satisfied, with default timeout.
 sendLiteralKeys
   :: (HasTmuxSession a, MonadReader a m, MonadIO m)
-  => String -> m String
-sendLiteralKeys keys = do
+  => String -> Condition -> m String
+sendLiteralKeys keys cond = do
     tmuxSendKeys LiteralKeys keys
-    -- FIXME? change type to allow any condition, matching sendKeys?
-    waitForCondition (Literal keys) defaultRetries defaultBackoff
+    waitForCondition cond defaultRetries defaultBackoff
 
 -- | Whether to tell tmux to treat keys literally or interpret
 -- sequences like "Enter" or "C-x".
