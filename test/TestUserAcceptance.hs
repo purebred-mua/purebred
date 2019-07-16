@@ -267,10 +267,10 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     let fpath = testdir </> "sentMail"
     contents <- liftIO $ B.readFile fpath
     let decoded = chr . fromEnum <$> B.unpack contents
-    assertSubstrInOutput ("Subject: Re: " <> subject) decoded
-    assertSubstrInOutput "From: frase@host.example" decoded
-    assertSubstrInOutput "To: roman@host.example" decoded
-    assertSubstrInOutput "> This is a test mail for purebred" decoded
+    assertSubstr ("Subject: Re: " <> subject) decoded
+    assertSubstr "From: frase@host.example" decoded
+    assertSubstr "To: roman@host.example" decoded
+    assertSubstr "> This is a test mail for purebred" decoded
 
 testFromAddressIsProperlyReset :: PurebredTestCase
 testFromAddressIsProperlyReset = purebredTmuxSession "from address is reset to configured identity" $
@@ -457,10 +457,10 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     let fpath = testdir </> "sentMail"
     contents <- liftIO $ B.readFile fpath
     let decoded = chr . fromEnum <$> B.unpack contents
-    assertSubstrInOutput "attachment; filename" decoded
-    assertSubstrInOutput secondLastFile decoded
-    assertSubstrInOutput lastFile decoded
-    assertSubstrInOutput "This is a test body" decoded
+    assertSubstr "attachment; filename" decoded
+    assertSubstr secondLastFile decoded
+    assertSubstr lastFile decoded
+    assertSubstr "This is a test body" decoded
 
 testManageTagsOnMails :: PurebredTestCase
 testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
@@ -852,14 +852,24 @@ assertMailSuccessfullyParsed fp = do
   let result = parseMail contents
   liftIO $ assertBool "expected successful MIMEMessage" (isRight result)
 
-assertSubstrInOutput :: (MonadIO m) => String -> String -> m ()
-assertSubstrInOutput substr out = liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
+assertSubstr :: MonadIO m => String -> String -> m ()
+assertSubstr needle haystack = liftIO $ assertBool
+  (needle <> " not found in\n\n" <> haystack)
+  (needle `isInfixOf` haystack)
 
-assertRegex :: (MonadIO m) => String -> String -> m ()
-assertRegex regex out = liftIO $ assertBool
-  (show regex <> " does not match out\n\n" <> out
-    <> "\n\n raw:\n\n" <> show out)
-  (out =~ regex)
+assertSubstrInOutput :: (MonadIO m) => String -> Capture -> m ()
+assertSubstrInOutput substr cap =
+  let out = captureString cap
+  in liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
+
+assertRegex :: (MonadIO m) => String -> Capture -> m ()
+assertRegex regex cap =
+  let out = captureString cap
+  in
+    liftIO $ assertBool
+      (show regex <> " does not match capture\n\n" <> out
+        <> "\n\n raw:\n\n" <> show out)
+      (out =~ regex)
 
 -- Global test environment (shared by all test cases)
 newtype GlobalEnv = GlobalEnv FilePath
