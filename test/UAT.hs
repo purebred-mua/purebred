@@ -116,7 +116,7 @@ teardown (TestEnv _ _ testDir) = rmDir testDir
 -}
 module UAT
   (
-  -- * Creating tmux test cases
+  -- * Creating test cases
     testTmux
   , withTmuxSession
   , TestCase
@@ -125,26 +125,6 @@ module UAT
   , HasTmuxSession(..)
   , TmuxSession
 
-  -- * Captures
-  , capture
-  , snapshot
-  , Capture
-  , captureString
-
-  -- * Assertions
-  , waitForCondition
-  , assertCondition
-  , assertSubstring
-  , assertRegex
-  , assertConditionS
-  , assertSubstringS
-  , assertRegexS
-  , Condition(..)
-  , defaultRetries
-  , defaultBackoff
-  , buildAnsiRegex
-  , (=~)
-
   -- * Sending input to a session
   , sendKeys
   , sendLiteralKeys
@@ -152,6 +132,30 @@ module UAT
   , tmuxSendKeys
   , TmuxKeysMode(..)
   , setEnvVarInSession
+
+  -- * Capturing terminal state
+  , capture
+  , snapshot
+  , Capture
+  , captureString
+
+  -- * Assertions
+  , waitForCondition
+  , Condition(..)
+  , defaultRetries
+  , defaultBackoff
+  , assertCondition
+  , assertSubstring
+  , assertRegex
+
+  -- ** State-aware assertions
+  , assertConditionS
+  , assertSubstringS
+  , assertRegexS
+
+  -- ** Helper functions
+  , buildAnsiRegex
+  , (=~)
 
   -- * Re-exports
   , put
