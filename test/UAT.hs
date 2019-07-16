@@ -155,7 +155,6 @@ module UAT
 
   -- ** Helper functions
   , buildAnsiRegex
-  , (=~)
 
   -- * Re-exports
   , put
