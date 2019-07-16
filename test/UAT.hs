@@ -39,6 +39,7 @@ module UAT
   -- * Sending input to a session
   , sendKeys
   , sendLiteralKeys
+  , sendLine
   , tmuxSendKeys
   , TmuxKeysMode(..)
   , setEnvVarInSession
@@ -178,6 +179,15 @@ sendLiteralKeys
 sendLiteralKeys keys cond = do
     tmuxSendKeys LiteralKeys keys
     waitForCondition cond defaultRetries defaultBackoff
+
+-- | Send the literal string to the terminal, followed by @Enter@,
+-- then wait for the condition be satisfied, with default timeout.
+sendLine
+  :: (HasTmuxSession a, MonadReader a m, MonadIO m)
+  => String -> Condition -> m String
+sendLine s cond = do
+  void $ sendLiteralKeys s Unconditional
+  sendKeys "Enter" cond
 
 -- | Whether to tell tmux to treat keys literally or interpret
 -- sequences like "Enter" or "C-x".
