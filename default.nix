@@ -44,7 +44,7 @@ let
     pkgs.notmuch
     pkgs.tmux
   ];
-  in
+in
     if pkgs.lib.inNixShell
     then haskellPackages.shellFor {
       withHoogle = true;
@@ -52,17 +52,17 @@ let
       nativeBuildInputs = haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
     }
     else {
-        purebred = pkgs.stdenv.mkDerivation {
-          name = "purebred-with-packages-${env.version}";
-          nativeBuildInputs = [ pkgs.makeWrapper ];
-          # This creates a Bash script, which sets the GHC in order for dyre to be
-          # able to build the config file.
-          buildCommand = ''
-            mkdir -p $out/bin
-            makeWrapper ${env}/bin/purebred $out/bin/purebred \
-            --set NIX_GHC "${env}/bin/ghc"
-          '';
-          preferLocalBuild = true;
-          allowSubstitutes = false;
-        };
-      }
+      purebred = pkgs.stdenv.mkDerivation {
+        name = "purebred-with-packages-${env.version}";
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        # This creates a Bash script, which sets the GHC in order for dyre to be
+        # able to build the config file.
+        buildCommand = ''
+          mkdir -p $out/bin
+          makeWrapper ${env}/bin/purebred $out/bin/purebred \
+          --set NIX_GHC "${env}/bin/ghc"
+        '';
+        preferLocalBuild = true;
+        allowSubstitutes = false;
+      };
+    }
