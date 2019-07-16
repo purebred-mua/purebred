@@ -159,7 +159,10 @@ module UAT
   , assertSubstringS
   , assertRegexS
 
-  -- ** Helper functions
+  -- ** ANSI escape sequence regex helpers
+  , AnsiAttrParam
+  , AnsiFGParam
+  , AnsiBGParam
   , buildAnsiRegex
 
   -- * Re-exports
@@ -259,17 +262,21 @@ testTmux' :: [TestCase ()] -> TestTree
 testTmux' = testTmux (pure ()) (const $ pure ())
 
 
+-- | ANSI attribute
 type AnsiAttrParam = String
+-- | ANSI foreground colour
 type AnsiFGParam = String
+-- | ANSI background colour
 type AnsiBGParam = String
 
--- | Generate a regex for an escape sequence setting the given
--- foreground and background parameters
+-- | Generate a regex for an escape sequence, setting the given
+-- foreground and background parameters.
 --
--- tmux < 03d01eabb5c5227f56b6b44d04964c1328802628 (first released
--- in tmux-2.5) ran attributes, foreground colour and background
--- colour params separated by semicolons (foreground first).
---
+-- tmux <
+-- <https://github.com/tmux/tmux/commit/03d01eabb5c5227f56b6b44d04964c1328802628 03d01ea>
+-- (first released in tmux-2.5) ran attributes, foreground
+-- colour and background colour params separated by semicolons
+-- (foreground first).
 -- After that commit, attributes, foreground colours and background
 -- colours are written in separate escape sequences.  Therefore for
 -- compatibility with different versions of tmux there are two
