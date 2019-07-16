@@ -14,7 +14,7 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+{-# OPTIONS_GHC -fno-warn-unused-do-bind -fno-warn-missing-signatures #-}
 
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -45,7 +45,7 @@ import System.Directory
   )
 import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed (proc, runProcess_, readProcess_, setEnv)
-import Test.Tasty (TestName, defaultMain)
+import Test.Tasty (defaultMain)
 import Test.Tasty.HUnit (assertBool)
 
 import Data.MIME (parse, message, mime, MIMEMessage)
@@ -225,8 +225,8 @@ testUserCanMoveBetweenThreads = purebredTmuxSession "user can navigate between t
     startApplication
     -- assert that the first mail is really the one we're later navigating back
     -- to
-    out <- capture
-    assertRegex (buildAnsiRegex ["1"] ["37"] ["43"] <> "\\sAug'17.*Testmail with whitespace") out
+    snapshot
+    assertRegexS (buildAnsiRegex ["1"] ["37"] ["43"] <> "\\sAug'17.*Testmail with whitespace")
 
     step "View Mail"
     sendKeys "Enter" (Literal "This is a test mail for purebred")
@@ -245,21 +245,21 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     startApplication
 
     step "pick first mail"
-    out <- sendKeys "Enter" (Literal "This is a test mail for purebred")
+    sendKeys "Enter" (Literal "This is a test mail for purebred") >>= put
 
-    assertSubstring "From: <roman@host.example>" out
-    assertSubstring "To: <frase@host.example>" out
-    assertSubstring ("Subject: " <> subject) out
+    assertSubstringS "From: <roman@host.example>"
+    assertSubstringS "To: <frase@host.example>"
+    assertSubstringS ("Subject: " <> subject)
 
     step "start replying"
     sendKeys "r" (Literal "> This is a test mail for purebred")
 
     step "exit vim"
-    out' <- sendKeys ": x\r" (Literal "Attachments")
+    sendKeys ": x\r" (Literal "Attachments") >>= put
 
-    assertSubstring "From: <frase@host.example>" out'
-    assertSubstring "To: <roman@host.example>" out'
-    assertSubstring ("Subject: Re: " <> subject) out'
+    assertSubstringS "From: <frase@host.example>"
+    assertSubstringS "To: <roman@host.example>"
+    assertSubstringS ("Subject: Re: " <> subject)
 
     step "send mail"
     sendKeys "y" (Literal "Query")
@@ -646,9 +646,9 @@ testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
   \step -> do
     startApplication
     step "shows tag"
-    out <- capture
-    assertSubstring "inbox" out
-    assertSubstring "Testmail with whitespace in the subject" out
+    snapshot
+    assertSubstringS "inbox"
+    assertSubstringS "Testmail with whitespace in the subject"
 
     step "open thread"
     sendKeys "Enter" (Literal "Testmail with whitespace in the subject")
@@ -962,10 +962,6 @@ setUpNotmuchCfg dir = do
       cfgFile = dir <> "/notmuch-config"
   writeFile cfgFile cfgData $> cfgFile
 
-purebredTmuxSession
-  :: TestName
-  -> (forall m. (MonadReader Env m, MonadIO m) => (String -> m ()) -> m a)
-  -> TestCase GlobalEnv
 purebredTmuxSession = withTmuxSession setUp tearDown
 
 -- | convenience function to print captured output to STDERR
