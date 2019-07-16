@@ -30,6 +30,7 @@ module UAT
 
   -- * Captures
   , capture
+  , snapshot
   , Capture
   , captureString
 
@@ -55,6 +56,9 @@ module UAT
   , TmuxKeysMode(..)
   , setEnvVarInSession
 
+  -- * Re-exports
+  , put
+
   ) where
 
 import Control.Concurrent (threadDelay)
@@ -62,7 +66,7 @@ import Control.Exception (catch, IOException)
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
-import Control.Monad.State (MonadState, get)
+import Control.Monad.State (MonadState, get, put, runStateT)
 import qualified Data.ByteString.Lazy as L
 import Data.Char (isAscii, isAlphaNum)
 import Data.List (intercalate, isInfixOf)
@@ -281,7 +285,25 @@ assertSubstring = assertCondition . Literal
 assertRegex :: (MonadIO m) => String -> Capture -> m ()
 assertRegex = assertCondition . Regex
 
--- | Assert that the saved capture satisfies a condition
+-- | Assert that the saved capture satisfies a condition.
+--
+-- Use 'snapshot' to save a capture:
+--
+-- @
+-- snapshot
+-- assertConditionS (Regex "[Ff][Oo][Oo]")
+-- @
+--
+-- Alternatively, use 'put' on the result of any action that returns
+-- a 'Capture':
+--
+-- @
+-- 'sendKeys' "Enter" Unconditional >>= 'put'
+-- assertConditionS (Literal "Doing thing...")
+-- @
+--
+-- See also 'assertSubstringS' and 'assertRegexS'.
+--
 assertConditionS :: (MonadIO m, MonadState Capture m) => Condition -> m ()
 assertConditionS cond = get >>= assertCondition cond
 
@@ -308,7 +330,9 @@ withTmuxSession
   -- /after/ this action.
   -> TestName
   -- ^ Name of the test (a string).
-  -> (forall m. (MonadReader sessionEnv m, MonadIO m) => (String -> m ()) -> m a)
+  -> ( forall m. (MonadReader sessionEnv m, MonadState Capture m, MonadIO m)
+       => (String -> m ()) -> m a
+     )
   -- ^ The main test function.  The argument is the "step" function
   -- which can be called with a description to label the steps of
   -- the test procedure.
@@ -318,8 +342,9 @@ withTmuxSession pre post desc f getGEnv i =
     (getGEnv >>= \gEnv -> frameworkPre >>= pre gEnv)
     (\env -> post env *> cleanUpTmuxSession (view tmuxSession env))
     $ \env -> testCaseSteps desc $
-        \step -> env >>= runReaderT (void $ f (liftIO . step))
+        \step -> env >>= void . runReaderT (runStateT (f (liftIO . step)) initCap)
   where
+    initCap = error "no Capture; use 'snapshot' first"
     frameworkPre =
       let
         -- FIXME? customisable session name prefix?
@@ -328,6 +353,7 @@ withTmuxSession pre post desc f getGEnv i =
       in
         setUpTmuxSession sessionName
 
+-- | Capture the current terminal state.
 capture :: (HasTmuxSession a, MonadReader a m, MonadIO m) => m Capture
 capture = Capture . T.unpack . decodeLenient . L.toStrict
   <$> (tmuxSessionProc "capture-pane"
@@ -338,6 +364,18 @@ capture = Capture . T.unpack . decodeLenient . L.toStrict
   >>= liftIO . readProcessInterleaved_)
   where
     decodeLenient = T.decodeUtf8With T.lenientDecode
+
+-- | Snapshot the current terminal state.
+--
+-- @
+-- snapshot = 'capture' >>= 'put'
+-- @
+--
+-- Use functions like 'assertConditionS' to make assertions on the
+-- most recent snapshot.
+--
+snapshot :: (HasTmuxSession a, MonadReader a m, MonadState Capture m, MonadIO m) => m ()
+snapshot = capture >>= put
 
 -- | 20 milliseconds
 defaultBackoff :: Int
