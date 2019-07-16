@@ -119,7 +119,7 @@ testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
 
     step "exit vim"
     sendKeys ": x\r" (Literal "text/plain")
-      >>= assertSubstrInOutput "From: \"Joe Bloggs\" <joe@foo.test>"
+      >>= assertSubstring "From: \"Joe Bloggs\" <joe@foo.test>"
 
     step "user can change from header"
     sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
@@ -247,9 +247,9 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     step "pick first mail"
     out <- sendKeys "Enter" (Literal "This is a test mail for purebred")
 
-    assertSubstrInOutput "From: <roman@host.example>" out
-    assertSubstrInOutput "To: <frase@host.example>" out
-    assertSubstrInOutput ("Subject: " <> subject) out
+    assertSubstring "From: <roman@host.example>" out
+    assertSubstring "To: <frase@host.example>" out
+    assertSubstring ("Subject: " <> subject) out
 
     step "start replying"
     sendKeys "r" (Literal "> This is a test mail for purebred")
@@ -257,9 +257,9 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     step "exit vim"
     out' <- sendKeys ": x\r" (Literal "Attachments")
 
-    assertSubstrInOutput "From: <frase@host.example>" out'
-    assertSubstrInOutput "To: <roman@host.example>" out'
-    assertSubstrInOutput ("Subject: Re: " <> subject) out'
+    assertSubstring "From: <frase@host.example>" out'
+    assertSubstring "To: <roman@host.example>" out'
+    assertSubstring ("Subject: Re: " <> subject) out'
 
     step "send mail"
     sendKeys "y" (Literal "Query")
@@ -449,7 +449,7 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
 
     step "add selected files"
     out <- sendKeys "Enter" (Literal "Item 3 of 3")
-    assertSubstrInOutput secondLastFile out
+    assertSubstring secondLastFile out
 
     step "send mail"
     sendKeys "y" (Literal "Query")
@@ -479,7 +479,7 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
                              <> "\\s"
                              <> buildAnsiRegex [] ["36"] []
                              <> "bar"))
-      >>= assertSubstrInOutput "This is a test mail"
+      >>= assertSubstring "This is a test mail"
 
     step "go back to list of mails"
     sendKeys "Escape" (Literal "List of Mails")
@@ -647,8 +647,8 @@ testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
     startApplication
     step "shows tag"
     out <- capture
-    assertSubstrInOutput "inbox" out
-    assertSubstrInOutput "Testmail with whitespace in the subject" out
+    assertSubstring "inbox" out
+    assertSubstring "Testmail with whitespace in the subject" out
 
     step "open thread"
     sendKeys "Enter" (Literal "Testmail with whitespace in the subject")
@@ -856,20 +856,6 @@ assertSubstr :: MonadIO m => String -> String -> m ()
 assertSubstr needle haystack = liftIO $ assertBool
   (needle <> " not found in\n\n" <> haystack)
   (needle `isInfixOf` haystack)
-
-assertSubstrInOutput :: (MonadIO m) => String -> Capture -> m ()
-assertSubstrInOutput substr cap =
-  let out = captureString cap
-  in liftIO $ assertBool (substr <> " not found in\n\n" <> out) $ substr `isInfixOf` out
-
-assertRegex :: (MonadIO m) => String -> Capture -> m ()
-assertRegex regex cap =
-  let out = captureString cap
-  in
-    liftIO $ assertBool
-      (show regex <> " does not match capture\n\n" <> out
-        <> "\n\n raw:\n\n" <> show out)
-      (out =~ regex)
 
 -- Global test environment (shared by all test cases)
 newtype GlobalEnv = GlobalEnv FilePath

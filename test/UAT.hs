@@ -14,6 +14,7 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
 module UAT
@@ -34,6 +35,12 @@ module UAT
 
   -- * Assertions
   , waitForCondition
+  , assertCondition
+  , assertSubstring
+  , assertRegex
+  , assertConditionS
+  , assertSubstringS
+  , assertRegexS
   , Condition(..)
   , defaultRetries
   , defaultBackoff
@@ -55,6 +62,7 @@ import Control.Exception (catch, IOException)
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
+import Control.Monad.State (MonadState, get)
 import qualified Data.ByteString.Lazy as L
 import Data.Char (isAscii, isAlphaNum)
 import Data.List (intercalate, isInfixOf)
@@ -70,7 +78,7 @@ import System.Process.Typed
 import Text.Regex.Posix ((=~))
 
 import Test.Tasty (TestTree, TestName, testGroup, withResource)
-import Test.Tasty.HUnit (assertFailure, testCaseSteps)
+import Test.Tasty.HUnit (assertBool, testCaseSteps)
 
 -- | A condition to check for in the output of the program
 data Condition
@@ -246,20 +254,42 @@ waitForCondition
   -> m Capture  -- ^ Return the successful capture (or throw an exception)
 waitForCondition cond n backOff = do
   cap <- capture
-  let s = captureString cap
   case checkCondition cond (captureString cap) of
     True -> pure cap
     _ | n > 0 -> do
           liftIO $ threadDelay backOff
           waitForCondition cond (n - 1) (backOff * 4)
-      | otherwise -> liftIO $ assertFailure
-          ( "Wait time exceeded. Condition not met: '" <> show cond
-            <> "' last screen shot:\n\n " <> s <> "\n\n" <> " raw: " <> show s )
+      | otherwise -> cap <$ assertCondition cond cap
 
 checkCondition :: Condition -> String -> Bool
 checkCondition Unconditional = const True
 checkCondition (Literal s) = (s `isInfixOf`)
 checkCondition (Regex re) = (=~ re)
+
+-- | Assert that the capture satisfies a condition
+assertCondition :: (MonadIO m) => Condition -> Capture -> m ()
+assertCondition cond cap =
+  let s = captureString cap
+  in liftIO $ assertBool
+    ( "Condition not met: '" <> show cond
+    <> "'.  Last capture:\n\n " <> s <> "\n\n" <> " raw: " <> show s )
+    (checkCondition cond s)
+
+assertSubstring :: (MonadIO m) => String -> Capture -> m ()
+assertSubstring = assertCondition . Literal
+
+assertRegex :: (MonadIO m) => String -> Capture -> m ()
+assertRegex = assertCondition . Regex
+
+-- | Assert that the saved capture satisfies a condition
+assertConditionS :: (MonadIO m, MonadState Capture m) => Condition -> m ()
+assertConditionS cond = get >>= assertCondition cond
+
+assertSubstringS :: (MonadIO m, MonadState Capture m) => String -> m ()
+assertSubstringS s = get >>= assertSubstring s
+
+assertRegexS :: (MonadIO m, MonadState Capture m) => String -> m ()
+assertRegexS s = get >>= assertRegex s
 
 -- | 5
 defaultRetries :: Int
