@@ -533,7 +533,7 @@ setUpTmuxSession sessionname = sessionname <$
              , "-s"
              , sessionname
              , "-n"
-             , "purebred"])
+             , "tasty-tmux"])
         (\e ->
               do let err = show (e :: IOException)
                  hPutStrLn stderr ("\nException during setUp: " <> err)
