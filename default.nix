@@ -37,6 +37,7 @@ let
   ]);
   nativeBuildTools = with pkgs.haskellPackages; [
     cabal-install
+    cabal2nix
     ghcid
     hindent
     hlint
