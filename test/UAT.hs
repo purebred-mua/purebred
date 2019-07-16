@@ -27,8 +27,12 @@ module UAT
   , HasTmuxSession(..)
   , TmuxSession
 
-  -- * Captures and assertions
+  -- * Captures
   , capture
+  , Capture
+  , captureString
+
+  -- * Assertions
   , waitForCondition
   , Condition(..)
   , defaultRetries
@@ -66,7 +70,7 @@ import System.Process.Typed
 import Text.Regex.Posix ((=~))
 
 import Test.Tasty (TestTree, TestName, testGroup, withResource)
-import Test.Tasty.HUnit (testCaseSteps, assertBool)
+import Test.Tasty.HUnit (assertFailure, testCaseSteps)
 
 -- | A condition to check for in the output of the program
 data Condition
@@ -74,6 +78,18 @@ data Condition
   | Literal String
   | Regex String
   deriving (Show)
+
+-- | A captured pane.  For now this just contains the string content,
+-- but in the future perhaps we will augment it with terminal title,
+-- terminal dimensions, timestamp, etc.
+--
+-- Use 'captureString' to get at the string.
+--
+newtype Capture = Capture { _captureString :: String }
+
+-- | Get the captured terminal content.
+captureString :: Capture -> String
+captureString = _captureString
 
 -- | A test case that will be executed in a dedicated tmux session.
 -- Parameterised over the "global" environment (c.f. the "session"
@@ -165,7 +181,7 @@ setEnvVarInSession name value =
 -- after some time.
 sendKeys
   :: (HasTmuxSession a, MonadReader a m, MonadIO m)
-  => String -> Condition -> m String
+  => String -> Condition -> m Capture
 sendKeys keys expect = do
     tmuxSendKeys InterpretKeys keys
     waitForCondition expect defaultRetries defaultBackoff
@@ -174,7 +190,7 @@ sendKeys keys expect = do
 -- be satisfied, with default timeout.
 sendLiteralKeys
   :: (HasTmuxSession a, MonadReader a m, MonadIO m)
-  => String -> Condition -> m String
+  => String -> Condition -> m Capture
 sendLiteralKeys keys cond = do
     tmuxSendKeys LiteralKeys keys
     waitForCondition cond defaultRetries defaultBackoff
@@ -183,7 +199,7 @@ sendLiteralKeys keys cond = do
 -- then wait for the condition be satisfied, with default timeout.
 sendLine
   :: (HasTmuxSession a, MonadReader a m, MonadIO m)
-  => String -> Condition -> m String
+  => String -> Condition -> m Capture
 sendLine s cond = do
   void $ sendLiteralKeys s Unconditional
   sendKeys "Enter" cond
@@ -227,21 +243,18 @@ waitForCondition
   => Condition
   -> Int  -- ^ Number of retries allowed
   -> Int  -- ^ Initial microseconds to back off.  Multiplied by 4 on each retry.
-  -> m String  -- ^ Return the successful capture (or throw an exception)
+  -> m Capture  -- ^ Return the successful capture (or throw an exception)
 waitForCondition cond n backOff = do
-  out <- capture >>= checkPane
-  liftIO $ assertBool
-    ( "Wait time exceeded. Condition not met: '" <> show cond
-      <> "' last screen shot:\n\n " <> out <> "\n\n" <> " raw: " <> show out )
-    (checkCondition cond out)
-  pure out
-  where
-    checkPane out
-      | checkCondition cond out = pure out
-      | n <= 0 = pure out
-      | otherwise = do
+  cap <- capture
+  let s = captureString cap
+  case checkCondition cond (captureString cap) of
+    True -> pure cap
+    _ | n > 0 -> do
           liftIO $ threadDelay backOff
           waitForCondition cond (n - 1) (backOff * 4)
+      | otherwise -> liftIO $ assertFailure
+          ( "Wait time exceeded. Condition not met: '" <> show cond
+            <> "' last screen shot:\n\n " <> s <> "\n\n" <> " raw: " <> show s )
 
 checkCondition :: Condition -> String -> Bool
 checkCondition Unconditional = const True
@@ -285,8 +298,8 @@ withTmuxSession pre post desc f getGEnv i =
       in
         setUpTmuxSession sessionName
 
-capture :: (HasTmuxSession a, MonadReader a m, MonadIO m) => m String
-capture = T.unpack . decodeLenient . L.toStrict
+capture :: (HasTmuxSession a, MonadReader a m, MonadIO m) => m Capture
+capture = Capture . T.unpack . decodeLenient . L.toStrict
   <$> (tmuxSessionProc "capture-pane"
     [ "-e"  -- include escape sequences
     , "-p"  -- send output to stdout
