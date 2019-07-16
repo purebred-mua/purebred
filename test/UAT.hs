@@ -157,9 +157,8 @@ buildAnsiRegex attrs fgs bgs =
 setEnvVarInSession
   :: (HasTmuxSession a, MonadReader a m, MonadIO m)
   => String -> String -> m ()
-setEnvVarInSession name value = do
-  void $ sendLiteralKeys ("export " <> name <> "=" <> value) Unconditional
-  void $ sendKeys "Enter" Unconditional
+setEnvVarInSession name value =
+  void $ sendLine ("export " <> name <> "=" <> value) Unconditional
 
 -- | Send interpreted keys into the program and wait for the
 -- condition to be met, failing the test if the condition is not met

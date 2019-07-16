@@ -156,8 +156,7 @@ testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" 
     sendKeys "|" (Literal "Pipe to")
 
     step "use less"
-    sendLiteralKeys "less" Unconditional
-    sendKeys "Enter" (Regex ("This is a test mail for purebred"
+    sendLine "less" (Regex ("This is a test mail for purebred"
                              <> buildAnsiRegex [] ["37"] ["40"]
                              <> "\\s+"
                              <> buildAnsiRegex ["7"] ["39"] ["49"]
@@ -177,9 +176,7 @@ testOpenEntitiesSuccessfully = purebredTmuxSession "open entities successfully" 
 
     step "open one entity"
     sendKeys "o" (Literal "Open With")
-    sendLiteralKeys "less" Unconditional
-
-    sendKeys "Enter" (Regex ("This is a test mail for purebred"
+    sendLine "less" (Regex ("This is a test mail for purebred"
                             <> buildAnsiRegex [] ["37"] ["40"]
                             <> "\\s+"
                             <> buildAnsiRegex ["7"] ["39"] ["49"]
@@ -200,8 +197,7 @@ testOpenCommandDoesNotKillPurebred = purebredTmuxSession "open attachment does n
     sendKeys "o" (Literal "Open With")
 
     step "Open with bogus command"
-    sendLiteralKeys "asdfasdfasdf" Unconditional
-    sendKeys "Enter" (Literal "ProcessError")
+    sendLine "asdfasdfasdf" (Literal "ProcessError")
 
 testShowsMailEntities :: PurebredTestCase
 testShowsMailEntities = purebredTmuxSession "shows mail entities successfully" $
@@ -478,10 +474,7 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
     sendKeys "`" (Regex (buildAnsiRegex [] ["37"] []))
 
     step "enter new tag"
-    sendLiteralKeys "+inbox +foo +bar" Unconditional
-
-    step "apply"
-    sendKeys "Enter" (Regex ("foo"
+    sendLine "+inbox +foo +bar" (Regex ("foo"
                              <> buildAnsiRegex [] ["37"] []
                              <> "\\s"
                              <> buildAnsiRegex [] ["36"] []
@@ -500,10 +493,7 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
     sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
 
     step "enter tag to search `foo and bar`"
-    sendLiteralKeys "tag:foo and tag:bar" Unconditional
-
-    step "apply"
-    sendKeys "Enter" (Literal "tag:foo and tag:bar")
+    sendLine "tag:foo and tag:bar" (Literal "tag:foo and tag:bar")
 
     step "view mail in thread"
     sendKeys "Enter" (Literal "Testmail")
@@ -535,10 +525,7 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     step "add new tag"
-    sendLiteralKeys "+archive" Unconditional
-
-    step "apply"
-    sendKeys "Enter" (Literal "archive")
+    sendLine "+archive" (Literal "archive")
 
     step "move to second mail"
     sendKeys "Down" (Literal "Item 2 of 2")
@@ -547,10 +534,7 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     step "add new tag"
-    sendLiteralKeys "+replied -inbox" Unconditional
-
-    step "apply"
-    sendKeys "Enter" (Literal "replied")
+    sendLine "+replied -inbox" (Literal "replied")
 
     step "go back to list of mails"
     sendKeys "Escape" (Literal "Item 2 of 2")
@@ -569,10 +553,7 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     -- "cheating" here a bit, since just invoking tmux with sending literally
     -- "-only" will fail due to tmux parsing it as an argument, but the mail is
     -- already tagged with "thread" so the additional adding won't do anything
-    sendLiteralKeys "+thread" Unconditional
-
-    step "apply"
-    sendKeys "Enter" (Regex ("archive"
+    sendLine "+thread" (Regex ("archive"
                              <> buildAnsiRegex [] ["37"] []
                              <> "\\s"
                              <> buildAnsiRegex [] ["36"] [] <> "replied" <> buildAnsiRegex [] ["37"] []
@@ -709,18 +690,14 @@ testUserCanManipulateNMQuery =
           sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
 
           step "search for non existing tags yielding no results"
-          sendLiteralKeys "does not match anything" Unconditional
-          sendKeys "Enter" (Literal "No items")
+          sendLine "does not match anything" (Literal "No items")
 
           step "search for mail correctly tagged"
           sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "does"))
           sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
 
           step "enter new tag"
-          sendLiteralKeys "tag:replied" Unconditional
-
-          step "apply"
-          sendKeys "Enter" (Literal "Item 1 of 1")
+          sendLine "tag:replied" (Literal "Item 1 of 1")
 
           step "open thread"
           sendKeys "Enter" (Literal "This is Purebred")
