@@ -15,6 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes #-}
 
 module UAT
@@ -112,6 +113,9 @@ type TmuxSession = String
 
 class HasTmuxSession a where
   tmuxSession :: Lens' a TmuxSession
+
+instance HasTmuxSession TmuxSession where
+  tmuxSession = id
 
 
 -- | Run a series of tests in tmux sessions.
