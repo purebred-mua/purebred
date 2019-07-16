@@ -121,7 +121,7 @@ module UAT
   , withTmuxSession
   , TestCase
 
-  -- ** Session environment
+  -- ** Test environment
   , HasTmuxSession(..)
   , TmuxSession
 
@@ -201,8 +201,7 @@ captureString :: Capture -> String
 captureString = _captureString
 
 -- | A test case that will be executed in a dedicated tmux session.
--- Parameterised over the "global" environment (c.f. the "session"
--- environment).
+-- Parameterised over the shared environment type.
 type TestCase a = IO a -> Int -> TestTree
 
 type TmuxSession = String
@@ -419,24 +418,24 @@ defaultRetries = 5
 
 -- | Run all application steps in a session defined by session name.
 withTmuxSession
-  :: (HasTmuxSession sessionEnv)
-  => (globalEnv -> TmuxSession -> IO sessionEnv)
+  :: (HasTmuxSession testEnv)
+  => (sharedEnv -> TmuxSession -> IO testEnv)
   -- ^ Set up session.  The tmux session is established before this
-  -- action is run.  Takes the global environment and Tmux session
-  -- and constructs a session environment value (which must make the
+  -- action is run.  Takes the shared environment and Tmux session
+  -- and constructs a test environment value (which must make the
   -- 'TmuxSession' available via its 'HasTmuxSession' instance).
-  -> (sessionEnv -> IO ())
+  -> (testEnv -> IO ())
   -- ^ Tear down the session.  The tmux session will be torn down
   -- /after/ this action.
   -> TestName
   -- ^ Name of the test (a string).
-  -> ( forall m. (MonadReader sessionEnv m, MonadState Capture m, MonadIO m)
+  -> ( forall m. (MonadReader testEnv m, MonadState Capture m, MonadIO m)
        => (String -> m ()) -> m a
      )
   -- ^ The main test function.  The argument is the "step" function
   -- which can be called with a description to label the steps of
   -- the test procedure.
-  -> TestCase globalEnv
+  -> TestCase sharedEnv
 withTmuxSession pre post desc f getGEnv i =
   withResource
     (getGEnv >>= \gEnv -> frameworkPre >>= pre gEnv)
