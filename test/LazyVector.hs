@@ -19,7 +19,6 @@ module LazyVector where
 import Prelude hiding (splitAt)
 
 import Data.Foldable (toList)
-import Data.Semigroup ((<>))
 
 import Test.Tasty
 import Test.Tasty.QuickCheck

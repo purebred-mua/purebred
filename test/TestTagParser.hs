@@ -19,7 +19,6 @@
 module TestTagParser where
 
 import Data.List (isInfixOf)
-import Data.Semigroup ((<>))
 
 import Purebred.Tags
 import Types (TagOp(..))

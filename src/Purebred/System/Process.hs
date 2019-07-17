@@ -46,7 +46,6 @@ import qualified Data.ByteString as B
 import System.IO.Temp (emptySystemTempFile)
 import System.Directory (removeFile)
 import Control.Lens ((&), _2, over, set, view)
-import Data.Semigroup ((<>))
 import Data.Foldable (toList)
 
 import qualified Data.Text as T

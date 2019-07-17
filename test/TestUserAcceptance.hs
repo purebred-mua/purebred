@@ -23,7 +23,6 @@ module Main where
 
 import Data.Char (chr)
 import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
-import Data.Semigroup ((<>))
 import Data.Either (isRight)
 import Data.Foldable (traverse_)
 import Data.Functor (($>))
