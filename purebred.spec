@@ -63,7 +63,7 @@ interface, but embracing the notmuch storage / search paradigm.
 
 = Requirements
 
-* GHC >= 8.2
+* GHC >= 8.4
 * notmuch
 * a local mailer (e.g. 'sendmail')
 
