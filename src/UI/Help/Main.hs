@@ -10,7 +10,6 @@ import Brick.Widgets.Core
         (<+>), vBox, withAttr)
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Control.Lens (view, views)
-import Data.Semigroup ((<>))
 import Data.Text (Text, singleton, intercalate, pack)
 import Config.Main (helpTitleAttr, helpKeybindingAttr)
 import Types

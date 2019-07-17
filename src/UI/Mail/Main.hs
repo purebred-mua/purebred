@@ -14,7 +14,6 @@ import Brick.Widgets.Core
 import Control.Lens (filtered, folded, toListOf, view, preview, has)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
-import Data.Semigroup ((<>))
 import Data.Maybe (fromMaybe)
 
 import Data.MIME

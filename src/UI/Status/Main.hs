@@ -24,7 +24,6 @@ import Brick.Widgets.Center (hCenter)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
 import Control.Lens (view, views)
-import Data.Semigroup ((<>))
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
 

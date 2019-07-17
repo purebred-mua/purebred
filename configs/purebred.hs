@@ -21,7 +21,6 @@ Example configuration, currently used for testing which demonstrates various
 ways to overwrite the configuration.
 -}
 import Purebred
-import Data.Semigroup ((<>))
 import qualified Data.ByteString as B
 import System.Environment (lookupEnv)
 import System.Directory (getCurrentDirectory)

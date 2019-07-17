@@ -28,7 +28,6 @@ import Control.Lens.Getter (view)
 import Data.Time.Clock
        (UTCTime(..), NominalDiffTime, nominalDay, diffUTCTime)
 import Data.Time.Format (formatTime, defaultTimeLocale)
-import Data.Semigroup ((<>))
 import Data.Text as T (Text, pack, unpack, unwords)
 
 import Notmuch (getTag)

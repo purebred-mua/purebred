@@ -76,7 +76,6 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Network.Mime (defaultMimeLookup)
 import Data.Proxy
-import Data.Semigroup ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Text.Encoding as T

@@ -24,7 +24,6 @@ your liking.  For example, the following configuration adds some
 custom keybindings:
 
 @
-import Data.Semigroup ((<>))
 import Purebred
 
 scrollKeybindings :: ('Scrollable' w) => ['Keybinding' v w]
@@ -147,7 +146,6 @@ import Control.Monad ((>=>), void)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import Data.List (elemIndex, isInfixOf, isPrefixOf)
-import Data.Semigroup ((<>))
 import System.Environment (lookupEnv)
 import System.FilePath (dropTrailingPathSeparator, joinPath, splitPath)
 import System.FilePath.Posix ((</>))

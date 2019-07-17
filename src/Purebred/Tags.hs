@@ -23,7 +23,6 @@ import Data.Attoparsec.ByteString.Char8
   , skipMany1, takeWhile1, endOfInput, peekChar' )
 import qualified Data.ByteString as B
 import Data.Functor (($>))
-import Data.Semigroup ((<>))
 import Control.Lens (over, _Left)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
