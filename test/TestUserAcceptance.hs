@@ -851,7 +851,17 @@ testUserCanAbortMailComposition =
                              <> "\"Joe Bloggs\" <joe@foo.test>")
 
             step "abort mail"
-            sendKeys "q" (Substring "Testmail")
+            sendKeys "q" (Substring "Keep draft?")
+
+            step "choose discard"
+            -- TODO: buildAnsiRegex will cause the generated Regex not
+            -- to match. Maybe not \\s+ even though raw it looks like
+            -- there is white space?
+            -- see https://github.com/purebred-mua/tasty-tmux/issues/8
+            sendKeys "Tab" (Substring "Discard")
+
+            step "confirm discard"
+            sendKeys "Enter" (Substring "Testmail")
 
             step "start composition again"
             sendKeys "m" (Substring "From")
