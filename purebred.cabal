@@ -154,6 +154,7 @@ test-suite uat
                      , tasty-tmux
                      , directory
                      , typed-process >= 0.2.4.0
+                     , text
                      , bytestring
                      , temporary
                      , mtl
