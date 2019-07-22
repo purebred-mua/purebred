@@ -146,20 +146,17 @@ test-suite uat
   hs-source-dirs:      test
   ghc-options:         -Wall -threaded
   main-is:             TestUserAcceptance.hs
-  other-modules:       UAT
   default-language:    Haskell2010
   build-depends:       base
                      , purebred-email >= 0.2
                      , tasty
                      , tasty-hunit
+                     , tasty-tmux
                      , directory
                      , typed-process >= 0.2.4.0
                      , bytestring
                      , temporary
-                     , text
-                     , regex-posix
                      , mtl
-                     , stm
                      , lens
                      , filepath
                      , unix
