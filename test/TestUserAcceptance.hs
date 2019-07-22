@@ -47,10 +47,9 @@ import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed (proc, runProcess_, readProcess_, setEnv)
 import Test.Tasty (defaultMain)
 import Test.Tasty.HUnit (assertBool, assertEqual)
+import Test.Tasty.Tmux
 
 import Data.MIME (parse, message, mime, MIMEMessage)
-
-import UAT
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 
