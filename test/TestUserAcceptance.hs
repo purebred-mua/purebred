@@ -17,6 +17,8 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind -fno-warn-missing-signatures #-}
 
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Main where
@@ -33,7 +35,9 @@ import System.FilePath.Posix ((</>))
 import Control.Monad (filterM, void, when)
 import Data.Maybe (fromMaybe, isJust)
 import Data.List (isInfixOf, sort)
-import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as B
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
 import Control.Monad.State (MonadState)
@@ -461,7 +465,7 @@ testUpdatesReadState = purebredTmuxSession "updates read state for mail and thre
     sendKeys "Down" (Substring "2 of 2")
 
     step "go back to thread list which is read"
-    sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
+    sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
 
     step "set one mail to unread"
     sendKeys "Enter" (Substring "Beginning of large text")
@@ -504,9 +508,9 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     -- git and sdist, list the directory ourselves to work out what
     -- the final entry should be.  Note that dirs come first in the
     -- filebrowser widget.
-    files <- fmap sort $ liftIO $
+    files <- sort . fmap (T.encodeUtf8 . T.pack) <$> liftIO (
       getSourceDirectory >>= listDirectory
-      >>= filterM (fmap isRegularFile . getFileStatus)
+      >>= filterM (fmap isRegularFile . getFileStatus) )
     let
       lastFile = fromMaybe "MISSING" $ preview _last files
       secondLastFile = fromMaybe "MISSING" $ preview (_init . _last) files
@@ -515,11 +519,11 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     composeNewMail step
 
     step "start file browser"
-    cwd <- liftIO getCurrentDirectory
+    cwd <- B.pack <$> liftIO getCurrentDirectory
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
     step "jump to the end of the list"
-    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
+    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> lastFile)
 
     step "add first selected file"
     sendKeys "Enter" (Substring lastFile)
@@ -568,13 +572,13 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
     step "jump to the end of the list"
-    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> lastFile)
+    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> lastFile)
 
     step "select the file"
-    sendKeys "Space" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9745 - " <> lastFile)
+    sendKeys "Space" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 "\\s\9745 - " <> lastFile)
 
     step "move one item up"
-    sendKeys "Up" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> "\\s\9744 - " <> secondLastFile)
+    sendKeys "Up" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> secondLastFile)
 
     step "add selected files"
     out <- sendKeys "Enter" (Substring "Item 3 of 3")
@@ -587,8 +591,8 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     contents <- liftIO $ B.readFile fpath
     let decoded = chr . fromEnum <$> B.unpack contents
     assertSubstr "attachment; filename" decoded
-    assertSubstr secondLastFile decoded
-    assertSubstr lastFile decoded
+    assertSubstr (B.unpack secondLastFile) decoded
+    assertSubstr (B.unpack lastFile) decoded
     assertSubstr "This is a test body" decoded
 
 testManageTagsOnMails :: PurebredTestCase
