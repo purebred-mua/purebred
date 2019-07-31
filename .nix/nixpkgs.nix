@@ -7,6 +7,7 @@ let
       overrides = hself: hsuper: {
         purebred = hsuper.callPackage ./purebred.nix { };
         purebred-email = hsuper.callPackage ./purebred-email.nix { };
+        purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
         tasty-tmux = hsuper.callPackage ./tasty-tmux.nix { };
         brick = hsuper.callPackage ./brick.nix {};
         notmuch = hsuper.callPackage ./hs-notmuch.nix {
