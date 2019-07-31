@@ -23,18 +23,22 @@
 # $ nix-build --arg compiler \"ghc442\"
 #
 #
+# Build with purebred-icu
+#
+# $ nix-build --arg with-icu true
+#
 # Use as a development environment
 #
 # $ nix-shell default.nix
 #
-{ compiler ? null, nixpkgs ? null }:
+{ compiler ? null, nixpkgs ? null, with-icu ? false }:
 
 with (import .nix/nixpkgs.nix { inherit compiler nixpkgs; });
 
 let
-  env = haskellPackages.ghcWithPackages (self: [
-    self.purebred
-  ]);
+  envPackages = self: if with-icu then [ self.purebred-icu ] else [ self.purebred ];
+  icuPackageDep = hp: if with-icu then [ hp.purebred-icu ] else [];
+  env = haskellPackages.ghcWithPackages envPackages;
   nativeBuildTools = with pkgs.haskellPackages; [
     cabal-install
     cabal2nix
@@ -48,7 +52,7 @@ in
     if pkgs.lib.inNixShell
     then haskellPackages.shellFor {
       withHoogle = true;
-      packages = haskellPackages: [ haskellPackages.purebred ];
+      packages = haskellPackages: [ haskellPackages.purebred ] ++ icuPackageDep haskellPackages;
       nativeBuildInputs = haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
     }
     else {
