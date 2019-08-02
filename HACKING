@@ -63,3 +63,23 @@ an application entirely written using Brick widgets only:
   ``OverloadedStrings``.
 
     {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
+
+## Using Nix as a development environment
+
+The `nix-shell --arg with-icu true` command will give you a
+development environment in which package dependencies for `purebred`
+and `purebred-icu` are installed. From there a typical compile/run
+session could look like this:
+
+    # clone purebred-icu as well into an adjacent directory to purebred
+    # and make cabal aware of purebred *and* purebred-icu necessary to build
+    echo "packages: .,../purebred-icu" > cabal.project.local
+
+    # install purebred and the purebred-icu plugin
+    $ cabal --enable-nix new-install --overwrite-policy=always exe:purebred lib:purebred-icu
+
+    # run purebred
+    $ ~/.cabal/bin/purebred
+
+    # run only acceptance tests containing 'user can abort'
+    PATH=~/.cabal/bin:$PATH cabal --enable-nix test --show-details=streaming --test-option='-p /user can abort/' uat
