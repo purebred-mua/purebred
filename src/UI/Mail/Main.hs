@@ -3,6 +3,7 @@
 module UI.Mail.Main
   ( renderMailView
   , renderAttachmentsList
+  , renderPart
   ) where
 
 import Brick.Types (Padding(..), ViewportType(..), Widget)
@@ -14,7 +15,6 @@ import Brick.Widgets.Core
 import Control.Lens (filtered, folded, toListOf, view, preview, has)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
-import Data.Maybe (fromMaybe)
 
 import Data.MIME
 import Storage.ParsedMail (chooseEntity, entityToText)
@@ -22,6 +22,7 @@ import Storage.ParsedMail (chooseEntity, entityToText)
 import Types
 import UI.Draw.Main (attachmentsHeader)
 import UI.Views (focusedViewWidget)
+import UI.Utils (takeFileName)
 import Config.Main (headerKeyAttr, headerValueAttr, mailViewAttr,
                     listSelectedAttr, listAttr)
 
@@ -67,19 +68,16 @@ renderAttachmentsList :: AppState -> Widget Name
 renderAttachmentsList s =
     let hasFocus = MailListOfAttachments == focusedViewWidget s
         attachmentsList =
-          L.renderList (renderPart charsets) hasFocus (view (asMailView . mvAttachments) s)
+          L.renderList (\isSel -> renderPart charsets isSel . view headers) hasFocus (view (asMailView . mvAttachments) s)
         charsets = view (asConfig . confCharsets) s
     in attachmentsHeader <=> attachmentsList
 
--- TODO: Both these functions are basically duplicates. Use classes for
--- WireEntity and MIMEMessage to don't repeat our selfs?
--- See #264
-renderPart :: CharsetLookup -> Bool -> WireEntity -> Widget Name
-renderPart charsets selected m =
-  let pType = showContentType $ view (headers . contentType) m
-      pFilename = fromMaybe "--" (preview (headers . contentDisposition . filename charsets) m)
+renderPart :: CharsetLookup -> Bool -> Headers -> Widget Name
+renderPart charsets selected hds =
+  let pType = showContentType $ view contentType hds
+      pFilename = maybe "--" takeFileName (preview (contentDisposition . filename charsets) hds)
       listItemAttr = if selected then listSelectedAttr else listAttr
-      attachmentType = txt (if isAttachment' m then "A" else "I")
+      attachmentType = txt (if isAttachment' hds then "A" else "I")
       widget = hBox
         [ padLeftRight 1 attachmentType
         , padRight Max (txt pFilename)
@@ -87,5 +85,5 @@ renderPart charsets selected m =
         ]
   in withAttr listItemAttr widget
 
-isAttachment' :: WireEntity -> Bool
-isAttachment' = has (headers . contentDisposition . dispositionType . filtered (== Attachment))
+isAttachment' :: Headers -> Bool
+isAttachment' = has (contentDisposition . dispositionType . filtered (== Attachment))
