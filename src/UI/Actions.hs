@@ -124,7 +124,7 @@ import Types
 import Error
 import UI.Utils (selectedFiles, takeFileName)
 import UI.Views
-       (listOfMailsView, mailView, toggleLastVisibleWidget, indexView, resetView,
+       (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.Events (nextGeneration)
 import Purebred.LazyVector (V)
@@ -288,9 +288,6 @@ class Resetable (v :: ViewName) (m :: Name) where
 instance Resetable 'Threads 'SearchThreadsEditor where
   reset _ _ = pure
 
-instance Resetable 'Mails 'ManageMailTagsEditor where
-  reset _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
-
 instance Resetable 'ViewMail 'ManageMailTagsEditor where
   reset _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
@@ -392,10 +389,6 @@ instance Focusable 'Threads 'ComposeSubject where
 instance Focusable 'Threads 'ListOfThreads where
   switchFocus _ _ = pure
 
-instance Focusable 'Mails 'ManageMailTagsEditor where
-  switchFocus _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
-                    . set (asViews . vsViews . at Mails . _Just . vFocus) ManageMailTagsEditor
-
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
   switchFocus _ _ s = pure $ s &
                       set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
@@ -404,12 +397,6 @@ instance Focusable 'ViewMail 'ManageMailTagsEditor where
 
 instance Focusable 'ViewMail 'ScrollingMailView where
   switchFocus _ _ = pure . set (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailView
-
-instance Focusable 'Mails 'ListOfMails where
-  switchFocus _ _ = pure
-
-instance Focusable 'Mails 'ComposeFrom where
-  switchFocus = focusComposeFrom
 
 instance Focusable 'ViewMail 'ListOfMails where
   switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) ListOfMails
@@ -553,14 +540,7 @@ class ViewTransition (v :: ViewName) (v' :: ViewName) where
 
 instance ViewTransition v v where
 
-instance ViewTransition 'Mails 'Threads where
-  transitionHook _ _ = set (asViews . vsViews . ix Mails) listOfMailsView
-
-instance ViewTransition 'Threads 'Mails where
-
 instance ViewTransition 'Threads 'ComposeView where
-
-instance ViewTransition 'Threads 'ViewMail where
 
 instance ViewTransition 'Help v where
 
@@ -570,11 +550,8 @@ instance ViewTransition 'ComposeView 'Threads where
 
 instance ViewTransition 'ComposeView 'FileBrowser where
 
-instance ViewTransition 'Mails 'ViewMail where
+instance ViewTransition 'Threads 'ViewMail where
   transitionHook _ _ = set (asViews . vsViews . ix ViewMail) mailView
-
-instance ViewTransition 'ViewMail 'Mails where
-  transitionHook _ _ = set (asViews . vsViews . ix Mails) listOfMailsView
 
 instance ViewTransition 'ViewMail 'ComposeView where
 
@@ -591,9 +568,6 @@ instance HasViewName 'Threads where
 
 instance HasViewName 'ViewMail where
   viewname _ = ViewMail
-
-instance HasViewName 'Mails where
-  viewname _ = Mails
 
 instance HasViewName 'Help where
   viewname _ = Help
@@ -739,7 +713,7 @@ displayThreadMails =
     , _aAction = liftIO . setMailsForThread
     }
 
-setUnread :: Action 'Mails 'ListOfMails AppState
+setUnread :: Action 'ViewMail 'ScrollingMailView AppState
 setUnread =
     Action
     { _aDescription = ["toggle unread"]
@@ -805,7 +779,7 @@ setTags ops =
 reloadList :: Action 'Threads 'ListOfThreads AppState
 reloadList = Action ["reload list of threads"] applySearch
 
-selectNextUnread :: Action 'Mails 'ListOfMails AppState
+selectNextUnread :: Action 'ViewMail 'ListOfMails AppState
 selectNextUnread =
   Action { _aDescription = ["select next unread"]
          , _aAction = \s ->

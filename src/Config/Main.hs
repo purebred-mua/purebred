@@ -43,9 +43,7 @@ import UI.GatherHeaders.Keybindings
         gatherToKeybindings,
         gatherSubjectKeybindings)
 import UI.Index.Keybindings
-       (browseMailKeybindings, browseThreadsKeybindings,
-        searchThreadsKeybindings, manageThreadTagsKeybindings,
-        manageMailTagsKeybindings)
+       (browseThreadsKeybindings, searchThreadsKeybindings, manageThreadTagsKeybindings)
 import UI.Mail.Keybindings
        (displayMailKeybindings, mailViewManageMailTagsKeybindings,
         mailAttachmentsKeybindings, openWithKeybindings,
@@ -215,9 +213,7 @@ defaultConfig =
       }
     , _confIndexView = IndexViewSettings
       { _ivBrowseThreadsKeybindings = browseThreadsKeybindings
-      , _ivBrowseMailsKeybindings = browseMailKeybindings
       , _ivSearchThreadsKeybindings = searchThreadsKeybindings
-      , _ivManageMailTagsKeybindings = manageMailTagsKeybindings
       , _ivManageThreadTagsKeybindings = manageThreadTagsKeybindings
       , _ivFromKeybindings = gatherFromKeybindings
       , _ivToKeybindings = gatherToKeybindings

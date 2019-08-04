@@ -8,9 +8,10 @@ import Types
 
 displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 displayMailKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'Mails 'ListOfMails AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KBS []) (scrollPageUp `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar ' ') []) (scrollPageDown `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'h') []) (toggleHeaders `chain` continue)
     , Keybinding (V.EvKey (V.KChar '`') []) (noop `chain'` (focus :: Action 'ViewMail 'ManageMailTagsEditor AppState) `chain` continue)

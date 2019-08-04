@@ -42,7 +42,7 @@ import UI.Mail.Main (renderAttachmentsList, renderMailView)
 import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
 import UI.Views
-       (indexView, mailView, composeView, helpView, listOfMailsView,
+       (indexView, mailView, composeView, helpView,
         filebrowserView, focusedViewWidget, focusedViewWidgets,
         focusedViewName)
 import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
@@ -86,8 +86,6 @@ handleViewEvent = f where
   f ComposeView ComposeSubject = dispatch eventHandlerComposeSubject
   f ComposeView ComposeTo = dispatch eventHandlerComposeTo
   f ComposeView ComposeListOfAttachments = dispatch eventHandlerComposeListOfAttachments
-  f Mails ListOfMails = dispatch eventHandlerListOfMails
-  f Mails ManageMailTagsEditor = dispatch eventHandlerManageMailTagsEditor
   f Threads ComposeFrom =  dispatch eventHandlerThreadComposeFrom
   f Threads ComposeSubject = dispatch eventHandlerThreadComposeSubject
   f Threads ComposeTo = dispatch eventHandlerThreadComposeTo
@@ -141,7 +139,6 @@ initialState conf =
         ViewSettings
         { _vsViews = Map.fromList
               [ (Threads, indexView)
-              , (Mails, listOfMailsView)
               , (ViewMail, mailView)
               , (Help, helpView)
               , (ComposeView, composeView)

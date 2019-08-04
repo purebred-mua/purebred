@@ -464,16 +464,16 @@ testUpdatesReadState = purebredTmuxSession "updates read state for mail and thre
     step "view next unread in thread"
     sendKeys "Down" (Substring "2 of 2")
 
-    step "go back to thread list which is read"
-    sendKeys "q q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
+    step "go back to thread list which is now read"
+    sendKeys "q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
 
     step "set one mail to unread"
     sendKeys "Enter" (Substring "Beginning of large text")
-    sendKeys "q t" (Regex (buildAnsiRegex ["1"] ["37"] []
+    sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] []
                            <> "\\sRe: WIP Refactor\\s+"
                            <> buildAnsiRegex ["0"] ["34"] ["40"]))
 
-    step "returning to thread list shows thread unread"
+    step "returning to thread list shows entire thread as unread"
     sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
 
 testConfig :: PurebredTestCase
@@ -614,9 +614,6 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
                              <> "bar"))
       >>= assertSubstring "This is a test mail"
 
-    step "go back to list of mails"
-    sendKeys "Escape" (Substring "List of Mails")
-
     step "go back to list of threads"
     sendKeys "Escape" (Substring "List of Threads")
 
@@ -669,9 +666,6 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     step "add new tag"
     sendLine "+replied -inbox" (Substring "replied")
 
-    step "go back to list of mails"
-    sendKeys "Escape" (Substring "Item 2 of 2")
-
     step "thread tags shows new tags"
     sendKeys "Escape" (Regex ("archive"
                               <> buildAnsiRegex [] ["37"] []
@@ -703,10 +697,7 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
                               <> buildAnsiRegex [] ["36"] []
                               <> "thread"
                               <> buildAnsiRegex [] ["37"] []
-                              <> "\\sRe: WIP Refactor"))
-
-    step "go back to list of threads"
-    sendKeys "Escape" (Substring "List of Threads")
+                              <> "\\sWIP Refactor"))
 
     step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -751,10 +742,13 @@ testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
     sendKeys "Enter" (Substring "This is a test mail for purebred")
 
     step "first unread mail is opened"
-    sendKeys "Escape" (Substring "List of Mails")
+    sendKeys "Escape" (Substring "List of Threads")
       >>= assertRegex (buildAnsiRegex [] ["37"] ["43"] <> ".*Testmail")
 
-    step "toggle it back to unread (bold again)"
+    step "show mail"
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
+
+    step "toggle single mail back to unread (bold again)"
     sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
 
 testCanToggleHeaders :: PurebredTestCase
@@ -790,7 +784,7 @@ testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
     sendKeys "Enter" (Substring "This is a test mail")
 
     step "go back to thread list"
-    sendKeys "q q" (Substring "WIP Refactor")
+    sendKeys "q" (Substring "WIP Refactor")
 
     step "Move down to threaded mails"
     sendKeys "Down" (Substring "Purebred: Item 2 of 3")
