@@ -351,9 +351,7 @@ hvKeybindings f (HelpViewSettings a) = fmap (\a' -> HelpViewSettings a') (f a)
 
 data IndexViewSettings = IndexViewSettings
     { _ivBrowseThreadsKeybindings :: [Keybinding 'Threads 'ListOfThreads]
-    , _ivBrowseMailsKeybindings :: [Keybinding 'Mails 'ListOfMails]
     , _ivSearchThreadsKeybindings :: [Keybinding 'Threads 'SearchThreadsEditor]
-    , _ivManageMailTagsKeybindings :: [Keybinding 'Mails 'ManageMailTagsEditor]
     , _ivManageThreadTagsKeybindings :: [Keybinding 'Threads 'ManageThreadTagsEditor]
     , _ivFromKeybindings :: [Keybinding 'Threads 'ComposeFrom]
     , _ivToKeybindings :: [Keybinding 'Threads 'ComposeTo]
@@ -364,14 +362,8 @@ data IndexViewSettings = IndexViewSettings
 ivBrowseThreadsKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ListOfThreads]
 ivBrowseThreadsKeybindings = lens _ivBrowseThreadsKeybindings (\s x -> s { _ivBrowseThreadsKeybindings = x })
 
-ivBrowseMailsKeybindings :: Lens' IndexViewSettings [Keybinding 'Mails 'ListOfMails]
-ivBrowseMailsKeybindings = lens _ivBrowseMailsKeybindings (\s x -> s { _ivBrowseMailsKeybindings = x })
-
 ivSearchThreadsKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'SearchThreadsEditor]
 ivSearchThreadsKeybindings = lens _ivSearchThreadsKeybindings (\s x -> s { _ivSearchThreadsKeybindings = x })
-
-ivManageMailTagsKeybindings :: Lens' IndexViewSettings [Keybinding 'Mails 'ManageMailTagsEditor]
-ivManageMailTagsKeybindings = lens _ivManageMailTagsKeybindings (\s x -> s { _ivManageMailTagsKeybindings = x })
 
 ivManageThreadTagsKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ManageThreadTagsEditor]
 ivManageThreadTagsKeybindings = lens _ivManageThreadTagsKeybindings (\s x -> s { _ivManageThreadTagsKeybindings = x })

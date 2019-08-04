@@ -82,11 +82,6 @@ nullEventHandler :: EventHandler v m
 nullEventHandler = EventHandler (\f s -> s <$ f []) (const . Brick.continue)
 
 
-eventHandlerListOfMails :: EventHandler 'Mails 'ListOfMails
-eventHandlerListOfMails = EventHandler
-  (asConfig . confIndexView . ivBrowseMailsKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailIndex . miListOfMails) L.handleListEvent)
-
 eventHandlerListOfThreads :: EventHandler 'Threads 'ListOfThreads
 eventHandlerListOfThreads = EventHandler
   (asConfig . confIndexView . ivBrowseThreadsKeybindings)
@@ -96,12 +91,6 @@ eventHandlerSearchThreadsEditor :: EventHandler 'Threads 'SearchThreadsEditor
 eventHandlerSearchThreadsEditor = EventHandler
   (asConfig . confIndexView . ivSearchThreadsKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailIndex . miSearchThreadsEditor) E.handleEditorEvent)
-
-eventHandlerManageMailTagsEditor :: EventHandler 'Mails 'ManageMailTagsEditor
-eventHandlerManageMailTagsEditor =
-  EventHandler
-    (asConfig . confIndexView . ivManageMailTagsKeybindings)
-    manageMailTagHandler
 
 eventHandlerViewMailManageMailTagsEditor :: EventHandler 'ViewMail 'ManageMailTagsEditor
 eventHandlerViewMailManageMailTagsEditor = EventHandler

@@ -1,6 +1,5 @@
 module UI.Views
   ( indexView
-  , listOfMailsView
   , mailView
   , composeView
   , helpView
@@ -84,21 +83,6 @@ indexView =
               ]
           ]
     , _vFocus = ListOfThreads
-    }
-
-listOfMailsView :: View
-listOfMailsView =
-  View
-    { _vLayers =
-        fromList
-          [ Layer $
-            fromList
-              [ Tile Visible ListOfMails
-              , Tile Visible StatusBar
-              , Tile Visible ManageMailTagsEditor
-              ]
-          ]
-    , _vFocus = ListOfMails
     }
 
 mailView :: View

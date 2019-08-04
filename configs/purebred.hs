@@ -33,11 +33,6 @@ myBrowseThreadsKbs =
   [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
   ]
 
-myBrowseMailKeybindings :: [Keybinding 'Mails 'ListOfMails]
-myBrowseMailKeybindings =
-    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
-    ]
-
 myMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 myMailKeybindings =
     [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
@@ -62,7 +57,6 @@ main :: IO ()
 main = purebred $ tweak defaultConfig where
   tweak =
     over (confIndexView . ivBrowseThreadsKeybindings) (`union` myBrowseThreadsKbs)
-    . over (confIndexView . ivBrowseMailsKeybindings) (`union` myBrowseMailKeybindings)
     . over (confMailView . mvKeybindings) (`union` myMailKeybindings)
     . set (confComposeView . cvSendMailCmd) writeMailtoFile
     . set (confFileBrowserView . fbHomePath) getCurrentDirectory
