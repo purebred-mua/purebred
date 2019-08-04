@@ -10,48 +10,30 @@ module UI.ComposeEditor.Main
 
 import Brick.Types (Padding(..), Widget)
 import Brick.Widgets.Core
-       (hBox, padLeftRight, padLeft, padRight, padBottom, txt, withAttr, (<=>),
-       (<+>), vLimit, hLimit, emptyWidget)
+  ((<+>), (<=>), emptyWidget, hLimit, padBottom, padLeft,
+   txt, vLimit)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Brick.Widgets.Dialog (renderDialog)
 import Brick.Widgets.Center (hCenter)
-import Control.Lens (view, preview, to)
+import Control.Lens (to, view)
 import qualified Data.Text as T
 import Data.Text.Zipper (currentLine)
 
-import Data.MIME
-       (MIMEMessage, headers, contentType, CharsetLookup,
-        filename, contentDisposition, isAttachment, showContentType)
+import Data.MIME (headers)
 
-import Config.Main (listSelectedAttr, listAttr)
-import UI.Utils (takeFileName)
 import UI.Views (focusedViewWidget)
 import UI.Draw.Main (attachmentsHeader)
+import UI.Mail.Main (renderPart)
 import Types
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
     let hasFocus = ComposeListOfAttachments == focusedViewWidget s
         attachmentsList =
-          L.renderList (renderPart charsets) hasFocus (view (asCompose . cAttachments) s)
+          L.renderList (\isSel -> renderPart charsets isSel . view headers) hasFocus (view (asCompose . cAttachments) s)
         charsets = view (asConfig . confCharsets) s
     in attachmentsHeader <=> attachmentsList
-
-renderPart :: CharsetLookup -> Bool -> MIMEMessage -> Widget Name
-renderPart charsets selected m =
-  let pType = showContentType $ view (headers . contentType) m
-      -- Only show the filename for now. See #253 for a discussion to fix this.
-      pFilename =
-        maybe "--" takeFileName (preview (headers . contentDisposition . filename charsets) m)
-      listItemAttr = if selected then listSelectedAttr else listAttr
-      attachmentType = txt (if isAttachment m then "A" else "I")
-      widget = hBox
-        [ padLeftRight 1 attachmentType
-        , padRight Max (txt pFilename)
-        , txt pType
-        ]
-  in withAttr listItemAttr widget
 
 drawHeaders :: AppState -> Widget Name
 drawHeaders s = padBottom (Pad 1) $ foldr (drawTableRows s) (txt T.empty) [ComposeSubject, ComposeTo, ComposeFrom]
