@@ -114,6 +114,7 @@ appEvent s (T.AppEvent ev) = case ev of
     if gen == view (asMailIndex . miListOfThreadsGeneration) s
     then set (asMailIndex . miThreads . listLength) (Just n) s
     else s
+  NotifyNewMailArrived n -> M.continue (set (asMailIndex . miNewMail) n s)
   InputValidated l err -> M.continue (s & set l err . set (asAsync . aValidation) Nothing)
 appEvent s _ = M.continue s
 
@@ -129,6 +130,7 @@ initialState conf =
             (E.editorText SearchThreadsEditor Nothing searchterms)
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
+            0
     mv = MailView
            Nothing
            Filtered

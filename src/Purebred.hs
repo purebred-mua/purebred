@@ -156,6 +156,7 @@ import Paths_purebred (version, getLibDir)
 import UI.Index.Keybindings
 import UI.Mail.Keybindings
 import UI.Actions
+import UI.Status.Main (rescheduleMailcheck)
 import Storage.Notmuch (getDatabasePath)
 import Config.Main (defaultConfig, solarizedDark, solarizedLight, mailTagAttr)
 import Types
@@ -223,6 +224,12 @@ launch cfg = do
   s <- initialState cfg'
   let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
   initialVty <- buildVty
+
+  let query = view (confNotmuch . nmHasNewMailSearch) cfg'
+      delay = view (confNotmuch . nmHasNewMailCheckDelay) cfg'
+      dbpath = view (confNotmuch . nmDatabase) cfg'
+  maybe (pure ()) (rescheduleMailcheck bchan dbpath query) delay
+
   void $ customMain initialVty buildVty (Just bchan) (theApp s) s
 
 

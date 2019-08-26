@@ -117,6 +117,7 @@ data MailIndex = MailIndex
     , _miSearchThreadsEditor :: E.Editor T.Text Name
     , _miMailTagsEditor :: E.Editor T.Text Name
     , _miThreadTagsEditor :: E.Editor T.Text Name
+    , _miNewMail :: Int
     }
 
 miMails :: Lens' MailIndex (ListWithLength V.Vector NotmuchMail)
@@ -143,6 +144,9 @@ miMailTagsEditor = lens _miMailTagsEditor (\m v -> m { _miMailTagsEditor = v})
 
 miThreadTagsEditor :: Lens' MailIndex (E.Editor T.Text Name)
 miThreadTagsEditor = lens _miThreadTagsEditor (\m v -> m { _miThreadTagsEditor = v})
+
+miNewMail :: Lens' MailIndex Int
+miNewMail = lens _miNewMail (\m v -> m { _miNewMail = v})
 
 data HeadersState = ShowAll | Filtered
 
@@ -211,6 +215,8 @@ data NotmuchSettings a = NotmuchSettings
     , _nmNewTag :: Tag
     , _nmDraftTag :: Tag
     , _nmSentTag :: Tag
+    , _nmHasNewMailSearch :: T.Text
+    , _nmHasNewMailCheckDelay :: Maybe Int
     }
     deriving (Generic, NFData)
 
@@ -228,6 +234,12 @@ nmDraftTag = lens _nmDraftTag (\nm x -> nm { _nmDraftTag = x })
 
 nmSentTag :: Lens' (NotmuchSettings a) Tag
 nmSentTag = lens _nmSentTag (\nm x -> nm { _nmSentTag = x })
+
+nmHasNewMailSearch :: Lens' (NotmuchSettings a) T.Text
+nmHasNewMailSearch = lens _nmHasNewMailSearch (\nm x -> nm { _nmHasNewMailSearch = x })
+
+nmHasNewMailCheckDelay :: Lens' (NotmuchSettings a) (Maybe Int)
+nmHasNewMailCheckDelay = lens _nmHasNewMailCheckDelay (\nm x -> nm { _nmHasNewMailCheckDelay = x })
 
 data FileBrowserSettings a = FileBrowserSettings
   { _fbKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]
@@ -746,5 +758,6 @@ newtype Generation = Generation Integer
 data PurebredEvent
   = NotifyNumThreads Int
                      Generation
+  | NotifyNewMailArrived Int
   | InputValidated (Lens' AppState (Maybe Error))
                    (Maybe Error)
