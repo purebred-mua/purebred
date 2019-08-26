@@ -14,16 +14,21 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module UI.Status.Main where
 
+import Brick.BChan (BChan, writeBChan)
 import Brick.Types (Widget)
-import Brick.Widgets.Core (hBox, txt, str, withAttr, (<+>), strWrap)
+import Brick.Widgets.Core (hBox, txt, str, withAttr, (<+>), strWrap, padLeftRight)
 import Brick.Widgets.Center (hCenter)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
+import Control.Monad.Except (runExceptT)
+import Control.Monad (void)
 import Control.Lens (view, views)
+import Control.Concurrent (forkIO, threadDelay)
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
 
@@ -33,6 +38,20 @@ import UI.Views (focusedViewWidget, focusedViewName)
 import Types
 import Error
 import Config.Main (statusbarAttr, statusbarErrorAttr)
+import qualified Storage.Notmuch as Notmuch
+
+checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Int -> IO ()
+checkForNewMail chan dbpath query delay = do
+  r <- runExceptT (Notmuch.countThreads query dbpath)
+  case r of
+    Left _ -> pure ()
+    Right n -> notify n *> rescheduleMailcheck chan dbpath query delay
+  where
+    notify = writeBChan chan . NotifyNewMailArrived
+
+rescheduleMailcheck :: BChan PurebredEvent -> FilePath -> Text -> Int -> IO ()
+rescheduleMailcheck chan dbpath query delay =
+  void $ forkIO (threadDelay delay *> checkForNewMail chan dbpath query delay)
 
 data StatusbarContext a
     = ListContext a
@@ -81,12 +100,19 @@ renderStatusbar :: WithContext w => w -> AppState -> Widget Name
 renderStatusbar w s = withAttr statusbarAttr $ hBox
   [ str "Purebred: "
   , renderContext s w
+  , renderNewMailIndicator s
   , fillLine
   , txt (
       titleize (focusedViewName s) <> "-"
       <> titleize (focusedViewWidget s) <> " "
       )
   ]
+
+renderNewMailIndicator :: AppState -> Widget n
+renderNewMailIndicator s =
+  let newMailCount = view (asMailIndex . miNewMail) s
+      indicator = str $ "[New: " <> show newMailCount <> "]"
+   in padLeftRight 1 indicator
 
 currentItemW :: ListWithLength t e -> Widget n
 currentItemW (ListWithLength l len) = str $

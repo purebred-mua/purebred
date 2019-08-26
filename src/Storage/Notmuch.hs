@@ -189,6 +189,12 @@ getDatabasePath = do
   where
       decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
+countThreads ::
+     (MonadError Error m, MonadIO m) => T.Text -> FilePath -> m Int
+countThreads query fp =
+  withDatabaseReadOnly fp $
+  flip Notmuch.query (Notmuch.Bare $ T.unpack query)
+  >=> Notmuch.queryCountMessages
 -- | creates a vector of threads from a notmuch search
 --
 getThreads

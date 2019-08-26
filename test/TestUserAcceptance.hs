@@ -36,24 +36,28 @@ import Control.Monad (filterM, void, when)
 import Data.Maybe (fromMaybe, isJust)
 import Data.List (isInfixOf, sort)
 import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
 import Control.Monad.State (MonadState)
 
-import Control.Lens (Getter, Lens', preview, to, view, _init, _last)
+import Control.Lens (Getter, Lens', _init, _last, at, preview, set, to, view)
 import System.Directory
   ( copyFile, getCurrentDirectory, listDirectory, removeDirectoryRecursive
   , removeFile
   )
 import System.Posix.Files (getFileStatus, isRegularFile)
-import System.Process.Typed (proc, runProcess_, readProcess_, setEnv)
+import System.Process.Typed
+  (byteStringInput, proc, readProcess_, runProcess_, setEnv, setStdin)
 import Test.Tasty (defaultMain)
 import Test.Tasty.HUnit (assertBool, assertEqual)
 import Test.Tasty.Tmux
 
-import Data.MIME (parse, message, mime, MIMEMessage)
+import Data.MIME
+  (MIMEMessage, createTextPlainMessage, message, mime, parse,
+  headers, renderMessage)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 
@@ -99,7 +103,43 @@ main = defaultMain $ testTmux pre post tests
       , testShowsInvalidTaggingInput
       , testKeepDraftMail
       , testDiscardsMail
+      , testShowsNewMail
       ]
+
+-- Note: The most time in this test is spend on waiting. The default
+-- time for the indicator to refresh is 5 seconds.
+testShowsNewMail :: PurebredTestCase
+testShowsNewMail = purebredTmuxSession "shows newly delivered mail" $
+  \step -> do
+    startApplication
+
+    step "shows new mails"
+    sendKeys "Down" (Substring "New: 3")
+
+    mdir <- view envMaildir
+
+    let notmuchcfg = mdir </> "notmuch-config"
+        m = set (headers . at "subject") (Just "new mail notification") $ createTextPlainMessage "Hello there"
+        rendered = LB.fromStrict $ renderMessage m
+        config = setStdin (byteStringInput rendered) $ proc "notmuch"
+            [ "--config=" <> notmuchcfg
+            , "insert"
+            , "--folder"
+            , "tmp"
+            , "--create-folder"
+            ]
+    void $ readProcess_ config
+
+    step "shows new delivered mail"
+    sendKeys "Up" (Substring "New: 4")
+
+    -- reload mails to see the new e-mail
+    step "focus query widget"
+    sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
+
+    step "view mail"
+    sendKeys "Enter" (Substring "new mail notification")
+
 
 testShowsInvalidTaggingInput :: PurebredTestCase
 testShowsInvalidTaggingInput = purebredTmuxSession "shows errors when tagging" $
