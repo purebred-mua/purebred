@@ -721,7 +721,7 @@ testShowsAndClearsError = purebredTmuxSession "shows and clears error" $
     startApplication
 
     testmdir <- view envMaildir
-    liftIO $ removeFile (testmdir <> "/Maildir/new/1502941827.R15455991756849358775.url")
+    liftIO $ removeFile (testmdir <> "/new/1502941827.R15455991756849358775.url")
 
     step "open thread"
     sendKeys "Enter" (Substring "Testmail")
@@ -1089,9 +1089,10 @@ mkTempDir = getCanonicalTemporaryDirectory >>= flip createTempDirectory "purebre
 -- The returned directory contains the 'Maildir' subdirectory.
 setUpTempMaildir :: IO FilePath
 setUpTempMaildir = do
-  mdir <- mkTempDir
+  basedir <- mkTempDir
   cwd <- getSourceDirectory
-  runProcess_ $ proc "cp" ["-r", cwd <> "/test/data/Maildir/", mdir]
+  runProcess_ $ proc "cp" ["-r", cwd <> "/test/data/Maildir/", basedir]
+  let mdir = basedir </> "Maildir"
   setUpNotmuchCfg mdir >>= setUpNotmuch
   pure mdir
 
