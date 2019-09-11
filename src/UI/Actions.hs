@@ -83,6 +83,8 @@ module UI.Actions (
   , scrollDown
   , scrollPageUp
   , scrollPageDown
+  , scrollNextWord
+  , removeHighlights
 
   -- ** Actions for composing mails
   , delete
@@ -149,7 +151,8 @@ import Data.MIME
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
        ( parseMail, getTo, getFrom, getSubject, toQuotedMail
-       , entityToBytes, toMIMEMessage, takeFileName)
+       , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
+       , removeMatchingWords, findMatchingWords, makeScrollSteps)
 import Types
 import Error
 import UI.Utils (selectedFiles)
@@ -227,6 +230,9 @@ instance HasEditor 'MailAttachmentOpenWithEditor where
 
 instance HasEditor 'MailAttachmentPipeToEditor where
   editorL _ = asMailView . mvPipeCommand
+
+instance HasEditor 'ScrollingMailViewFindWordEditor where
+  editorL _ = asMailView . mvFindWordEditor
 
 instance HasEditor 'SearchThreadsEditor where
   editorL _ = asMailIndex . miSearchThreadsEditor
@@ -344,6 +350,16 @@ instance Completable 'MailAttachmentPipeToEditor where
                . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
                       . ix MailAttachmentPipeToEditor . veState) Hidden
 
+instance Completable 'ScrollingMailViewFindWordEditor where
+  complete _ s =
+    let needle = view (asMailView . mvFindWordEditor . E.editContentsL . to currentLine) s
+        mbody = findMatchingWords needle $ view (asMailView . mvBody) s
+    in pure $ s &
+       set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                      . ix ScrollingMailViewFindWordEditor . veState) Hidden
+       . set (asMailView . mvScrollSteps) (Brick.focusRing (makeScrollSteps mbody))
+       . set (asMailView . mvBody) mbody
+
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
 --
@@ -410,6 +426,15 @@ instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
             . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
                    . ix MailAttachmentPipeToEditor . veState) Hidden
 
+instance Resetable 'ViewMail 'ScrollingMailViewFindWordEditor where
+  reset _ _ = pure . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
+              . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                    . ix ScrollingMailViewFindWordEditor . veState) Hidden
+              . set (asMailView . mvScrollSteps) (Brick.focusRing [])
+
+instance Resetable 'ViewMail 'ScrollingMailView where
+  reset _ _ = pure . set (asMailView . mvScrollSteps) (Brick.focusRing [])
+
 -- | Reset the composition state for a new mail
 --
 clearMailComposition :: AppState -> AppState
@@ -460,6 +485,13 @@ instance Focusable 'ViewMail 'ManageMailTagsEditor where
 
 instance Focusable 'ViewMail 'ScrollingMailView where
   switchFocus _ _ = pure . set (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailView
+
+instance Focusable 'ViewMail 'ScrollingMailViewFindWordEditor where
+  switchFocus _ _ = pure
+                    . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
+                    . set (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailViewFindWordEditor
+                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                           . ix ScrollingMailViewFindWordEditor . veState) Visible
 
 instance Focusable 'ViewMail 'ListOfMails where
   switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) ListOfMails
@@ -553,6 +585,9 @@ instance HasName 'SearchThreadsEditor where
 
 instance HasName 'ScrollingMailView where
   name _ = ScrollingMailView
+
+instance HasName 'ScrollingMailViewFindWordEditor where
+  name _ = ScrollingMailViewFindWordEditor
 
 instance HasName 'ManageMailTagsEditor where
   name _ = ManageMailTagsEditor
@@ -795,6 +830,33 @@ scrollPageDown = Action
   { _aDescription = ["page down"]
   , _aAction = \s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s
   }
+
+scrollNextWord :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollNextWord =
+  Action
+    { _aDescription = ["find next word in mail body"]
+    , _aAction =
+        \s -> Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy ctx))
+          *> if has (asMailView . mvScrollSteps) s
+               then
+                 let s' = s & over (asMailView . mvScrollSteps) Brick.focusNext
+                     nextLine = preview (asMailView . mvScrollSteps
+                                         . to Brick.focusGetCurrent . _Just . _1) s'
+                     scrollBy = view (non 0) nextLine
+                 in Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) scrollBy >> pure s'
+               else pure $ s & setError (GenericError "No match")
+    }
+
+-- | Removes any highlighting done by searching in the body text
+--
+removeHighlights :: Action 'ViewMail 'ScrollingMailView AppState
+removeHighlights =
+  Action
+    { _aDescription = ["remove search results highlights"]
+    , _aAction = pure . over (asMailView . mvBody) removeMatchingWords
+                 . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
+                 . set (asMailView . mvScrollSteps) (Brick.focusRing [])
+    }
 
 displayMail :: Action 'ViewMail 'ScrollingMailView AppState
 displayMail =
@@ -1142,12 +1204,16 @@ updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s
         either
             (\e -> setError e . over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads))
             (\pmail -> set (asMailView . mvMail) (Just pmail)
+                       . set (asMailView . mvBody) (bodyToDisplay textwidth charsets  preferredContentType pmail)
                        . over (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail)
                        . set (asMailView . mvAttachments) (setEntities pmail)
             )
             <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
   where
     setEntities m = L.list MailListOfAttachments (view vector $ toListOf entities m) 0
+    charsets = view (asConfig . confCharsets) s
+    textwidth = view (asConfig . confMailView . mvTextWidth) s
+    preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
 
 -- | Tag the currently selected mail as /read/. This is reflected as a
 -- visual change in the UI.

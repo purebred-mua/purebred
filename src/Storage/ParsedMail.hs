@@ -22,6 +22,11 @@ module Storage.ParsedMail (
 
   -- * API
     parseMail
+  , bodyToDisplay
+  , findMatchingWords
+  , removeMatchingWords
+  , makeScrollSteps
+
   -- ** Header data
   , getTo
   , getSubject
@@ -39,7 +44,6 @@ module Storage.ParsedMail (
 import Control.Applicative ((<|>))
 import Control.Exception (try)
 import Control.Lens
-       (firstOf, view, preview, filtered, folded, to, (&), set, preview, at)
 import Data.Text.Lens (packed)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -47,13 +51,15 @@ import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text as T
 import qualified System.FilePath as FP (takeFileName)
+import Prelude hiding (Word)
 
 import Data.MIME
 
 import Error
 import Storage.Notmuch (mailFilepath)
-import Types (NotmuchMail, decodeLenient)
+import Types
 import Purebred.Types.IFC (sanitiseText)
+import Purebred.Parsing.Text (parseMailbody)
 
 {- $synopsis
 
@@ -85,6 +91,44 @@ getSubject = getHeader "subject"
 
 getTo :: Message s a -> T.Text
 getTo = getHeader "to"
+
+-- | Create a list of steps to record which absolute positions
+-- brick/the terminal should scroll.
+makeScrollSteps :: MailBody -> [ScrollStep]
+makeScrollSteps = mkScrollStep <$> itoListOf (indexing (mbParagraph . pLine . lMatches . traversed))
+  where
+    mkScrollStep :: [(Int, Match)] -> [ScrollStep]
+    mkScrollStep = fmap (\(n, m) -> (n + 1, view mLinenumber m, m))
+
+-- | Find matching words in the AST and change the annotation so
+-- they're highlighted during rendering
+--
+-- Note, that the matching is case sensitive.
+--
+findMatchingWords :: T.Text -> MailBody -> MailBody
+findMatchingWords needle =
+  over (mbParagraph . pLine) go
+  where
+    go :: Line -> Line
+    go line =
+      let lengthNeedle = T.length needle
+          lineNumber = view lNumber line
+          allMatches =
+            (\(h, _) -> Match (T.length h) lengthNeedle lineNumber) <$>
+            T.breakOnAll needle (view lText line)
+       in set lMatches allMatches line
+
+-- | Reset all matching words, effectively removing any information
+-- for highlights
+--
+removeMatchingWords :: MailBody -> MailBody
+removeMatchingWords =
+  set (mbParagraph . pLine . filtered hasMatches . lMatches) []
+
+bodyToDisplay :: Int -> CharsetLookup -> ContentType -> MIMEMessage -> MailBody
+bodyToDisplay textwidth charsets prefCT msg =
+  let ent = chooseEntity prefCT msg
+   in maybe (MailBody []) (parseMailbody textwidth . entityToText charsets) ent
 
 -- | Pick a preferred entity to be displayed in the UI.
 --

@@ -47,7 +47,7 @@ import UI.Index.Keybindings
 import UI.Mail.Keybindings
        (displayMailKeybindings, mailViewManageMailTagsKeybindings,
         mailAttachmentsKeybindings, openWithKeybindings,
-        pipeToKeybindings)
+        pipeToKeybindings, findWordEditorKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
 import UI.ComposeEditor.Keybindings
        (listOfAttachmentsKeybindings, composeFromKeybindings,
@@ -102,12 +102,18 @@ solarizedDark =
         , (D.dialogAttr, V.yellow `on` V.white)
         , (D.buttonAttr, V.black `on` V.white)
         , (D.buttonSelectedAttr, bg V.green)
+        , (textMatchHighlightAttr, V.white `on` V.green)
+        , (currentTextMatchHighlightAttr, V.green `on` V.white)
+        , (defaultAttr, V.defAttr)
         ]
 
 -- * Attributes
 -- $attributes
 -- These attributes are used as keys in widgets to assign color values.
 --
+defaultAttr :: A.AttrName
+defaultAttr = "default"
+
 mailViewAttr :: A.AttrName
 mailViewAttr = "mailview"
 
@@ -171,6 +177,12 @@ helpTitleAttr = helpAttr <> "title"
 helpKeybindingAttr :: A.AttrName
 helpKeybindingAttr = helpAttr <> "keybinding"
 
+textMatchHighlightAttr :: A.AttrName
+textMatchHighlightAttr = "match"
+
+currentTextMatchHighlightAttr :: A.AttrName
+currentTextMatchHighlightAttr = textMatchHighlightAttr <> "current"
+
 -- * Purebred's Configuration
 -- The default configuration used in Purebred.
 --
@@ -190,6 +202,7 @@ defaultConfig =
     , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
     , _confMailView = MailViewSettings
       { _mvIndexRows = 10
+      , _mvTextWidth = 82
       , _mvPreferredContentType = contentTypeTextPlain
       , _mvHeadersToShow = (`elem` ["subject", "to", "from", "cc", "date"])
       , _mvKeybindings = displayMailKeybindings
@@ -197,6 +210,7 @@ defaultConfig =
       , _mvMailListOfAttachmentsKeybindings = mailAttachmentsKeybindings
       , _mvOpenWithKeybindings = openWithKeybindings
       , _mvPipeToKeybindings = pipeToKeybindings
+      , _mvFindWordEditorKeybindings = findWordEditorKeybindings
       , _mvMailcap =
           [ ( matchContentType "text" (Just "html")
             , MailcapHandler (Shell (fromList "elinks -force-html")) False)

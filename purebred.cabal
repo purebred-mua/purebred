@@ -108,6 +108,7 @@ library
                      , random
                      , time
                      , temporary
+                     , word-wrap
 
 executable purebred
   hs-source-dirs:      app
@@ -125,6 +126,7 @@ test-suite unit
   other-modules:       TestMail
                      , TestActions
                      , TestTagParser
+                     , TestTextParser
                      , LazyVector
   default-language:    Haskell2010
   build-depends:       base
@@ -140,6 +142,7 @@ test-suite unit
                      , time
                      , brick
                      , vector
+                     , attoparsec
 
 test-suite uat
   type:                exitcode-stdio-1.0

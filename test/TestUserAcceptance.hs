@@ -106,7 +106,53 @@ main = defaultMain $ testTmux pre post tests
       , testShowsNewMail
       , testConfirmDialogResets
       , testCursorPositionedEndOnReply
+      , testSubstringSearchInMailBody
       ]
+
+testSubstringSearchInMailBody :: PurebredTestCase
+testSubstringSearchInMailBody = purebredTmuxSession "search for substrings in mailbody" $
+  \step -> do
+    startApplication
+
+    step "search for Lorem mail"
+    sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+
+    step "enter free text search"
+    sendLine "Lorem ipsum" (Substring "Item 1 of 1")
+
+    step "show mail contents"
+    sendKeys "Enter" (Substring "Lorem ipsum dolor sit amet, consectetur")
+
+    step "show substring search editor"
+    sendKeys "/" (Substring "Search for")
+
+    step "enter needle and show results"
+    sendKeys "et\r" (Regex ("am"
+                            <> buildAnsiRegex [] ["32"] ["47"] <> "et"
+                            <> buildAnsiRegex [] ["39"] ["49"] <> ", consect"
+                            <> buildAnsiRegex [] ["37"] ["42"] <> "et"
+                            <> buildAnsiRegex [] ["39"] ["49"] <> "ur"))
+
+    step "highlight next search result"
+    sendKeys "n" (Regex ("am"
+                         <> buildAnsiRegex [] ["37"] ["42"] <> "et"
+                         <> buildAnsiRegex [] ["39"] ["49"] <> ", consect"
+                         <> buildAnsiRegex [] ["32"] ["47"] <> "et"
+                         <> buildAnsiRegex [] ["39"] ["49"] <> "ur"))
+
+    step "focus search input editor again"
+    sendKeys "/" (Regex (buildAnsiRegex [] ["33"] ["40"] <> "Search for:\\s"
+                         <> buildAnsiRegex [] ["37"] [] <> "\\s+$"))
+
+    step "search for different needle"
+    sendKeys "Lorem\r" (Regex ("\""
+                            <> buildAnsiRegex [] ["32"] ["47"] <> "Lorem"
+                            <> buildAnsiRegex [] ["39"] ["49"] <> " ipsum"))
+
+    step "clear all highlights"
+    sendKeys "Enter" (Substring "Lorem ipsum dolor sit amet, consectetur")
+
 
 testCursorPositionedEndOnReply :: PurebredTestCase
 testCursorPositionedEndOnReply = purebredTmuxSession "cursor positioned on EOL when replying" $
@@ -138,6 +184,7 @@ testCursorPositionedEndOnReply = purebredTmuxSession "cursor positioned on EOL w
 
     step "enter subject"
     sendKeys " appended\r" (Substring "Subject: Re: Testmail with whitespace in the subject appended")
+
 
 testConfirmDialogResets :: PurebredTestCase
 testConfirmDialogResets = purebredTmuxSession "confirm dialog resets state" $

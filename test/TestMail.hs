@@ -34,13 +34,18 @@ import Notmuch (mkTag, tagMaxLen)
 
 import Types
 import Storage.Notmuch (addTags, removeTags, tagItem)
+import Storage.ParsedMail (findMatchingWords)
 
 mailTests ::
   TestTree
 mailTests =
-    testGroup
-        "mail parsing tests"
-        [testAddingTags, testRemovingTags, testTagOpsWithReset]
+  testGroup
+    "mail parsing tests"
+    [ testAddingTags
+    , testRemovingTags
+    , testTagOpsWithReset
+    , testFindsMatchingWords
+    ]
 
 testAddingTags :: TestTree
 testAddingTags = testProperty "no duplicates when adding tags" propNoDuplicatesAdded
@@ -75,3 +80,13 @@ instance Arbitrary NotmuchMail where
         <*> arbitrary
         <*> arbitrary
         <*> (T.encodeUtf8 <$> arbitrary)
+
+testFindsMatchingWords :: TestTree
+testFindsMatchingWords = testCase "finds matching words" $ expected @=? actual
+  where
+    expected =
+      MailBody
+        [Paragraph [Line [Match 9 3 1] 1 "Purebred finds matching words"]]
+    actual =
+      findMatchingWords "fin" $
+      MailBody [Paragraph [Line [] 1 "Purebred finds matching words"]]
