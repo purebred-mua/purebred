@@ -19,26 +19,34 @@ module UI.Mail.Main
   ( renderMailView
   , renderAttachmentsList
   , renderPart
+  , buildWordMarkup
   ) where
 
+import qualified Brick.AttrMap as A
 import Brick.Types (Padding(..), ViewportType(..), Widget)
 import qualified Brick.Widgets.List as L
 import Brick.Widgets.Core
   (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr, vBox,
    hBox, padLeftRight, padRight)
+import Brick.Markup (markup, (@?))
+import Brick.Focus (focusGetCurrent)
+import Data.Text.Markup (Markup, markupSet)
 
-import Control.Lens (filtered, folded, toListOf, view, preview)
+import Control.Lens
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
+import Prelude hiding (Word)
 
 import Data.MIME
-import Storage.ParsedMail (chooseEntity, entityToText, takeFileName)
 
 import Types
 import UI.Draw.Main (attachmentsHeader)
 import UI.Views (focusedViewWidget)
-import Config.Main (headerKeyAttr, headerValueAttr, mailViewAttr,
-                    listSelectedAttr, listAttr)
+import Config.Main
+  (headerKeyAttr, headerValueAttr, mailViewAttr, listSelectedAttr,
+   listAttr, textMatchHighlightAttr, currentTextMatchHighlightAttr,
+   defaultAttr)
+import Storage.ParsedMail (takeFileName)
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.
@@ -55,6 +63,10 @@ mailView _ Nothing = txt "Eeek: this is not supposed to happen"
 messageToMailView :: AppState -> MIMEMessage -> Widget Name
 messageToMailView s msg =
   let
+    body' = renderMarkup
+      (preview (asMailView . mvScrollSteps . to focusGetCurrent . _Just) s)
+      (view (asMailView . mvBody) s)
+
     wantHeader :: CI.CI B.ByteString -> Bool
     wantHeader = case view (asMailView . mvHeadersState) s of
       Filtered -> view (asConfig . confMailView . mvHeadersToShow) s
@@ -70,10 +82,7 @@ messageToMailView s msg =
         <+> withAttr headerValueAttr (txtWrap (decodeEncodedWords charsets v))
 
     headerWidgets = headerToWidget <$> filteredHeaders
-    bodyWidget = padTop (Pad 1)
-      (maybe (txt "No entity selected") (txtWrap . entityToText charsets) ent)
-    preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
-    ent = chooseEntity preferredContentType msg
+    bodyWidget = padTop (Pad 1) body'
     charsets = view (asConfig . confCharsets) s
   in
     vBox headerWidgets <=> padTop (Pad 1) bodyWidget
@@ -99,3 +108,25 @@ renderPart charsets selected hds =
         , txt pType
         ]
   in withAttr listItemAttr widget
+
+-- | render the Mailbody AST to a list used for Markup in Brick
+--
+renderMarkup ::  Maybe ScrollStep -> MailBody -> Widget Name
+renderMarkup st b =
+  vBox $ toListOf (mbParagraph . pLine . to (markup . buildWordMarkup st)) b
+
+-- | Render the line by inserting markup if we have a match *and* a
+-- scroll step matching
+-- Note: Why are we ignoring the line number here? Because it only
+-- matters for scrolling, not for highlighting the match.
+--
+buildWordMarkup :: Maybe ScrollStep -> Line -> Markup A.AttrName
+buildWordMarkup st (Line xs _ t) = foldr (go st) (t @? defaultAttr) xs
+  where
+    go :: Maybe ScrollStep -> Match -> Markup A.AttrName -> Markup A.AttrName
+    go Nothing (Match offset l _) m =
+      markupSet (offset, l) textMatchHighlightAttr m
+    go (Just step) ma@(Match offset l _) m =
+      if view stMatch step == ma
+        then markupSet (offset, l) currentTextMatchHighlightAttr m
+        else markupSet (offset, l) textMatchHighlightAttr m

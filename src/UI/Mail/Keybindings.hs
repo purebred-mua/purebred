@@ -23,8 +23,8 @@ import Types
 
 displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 displayMailKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
     , Keybinding (V.EvKey V.KBS []) (scrollPageUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar ' ') []) (scrollPageDown `chain` continue)
@@ -51,7 +51,18 @@ displayMailKeybindings =
     , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `chain'` (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain` invokeEditor)
     , Keybinding (V.EvKey (V.KChar 'v') []) (noop `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'e') []) (composeAsNew `chain'` (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '/') []) (noop `chain'` (focus :: Action 'ViewMail 'ScrollingMailViewFindWordEditor AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'n') []) (scrollNextWord `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (removeHighlights `chain` continue)
     ]
+
+findWordEditorKeybindings :: [Keybinding 'ViewMail 'ScrollingMailViewFindWordEditor]
+findWordEditorKeybindings =
+  [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
+  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
+  , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
+  ]
+
 
 mailAttachmentsKeybindings :: [Keybinding 'ViewMail 'MailListOfAttachments]
 mailAttachmentsKeybindings =

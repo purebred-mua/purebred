@@ -91,6 +91,8 @@ renderWidget s _ ManageMailTagsEditor =
 renderWidget s _ ManageThreadTagsEditor =
   renderEditorWithLabel (Proxy :: Proxy 'ManageThreadTagsEditor) "Labels:" s
 renderWidget s _ ScrollingMailView = renderMailView s
+renderWidget s _ ScrollingMailViewFindWordEditor =
+  renderEditorWithLabel (Proxy :: Proxy 'ScrollingMailViewFindWordEditor) "Search for:" s
 renderWidget s _ ScrollingHelpView = renderHelp s
 renderWidget s _ ComposeFrom = renderEditorWithLabel (Proxy :: Proxy 'ComposeFrom) "From:" s
 renderWidget s _ ComposeTo = renderEditorWithLabel (Proxy :: Proxy 'ComposeTo) "To:" s
@@ -117,6 +119,7 @@ handleViewEvent = f where
   f ViewMail MailListOfAttachments = dispatch eventHandlerMailsListOfAttachments
   f ViewMail MailAttachmentOpenWithEditor = dispatch eventHandlerMailAttachmentOpenWithEditor
   f ViewMail MailAttachmentPipeToEditor = dispatch eventHandlerMailAttachmentPipeToEditor
+  f ViewMail ScrollingMailViewFindWordEditor = dispatch eventHandlerScrollingMailViewFind
   f ViewMail _ = dispatch eventHandlerScrollingMailView
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
   f _ ListOfFiles = dispatch eventHandlerComposeFileBrowser
@@ -157,10 +160,13 @@ initialState conf =
             0
     mv = MailView
            Nothing
+           (MailBody [])
            Filtered
            (L.list MailListOfAttachments mempty 1)
            (E.editorText MailAttachmentOpenWithEditor Nothing "")
            (E.editorText MailAttachmentPipeToEditor Nothing "")
+           (E.editorText ScrollingMailViewFindWordEditor Nothing "")
+           (focusRing [])
     viewsettings =
         ViewSettings
         { _vsViews = Map.fromList

@@ -41,6 +41,7 @@ module UI.Keybindings (
   , eventHandlerScrollingMailView
   , eventHandlerScrollingHelpView
   , eventHandlerComposeFileBrowser
+  , eventHandlerScrollingMailViewFind
   ) where
 
 import Control.Monad ((<=<))
@@ -173,6 +174,11 @@ eventHandlerScrollingMailView :: EventHandler 'ViewMail 'ScrollingMailView
 eventHandlerScrollingMailView = EventHandler
   (asConfig . confMailView . mvKeybindings)
   (const . Brick.continue)
+
+eventHandlerScrollingMailViewFind :: EventHandler 'ViewMail 'ScrollingMailViewFindWordEditor
+eventHandlerScrollingMailViewFind = EventHandler
+  (asConfig . confMailView . mvFindWordEditorKeybindings)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvFindWordEditor) E.handleEditorEvent)
 
 eventHandlerScrollingHelpView :: EventHandler 'Help 'ScrollingHelpView
 eventHandlerScrollingHelpView = EventHandler
