@@ -8,7 +8,7 @@ module Storage.ParsedMail where
 import Control.Applicative ((<|>))
 import Control.Exception (try)
 import Control.Lens
-       (firstOf, view, preview, filtered, to, (&), set, preview, at)
+       (firstOf, view, preview, filtered, folded, to, (&), set, preview, at)
 import Data.Text.Lens (packed)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -111,8 +111,8 @@ toQuotedMail charsets ct msg =
 toMIMEMessage :: CharsetLookup -> WireEntity -> MIMEMessage
 toMIMEMessage charsets m@(Message _ bs) =
   let ct = view (headers . contentType) m
-      fp = preview (headers . contentDisposition . filename charsets . to T.unpack) m
-      cdType = preview (headers . contentDisposition . dispositionType) m
+      fp = preview (headers . contentDisposition . folded . filename charsets . to T.unpack) m
+      cdType = preview (headers . contentDisposition . folded . dispositionType) m
   in case cdType of
     (Just Inline) -> createTextPlainMessage (entityToText charsets m)
     _ -> createAttachment ct fp bs
