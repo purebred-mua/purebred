@@ -124,7 +124,7 @@ import Data.Functor (($>))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has, snoc,
         filtered, set, over, preview, view, views, (&), nullOf, firstOf, non,
-        Getting, Lens')
+        Getting, Lens', folded)
 import Control.Concurrent (forkIO)
 import Control.Monad ((>=>))
 import Control.Monad.Catch (MonadMask)
@@ -141,7 +141,7 @@ import Data.MIME
        (createMultipartMixedMessage, contentTypeApplicationOctetStream,
         createTextPlainMessage, createAttachmentFromFile, renderMessage,
         contentDisposition, dispositionType, headers, filename,
-        parseContentType, attachments, isAttachment, entities, matchContentType,
+        parseContentType, attachments, entities, matchContentType,
         contentType, mailboxList, renderMailboxes, addressList, renderAddresses,
         renderRFC5422Date, MIMEMessage, WireEntity, DispositionType(..),
         ContentType(..), Mailbox(..),
@@ -1220,11 +1220,11 @@ buildMail s = do
     let to' = either (pure []) id $ parseOnly addressList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cTo) s
         from = either (pure []) id $ parseOnly mailboxList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cFrom) s
         subject = T.unlines $ E.getEditContents $ view (asCompose . cSubject) s
-        attachments' = toListOf (asCompose . cAttachments . L.listElementsL . traversed) s
         (b, l') = splitAt 50 $ view (asConfig . confBoundary) s
-        mail = if has (asCompose . cAttachments . L.listElementsL . traversed . filtered isAttachment) s
-                then Just $ createMultipartMixedMessage (C8.pack b) attachments'
-                else firstOf (asCompose . cAttachments . L.listElementsL . traversed) s
+        attachments' = toListOf (asCompose . cAttachments . L.listElementsL . traversed) s
+        mail = case attachments' of
+          x:xs  -> Just $ createMultipartMixedMessage (C8.pack b) (x:|xs)
+          _     -> firstOf (asCompose . cAttachments . L.listElementsL . traversed) s
     case mail of
         Nothing -> throwError (GenericError "Black hole detected")
         (Just m) -> let m' = m
@@ -1258,7 +1258,7 @@ trySendAndCatch l' m s = do
 -- Note: currently only strips away path names from files
 sanitizeMail :: CharsetLookup -> MIMEMessage -> MIMEMessage
 sanitizeMail charsets =
-  over (attachments . headers . contentDisposition . filename charsets) takeFileName
+  over (attachments . headers . contentDisposition . traversed . filename charsets) takeFileName
 
 initialCompose :: [Mailbox] -> Compose
 initialCompose mailboxes =
@@ -1359,7 +1359,7 @@ editAttachment :: AppState -> IO AppState
 editAttachment s =
     case L.listSelectedElement $ view (asCompose . cAttachments) s of
         Nothing -> pure $ setError (GenericError "No file selected to edit") s
-        Just (_, m) -> case preview (headers . contentDisposition . dispositionType) m of
+        Just (_, m) -> case preview (headers . contentDisposition . folded . dispositionType) m of
           (Just Inline) -> invokeEditor' s
           _ -> pure $ setError (GenericError "Not implemented. See #182") s
 
@@ -1375,8 +1375,8 @@ upsertPart charsets newPart l =
   case L.listSelectedElement l of
     Nothing -> L.listInsert 0 newPart l
     Just (_, part) ->
-      if view (headers . contentDisposition . filename charsets) part
-          == view (headers . contentDisposition . filename charsets) newPart
+      if view (headers . contentDisposition . folded . filename charsets) part
+          == view (headers . contentDisposition . folded . filename charsets) newPart
       then
         -- replace
         L.listModify (const newPart) l

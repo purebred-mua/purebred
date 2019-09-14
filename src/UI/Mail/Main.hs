@@ -27,7 +27,7 @@ import Brick.Widgets.Core
   (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr, vBox,
    hBox, padLeftRight, padRight)
 
-import Control.Lens (filtered, folded, toListOf, view, preview, has)
+import Control.Lens (filtered, folded, toListOf, view, preview)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 
@@ -89,15 +89,13 @@ renderAttachmentsList s =
 renderPart :: CharsetLookup -> Bool -> Headers -> Widget Name
 renderPart charsets selected hds =
   let pType = showContentType $ view contentType hds
-      pFilename = maybe "--" takeFileName (preview (contentDisposition . filename charsets) hds)
+      pFilename = maybe "--" takeFileName $
+        preview (contentDisposition . folded . filename charsets) hds
       listItemAttr = if selected then listSelectedAttr else listAttr
-      attachmentType = txt (if isAttachment' hds then "A" else "I")
+      attachmentType = txt (if isAttachment hds then "A" else "I")
       widget = hBox
         [ padLeftRight 1 attachmentType
         , padRight Max (txt pFilename)
         , txt pType
         ]
   in withAttr listItemAttr widget
-
-isAttachment' :: Headers -> Bool
-isAttachment' = has (contentDisposition . dispositionType . filtered (== Attachment))
