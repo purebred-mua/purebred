@@ -16,9 +16,25 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- | module to integrate with a mail parser. This is needed to actually view the
--- entire mail and it's attachments.
-module Storage.ParsedMail where
+module Storage.ParsedMail (
+  -- * Synopsis
+  -- $synopsis
+
+  -- * API
+    parseMail
+  -- ** Header data
+  , getTo
+  , getSubject
+  , getFrom
+  , toQuotedMail
+  , takeFileName
+
+  -- ** Attachment handling
+  , toMIMEMessage
+  , chooseEntity
+  , entityToText
+  , entityToBytes
+  ) where
 
 import Control.Applicative ((<|>))
 import Control.Exception (try)
@@ -30,6 +46,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text as T
+import qualified System.FilePath as FP (takeFileName)
 
 import Data.MIME
 
@@ -37,6 +54,13 @@ import Error
 import Storage.Notmuch (mailFilepath)
 import Types (NotmuchMail, decodeLenient)
 import Purebred.Types.IFC (sanitiseText)
+
+{- $synopsis
+
+This module integrates with an email parser in order to display all
+parts.
+
+-}
 
 parseMail
   :: (MonadError Error m, MonadIO m)
@@ -62,6 +86,8 @@ getSubject = getHeader "subject"
 getTo :: Message s a -> T.Text
 getTo = getHeader "to"
 
+-- | Pick a preferred entity to be displayed in the UI.
+--
 chooseEntity :: ContentType -> MIMEMessage -> Maybe WireEntity
 chooseEntity preferredContentType msg =
   let
@@ -74,6 +100,9 @@ chooseEntity preferredContentType msg =
     -- otherwise select first entity;
   in firstOf (entities . filtered match) msg <|> firstOf entities msg
 
+-- | Render the entity to be written to the filesystem. In case of a
+-- decoding error propagates an 'Error'.
+--
 entityToBytes :: (MonadError Error m) => WireEntity -> m B.ByteString
 entityToBytes msg = either err pure (convert msg)
   where
@@ -81,6 +110,9 @@ entityToBytes msg = either err pure (convert msg)
     convert :: WireEntity -> Either EncodingError B.ByteString
     convert m = view body <$> view transferDecoded m
 
+-- | Render the entity to be displayed in the UI. If decoding errors,
+-- returns an error message instead.
+--
 entityToText :: CharsetLookup -> WireEntity -> T.Text
 entityToText charsets msg = sanitiseText . either err (view body) $
   view transferDecoded msg >>= view (charsetDecoded charsets)
@@ -123,6 +155,9 @@ toQuotedMail charsets ct msg =
                  . set (headers . at "subject") (("Re: " <>) <$> view (headers . at "subject") msg))
            contents
 
+-- | Convert an entity into a MIMEMessage used, for example, when
+-- re-composing a draft mail.
+--
 toMIMEMessage :: CharsetLookup -> WireEntity -> MIMEMessage
 toMIMEMessage charsets m@(Message _ bs) =
   let ct = view (headers . contentType) m
@@ -131,3 +166,8 @@ toMIMEMessage charsets m@(Message _ bs) =
   in case cdType of
     (Just Inline) -> createTextPlainMessage (entityToText charsets m)
     _ -> createAttachment ct fp bs
+
+-- | Version of takeFileName handling 'Text' values
+--
+takeFileName :: T.Text -> T.Text
+takeFileName = T.pack . FP.takeFileName . T.unpack

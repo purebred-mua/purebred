@@ -62,7 +62,12 @@ import Storage.Notmuch (getDatabasePath)
 sendmailPath :: FilePath
 sendmailPath = "/usr/sbin/sendmail"
 
-renderSendMail :: FilePath -> B.ByteString -> IO (Either Error ())
+-- | Invoke a sendmail compatible program to send the email
+--
+renderSendMail ::
+     FilePath
+  -> B.ByteString -- ^ the rendered mail
+  -> IO (Either Error ())
 renderSendMail sendmail m = do
   -- -t which extracts recipients from the mail
   result <- runExceptT $ tryReadProcess config
@@ -74,6 +79,7 @@ renderSendMail sendmail m = do
     config = setStdin (byteStringInput (LB.fromStrict m)) $ proc sendmail ["-t", "-v"]
     decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
+-- | Default theme
 solarizedDark :: A.AttrMap
 solarizedDark =
     A.attrMap
@@ -98,6 +104,10 @@ solarizedDark =
         , (D.buttonSelectedAttr, bg V.green)
         ]
 
+-- * Attributes
+-- $attributes
+-- These attributes are used as keys in widgets to assign color values.
+--
 mailViewAttr :: A.AttrName
 mailViewAttr = "mailview"
 
@@ -161,6 +171,9 @@ helpTitleAttr = helpAttr <> "title"
 helpKeybindingAttr :: A.AttrName
 helpKeybindingAttr = helpAttr <> "keybinding"
 
+-- * Purebred's Configuration
+-- The default configuration used in Purebred.
+--
 defaultConfig :: UserConfiguration
 defaultConfig =
     Configuration

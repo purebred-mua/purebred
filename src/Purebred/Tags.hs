@@ -14,7 +14,17 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --
-module Purebred.Tags where
+
+-- | This module provides functions to parse tagging operations. These
+-- operations are used for annotating mails or threads with
+-- labels. Notmuch does not support the labelling of threads as such
+-- even though Purebred exposes the functionality. Labeling threads
+-- just means labelling all mails in a thread.
+--
+module Purebred.Tags
+  ( parseTag
+  , parseTagOps
+  ) where
 
 import Control.Applicative ((<|>), optional)
 import qualified Data.Attoparsec.Internal.Types as AT

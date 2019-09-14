@@ -32,12 +32,11 @@ import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 
 import Data.MIME
-import Storage.ParsedMail (chooseEntity, entityToText)
+import Storage.ParsedMail (chooseEntity, entityToText, takeFileName)
 
 import Types
 import UI.Draw.Main (attachmentsHeader)
 import UI.Views (focusedViewWidget)
-import UI.Utils (takeFileName)
 import Config.Main (headerKeyAttr, headerValueAttr, mailViewAttr,
                     listSelectedAttr, listAttr)
 
