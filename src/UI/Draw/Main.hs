@@ -18,8 +18,12 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
--- | module for drawing main window widgets
-module UI.Draw.Main where
+-- | Module holding generic widgets.
+module UI.Draw.Main
+  ( fillLine
+  , renderEditorWithLabel
+  , attachmentsHeader
+  ) where
 
 import Brick.Types (Padding(..), Widget)
 import Brick.Widgets.Core
@@ -34,6 +38,9 @@ import UI.Actions (HasName(..), HasEditor(..))
 import Config.Main
   (editorLabelAttr, editorAttr, editorFocusedAttr, statusbarAttr, editorErrorAttr)
 
+-- | Fills the entire line with spaces. This can be used to draw a
+-- visual bar when an 'AttrName' with a background colour is set.
+--
 fillLine :: Widget Name
 fillLine = vLimit 1 (fill ' ')
 

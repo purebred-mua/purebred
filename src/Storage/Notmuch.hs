@@ -18,8 +18,33 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- | module for integrating notmuch within purebred
-module Storage.Notmuch where
+module Storage.Notmuch (
+    -- * Synopsis
+    -- $synopsis
+
+    -- * API
+    -- ** Threads
+    getThreads
+  , getThreadMessages
+  , countThreads
+
+    -- ** Messages
+  , messageTagModify
+  , mailFilepath
+  , indexMail
+  , unindexFilePath
+
+    -- ** Tagging (Labels)
+  , ManageTags(..)
+  , hasTag
+  , tagItem
+  , addTags
+  , removeTags
+
+    -- ** Database
+  , getDatabasePath
+  , withDatabase
+  ) where
 
 import Control.Monad ((>=>), when)
 import Data.Function (on)
@@ -48,6 +73,15 @@ import Purebred.System.Process (readProcess, proc, createDraftFilePath)
 import Purebred.System (tryIO)
 import Purebred.Types.IFC (sanitiseText, untaint)
 
+{- $synopsis
+
+The purpose of this module is to provide a bridge between the
+low-level API of notmuch and the higher level functionality in
+Purebred. It propagates errors picked up by callers in order to be set
+in the 'AppState'. The module also serves as a translation between
+notmuch data types and Purebreds. The latter are used in the UI.
+-}
+
 
 -- | apply tag operations on all given mails and write the resulting tags to the
 -- database
@@ -72,6 +106,8 @@ applyTags ops db = traverse $ \m -> do
     (tagsToMessage (view mailTags m') (view mailId m') db)
   pure m'
 
+-- | Tag either a 'NotmuchMail' or a 'NotmuchThread'
+--
 tagItem :: ManageTags a => [TagOp] -> a -> a
 tagItem ops mail = foldl (flip applyTagOp) mail ops
 
@@ -94,9 +130,6 @@ addTags tgs = over tags (`union` tgs)
 
 removeTags :: (ManageTags a) => [Tag] -> a -> a
 removeTags tgs = over tags (filter (`notElem` tgs))
-
-getTags :: (ManageTags a) => a -> [Tag]
-getTags = view tags
 
 hasTag :: (ManageTags a) => Tag -> a -> Bool
 hasTag t x = t `elem` view tags x
@@ -129,21 +162,9 @@ withDatabaseReadOnly
   -> m c
 withDatabaseReadOnly = withDatabase
 
--- | creates a vector of parsed mails from a not much search
--- Note, that at this point in time only free form searches are supported. Also,
--- we filter out the tag which we use to mark mails as new mails
-getMessages
-  :: (MonadError Error m, MonadIO m)
-  => T.Text
-  -> NotmuchSettings FilePath
-  -> m (Vec.Vector NotmuchMail)
-getMessages s settings =
-  withDatabaseReadOnly (view nmDatabase settings) go
-  where go db = do
-              msgs <- Notmuch.query db (Notmuch.Bare $ T.unpack s) >>= Notmuch.messages
-              mails <- liftIO $ mapM messageToMail msgs
-              pure $ Vec.fromList mails
-
+-- | Returns the absolute path to the email. Typically used by the
+-- email parser.
+--
 mailFilepath
   :: (MonadError Error m, MonadIO m)
   => NotmuchMail -> FilePath -> m FilePath
@@ -178,6 +199,9 @@ messageToMail m = do
       <*> pure tgs
       <*> Notmuch.messageId m
 
+-- | Returns the notmuch database path by executing 'notmuch config
+-- get database.path' in a separate process
+--
 getDatabasePath :: IO FilePath
 getDatabasePath = do
   let cmd = "notmuch"
@@ -189,6 +213,7 @@ getDatabasePath = do
   where
       decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
+-- | Return the number of threads for the given query
 countThreads ::
      (MonadError Error m, MonadIO m) => T.Text -> FilePath -> m Int
 countThreads query fp =

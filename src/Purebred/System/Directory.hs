@@ -32,12 +32,17 @@ import Error
 import Types
 
 
+-- | A version of 'listDirectory' capable of raising an 'Error' displayed in the UI.
+--
 listDirectory' :: (MonadError Error m, MonadIO m) => FilePath -> m [FileSystemEntry]
 listDirectory' path = liftIO (try $ listDirectory path)
                       >>= either (throwError . convertError) (fmap sort <$> traverse (filePathToEntry path))
   where convertError :: IOException -> Error
         convertError = GenericError . show
 
+-- | Used for rendering file system contents in order to decide
+-- whether to show the entry as a directory or file.
+--
 filePathToEntry :: (MonadIO m) => FilePath -> FilePath -> m FileSystemEntry
 filePathToEntry base filename = do
     exists <- liftIO $ doesDirectoryExist (base </> filename)

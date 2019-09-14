@@ -16,7 +16,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- | The main application module
 module UI.App where
 
 import qualified Brick.Main as M
@@ -50,6 +49,26 @@ import UI.Draw.Main (renderEditorWithLabel)
 import Purebred.Events (firstGeneration)
 import Types
 
+-- * Synopsis
+--
+-- $synopsis
+-- This module ties in all functions for rendering and handling events.
+--
+
+-- ** Differences to Brick
+-- $differences
+-- Purebred uses Brick widgets, but in order to make Purebred
+-- configurable, we've made changes to how we use Brick. The single
+-- difference to Brick is found on how we process keys (see
+-- 'UI.Keybindings'). Brick handles keys directly in the
+-- widget. Purebred instead looks up keybindings first. If nothing
+-- matches, the key is forwarded to the widget.
+
+-- | Main UI drawing function. Looks up which widgets need to be
+-- rendered in the current 'View' and traverses each layer pattern
+-- matching the 'ViewName' and widget 'Name' in 'renderWidget' to draw
+-- the widget.
+--
 drawUI :: AppState -> [Widget Name]
 drawUI s = vBox . fmap (renderWidget s (focusedViewName s)) <$> focusedViewWidgets s
 
@@ -80,6 +99,8 @@ renderWidget s _ ComposeHeaders = drawHeaders s
 renderWidget s _ StatusBar = statusbar s
 renderWidget s _ ConfirmDialog = renderConfirm s
 
+-- | Main event handler
+--
 handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
 handleViewEvent = f where
   f ComposeView ComposeFrom = dispatch eventHandlerComposeFrom
@@ -104,9 +125,12 @@ handleViewEvent = f where
   f _ _ = dispatch nullEventHandler
 
 
-appEvent
-  :: AppState               -- ^ program state
-  -> T.BrickEvent Name PurebredEvent  -- ^ event
+-- | Handling of application events. These can be keys which are
+-- pressed by the user or asynchronous events send by threads.
+--
+appEvent ::
+     AppState
+  -> T.BrickEvent Name PurebredEvent -- ^ event
   -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
 appEvent s (T.AppEvent ev) = case ev of
@@ -157,8 +181,9 @@ initialState conf =
     s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
   in applySearch s
 
-theApp
-  :: AppState               -- ^ initial state
+-- | Application event loop.
+theApp ::
+     AppState -- ^ initial state
   -> M.App AppState PurebredEvent Name
 theApp s =
     M.App

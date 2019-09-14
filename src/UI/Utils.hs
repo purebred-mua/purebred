@@ -16,22 +16,19 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Utility functions for UI
 module UI.Utils
   ( titleize
   , Titleize
   , toggledItems
   , selectedFiles
-  , takeFileName
-  , getEditor
   ) where
 import Data.List (union)
 
-import Data.Text (Text, pack, unpack)
-import qualified System.FilePath as FP (takeFileName)
+import Data.Text (Text, pack)
 import Control.Lens
        (folded, traversed, filtered, toListOf, view, _2)
 import qualified Brick.Widgets.List as L
-import qualified Brick.Widgets.Edit as E
 
 import Types
 
@@ -39,6 +36,8 @@ import Types
 toggledItems :: L.List Name (Bool, a) -> [(Bool, a)]
 toggledItems = toListOf (L.listElementsL . folded . filtered fst)
 
+-- | Toggle file list entries to be selected
+--
 selectedFiles :: L.List Name (Bool, FileSystemEntry) -> [FilePath]
 selectedFiles l = let cur = case L.listSelectedElement l of
                         Just (_, (_, File fsname)) -> [(False, File fsname)]
@@ -46,17 +45,8 @@ selectedFiles l = let cur = case L.listSelectedElement l of
                       toggled = view (_2 . fsEntryName) <$> toggledItems l
                   in toggled `union` toListOf (traversed . _2 . fsEntryName) cur
 
-takeFileName :: Text -> Text
-takeFileName = pack . FP.takeFileName . unpack
-
-getEditor :: Name -> AppState -> E.Editor Text Name
-getEditor ComposeFrom = view (asCompose . cFrom)
-getEditor ComposeTo = view (asCompose . cTo)
-getEditor ComposeSubject = view (asCompose . cSubject)
-getEditor ManageMailTagsEditor = view (asMailIndex . miMailTagsEditor)
-getEditor ManageThreadTagsEditor = view (asMailIndex . miThreadTagsEditor)
-getEditor _ = view (asMailIndex . miSearchThreadsEditor)
-
+-- | Show a descriptive name
+--
 class Titleize a where
   titleize :: a -> Text
 

@@ -16,7 +16,32 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 
-module UI.Keybindings where
+module UI.Keybindings (
+  -- * API
+  dispatch
+  -- * Event Handlers
+  -- $eventhandlers
+  , nullEventHandler
+  , eventHandlerComposeFrom
+  , eventHandlerComposeTo
+  , eventHandlerComposeSubject
+  , eventHandlerThreadComposeFrom
+  , eventHandlerThreadComposeTo
+  , eventHandlerThreadComposeSubject
+  , eventHandlerManageThreadTagsEditor
+  , eventHandlerMailAttachmentPipeToEditor
+  , eventHandlerMailAttachmentOpenWithEditor
+  , eventHandlerMailsListOfAttachments
+  , eventHandlerListOfThreads
+  , eventHandlerViewMailManageMailTagsEditor
+  , eventHandlerSearchThreadsEditor
+  , eventHandlerComposeListOfAttachments
+  , eventHandlerManageFileBrowserSearchPath
+  , eventHandlerConfirm
+  , eventHandlerScrollingMailView
+  , eventHandlerScrollingHelpView
+  , eventHandlerComposeFileBrowser
+  ) where
 
 import Control.Monad ((<=<))
 import qualified Brick.Types as Brick
@@ -41,14 +66,18 @@ import Purebred.Parsing.Text (niceEndOfInput)
 import UI.Validation (dispatchValidation)
 
 
-lookupKeybinding :: Event -> [Keybinding v ctx] -> Maybe (Keybinding v ctx)
-lookupKeybinding e = find (\x -> view kbEvent x == e)
-
+-- | Purebreds event handler. Either we can look up a function
+-- declared for the key press or send the key press to the Brick widget
+-- to handle it.
+--
 data EventHandler v m = EventHandler
   (forall f. Functor f
     => ([Keybinding v m] -> f [Keybinding v m])
     -> AppState -> f AppState) -- lens to keybindings
   (AppState -> Event -> Brick.EventM Name (Brick.Next AppState)) -- fallback handler
+
+lookupKeybinding :: Event -> [Keybinding v ctx] -> Maybe (Keybinding v ctx)
+lookupKeybinding e = find (\x -> view kbEvent x == e)
 
 dispatch :: EventHandler v m -> AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
 dispatch (EventHandler l fallback) s ev =
@@ -57,7 +86,9 @@ dispatch (EventHandler l fallback) s ev =
     Nothing -> fallback s ev
 
 
--- | simple helper to pass the current value to the dispatching function
+-- | Simple wrapper around the validation function to not repeating
+-- myself pulling the text values out of the lens.
+--
 runValidation ::
      Monoid a
   => (a -> Maybe Error) -- ^ validation
@@ -67,7 +98,10 @@ runValidation ::
 runValidation fx l s =
   dispatchValidation fx asError (view (l . E.editContentsL . to currentLine) s) s
 
--- | Handlers used in more than one view
+-- $eventhandlers
+-- Each event handler is handling a single widget in Purebreds UI
+
+-- | Handlers capable of running used in more than one view
 --
 composeFromHandler, composeToHandler, manageMailTagHandler ::
      AppState -> Event -> Brick.EventM Name (Brick.Next AppState)

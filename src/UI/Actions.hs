@@ -24,48 +24,77 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module UI.Actions (
+  -- * Overview
+  -- $overview
+
+  -- * Examples
+  -- $examples
+
+  -- * Adding new Actions
+  -- $new_actions
+
   Scrollable(..)
+  , Completable(..)
   , HasEditor(..)
   , HasName(..)
+  -- * Actions
+
+  -- ** Brick Event Loop Actions
+  -- $brick_actions
   , quit
+  , continue
+  , edit
+  , invokeEditor
+  , openWithCommand
+  , pipeToCommand
+
+  -- ** Keybinding Actions
+  -- $keybinding_actions
   , focus
   , done
   , abort
   , noop
-  , displayMail
-  , displayThreadMails
-  , setUnread
+  , chain
+  , chain'
+
+  -- ** List specific Actions
   , listUp
   , listDown
   , listJumpToEnd
   , listJumpToStart
+  , reloadList
+  , toggleListItem
+
+  -- ** Mail specific Actions
+  , displayMail
+  , setUnread
+  , displayThreadMails
+  , toggleHeaders
   , switchComposeEditor
   , replyMail
+  , selectNextUnread
+  , composeAsNew
+  , createAttachments
+  , openAttachment
+  , setTags
+
+  -- ** Actions for scrolling
   , scrollUp
   , scrollDown
   , scrollPageUp
   , scrollPageDown
-  , toggleHeaders
-  , initialCompose
-  , continue
-  , chain
-  , chain'
-  , setTags
-  , invokeEditor
-  , edit
-  , reloadList
-  , selectNextUnread
-  , toggleListItem
+
+  -- ** Actions for composing mails
+  , delete
+
+  -- ** Actions only used for a specific widget context
   , enterDirectory
   , parentDirectory
-  , createAttachments
-  , delete
-  , applySearch
-  , openWithCommand
-  , openAttachment
-  , pipeToCommand
   , handleConfirm
-  , composeAsNew
+
+  -- * API
+  , applySearch
+  , initialCompose
   ) where
 
 import Data.Functor.Identity (Identity(..))
@@ -119,10 +148,11 @@ import Data.MIME
         CharsetLookup)
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
-       (parseMail, getTo, getFrom, getSubject, toQuotedMail, entityToBytes, toMIMEMessage)
+       ( parseMail, getTo, getFrom, getSubject, toQuotedMail
+       , entityToBytes, toMIMEMessage, takeFileName)
 import Types
 import Error
-import UI.Utils (selectedFiles, takeFileName)
+import UI.Utils (selectedFiles)
 import UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
@@ -133,6 +163,38 @@ import Purebred.System.Directory (listDirectory')
 import Purebred.System (tryIO)
 import Purebred.System.Process
 
+{- $overview
+
+Actions are composible functions. They can be sequenced and used in 'Keybinding's.
+
+-}
+
+{- $examples
+
+This keybinding registered to back space scrolls a page up and
+continues with the event loop:
+
+@
+'Keybinding' (EvKey KBS []) ('scrollPageUp' ``chain'`` 'continue') ]
+@
+
+This keybinding is used to change the focus to a different widget:
+
+@
+'Keybinding' (EvKey (KChar 'q') []) ('noop' ``chain'`` ('focus' :: Action 'Threads 'ListOfThreads 'AppState') ``chain`` 'continue'
+@
+-}
+
+{- $new_actions
+New 'Action's are typically added when creating a 'Keybinding'
+first. A simple Action to start off has a specific 'View' and widget
+(see 'Name'). You can access the full 'AppState' in the Action's
+function including 'IO'.
+-}
+
+-- | Scrollable is an abstraction over Brick's viewport scroller in
+-- order to support viewing larger amounts of text.
+--
 class Scrollable (n :: Name) where
   makeViewportScroller :: Proxy n -> Brick.ViewportScroll Name
 
@@ -142,7 +204,9 @@ instance Scrollable 'ScrollingMailView where
 instance Scrollable 'ScrollingHelpView where
   makeViewportScroller _ = Brick.viewportScroll ScrollingHelpView
 
--- | contexts that have an editor
+-- | Abstraction to access editors (via it's lens) in the current
+-- context with a proxy type.
+--
 class HasEditor (n :: Name) where
   editorL :: Proxy n -> Lens' AppState (E.Editor T.Text Name)
 
@@ -207,15 +271,11 @@ instance HasList 'ListOfFiles where
   list _ = asFileBrowser . fbEntries
 
 
--- | An action - typically completed by a key press (e.g. Enter) - and it's
--- contents are used to be applied to an action.
+-- | A function which is run at the end of a chained sequence of actions.
 --
--- For example: the user changes
--- the notmuch search terms to find a particular mail. To apply his changes, he
--- 'completes' his text entered by pressing Enter.
---
--- Another example is sending e-mail. So the complete action for the
--- ComposeEditor is sent, since that's at the end of the composition process.
+-- For example: the user changes the notmuch search terms to find a
+-- particular mail. To apply his changes, he 'completes' his typed in
+-- text by pressing Enter.
 --
 class Completable (m :: Name) where
   complete :: Proxy m -> AppState -> T.EventM Name AppState
@@ -229,6 +289,8 @@ instance Completable 'ManageMailTagsEditor where
 instance Completable 'ComposeListOfAttachments where
   complete _ = sendMail
 
+-- | Apply all given tag operations to existing mails
+--
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
     case getEditorTagOps (Proxy :: Proxy 'ManageMailTagsEditor) s of
@@ -345,6 +407,8 @@ instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
             . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
                    . ix MailAttachmentPipeToEditor . veState) Hidden
 
+-- | Reset the composition state for a new mail
+--
 clearMailComposition :: AppState -> AppState
 clearMailComposition s =
     let mailboxes = AddressText.renderMailboxes $ view (asConfig . confComposeView . cvIdentities) s
@@ -363,8 +427,8 @@ clearMailComposition s =
         -- want to replace anything. Implement #181 to fix this.
         . toggleLastVisibleWidget SearchThreadsEditor
 
--- | Generalisation of focus changes between widgets on the same "view"
--- expressed with the mode in the application state.
+-- | Generalisation of focus changes between widgets on the same
+-- "view" expressed with the mode in the application state.
 --
 class Focusable (v :: ViewName) (m :: Name) where
   switchFocus :: Proxy v -> Proxy m -> AppState -> T.EventM Name AppState
@@ -476,12 +540,12 @@ focusComposeFrom _ _ s =
         else pure $ s & toggleLastVisibleWidget ComposeFrom
              . over (asCompose . cFrom) (E.applyEdit gotoEOL)
 
--- | Problem: How to chain actions, which operate not on the same mode, but a
--- mode switched by the previous action?
+-- | Generalisation in order to access the widget name from a phantom
+-- type
+--
 class HasName (a :: Name) where
   name :: Proxy a -> Name
 
--- promote the type to a value we can use for chaining actions
 instance HasName 'ListOfMails where
   name _ = ListOfMails
 
@@ -533,7 +597,9 @@ instance HasName 'MailAttachmentPipeToEditor where
 instance HasName 'ConfirmDialog where
   name _ = ConfirmDialog
 
--- | Allow to change the view to a different view in order to put the focus on a widget there
+-- | Allow to switch from the current active view to a different
+-- view. Instances are view transitions we only permit.
+--
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
   transitionHook :: Proxy v -> Proxy v' -> AppState -> AppState
   transitionHook _ _ = id
@@ -560,6 +626,9 @@ instance ViewTransition 'FileBrowser 'ComposeView where
 instance ViewTransition 'ViewMail 'Threads where
 
 
+-- | Generalisation to access the view name from a phantom type. This
+-- is useful when switching views.
+--
 class HasViewName (a :: ViewName) where
   viewname :: Proxy a -> ViewName
 
@@ -579,15 +648,34 @@ instance HasViewName 'FileBrowser where
   viewname _ = FileBrowser
 
 
+-- $brick_actions
+-- These actions wrap Brick's event loop functions. They are used to
+-- indicate whether we continue the event loop or halt (quit). These
+-- actions typically finish a sequence of chained Actions. Use them at
+-- the __end__ of a chained sequence.
+--
+-- Note:
+-- While only 'quit' and 'continue' falls into this category, more
+-- Purebred functions fall into this category because we're missing
+-- ways to modularise them. See #294
+--
 quit :: Action v ctx (T.Next AppState)
 quit = Action ["quit the application"] Brick.halt
 
+-- | A noop used to continue the Brick event loop.
+--
 continue :: Action v ctx (T.Next AppState)
 continue = Action mempty Brick.continue
 
+-- | Suspends Purebred and invokes the configured editor.
+--
 invokeEditor :: Action v ctx (T.Next AppState)
 invokeEditor = Action ["invoke external editor"] (Brick.suspendAndResume . liftIO . invokeEditor')
 
+-- | Suspends Purebred to invoke a command for editing an
+-- attachment. Currently only supports re-editing the body text of an
+-- e-mail.
+--
 edit :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
 edit = Action ["edit file"] (Brick.suspendAndResume . liftIO . editAttachment)
 
@@ -612,6 +700,8 @@ openAttachment =
                     . ix MailAttachmentOpenWithEditor . veState) Visible
   }
 
+-- | Open the selected entity with the command given from the editor widget.
+--
 openWithCommand :: Action 'ViewMail 'MailAttachmentOpenWithEditor (T.Next AppState)
 openWithCommand =
   Action
@@ -624,6 +714,8 @@ openWithCommand =
             (x:xs) -> Brick.suspendAndResume $ liftIO $ openCommand' s (MailcapHandler (Process (x :| xs) []) False)
     }
 
+-- | Pipe the selected entity to the command given from the editor widget.
+--
 pipeToCommand :: Action 'ViewMail 'MailAttachmentPipeToEditor (T.Next AppState)
 pipeToCommand =
   Action
@@ -633,9 +725,15 @@ pipeToCommand =
     in Brick.suspendAndResume $ liftIO $ pipeCommand' s cmd
   }
 
+-- | Chain sequences of actions to create a keybinding
+--
 chain :: Action v ctx AppState -> Action v ctx a -> Action v ctx a
 chain (Action d1 f1) (Action d2 f2) = Action (d1 <> d2) (f1 >=> f2)
 
+-- | /Special/ form of chain allowing to sequencing actions registered
+-- for a different view/widget. This is useful to perform actions on
+-- widget focus changes.
+--
 chain'
     :: forall ctx ctx' a v v'.
        (HasName ctx', HasViewName v', ViewTransition v v')
@@ -656,14 +754,22 @@ done = Action ["apply"] (complete (Proxy :: Proxy a))
 abort :: forall a v. (HasViewName v, Resetable v a) => Action v a AppState
 abort = Action ["cancel"] (reset (Proxy :: Proxy v) (Proxy :: Proxy a))
 
+-- $keybinding_actions
+-- These actions are used to sequence other actions together. Think of
+-- it like glue functions.
+--
+
+-- | Used to switch the focus from one widget to another on the same view.
+--
 focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState
 focus = Action
   ["switch mode to " <> T.pack (show (name (Proxy :: Proxy a)))]
   (switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a))
 
--- | A no-op action which just returns the current AppState
--- This action can be used at the start of an Action chain where an immediate
--- mode switch is required
+-- | A no-op action returning the current 'AppState'. This action can
+-- be used at the start of a sequence with an immediate switch of
+-- focus to a different widget (see 'focus').
+--
 noop :: Action v ctx AppState
 noop = Action mempty pure
 
@@ -740,6 +846,11 @@ listJumpToEnd
   => Action v ctx AppState
 listJumpToEnd = Action ["list bottom"] (pure . over (list (Proxy :: Proxy ctx)) (L.listMoveTo (-1)))
 
+-- | Action used to either start a composition of a new mail or switch
+-- the view to the composition editor if we've already been editing a new
+-- mail. The use case here is to continue editing an e-mail while
+-- still having the ability to browse existing e-mails.
+--
 switchComposeEditor :: Action 'Threads 'ListOfThreads AppState
 switchComposeEditor =
     Action
@@ -749,6 +860,9 @@ switchComposeEditor =
                           else pure s
     }
 
+-- | Update the 'AppState' with a quoted form of the first preferred
+-- entity in order to reply to the e-mail.
+--
 replyMail :: Action 'ViewMail 'ScrollingMailView AppState
 replyMail =
     Action
@@ -756,6 +870,9 @@ replyMail =
     , _aAction = replyToMail
     }
 
+-- | Toggles whether we want to show all headers from an e-mail or a
+-- filtered list in the 'AppState'.
+--
 toggleHeaders :: Action 'ViewMail 'ScrollingMailView AppState
 toggleHeaders = Action
   { _aDescription = ["toggle mail headers"]
@@ -767,6 +884,9 @@ toggleHeaders = Action
       Filtered -> set (asMailView . mvHeadersState) ShowAll s
       ShowAll -> set (asMailView . mvHeadersState) Filtered s
 
+-- | Apply given tag operations on the currently selected thread or
+-- mail.
+--
 setTags :: [TagOp] -> Action v ctx AppState
 setTags ops =
     Action
@@ -776,9 +896,14 @@ setTags ops =
           _ -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
     }
 
+-- | Reloads the list of threads by executing the notmuch query given
+-- by the search widget.
+--
 reloadList :: Action 'Threads 'ListOfThreads AppState
 reloadList = Action ["reload list of threads"] applySearch
 
+-- | Selects the next unread mail in a thread.
+--
 selectNextUnread :: Action 'ViewMail 'ListOfMails AppState
 selectNextUnread =
   Action { _aDescription = ["select next unread"]
@@ -792,6 +917,9 @@ selectNextUnread =
            in pure $ over (asMailIndex . miListOfMails) (f . L.listFindBy p) s
          }
 
+-- | Selects a list item. Currently only used in the file browser to
+-- select a file for attaching.
+--
 toggleListItem :: Action v 'ListOfFiles AppState
 toggleListItem =
     Action
@@ -803,6 +931,8 @@ toggleListItem =
                           (view (asFileBrowser . fbEntries . L.listSelectedL) s)
     }
 
+-- | Delete an attachment from a mail currently being composed.
+--
 delete :: Action 'ComposeView 'ComposeListOfAttachments AppState
 delete =
     Action
@@ -814,6 +944,8 @@ delete =
                                in pure $ over (asCompose . cAttachments) (\l -> maybe l (`L.listRemove` l) sel) s
     }
 
+-- | Go to the parent directory.
+--
 parentDirectory :: Action 'FileBrowser 'ListOfFiles AppState
 parentDirectory = Action ["go to parent directory"]
                       (\s ->
@@ -825,6 +957,8 @@ parentDirectory = Action ["go to parent directory"]
                                <$> runExceptT (view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine . to listDirectory') s'))
                       )
 
+-- | Open a directory and set the contents in the 'AppState'.
+--
 enterDirectory :: Action 'FileBrowser 'ListOfFiles AppState
 enterDirectory =
   Action
@@ -841,6 +975,8 @@ enterDirectory =
       Nothing -> pure s
   }
 
+-- | Adds all selected files as attachments to the e-mail.
+--
 createAttachments :: Action 'FileBrowser 'ListOfFiles AppState
 createAttachments =
     Action
@@ -850,12 +986,19 @@ createAttachments =
               then liftIO $ makeAttachmentsFromSelected s
               else pure s)
 
+-- | Action to deal with a choice from the confirmation dialog.
+--
 handleConfirm :: Action 'ComposeView 'ConfirmDialog AppState
 handleConfirm =
   Action
     ["handle confirmation"]
     (liftIO . keepOrDiscardDraft)
 
+-- | Edit an e-mail as a new mail. This is typically used by saving a
+-- mail under composition for later and continuing the draft. Another
+-- use case can be editing an already sent mail in order to send it to
+-- anther recipient.
+--
 composeAsNew :: Action 'ViewMail 'ScrollingMailView AppState
 composeAsNew =
   Action
@@ -882,6 +1025,9 @@ composeAsNew =
 
 -- Function definitions for actions
 --
+
+-- | Traverse and make attachments from the selected files in the file
+-- browser.
 makeAttachmentsFromSelected :: AppState -> IO AppState
 makeAttachmentsFromSelected s = do
   parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (selectedFiles (view (asFileBrowser . fbEntries) s))
@@ -894,19 +1040,33 @@ makeAttachmentsFromSelected s = do
     charsets = view (asConfig . confCharsets) s
     makeFullPath path = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> path
 
+-- | Determine if the selected directory entry is a file or not. We do
+-- not support adding entire directories to the e-mail.
+--
 isFileUnderCursor :: Maybe (a, (b, FileSystemEntry)) -> Bool
 isFileUnderCursor i = maybe False isFile (preview (_Just . _2 . _2) i)
   where isFile (File _) = True
         isFile _ = False
 
+-- | Construct the full path to the attachment. The file browser only
+-- lists the file names (otherwise we wouldn't have the ability to
+-- display the full paths for deeper file hirarchies). However when
+-- attaching the file, we need the full paths so we can find, edit and
+-- update the attachments later.
+--
 fullpath :: AppState -> (a, FileSystemEntry) -> FilePath
 fullpath s i = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> view (_2 . fsEntryName) i
 
+-- | Update the result of a file system listing in the 'AppState'
+--
 updateBrowseFileContents :: [FileSystemEntry] -> AppState -> AppState
 updateBrowseFileContents contents s =
   let contents' = view vector ((False, ) <$> contents)
   in over (asFileBrowser . fbEntries) (L.listReplace contents' (Just 0)) s
 
+-- | Take the notmuch query given by the user and update the
+-- 'AppState' with notmuch query result.
+--
 applySearch :: (MonadIO m) => AppState -> m AppState
 applySearch s = do
   r <- runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
@@ -933,6 +1093,9 @@ notifyNumThreads s l =
   in
     liftIO $ forkIO go $> s'
 
+-- | Update the Application state with all mails found for the
+-- currently selected thread.
+--
 setMailsForThread :: AppState -> IO AppState
 setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
@@ -941,6 +1104,9 @@ setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t 
         . set (asMailIndex . miMails . listLength) (Just (length vec))
   in either setError updateThreadMails <$> runExceptT (Notmuch.getThreadMessages dbpath t)
 
+-- | Helper function to either show an error if no list item is
+-- selected or apply the given function.
+--
 selectedItemHelper
     :: (Applicative f, Foldable t, L.Splittable t)
     => Getting (L.GenericList n t a) AppState (L.GenericList n t a)
@@ -952,11 +1118,16 @@ selectedItemHelper l s func =
   Just (_, a) -> func a
   Nothing -> pure $ setError (GenericError "No item selected.")
 
+-- | Retrieve the given tag operations from the given editor widget
+-- and parse them.
+--
 getEditorTagOps :: HasEditor n => Proxy n -> AppState -> Either Error [TagOp]
 getEditorTagOps p s =
   let contents = (foldr (<>) "" $ E.getEditContents $ view (editorL p) s)
   in parseTagOps contents
 
+-- | Apply given tag operations on all mails
+--
 applyTagOps
   :: (Traversable t, MonadIO m)
   => [TagOp]
@@ -979,6 +1150,9 @@ updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s
   where
     setEntities m = L.list MailListOfAttachments (view vector $ toListOf entities m) 0
 
+-- | Tag the currently selected mail as /read/. This is reflected as a
+-- visual change in the UI.
+--
 updateReadState :: TagOp -> AppState -> IO AppState
 updateReadState op s =
   -- Also update the thread to reflect the change. We used
@@ -998,9 +1172,14 @@ manageMailTags s tagop m =
   either setError (over (asMailIndex . miListOfMails) . L.listModify . const . runIdentity)
   <$> applyTagOps tagop (Identity m) s
 
+-- | Convenience function to set an error state in the 'AppState'
+--
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
 
+-- | Update the 'AppState' with a quoted version of the currently
+-- selected mail in order to reply to it.
+--
 replyToMail :: AppState -> T.EventM Name AppState
 replyToMail s =
   ($ s) <$> case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
@@ -1093,6 +1272,8 @@ initialCompose mailboxes =
         (L.list ComposeListOfAttachments mempty 1)
         initialDraftConfirmDialog
 
+-- | Set the compose state from an existing mail. This is typically
+-- used for re-editing draft mails.
 newComposeFromMail :: CharsetLookup -> Maybe MIMEMessage -> Compose
 newComposeFromMail charsets m =
   let subject =
@@ -1182,7 +1363,14 @@ editAttachment s =
           (Just Inline) -> invokeEditor' s
           _ -> pure $ setError (GenericError "Not implemented. See #182") s
 
-upsertPart :: CharsetLookup -> MIMEMessage -> L.List Name MIMEMessage -> L.List Name MIMEMessage
+-- | Either inserts or updates a part in a list of attachments. This
+-- is needed when editing parts during composition of an e-mail.
+--
+upsertPart ::
+     CharsetLookup
+  -> MIMEMessage
+  -> L.List Name MIMEMessage
+  -> L.List Name MIMEMessage
 upsertPart charsets newPart l =
   case L.listSelectedElement l of
     Nothing -> L.listInsert 0 newPart l
