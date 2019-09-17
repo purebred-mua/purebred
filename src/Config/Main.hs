@@ -98,28 +98,6 @@ solarizedDark =
         , (D.buttonSelectedAttr, bg V.green)
         ]
 
-solarizedLight :: A.AttrMap
-solarizedLight =
-    A.attrMap
-        V.defAttr
-        [ (listAttr, V.brightCyan `on` V.brightWhite)
-        , (listSelectedAttr, V.white `on` V.yellow)
-        , (listNewMailAttr, fg V.brightGreen `V.withStyle` V.bold)
-        , (listNewMailSelectedAttr, V.white `on` V.yellow `V.withStyle` V.bold)
-        , (mailTagAttr, fg V.magenta)
-        , (mailAuthorsAttr, fg V.brightCyan)
-        , (mailSelectedAuthorsAttr, fg V.brightWhite)
-        , (E.editFocusedAttr, V.brightBlack `on` V.brightWhite)
-        , (editorAttr, V.brightBlue `on` V.brightWhite)
-        , (editorLabelAttr, V.brightYellow `on` V.brightWhite)
-        , (editorErrorAttr, fg V.red)
-        , (statusbarErrorAttr, bg V.red)
-        , (statusbarAttr, V.brightYellow `on` V.white)
-        , (mailViewAttr, bg V.brightWhite)
-        , (headerKeyAttr, V.cyan `on` V.brightWhite)
-        , (headerValueAttr, V.brightCyan `on` V.brightWhite)
-        , (helpTitleAttr, fg V.cyan `V.withStyle` V.bold)]
-
 mailViewAttr :: A.AttrName
 mailViewAttr = "mailview"
 

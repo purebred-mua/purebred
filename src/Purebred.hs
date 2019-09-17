@@ -128,7 +128,6 @@ module Purebred (
   getDatabasePath,
   defaultConfig,
   solarizedDark,
-  solarizedLight,
   mailTagAttr,
   (</>),
   module Control.Lens,
@@ -158,7 +157,7 @@ import UI.Mail.Keybindings
 import UI.Actions
 import UI.Status.Main (rescheduleMailcheck)
 import Storage.Notmuch (getDatabasePath)
-import Config.Main (defaultConfig, solarizedDark, solarizedLight, mailTagAttr)
+import Config.Main (defaultConfig, solarizedDark, mailTagAttr)
 import Types
 import Error
 
