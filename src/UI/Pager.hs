@@ -1,1 +1,0 @@
-module UI.Pager where
