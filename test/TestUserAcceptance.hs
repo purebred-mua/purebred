@@ -929,7 +929,7 @@ testSendMail =
           sendKeys "Escape" (Substring "body")
 
           step "exit vim"
-          sendKeys ": x\r" (Regex ("text/plain\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
+          sendKeys ": x\r" (Regex ("text/plain; charset=us-ascii\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
 
           step "send mail and go back to threads"
           sendKeys "y" (Regex ("Query:\\s" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
