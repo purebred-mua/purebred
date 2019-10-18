@@ -15,6 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Storage.ParsedMail (
   -- * Synopsis
@@ -47,6 +48,8 @@ import Control.Lens
 import Data.Text.Lens (packed)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Catch (MonadMask)
+import Data.Foldable (toList)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text as T
@@ -60,6 +63,9 @@ import Storage.Notmuch (mailFilepath)
 import Types
 import Purebred.Types.IFC (sanitiseText)
 import Purebred.Parsing.Text (parseMailbody)
+import Purebred.System.Process
+  (runEntityCommand, tmpfileResource, toProcessConfigWithTempfile,
+  tryReadProcessStdout, handleExitCodeThrow)
 
 {- $synopsis
 
@@ -125,10 +131,36 @@ removeMatchingWords :: MailBody -> MailBody
 removeMatchingWords =
   set (mbParagraph . pLine . filtered hasMatches . lMatches) []
 
-bodyToDisplay :: Int -> CharsetLookup -> ContentType -> MIMEMessage -> MailBody
-bodyToDisplay textwidth charsets prefCT msg =
-  let ent = chooseEntity prefCT msg
-   in maybe (MailBody []) (parseMailbody textwidth . entityToText charsets) ent
+bodyToDisplay ::
+     (MonadMask m, MonadError Error m, MonadIO m)
+  => AppState
+  -> Int
+  -> CharsetLookup
+  -> ContentType
+  -> MIMEMessage
+  -> m (MIMEMessage, MailBody)
+bodyToDisplay s textwidth charsets prefCT msg =
+  case chooseEntity prefCT msg of
+    Nothing ->
+      throwError
+        (GenericError $ "Unable to find preferred entity with: " <> show prefCT)
+    Just entity ->
+      let output =
+            maybe
+              (pure $ parseMailbody textwidth "Internal Viewer" $ entityToText charsets entity)
+              (\handler ->
+                 parseMailbody textwidth (showHandler handler) <$>
+                 entityPiped handler entity)
+              (findAutoview s entity)
+          showHandler = view (mhMakeProcess . mpCommand . to (T.pack . toList))
+       in (msg, ) <$> output
+
+
+findAutoview :: AppState -> WireEntity -> Maybe MailcapHandler
+findAutoview s msg =
+  let match ct = firstOf (asConfig . confMailView . mvMailcap . hasCopiousoutput . filtered (`fst` ct) . _2) s
+  in match =<< preview (headers . contentType) msg
+
 
 -- | Pick a preferred entity to be displayed in the UI.
 --
@@ -166,38 +198,54 @@ entityToText charsets msg = sanitiseText . either err (view body) $
       "ERROR: " <> view (to show . packed) e <> ". Showing raw body.\n\n"
       <> decodeLenient (view body msg)
 
+-- | Pipe an entity through the command given by the 'MailcapHandler'.
+--
+entityPiped ::
+     (MonadMask m, MonadError Error m, MonadIO m)
+  => MailcapHandler
+  -> WireEntity
+  -> m T.Text
+entityPiped handler msg =
+  entityToBytes msg >>= mkConfig handler >>= runEntityCommand
+
+-- | Create an entity command which writes our entity to a tempfile,
+-- runs the command given by the 'MailcapHandler' over it and grab the
+-- stdout for later display.
+--
+mkConfig ::
+     (MonadError Error m, MonadIO m)
+  => MailcapHandler
+  -> B.ByteString
+  -> m (EntityCommand m FilePath)
+mkConfig cmd =
+  pure .
+  EntityCommand
+    handleExitCodeThrow
+    (tmpfileResource (view mhKeepTemp cmd))
+    (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
+    tryReadProcessStdout
+
 quoteText :: T.Text -> T.Text
-quoteText = T.unlines . fmap ("> " <>) . T.lines
+quoteText = ("> " <>)
 
 -- | Creates a new instance of `MIMEMessage` with a quoted plain text part if:
 -- a) the preferred content type can be extracted
 -- b) the text entity can be successfully decoded
 -- otherwise an empty plain text body is created
 toQuotedMail
-  :: CharsetLookup
-  -> ContentType
+  :: MailBody
   -> MIMEMessage
-  -> Either Error MIMEMessage
-toQuotedMail charsets ct msg =
-    let contents =
-            case chooseEntity ct msg of
-                Nothing ->
-                    Left
-                        (GenericError $
-                         "Unable to find preferred content type: " <>
-                         T.unpack (showContentType ct))
-                Just ent -> Right $ quoteText (entityToText charsets ent)
+  -> MIMEMessage
+toQuotedMail mbody msg =
+    let contents = T.unlines $ toListOf (mbParagraph . pLine . lText . to quoteText) mbody
         replyToAddress m =
             firstOf (headers . header "reply-to") m
             <|> firstOf (headers . header "from") m
-    in fmap
-           (\x ->
-                 createTextPlainMessage x
+    in createTextPlainMessage contents
                  & set (headers . at "from") (view (headers . at "to") msg)
                  . set (headers . at "to") (replyToAddress msg)
                  . set (headers . at "references") (view (headers . replyHeaderReferences) msg)
-                 . set (headers . at "subject") (("Re: " <>) <$> view (headers . at "subject") msg))
-           contents
+                 . set (headers . at "subject") (("Re: " <>) <$> view (headers . at "subject") msg)
 
 -- | Convert an entity into a MIMEMessage used, for example, when
 -- re-composing a draft mail.

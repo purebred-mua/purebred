@@ -70,7 +70,7 @@ renderSendMail ::
   -> IO (Either Error ())
 renderSendMail sendmail m = do
   -- -t which extracts recipients from the mail
-  result <- runExceptT $ tryReadProcess config
+  result <- runExceptT $ tryReadProcessStderr config
   pure $ case result of
     Left e -> Left $ SendMailError (show e)
     Right (ExitFailure _, stderr) -> Left $ SendMailError (untaint decode stderr)
@@ -105,6 +105,7 @@ solarizedDark =
         , (textMatchHighlightAttr, V.white `on` V.green)
         , (currentTextMatchHighlightAttr, V.green `on` V.white)
         , (defaultAttr, V.defAttr)
+        , (mailbodySourceAttr, fg V.blue)
         ]
 
 -- * Attributes
@@ -177,11 +178,19 @@ helpTitleAttr = helpAttr <> "title"
 helpKeybindingAttr :: A.AttrName
 helpKeybindingAttr = helpAttr <> "keybinding"
 
+
 textMatchHighlightAttr :: A.AttrName
 textMatchHighlightAttr = "match"
 
 currentTextMatchHighlightAttr :: A.AttrName
 currentTextMatchHighlightAttr = textMatchHighlightAttr <> "current"
+
+mailbodyAttr :: A.AttrName
+mailbodyAttr = "mailbody"
+
+mailbodySourceAttr :: A.AttrName
+mailbodySourceAttr = mailbodyAttr <> "source"
+
 
 -- * Purebred's Configuration
 -- The default configuration used in Purebred.
@@ -213,9 +222,9 @@ defaultConfig =
       , _mvFindWordEditorKeybindings = findWordEditorKeybindings
       , _mvMailcap =
           [ ( matchContentType "text" (Just "html")
-            , MailcapHandler (Shell (fromList "elinks -force-html")) False)
+            , MailcapHandler (Shell (fromList "elinks -force-html")) True False)
           , ( const True
-            , MailcapHandler (Process (fromList "xdg-open") []) True)
+            , MailcapHandler (Process (fromList "xdg-open") []) False True)
           ]
       }
     , _confIndexView = IndexViewSettings

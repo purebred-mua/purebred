@@ -107,7 +107,23 @@ main = defaultMain $ testTmux pre post tests
       , testConfirmDialogResets
       , testCursorPositionedEndOnReply
       , testSubstringSearchInMailBody
+      , testAutoview
       ]
+
+testAutoview :: PurebredTestCase
+testAutoview = purebredTmuxSession "automatically copies output for display" $
+  \step -> do
+    startApplication
+
+    step "search for HTML mail"
+    findMail step "subject:\"HTML mail\""
+
+    step "open HTML mail"
+    sendKeys "Enter" (Substring "This is a HTML mail for purebred in which the HTML part contains")
+
+    step "use as reply"
+    sendKeys "r" (Regex ">\\s+This is a HTML mail for purebred")
+
 
 testSubstringSearchInMailBody :: PurebredTestCase
 testSubstringSearchInMailBody = purebredTmuxSession "search for substrings in mailbody" $
@@ -216,7 +232,7 @@ testShowsNewMail = purebredTmuxSession "shows newly delivered mail" $
     startApplication
 
     step "shows new mails"
-    sendKeys "Down" (Substring "New: 3")
+    sendKeys "Down" (Substring "New: 4")
 
     mdir <- view envMaildir
 
@@ -233,7 +249,7 @@ testShowsNewMail = purebredTmuxSession "shows newly delivered mail" $
     void $ readProcess_ config
 
     step "shows new delivered mail"
-    sendKeys "Up" (Substring "New: 4")
+    sendKeys "Up" (Substring "New: 5")
 
     -- reload mails to see the new e-mail
     step "focus query widget"
@@ -591,18 +607,17 @@ testCanJumpToFirstListItem = purebredTmuxSession "can jump to first and last mai
     startApplication
 
     step "Jump to last mail"
-    sendKeys "G" (Substring "3 of 3")
+    sendKeys "G" (Substring "4 of 4")
 
     step "Jump to first mail"
-    sendKeys "1" (Substring "1 of 3")
+    sendKeys "1" (Substring "1 of 4")
 
 testUpdatesReadState :: PurebredTestCase
 testUpdatesReadState = purebredTmuxSession "updates read state for mail and thread" $
   \step -> do
     startApplication
 
-    step "navigate to thread mails"
-    sendKeys "G" (Substring "3 of 3")
+    findMail step "subject:WIP Refactor"
 
     step "view unread mail in thread"
     sendKeys "Enter" (Substring "WIP Refactor")
@@ -791,8 +806,8 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     -- tag the thread as a whole with a new tag. All mails should keep their
     -- distinct tags, while having received a new tag.
     step "navigate to thread"
-    sendKeys "Down" (Substring "Item 2 of 3")
-    sendKeys "Down" (Substring "Item 3 of 3")
+    sendKeys "Down" (Substring "Item 2 of 4")
+    sendKeys "Down" (Substring "Item 3 of 4")
 
     step "show thread mails"
     sendKeys "Enter" (Substring "ViewMail")
@@ -877,7 +892,7 @@ testShowsAndClearsError = purebredTmuxSession "shows and clears error" $
       >>= assertRegex "open(Binary)?File:.*does not exist"
 
     step "error is cleared with next registered keybinding"
-    sendKeys "Up" (Substring "Purebred: Item 1 of 3")
+    sendKeys "Up" (Substring "Purebred: Item 1 of 4")
 
 testSetsMailToRead :: PurebredTestCase
 testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
@@ -933,8 +948,8 @@ testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
     sendKeys "q" (Substring "WIP Refactor")
 
     step "Move down to threaded mails"
-    sendKeys "Down" (Substring "Purebred: Item 2 of 3")
-    sendKeys "Down" (Substring "Purebred: Item 3 of 3")
+    sendKeys "Down" (Substring "Purebred: Item 2 of 4")
+    sendKeys "Down" (Substring "Purebred: Item 3 of 4")
     sendKeys "Enter" (Substring "Re: WIP Refactor")
 
     step "Scroll down"
@@ -1110,6 +1125,7 @@ testSendMail =
           step "enter sent tags"
           sendLine "tag:sent" (Substring "Draft mail subject")
 
+
           -- check that a copy of the sent mail has been copied to our Maildir
           step "Drafts directory is empty"
           assertFileAmountInMaildir (mdir </> "Drafts" </> "new") 0
@@ -1117,6 +1133,21 @@ testSendMail =
           step "Sent directory has a new entry"
           assertFileAmountInMaildir (mdir </> "Sent" </> "cur") 1
 
+findMail ::
+     ( HasTmuxSession testEnv
+     , MonadReader testEnv m
+     , MonadState Capture m
+     , MonadIO m
+     )
+  => (String -> m ())
+  -> String -- ^ query
+  -> m Capture
+findMail step query = do
+  step ("search for mail with query: " <> query)
+  sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
+  sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+  step "enter free text search"
+  sendLine query (Substring "Item 1 of 1")
 
 composeNewMail ::
      HasTmuxSession testEnv

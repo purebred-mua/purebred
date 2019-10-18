@@ -26,8 +26,8 @@ import qualified Brick.AttrMap as A
 import Brick.Types (Padding(..), ViewportType(..), Widget)
 import qualified Brick.Widgets.List as L
 import Brick.Widgets.Core
-  (padTop, txt, txtWrap, viewport, (<+>), (<=>), withAttr, vBox,
-   hBox, padLeftRight, padRight)
+  (padTop, padBottom, txt, txtWrap, viewport, (<+>), (<=>), withAttr,
+   vBox, hBox, padLeftRight, padRight)
 import Brick.Markup (markup, (@?))
 import Brick.Focus (focusGetCurrent)
 import Data.Text.Markup (Markup, markupSet)
@@ -45,7 +45,7 @@ import UI.Views (focusedViewWidget)
 import Config.Main
   (headerKeyAttr, headerValueAttr, mailViewAttr, listSelectedAttr,
    listAttr, textMatchHighlightAttr, currentTextMatchHighlightAttr,
-   defaultAttr)
+   defaultAttr, mailbodySourceAttr)
 import Storage.ParsedMail (takeFileName)
 
 -- | Instead of using the entire rendering area to show the email, we still show
@@ -113,7 +113,14 @@ renderPart charsets selected hds =
 --
 renderMarkup ::  Maybe ScrollStep -> MailBody -> Widget Name
 renderMarkup st b =
-  vBox $ toListOf (mbParagraph . pLine . to (markup . buildWordMarkup st)) b
+  let source =
+        withAttr mailbodySourceAttr $
+        padBottom (Pad 1) $ txt ("Showing output from: " <> view mbSource b)
+      bodyMarkup = toListOf (mbParagraph . to (padBottom (Pad 1) . buildParagraph st)) b
+   in source <=> vBox bodyMarkup
+
+buildParagraph :: Maybe ScrollStep -> Paragraph -> Widget Name
+buildParagraph st = vBox . toListOf (pLine . to (markup . buildWordMarkup st))
 
 -- | Render the line by inserting markup if we have a match *and* a
 -- scroll step matching
