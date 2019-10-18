@@ -160,7 +160,7 @@ initialState conf =
             0
     mv = MailView
            Nothing
-           (MailBody [])
+           (MailBody mempty [])
            Filtered
            (L.list MailListOfAttachments mempty 1)
            (E.editorText MailAttachmentOpenWithEditor Nothing "")

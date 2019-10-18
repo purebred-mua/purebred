@@ -16,9 +16,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Purebred.System.Process
-  ( tryReadProcess
+  ( tryReadProcessStderr
+  , tryReadProcessStdout
   , handleIOException
-  , handleExitCode
+  , handleExitCodeThrow
+  , handleExitCodeTempfileContents
+  , outputToText
   , Purebred.System.Process.readProcess
   , tmpfileResource
   , draftFileResoure
@@ -41,8 +44,8 @@ import System.Exit (ExitCode(..))
 import Control.Exception (IOException)
 import Control.Monad.Catch (bracket, MonadMask)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Except (MonadError)
-import Control.Lens ((&), _2, over, set, view)
+import Control.Monad.Except (MonadError, throwError)
+import Control.Lens (_2, over, set, view)
 import Data.Semigroup ((<>))
 import System.Process.Typed
 import System.IO.Temp (emptyTempFile, emptySystemTempFile)
@@ -57,6 +60,7 @@ import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 
 import Error
 import Types
@@ -65,11 +69,28 @@ import Purebred.Types.IFC
 
 
 -- | Handler to handle exit failures and possibly showing an error in the UI.
-handleExitCode :: AppState -> (ExitCode, Tainted LB.ByteString) -> AppState
-handleExitCode s (ExitFailure e, stderr) =
-  s & setError (ProcessError (
-    show e <> ": " <> untaint (T.unpack . sanitiseText . decodeLenient . LB.toStrict) stderr))
-handleExitCode s (ExitSuccess, _) = s
+handleExitCodeThrow ::
+     (MonadError Error m, MonadIO m)
+  => (ExitCode, Tainted LB.ByteString)
+  -> a
+  -> m T.Text
+handleExitCodeThrow (ExitFailure e, out) _ =
+  throwError $ ProcessError (show e <> ": " <> T.unpack (outputToText out))
+handleExitCodeThrow (ExitSuccess, out) _ = pure (outputToText out)
+
+handleExitCodeTempfileContents ::
+     (MonadError Error m, MonadIO m)
+  => (ExitCode, Tainted LB.ByteString)
+  -> FilePath
+  -> m T.Text
+handleExitCodeTempfileContents (ExitFailure e, out) _ =
+  throwError $ ProcessError (show e <> ": " <> T.unpack (outputToText out))
+handleExitCodeTempfileContents (ExitSuccess, _) tempfile = tryIO $ T.readFile tempfile
+
+-- | Convert tained output from a 'readProcess' function to T.Text for
+-- display
+outputToText :: Tainted LB.ByteString -> T.Text
+outputToText = untaint (sanitiseText . decodeLenient . LB.toStrict)
 
 -- | Handle only IOExceptions, everything else is fair game.
 handleIOException :: AppState -> IOException -> IO AppState
@@ -83,11 +104,17 @@ setError = set asError . Just
 --
 -- Returns the exit code and the standard error output.
 --
-tryReadProcess ::
+tryReadProcessStderr ::
+     (MonadError Error m, MonadIO m)
+  => ProcessConfig stdoutIgnored stderr stdin
+  -> m (ExitCode, Tainted LB.ByteString)
+tryReadProcessStderr pc = over _2 taint <$> tryIO (readProcessStderr pc)
+
+tryReadProcessStdout ::
      (MonadError Error m, MonadIO m)
   => ProcessConfig stdout stderrIgnored stdin
   -> m (ExitCode, Tainted LB.ByteString)
-tryReadProcess pc = over _2 taint <$> tryIO (readProcessStderr pc)
+tryReadProcessStdout pc = over _2 taint <$> tryIO (readProcessStdout pc)
 
 -- | Run process, returning stdout and stderr as @ByteString@.
 readProcess
@@ -99,19 +126,19 @@ readProcess = (fmap . fmap) (bimap taint taint) System.Process.Typed.readProcess
 runEntityCommand ::
      (MonadMask m, MonadError Error m, MonadIO m)
   => EntityCommand m a
-  -> AppState
-  -> m AppState
-runEntityCommand cmd s =
+  -> m T.Text
+runEntityCommand cmd =
   let acquire = view (ccResource . rsAcquire) cmd
       update = view (ccResource . rsUpdate) cmd
       free = view (ccResource . rsFree) cmd
+      run = view ccRunProcess cmd
+      afterExit = view ccAfterExit cmd
    in bracket
-        (acquire >>= \tmpfile ->
-           update tmpfile (view ccEntity cmd) $> tmpfile)
+        (acquire >>= \tmpfile -> update tmpfile (view ccEntity cmd) $> tmpfile)
         free
         (\tmpfile ->
-           tryReadProcess (view ccProcessConfig cmd (view ccEntity cmd) tmpfile) >>=
-           (flip (view ccAfterExit cmd) tmpfile <$> handleExitCode s))
+           run (view ccProcessConfig cmd (view ccEntity cmd) tmpfile) >>=
+           flip afterExit tmpfile)
 
 tmpfileResource ::
      (MonadIO m, MonadError Error m)

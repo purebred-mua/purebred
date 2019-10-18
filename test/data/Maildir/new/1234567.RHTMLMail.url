@@ -1,0 +1,20 @@
+Return-Path: <frase@host.example>
+X-Original-To: rjoost
+Delivered-To: rjoost@host.example
+Received: by host.example (Postfix, from userid 20845)
+	id 55C4580B8F; Thu, 07 Nov 2016 13:50:04 +1000 (AEST)
+From: <frase@host.example>
+To: <roman@host.example>
+Subject: HTML mail
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <20191107035004.55C4580B8F@host.example>
+Date: Thu, 07 Nov 2016 13:50:04 +1000 (AEST)
+
+<div dir=3D"ltr">This is a HTML mail for purebred in which the HTML part co=
+ntains more crazy content than the text plain part and w &quot;linebreaks&q=
+uot; basically blah foo bar :<div><br></div><div><a href=3D"https://github.=
+purebred.com/purebred-mua/this/link/doesn/exist/really/bla/f" target=3D"_bl=
+ank">https://thislinkdoesnotexist/foo/bar/baz/just/to/fill/the/line/really/=
+XV3IJ</a> and this is were it ends.=C2=A0</div>

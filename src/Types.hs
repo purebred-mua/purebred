@@ -44,6 +44,7 @@ import Control.Monad.Except (MonadError)
 import Control.Monad.Reader (MonadIO)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Encoding.Error as T
@@ -52,6 +53,7 @@ import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
 import Data.List.NonEmpty (NonEmpty)
+import System.Exit (ExitCode(..))
 import System.Process.Typed (ProcessConfig)
 
 import Notmuch (Tag)
@@ -59,6 +61,7 @@ import Data.MIME
 
 import Error
 import Purebred.LazyVector (V)
+import Purebred.Types.IFC (Tainted)
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
@@ -151,14 +154,22 @@ miThreadTagsEditor = lens _miThreadTagsEditor (\m v -> m { _miThreadTagsEditor =
 miNewMail :: Lens' MailIndex Int
 miNewMail = lens _miNewMail (\m v -> m { _miNewMail = v})
 
+-- | A loose annotation what produced the rendered output of the
+-- entity
+--
+type Source = T.Text
+
 -- | Type representing a specific entity from an e-mail for display.
 --
-newtype MailBody =
-  MailBody [Paragraph]
+data MailBody =
+  MailBody Source [Paragraph]
   deriving (Show, Eq)
 
 mbParagraph :: Traversal' MailBody Paragraph
-mbParagraph f (MailBody xs) = fmap (\xs' -> MailBody xs') (traverse f xs)
+mbParagraph f (MailBody s xs) = fmap (\xs' -> MailBody s xs') (traverse f xs)
+
+mbSource :: Lens' MailBody Source
+mbSource f (MailBody d xs) = fmap (\d' -> MailBody d' xs) (f d)
 
 matchCount :: MailBody -> Int
 matchCount =
@@ -519,6 +530,9 @@ mvFindWordEditorKeybindings = lens _mvFindWordEditorKeybindings (\s x -> s { _mv
 mvMailcap :: Lens' MailViewSettings [(ContentType -> Bool, MailcapHandler)]
 mvMailcap = lens _mvMailcap (\s x -> s { _mvMailcap = x })
 
+hasCopiousoutput :: Traversal' [(ContentType -> Bool, MailcapHandler)] (ContentType -> Bool, MailcapHandler)
+hasCopiousoutput = traversed . filtered (view (_2 . mhCopiousoutput))
+
 data ViewName
     = Threads
     | Mails
@@ -784,13 +798,24 @@ data MakeProcess
             [String]
   deriving (Generic, NFData)
 
+mpCommand :: Lens' MakeProcess (NonEmpty Char)
+mpCommand f (Shell x) = fmap (\x' -> Shell x') (f x)
+mpCommand f (Process x args) = fmap (\x' -> Process x' args) (f x)
+
 data MailcapHandler = MailcapHandler
   { _mhMakeProcess :: MakeProcess
+  , _mhCopiousoutput :: Bool
+  -- ^ output should be paged or made scrollable
   , _mhKeepTemp :: Bool
+  -- ^ Keep the temporary file if application spawns child and parent
+  -- exits immediately (e.g. Firefox)
   } deriving (Generic, NFData)
 
 mhMakeProcess :: Lens' MailcapHandler MakeProcess
 mhMakeProcess = lens _mhMakeProcess (\h x -> h { _mhMakeProcess = x })
+
+mhCopiousoutput :: Lens' MailcapHandler Bool
+mhCopiousoutput = lens _mhCopiousoutput (\h x -> h { _mhCopiousoutput = x })
 
 mhKeepTemp :: Lens' MailcapHandler Bool
 mhKeepTemp = lens _mhKeepTemp (\h x -> h { _mhKeepTemp = x })
@@ -802,17 +827,20 @@ mhKeepTemp = lens _mhKeepTemp (\h x -> h { _mhKeepTemp = x })
 -- exits.
 data EntityCommand m a = EntityCommand
   { _ccAfterExit :: (MonadIO m, MonadError Error m) =>
-                      AppState -> a -> m AppState
+                      (ExitCode, Tainted LB.ByteString) -> a -> m T.Text
   , _ccResource :: (MonadIO m, MonadError Error m) =>
                      ResourceSpec m a
   , _ccProcessConfig :: B.ByteString -> a -> ProcessConfig () () ()
+  , _ccRunProcess :: (MonadError Error m, MonadIO m) =>
+                       ProcessConfig () () () -> m ( ExitCode
+                                                   , Tainted LB.ByteString)
   , _ccEntity :: B.ByteString
   -- ^ The decoded Entity
   }
 
 ccAfterExit ::
      (MonadIO m, MonadError Error m)
-  => Lens' (EntityCommand m a) (AppState -> a -> m AppState)
+  => Lens' (EntityCommand m a) ((ExitCode, Tainted LB.ByteString) -> a -> m T.Text)
 ccAfterExit = lens _ccAfterExit (\cc x -> cc {_ccAfterExit = x})
 
 ccEntity :: Lens' (EntityCommand m a) B.ByteString
@@ -827,6 +855,11 @@ ccResource ::
   => Lens' (EntityCommand m a) (ResourceSpec m a)
 ccResource = lens _ccResource (\cc x -> cc {_ccResource = x})
 
+ccRunProcess ::
+     (MonadError Error m, MonadIO m)
+  => Lens' (EntityCommand m a) (ProcessConfig () () () -> m ( ExitCode
+                                                            , Tainted LB.ByteString))
+ccRunProcess = lens _ccRunProcess (\cc x -> cc {_ccRunProcess = x})
 
 -- | A serial number that can be used to match (or ignore as
 -- irrelevant) asynchronous events to current application state.

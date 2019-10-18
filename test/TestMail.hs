@@ -85,8 +85,8 @@ testFindsMatchingWords :: TestTree
 testFindsMatchingWords = testCase "finds matching words" $ expected @=? actual
   where
     expected =
-      MailBody
+      MailBody mempty
         [Paragraph [Line [Match 9 3 1] 1 "Purebred finds matching words"]]
     actual =
       findMatchingWords "fin" $
-      MailBody [Paragraph [Line [] 1 "Purebred finds matching words"]]
+      MailBody mempty [Paragraph [Line [] 1 "Purebred finds matching words"]]

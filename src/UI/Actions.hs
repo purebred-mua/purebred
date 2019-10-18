@@ -111,7 +111,6 @@ import Brick.Widgets.Dialog (dialog, dialogSelection, Dialog)
 import Network.Mime (defaultMimeLookup)
 import Data.Proxy
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
 import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C8
@@ -163,7 +162,6 @@ import Purebred.Events (nextGeneration)
 import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
-import Purebred.System (tryIO)
 import Purebred.System.Process
 
 {- $overview
@@ -745,7 +743,7 @@ openWithCommand =
           let cmd = view (asMailView . mvOpenCommand . E.editContentsL . to (T.unpack . currentLine)) s
            in case cmd of
             [] -> Brick.continue $ setError (GenericError "Empty command") s
-            (x:xs) -> Brick.suspendAndResume $ liftIO $ openCommand' s (MailcapHandler (Process (x :| xs) []) False)
+            (x:xs) -> Brick.suspendAndResume $ liftIO $ openCommand' s (MailcapHandler (Process (x :| xs) []) False False)
     }
 
 -- | Pipe the selected entity to the command given from the editor widget.
@@ -928,7 +926,7 @@ replyMail :: Action 'ViewMail 'ScrollingMailView AppState
 replyMail =
     Action
     { _aDescription = ["reply to an e-mail"]
-    , _aAction = replyToMail
+    , _aAction = pure . replyToMail
     }
 
 -- | Toggles whether we want to show all headers from an e-mail or a
@@ -1200,20 +1198,28 @@ applyTagOps ops mails s =
   in runExceptT (Notmuch.messageTagModify dbpath ops mails)
 
 updateStateWithParsedMail :: AppState -> IO AppState
-updateStateWithParsedMail s = selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
-        either
-            (\e -> setError e . over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads))
-            (\pmail -> set (asMailView . mvMail) (Just pmail)
-                       . set (asMailView . mvBody) (bodyToDisplay textwidth charsets  preferredContentType pmail)
-                       . over (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail)
-                       . set (asMailView . mvAttachments) (setEntities pmail)
-            )
-            <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
+updateStateWithParsedMail s =
+  selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
+    either
+      (\e ->
+         setError e .
+         over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads))
+      (\(pmail, mbody) s' ->
+         s' &
+         set (asMailView . mvMail) (Just pmail) .
+         set (asMailView . mvBody) mbody .
+         over (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail) .
+         set (asMailView . mvAttachments) (setEntities pmail)) <$>
+    runExceptT
+      (parseMail m (view (asConfig . confNotmuch . nmDatabase) s) >>=
+       bodyToDisplay s textwidth charsets preferredContentType)
   where
-    setEntities m = L.list MailListOfAttachments (view vector $ toListOf entities m) 0
     charsets = view (asConfig . confCharsets) s
     textwidth = view (asConfig . confMailView . mvTextWidth) s
-    preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
+    setEntities m =
+      L.list MailListOfAttachments (view vector $ toListOf entities m) 0
+    preferredContentType =
+      view (asConfig . confMailView . mvPreferredContentType) s
 
 -- | Tag the currently selected mail as /read/. This is reflected as a
 -- visual change in the UI.
@@ -1245,23 +1251,22 @@ setError = set asError . Just
 -- | Update the 'AppState' with a quoted version of the currently
 -- selected mail in order to reply to it.
 --
-replyToMail :: AppState -> T.EventM Name AppState
+replyToMail :: AppState -> AppState
 replyToMail s =
-  ($ s) <$> case L.listSelectedElement (view (asMailIndex . miListOfMails) s) of
-    Just (_, m) ->
-      either handleErr handleMail
-        . (>>= toQuotedMail charsets preferredContentType)
-      <$> runExceptT (parseMail m (view (asConfig . confNotmuch . nmDatabase) s))
-    Nothing -> pure id
-  where
-    charsets = view (asConfig . confCharsets) s
-    preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
-    handleErr e = over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) . setError e
-    handleMail pmail s' = s' &
-      over (asCompose . cTo . E.editContentsL) (insertMany (getTo pmail) . clearZipper)
-      . over (asCompose . cFrom . E.editContentsL) (insertMany (getFrom pmail) . clearZipper)
-      . over (asCompose . cSubject . E.editContentsL) (insertMany (getSubject pmail) . clearZipper)
-      . over (asCompose . cAttachments) (upsertPart charsets pmail)
+  case view (asMailView . mvMail) s of
+    Nothing ->
+      s &
+      over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) .
+      setError (GenericError "No mail selected for replying")
+    Just pmail ->
+      let quoted = toQuotedMail mbody pmail
+          mbody = view (asMailView . mvBody) s
+          charsets = view (asConfig . confCharsets) s
+       in s &
+          over (asCompose . cTo . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
+          . over (asCompose . cFrom . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
+          . over (asCompose . cSubject . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
+          . over (asCompose . cAttachments) (upsertPart charsets quoted)
 
 -- | Build the MIMEMessage, sanitize filepaths, serialize and send it
 --
@@ -1369,17 +1374,14 @@ invokeEditor' s =
                              . _Just . _2 . to getTextPlainPart . _Just) s
       maildir = view (asConfig . confNotmuch . nmDatabase) s
       cmd = view (asConfig . confEditor) s
-      updatePart s' tempfile = do
-        contents <- tryIO $ T.readFile tempfile
-        let mail = createTextPlainMessage contents
-        pure $ s' & over (asCompose . cAttachments) (upsertPart charsets mail)
+      updatePart = over (asCompose . cAttachments) . upsertPart charsets . createTextPlainMessage
       mkEntity :: (MonadError Error m) => m B.ByteString
       mkEntity = maybe (pure mempty) entityToBytes maybeEntity
-      entityCmd = EntityCommand updatePart (draftFileResoure maildir) (\_ fp -> proc cmd [fp])
+      entityCmd = EntityCommand handleExitCodeTempfileContents (draftFileResoure maildir) (\_ fp -> proc cmd [fp]) tryReadProcessStderr
       charsets = view (asConfig . confCharsets) s
   in
-    either (`setError` s) id
-    <$> runExceptT (mkEntity >>= flip runEntityCommand s . entityCmd)
+    either (`setError` s) (`updatePart` s)
+    <$> runExceptT (mkEntity >>= runEntityCommand . entityCmd)
 
 -- | Write the serialised WireEntity to a temporary file. Pass the FilePath of
 -- the temporary file to the command. Do not remove the temporary file, so
@@ -1391,11 +1393,14 @@ openCommand' s cmd =
   let
     mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m FilePath)
     mkConfig =
-      let con = EntityCommand (const . pure) (tmpfileResource (view mhKeepTemp cmd))
+      let con = EntityCommand
+            handleExitCodeThrow
+            (tmpfileResource (view mhKeepTemp cmd))
             (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
+            tryReadProcessStderr
       in fmap con . entityToBytes
-  in either (`setError` s) id
-      <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= flip runEntityCommand s)
+  in either (`setError` s) (const s)
+      <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= runEntityCommand)
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
 -- temporary file is used. If either no WireEntity exists (e.g. none selected)
@@ -1407,11 +1412,14 @@ pipeCommand' s cmd
     let
       mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m ())
       mkConfig =
-        let con = EntityCommand (const . pure) emptyResource
+        let con = EntityCommand
+              handleExitCodeThrow
+              emptyResource
               (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
+              tryReadProcessStderr
         in fmap con . entityToBytes
-     in either (`setError` s) id
-        <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= flip runEntityCommand s)
+     in either (`setError` s) (const s)
+        <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= runEntityCommand)
 
 selectedAttachmentOrError :: MonadError Error m => AppState -> m WireEntity
 selectedAttachmentOrError =
