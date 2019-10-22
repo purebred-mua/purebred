@@ -411,14 +411,10 @@ instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
 --
 clearMailComposition :: AppState -> AppState
 clearMailComposition s =
-    let mailboxes = AddressText.renderMailboxes $ view (asConfig . confComposeView . cvIdentities) s
+    let mailboxes = view (asConfig . confComposeView . cvIdentities) s
     in s
         -- insert default from addresses
-        & over (asCompose . cFrom . E.editContentsL) (insertMany mailboxes . clearZipper)
-        -- clear editor contents for other fields
-        . over (asCompose . cTo . E.editContentsL) clearZipper
-        . over (asCompose . cSubject . E.editContentsL) clearZipper
-        . over (asCompose . cAttachments) L.listClear
+        & set asCompose (initialCompose mailboxes)
         -- reset the UI
         -- Note: Only replace the last widget on the Threads view with the
         -- SearchThreadsEditor. This is important if we abort mail composition
