@@ -104,7 +104,30 @@ main = defaultMain $ testTmux pre post tests
       , testKeepDraftMail
       , testDiscardsMail
       , testShowsNewMail
+      , testConfirmDialogResets
       ]
+
+testConfirmDialogResets :: PurebredTestCase
+testConfirmDialogResets = purebredTmuxSession "confirm dialog resets state" $
+  \step -> do
+    startApplication
+
+    composeNewMail step
+
+    step "abort composition"
+    sendKeys "q" (Substring "Keep draft?")
+
+    step "choose Discard"
+    sendKeys "Tab" (Substring "Discard")
+
+    step "confirm discard"
+    sendKeys "Enter" (Substring "Testmail")
+
+    composeNewMail step
+
+    step "abort composition"
+    sendKeys "q" (Regex (buildAnsiRegex [] ["30"] ["42"] <> "\\s+Keep" ))
+
 
 -- Note: The most time in this test is spend on waiting. The default
 -- time for the indicator to refresh is 5 seconds.
