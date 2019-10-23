@@ -340,21 +340,25 @@ testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
     step "user can change from header"
     sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
 
+    let lastLineIsStatusLine = "Purebred:.*ComposeView-Attachments\\s+$^$"
     step "append an email"
     sendKeys ", testuser@foo.test\r" (Substring $ "From: "
                                       <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
+      >>= assertRegex lastLineIsStatusLine
 
     step "user can change to header"
     sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "user@to.test")
 
     step "append an additional from email"
     sendKeys ", testuser@foo.test\r" (Substring "To: user@to.test, testuser@foo.test")
+      >>= assertRegex lastLineIsStatusLine
 
     step "change subject"
     sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> "")
 
     step "enter subject"
     sendKeys "foo subject\r" (Substring "Subject: foo subject")
+      >>= assertRegex lastLineIsStatusLine
 
 testPipeEntitiesSuccessfully :: PurebredTestCase
 testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" $

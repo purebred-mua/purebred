@@ -299,13 +299,16 @@ completeMailTags s =
                       <$> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops')
 
 instance Completable 'ComposeTo where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ComposeTo . veState) Hidden
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just
+                           . vLayers . ix 1 . ix ComposeTo . veState) Hidden
 
 instance Completable 'ComposeFrom where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ComposeFrom . veState) Hidden
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just
+                           . vLayers . ix 1 . ix ComposeFrom . veState) Hidden
 
 instance Completable 'ComposeSubject where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ComposeSubject . veState) Hidden
+  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just
+                           . vLayers . ix 1 . ix ComposeSubject . veState) Hidden
 
 instance Completable 'ConfirmDialog where
   complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ConfirmDialog . veState) Hidden
