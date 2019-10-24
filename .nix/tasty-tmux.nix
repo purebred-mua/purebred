@@ -3,8 +3,8 @@
 }:
 mkDerivation {
   pname = "tasty-tmux";
-  version = "0.1.0.0";
-  sha256 = "0886b212d0e58820175fb99fac94d469d9dcb28454065a21223b4bb79d60fdcc";
+  version = "0.1.0.1";
+  sha256 = "029a4992bdf9c6c2af1563ee28c2897063378739fbd7c8bc6139d685660c5d1e";
   libraryHaskellDepends = [
     base bytestring mtl regex-posix tasty tasty-hunit text
     typed-process
