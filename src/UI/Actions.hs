@@ -1192,9 +1192,9 @@ replyToMail s =
     preferredContentType = view (asConfig . confMailView . mvPreferredContentType) s
     handleErr e = over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) . setError e
     handleMail pmail s' = s' &
-      set (asCompose . cTo) (E.editor ComposeTo Nothing $ getTo pmail)
-      . set (asCompose . cFrom) (E.editor ComposeFrom Nothing $ getFrom pmail)
-      . set (asCompose . cSubject) (E.editor ComposeSubject Nothing (getSubject pmail))
+      over (asCompose . cTo . E.editContentsL) (insertMany (getTo pmail) . clearZipper)
+      . over (asCompose . cFrom . E.editContentsL) (insertMany (getFrom pmail) . clearZipper)
+      . over (asCompose . cSubject . E.editContentsL) (insertMany (getSubject pmail) . clearZipper)
       . over (asCompose . cAttachments) (upsertPart charsets pmail)
 
 -- | Build the MIMEMessage, sanitize filepaths, serialize and send it
