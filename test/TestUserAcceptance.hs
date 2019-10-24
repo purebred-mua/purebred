@@ -105,7 +105,39 @@ main = defaultMain $ testTmux pre post tests
       , testDiscardsMail
       , testShowsNewMail
       , testConfirmDialogResets
+      , testCursorPositionedEndOnReply
       ]
+
+testCursorPositionedEndOnReply :: PurebredTestCase
+testCursorPositionedEndOnReply = purebredTmuxSession "cursor positioned on EOL when replying" $
+  \step -> do
+    startApplication
+
+    step "pick first mail"
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
+
+    step "start replying"
+    sendKeys "r" (Substring "> This is a test mail for purebred")
+
+    step "exit vim"
+    sendKeys ": x\r" (Substring "Attachments")
+
+    step "focus from field"
+    sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "<frase@host.example>")
+    sendKeys ", fromuser@foo.test\r" (Substring $ "From: "
+                                      <> "<frase@host.example>, fromuser@foo.test")
+
+    step "user can change to header"
+    sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "<roman@host.example>")
+
+    step "append an additional from email"
+    sendKeys ", touser@foo.test\r" (Substring "To: <roman@host.example>, touser@foo.test")
+
+    step "change subject"
+    sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> ".*subject\\s+$")
+
+    step "enter subject"
+    sendKeys " appended\r" (Substring "Subject: Re: Testmail with whitespace in the subject appended")
 
 testConfirmDialogResets :: PurebredTestCase
 testConfirmDialogResets = purebredTmuxSession "confirm dialog resets state" $
