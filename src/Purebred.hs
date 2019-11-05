@@ -171,22 +171,35 @@ import Brick.Types (Next)
 import Brick.Util (on, fg, bg)
 import Brick.AttrMap (AttrName, applyAttrMappings)
 import Control.Lens ((&), _head, over, preview, set, view)
+import Data.Text.Lens (packed)
 import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 
-newtype AppConfig = AppConfig
+data AppConfig = AppConfig
     { databaseFilepath :: Maybe String
+    , searchOverride :: Maybe String
     }
 
 appconfig :: Parser AppConfig
-appconfig =
-    AppConfig <$> optional
-     ( Builder.option
-         Builder.str
-         (long "database" <> metavar "DATABASE" <>
-          help "Filepath to notmuch database") )
-     <* Builder.infoOption versionString
-         (long "version" <> short 'v' <>
-          help "Prints the Purebred version and exits")
+appconfig = AppConfig
+  <$> optional
+    ( Builder.option Builder.str
+      ( long "database"
+      <> metavar "DATABASE"
+      <> help "Filepath to notmuch database"
+      )
+    )
+  <*> optional
+    ( Builder.option Builder.str
+      ( long "search"
+      <> metavar "SEARCH-TERM"
+      <> help "Override the initial notmuch search"
+      )
+    )
+  <* Builder.infoOption versionString
+    ( long "version"
+    <> short 'v'
+    <> help "Print the Purebred version and exit"
+    )
 
 versionString :: String
 versionString = showVersion version
@@ -204,7 +217,10 @@ launch cfg = do
   -- set the user-specified database path *before* processing config,
   -- to avoid possible error in `notmuch config-get`
   opts <- execParser optParser
-  let pre = maybe id (set (confNotmuch . nmDatabase) . pure) (databaseFilepath opts)
+  let
+    pre =
+      maybe id (set (confNotmuch . nmDatabase) . pure) (databaseFilepath opts)
+      . maybe id (set (confNotmuch . nmSearch)) (view packed <$> searchOverride opts)
 
   -- Set the boundary generator (an INFINITE [Char]) /after/ deepseq'ing :)
   -- FIXME: seems like something that shouldn't be exposed in user config
