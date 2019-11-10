@@ -21,7 +21,7 @@ module UI.Status.Main where
 
 import Brick.BChan (BChan, writeBChan)
 import Brick.Types (Widget)
-import Brick.Focus (focusGetCurrent)
+import Brick.Focus (focusGetCurrent, focusRingLength)
 import Brick.Widgets.Core
   (hBox, txt, str, withAttr, (<+>), strWrap, padLeftRight,
   emptyWidget)
@@ -115,7 +115,8 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
 
 renderMatches :: AppState -> Widget n
 renderMatches s =
-  let showCount = show $ matchCount $ view (asMailView . mvBody) s
+  let showCount = view (non "0")
+        $ preview (asMailView . mvScrollSteps . to (show . focusRingLength)) s
       currentItem = view (non "0")
         $ preview (asMailView . mvScrollSteps . to focusGetCurrent . _Just . stNumber . to show) s
    in if has (asMailView . mvScrollSteps) s
