@@ -14,7 +14,10 @@ An MUA built around [*notmuch*](https://notmuchmail.org/).
 
 This project is in its infancy, but please join us and help.  All
 kinds of contributions (bug reports, testing, documentation, code)
-are welcome.  See [HACKING] for more info.
+are welcome.  See [HACKING](HACKING) for more info. If you want to **jump right
+in**, have a look at the [easy
+fix](https://github.com/purebred-mua/purebred/issues?q=is%3Aopen+is%3Aissue+label%3Aeasyfix)
+issues.
 
 ![](screenshot.png)
 
