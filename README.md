@@ -18,6 +18,21 @@ are welcome.  See [HACKING] for more info.
 
 ![](screenshot.png)
 
+## Roadmap
+
+### 1.0 - The basics
+
+The first release will deliver a primitive MUA with a primitive UX.
+Primitive meaning that most features can be used in anger but are not
+recommended for every-day productive use. This release will form the
+base upon which we want to build an application which separates itself
+from current terminal mail clients.
+
+### Future releases
+
+These releases will focus in more depth on specific issues: e.g. better
+UX, better plug-in support, etc.
+
 ## Goals
 
 - [ ] re-use strong UX patterns from existing console mailers like mutt and sup
