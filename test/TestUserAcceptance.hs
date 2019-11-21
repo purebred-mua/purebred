@@ -334,7 +334,7 @@ testDiscardsMail = purebredTmuxSession "discards draft mail" $
     composeNewMail step
 
     step "abort composition"
-    sendKeys "q" (Substring "Keep draft?")
+    sendKeys "Escape" (Substring "Keep draft?")
 
     step "choose Discard"
     sendKeys "Tab" (Substring "Discard")
