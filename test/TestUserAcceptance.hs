@@ -708,7 +708,7 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     sendKeys "Down" (Substring "Item 2 of 2")
 
     step "remove the attachment"
-    sendKeys "D" (Substring "Item 1 of 1")
+    sendKeys "D" (Not (Substring "screenshot.png"))
 
     step "try to remove the last attachment"
     sendKeys "D" (Substring "You may not remove the only attachment")
