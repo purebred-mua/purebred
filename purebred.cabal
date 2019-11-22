@@ -154,7 +154,7 @@ test-suite uat
                      , purebred-email >= 0.2
                      , tasty
                      , tasty-hunit
-                     , tasty-tmux
+                     , tasty-tmux >= 0.1.0.2
                      , directory
                      , typed-process >= 0.2.4.0
                      , text
