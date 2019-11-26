@@ -8,7 +8,7 @@
 
 Name:           %{pkg_name}
 Version:        0.1.0.0
-Release:        0.20191104%{?dist}
+Release:        0.20191125%{?dist}
 Summary:        An mail user agent built around notmuch
 
 License:        AGPLv3
@@ -84,6 +84,8 @@ BuildRequires:  ghc-tasty-quickcheck-devel
 BuildRequires:  ghc-temporary-devel
 BuildRequires:  ghc-unix-devel
 %endif
+Requires: purebred-basic = %{version}-%{release}
+Requires: purebred-config = %{version}-%{release}
 
 %description
 An MUA built around <https://notmuchmail.org/ notmuch>. Mutt-inspired console
@@ -141,6 +143,19 @@ Requires:       ghc-%{name}-devel%{?_isa} = %{version}-%{release}
 This package provides the Haskell %{name} profiling library.
 %endif
 
+%package basic
+Summary: An terminal based mail user agent.
+
+%description basic
+An mail user agent built around notmuch.
+
+%package config
+Summary: purebred config
+Requires: ghc-purebred-devel = %{version}-%{release}
+
+%description config
+This package provides configuration files for purebred.
+
 
 %prep
 %setup -q
@@ -161,17 +176,23 @@ This package provides the Haskell %{name} profiling library.
 
 %install
 %ghc_lib_install
+install -p -m 0644 -D configs/purebred.hs %{buildroot}%{_datadir}/purebred/purebred.hs
 
 %check
 %cabal_test
 
 
 %files
-# Begin cabal-rpm files:
 %license LICENSE
+
+%files basic
+# Begin cabal-rpm files:
 %doc README.md
 %{_bindir}/%{name}
 # End cabal-rpm files
+
+%files config
+%{_datadir}/purebred/purebred.hs
 
 
 %files -n ghc-%{name} -f ghc-%{name}.files
@@ -195,5 +216,9 @@ This package provides the Haskell %{name} profiling library.
 
 
 %changelog
+* Mon Nov 25 2019 Róman Joost <roman@bromeco.de> - 0.1.0.0-0.20191125
+- Fixes purebred dependencies
+- new archive from 9b71d6de7b6a11722606c042d63fa4dbead621a8
+
 * Mon Nov 04 2019 Róman Joost <roman@bromeco.de> - 0.1.0.0-0.20191104
 - new nightly build
