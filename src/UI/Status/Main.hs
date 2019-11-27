@@ -30,7 +30,7 @@ import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
 import Control.Monad.Except (runExceptT)
 import Control.Monad (void)
-import Control.Lens (view, views, to, has, _Just, preview, non)
+import Control.Lens (view, views, to, _Just, preview, non)
 import Control.Concurrent (forkIO, threadDelay)
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
@@ -119,7 +119,7 @@ renderMatches s =
         $ preview (asMailView . mvScrollSteps . to (show . focusRingLength)) s
       currentItem = view (non "0")
         $ preview (asMailView . mvScrollSteps . to focusGetCurrent . _Just . stNumber . to show) s
-   in if has (asMailView . mvScrollSteps) s
+   in if view (asMailView . mvBody . to matchCount) s > 0
         then str (currentItem <> " of " <> showCount <> " matches")
         else emptyWidget
 

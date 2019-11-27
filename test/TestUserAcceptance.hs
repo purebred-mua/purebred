@@ -107,6 +107,7 @@ main = defaultMain $ testTmux pre post tests
       , testConfirmDialogResets
       , testCursorPositionedEndOnReply
       , testSubstringSearchInMailBody
+      , testSubstringMatchesAreCleared
       , testAutoview
       ]
 
@@ -123,6 +124,35 @@ testAutoview = purebredTmuxSession "automatically copies output for display" $
 
     step "use as reply"
     sendKeys "r" (Regex ">\\s+This is a HTML mail for purebred")
+
+
+testSubstringMatchesAreCleared :: PurebredTestCase
+testSubstringMatchesAreCleared = purebredTmuxSession "substring match indicator only shown on mail" $
+  \step -> do
+    startApplication
+
+    step "No match indicator is shown"
+    snapshot
+    assertRegexS "New:\\s[0-9]\\]\\s+Threads"
+
+    step "search for Lorem mail"
+    sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+
+    step "enter free text search"
+    sendLine "Lorem ipsum" (Substring "Item 1 of 1")
+
+    step "show mail contents"
+    sendKeys "Enter" (Substring "Lorem ipsum dolor sit amet, consectetur")
+
+    step "show substring search editor"
+    sendKeys "/" (Substring "Search for")
+
+    step "enter needle and show results"
+    sendKeys "et\r" (Substring "1 of 20 matches")
+
+    step "go back to threads"
+    sendKeys "Escape" (Regex "New:\\s[0-9]\\]\\s+Threads")
 
 
 testSubstringSearchInMailBody :: PurebredTestCase

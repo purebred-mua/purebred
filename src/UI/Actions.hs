@@ -428,10 +428,10 @@ instance Resetable 'ViewMail 'ScrollingMailViewFindWordEditor where
   reset _ _ = pure . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
               . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
                     . ix ScrollingMailViewFindWordEditor . veState) Hidden
-              . set (asMailView . mvScrollSteps) (Brick.focusRing [])
+              . resetMatchingWords
 
 instance Resetable 'ViewMail 'ScrollingMailView where
-  reset _ _ = pure . set (asMailView . mvScrollSteps) (Brick.focusRing [])
+  reset _ _ = pure . resetMatchingWords
 
 -- | Reset the composition state for a new mail
 --
@@ -851,9 +851,7 @@ removeHighlights :: Action 'ViewMail 'ScrollingMailView AppState
 removeHighlights =
   Action
     { _aDescription = ["remove search results highlights"]
-    , _aAction = pure . over (asMailView . mvBody) removeMatchingWords
-                 . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
-                 . set (asMailView . mvScrollSteps) (Brick.focusRing [])
+    , _aAction = pure . resetMatchingWords
     }
 
 displayMail :: Action 'ViewMail 'ScrollingMailView AppState
@@ -1510,3 +1508,9 @@ keepDraft s maildir =
     fp <- createDraftFilePath maildir
     Notmuch.indexMail bs maildir fp draftTag
     pure s
+
+resetMatchingWords :: AppState -> AppState
+resetMatchingWords =
+  over (asMailView . mvBody) removeMatchingWords
+  . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
+  . set (asMailView . mvScrollSteps) (Brick.focusRing [])
