@@ -1062,6 +1062,7 @@ testSendMail =
   purebredTmuxSession "sending mail successfully" $
         \step -> do
           testdir <- view effectiveDir
+          mdir <- view envMaildir
           startApplication
           composeNewMail step
 
@@ -1077,12 +1078,29 @@ testSendMail =
           step "exit vim"
           sendKeys ": x\r" (Regex ("text/plain; charset=us-ascii\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
 
+          -- pre-check before we sent:
+          --   * Drafts is empty before sending
+          --   * Sent folder doesn't exist yet
+          --
+          step "Drafts is empty before sending"
+          assertFileAmountInMaildir (mdir </> "Drafts" </> "new") 0
+
+          step "Sent folder doesn't exist yet"
+          files <- liftIO $ listDirectory mdir
+          liftIO $
+            assertEqual
+            "expected no maildir directories"
+            (sort ["Drafts", ".notmuch", "notmuch-config", "new", "cur"])
+            (sort files)
+
           step "send mail and go back to threads"
           sendKeys "y" (Regex ("Query:\\s" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
 
+          -- check that the sent mail can be parsed without errors
           step "parse mail with purebred-email"
           assertMailSuccessfullyParsed (testdir </> "sentMail")
 
+          -- check that the sent mail is indexed
           step "focus query"
           sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
 
@@ -1091,6 +1109,13 @@ testSendMail =
 
           step "enter sent tags"
           sendLine "tag:sent" (Substring "Draft mail subject")
+
+          -- check that a copy of the sent mail has been copied to our Maildir
+          step "Drafts directory is empty"
+          assertFileAmountInMaildir (mdir </> "Drafts" </> "new") 0
+
+          step "Sent directory has a new entry"
+          assertFileAmountInMaildir (mdir </> "Sent" </> "cur") 1
 
 
 composeNewMail ::
