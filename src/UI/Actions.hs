@@ -1273,7 +1273,8 @@ sendMail s =
       send = do
         (bs, randomg) <- over _1 (renderMessage . sanitizeMail charsets) <$> buildMail s
         s' <- liftIO $ trySendAndCatch randomg bs s
-        Notmuch.indexMail bs maildir sentTag
+        sentFP <- createSentFilePath maildir
+        Notmuch.indexMail bs maildir sentFP sentTag
         pure s'
    in either (`setError` s) id <$> runExceptT send
 
@@ -1498,5 +1499,6 @@ keepDraft s maildir =
   let draftTag = view (asConfig . confNotmuch . nmDraftTag) s
   in do
     bs <- renderMessage . fst <$> buildMail s
-    Notmuch.indexMail bs maildir draftTag
+    fp <- createDraftFilePath maildir
+    Notmuch.indexMail bs maildir fp draftTag
     pure s

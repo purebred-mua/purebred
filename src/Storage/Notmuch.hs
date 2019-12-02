@@ -69,7 +69,7 @@ import qualified Notmuch
 import Error
 import Types
 import Purebred.LazyVector
-import Purebred.System.Process (readProcess, proc, createDraftFilePath)
+import Purebred.System.Process (readProcess, proc)
 import Purebred.System (tryIO)
 import Purebred.Types.IFC (sanitiseText, untaint)
 
@@ -298,11 +298,11 @@ indexFilePath dbpath fp tgs =
 indexMail ::
      (MonadError Error m, MonadIO m)
   => B.ByteString -- ^ rendered mail
-  -> FilePath -- ^ maildir under which we store the mail
+  -> FilePath -- ^ path to the maildir
+  -> FilePath -- ^ path to file under which the mail is stored
   -> Tag -- ^ tag to attach the mail
   -> m ()
-indexMail bs maildir tag = do
-    fp <- createDraftFilePath maildir
+indexMail bs maildir fp tag = do
     tryIO $ B.writeFile fp bs
     indexFilePath maildir fp [tag]
 
