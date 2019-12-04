@@ -531,7 +531,7 @@ mvMailcap :: Lens' MailViewSettings [(ContentType -> Bool, MailcapHandler)]
 mvMailcap = lens _mvMailcap (\s x -> s { _mvMailcap = x })
 
 hasCopiousoutput :: Traversal' [(ContentType -> Bool, MailcapHandler)] (ContentType -> Bool, MailcapHandler)
-hasCopiousoutput = traversed . filtered (view (_2 . mhCopiousoutput))
+hasCopiousoutput = traversed . filtered (view (_2 . mhCopiousoutput . to isCopiousOutput))
 
 data ViewName
     = Threads
@@ -802,11 +802,25 @@ mpCommand :: Lens' MakeProcess (NonEmpty Char)
 mpCommand f (Shell x) = fmap (\x' -> Shell x') (f x)
 mpCommand f (Process x args) = fmap (\x' -> Process x' args) (f x)
 
+data CopiousOutput
+  = CopiousOutput
+  | IgnoreOutput
+  deriving (Generic, NFData)
+
+isCopiousOutput :: CopiousOutput -> Bool
+isCopiousOutput CopiousOutput = True
+isCopiousOutput _ = False
+
+data TempfileOnExit
+  = KeepTempfile
+  | DiscardTempfile
+  deriving (Generic, NFData)
+
 data MailcapHandler = MailcapHandler
   { _mhMakeProcess :: MakeProcess
-  , _mhCopiousoutput :: Bool
+  , _mhCopiousoutput :: CopiousOutput
   -- ^ output should be paged or made scrollable
-  , _mhKeepTemp :: Bool
+  , _mhKeepTemp :: TempfileOnExit
   -- ^ Keep the temporary file if application spawns child and parent
   -- exits immediately (e.g. Firefox)
   } deriving (Generic, NFData)
@@ -814,10 +828,10 @@ data MailcapHandler = MailcapHandler
 mhMakeProcess :: Lens' MailcapHandler MakeProcess
 mhMakeProcess = lens _mhMakeProcess (\h x -> h { _mhMakeProcess = x })
 
-mhCopiousoutput :: Lens' MailcapHandler Bool
+mhCopiousoutput :: Lens' MailcapHandler CopiousOutput
 mhCopiousoutput = lens _mhCopiousoutput (\h x -> h { _mhCopiousoutput = x })
 
-mhKeepTemp :: Lens' MailcapHandler Bool
+mhKeepTemp :: Lens' MailcapHandler TempfileOnExit
 mhKeepTemp = lens _mhKeepTemp (\h x -> h { _mhKeepTemp = x })
 
 

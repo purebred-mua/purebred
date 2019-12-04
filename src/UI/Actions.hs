@@ -743,7 +743,9 @@ openWithCommand =
           let cmd = view (asMailView . mvOpenCommand . E.editContentsL . to (T.unpack . currentLine)) s
            in case cmd of
             [] -> Brick.continue $ setError (GenericError "Empty command") s
-            (x:xs) -> Brick.suspendAndResume $ liftIO $ openCommand' s (MailcapHandler (Process (x :| xs) []) False False)
+            (x:xs) -> Brick.suspendAndResume
+                      $ liftIO
+                      $ openCommand' s (MailcapHandler (Process (x :| xs) []) IgnoreOutput DiscardTempfile)
     }
 
 -- | Pipe the selected entity to the command given from the editor widget.

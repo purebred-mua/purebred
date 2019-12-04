@@ -142,16 +142,14 @@ runEntityCommand cmd =
 
 tmpfileResource ::
      (MonadIO m, MonadError Error m)
-  => Bool -- ^ removeFile upon cleanup?
+  => TempfileOnExit
   -> ResourceSpec m FilePath
-tmpfileResource keepTempfile =
-  let cleanUp =
-        if keepTempfile
-          then mempty
-          else removeFile
+tmpfileResource tmpOnExit =
+  let cleanUp KeepTempfile = mempty
+      cleanUp _ = removeFile
    in ResourceSpec
         (tryIO $ emptySystemTempFile "purebred")
-        (tryIO . cleanUp)
+        (tryIO . cleanUp tmpOnExit)
         (\fp -> tryIO . B.writeFile fp)
 
 emptyResource :: (MonadIO m, MonadError Error m) => ResourceSpec m ()
