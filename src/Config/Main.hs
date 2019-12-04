@@ -222,9 +222,9 @@ defaultConfig =
       , _mvFindWordEditorKeybindings = findWordEditorKeybindings
       , _mvMailcap =
           [ ( matchContentType "text" (Just "html")
-            , MailcapHandler (Shell (fromList "elinks -force-html")) True False)
+            , MailcapHandler (Shell (fromList "elinks -force-html")) CopiousOutput DiscardTempfile)
           , ( const True
-            , MailcapHandler (Process (fromList "xdg-open") []) False True)
+            , MailcapHandler (Process (fromList "xdg-open") []) IgnoreOutput KeepTempfile)
           ]
       }
     , _confIndexView = IndexViewSettings
