@@ -69,3 +69,33 @@ and `nix-env` to install the application:
 ```
 $ nix-env --file default.nix --install
 ```
+
+### Cabal
+
+Install development packages for system library dependencies
+first. They are needed to compile the Haskell notmuch
+bindings. Note that package names may vary between different distributions.
+
+* libtalloc-devel
+* notmuch-devel
+
+Make sure you have one of our supported GHC versions and
+Cabal-install >= 2.2 installed. From a cloned checkout you then go:
+
+```
+# Updates the package list needed for cabal to download dependencies
+$ cabal new-update
+
+# Builds all dependencies, the purebred library and executable and
+# installs it to ~/.cabal/bin
+$ cabal new-build
+Resolving dependencies...
+Build profile: ...
+In order, the following will be built (use -v for more details):
+ - ...
+ - ...
+$ cabal new-install exe:purebred
+
+# start purebred
+$ ~/.cabal/bin/purebred
+```
