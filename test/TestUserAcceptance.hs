@@ -31,10 +31,13 @@ import Data.Functor (($>))
 import Control.Concurrent (threadDelay)
 import System.IO (hPutStr, stderr)
 import System.Environment (lookupEnv, getEnvironment)
-import System.FilePath.Posix ((</>))
+import System.FilePath.Posix
+  ( (</>)
+  , getSearchPath, isAbsolute, searchPathSeparator
+  )
 import Control.Monad (filterM, void, when)
 import Data.Maybe (fromMaybe, isJust)
-import Data.List (isInfixOf, sort)
+import Data.List (intercalate, isInfixOf, sort)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
@@ -1331,7 +1334,19 @@ setUpTempMaildir = do
   -- filenames that are valid on both POSIX and Windows.  We have to fix the
   -- filenames here before using them.
   --
-  runProcess_ $ proc "find"
+  -- In a Nix system the PATH environment may contain relative paths.
+  -- For security reasons find(1) refuses to run when -execdir is given
+  -- and PATH contains relative paths.  So we have to remove relative
+  -- dirs from PATH.
+  --
+  path <- intercalate [searchPathSeparator]
+          . filter isAbsolute
+          <$> getSearchPath
+  let
+    f (k, _) | k == "PATH" = (k, path)
+    f x = x
+  env <- fmap f <$> getEnvironment
+  runProcess_ $ setEnv env $ proc "find"
     [ mdir, "-name", "*_2,*"
     , "-execdir", "sh", "-c", "mv {} $(echo {} | sed s/_2,/:2,/)", ";"
     ]
