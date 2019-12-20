@@ -1325,6 +1325,17 @@ setUpTempMaildir = do
   cwd <- getSourceDirectory
   runProcess_ $ proc "cp" ["-r", cwd <> "/test/data/Maildir/", basedir]
   let mdir = basedir </> "Maildir"
+
+  -- Rename files with maildir flags ; these had to be renamed (':' replaced
+  -- with '_') to appease Hackage requirement that tarballs only contain
+  -- filenames that are valid on both POSIX and Windows.  We have to fix the
+  -- filenames here before using them.
+  --
+  runProcess_ $ proc "find"
+    [ mdir, "-name", "*_2,*"
+    , "-execdir", "sh", "-c", "mv {} $(echo {} | sed s/_2,/:2,/)", ";"
+    ]
+
   setUpNotmuchCfg mdir >>= setUpNotmuch
   pure mdir
 

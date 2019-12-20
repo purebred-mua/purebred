@@ -33,7 +33,7 @@ build-type:          Simple
 extra-source-files:
   README.md
   test/data/Maildir/**/*.url
-  "test/data/Maildir/**/*.url:2,RS"
+  "test/data/Maildir/**/*.url_2,RS"
   configs/purebred.hs
 
 tested-with:
