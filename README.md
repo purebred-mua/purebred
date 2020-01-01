@@ -70,6 +70,13 @@ and `nix-env` to install the application:
 $ nix-env --file default.nix --install
 ```
 
+### Arch Linux
+
+We officially don't support Arch Linux, but will support any packaging
+efforts.  Please see
+[#352](https://github.com/purebred-mua/purebred/issues/352#issuecomment-567873060)
+for links to help building Purebred.
+
 ### Cabal
 
 Install development packages for system library dependencies
