@@ -46,7 +46,7 @@ matrix:
       script:
        - nix-channel --add https://nixos.org/channels/nixos-19.09 nixpkgs
        - nix-channel --update
-       - nix-env --install elinks
+       - nix-env --install --attr nixpkgs.elinks
        - nix-build
        - nix-shell --command 'PATH=$PATH:result/bin cabal test --show-details=streaming uat'
     - compiler: "hlint"
