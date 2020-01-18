@@ -24,7 +24,9 @@
 module Main where
 
 import Data.Char (chr)
-import System.IO.Temp (createTempDirectory, getCanonicalTemporaryDirectory)
+import System.IO.Temp
+  ( createTempDirectory, getCanonicalTemporaryDirectory
+  , emptySystemTempFile)
 import Data.Either (isRight)
 import Data.Foldable (traverse_)
 import Data.Functor (($>))
@@ -49,7 +51,7 @@ import Control.Monad.State (MonadState)
 import Control.Lens (Getter, Lens', _init, _last, at, preview, set, to, view)
 import System.Directory
   ( copyFile, getCurrentDirectory, listDirectory, removeDirectoryRecursive
-  , removeFile
+  , removeFile, doesPathExist
   )
 import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed
@@ -112,7 +114,48 @@ main = defaultMain $ testTmux pre post tests
       , testSubstringSearchInMailBody
       , testSubstringMatchesAreCleared
       , testAutoview
+      , testSavesEntitySuccessfully
       ]
+
+testSavesEntitySuccessfully :: PurebredTestCase
+testSavesEntitySuccessfully = purebredTmuxSession "saves entity to disk successfully" $
+  \step -> do
+    startApplication
+
+    let mailbody = "This is a test mail for purebred"
+        bogusSavePath = "/tmp/this/path/should/not/exist"
+
+    -- Better check and abort the test if our made up path really does
+    -- exist however unlikely we think it is.
+    liftIO $ assertBool "expected bogus path to not exist" <$> doesPathExist bogusSavePath
+
+    tmpfile <- liftIO $ emptySystemTempFile "purebred_saves_entity_to_disk_successfully"
+
+    step "show current mail body"
+    sendKeys "Enter" (Substring mailbody)
+
+    step "list attachments"
+    sendKeys "v" (Substring "text/plain; charset=utf-8")
+
+    step "show save to disk editor"
+    sendKeys "s" (Substring "Save to file")
+
+    step "enter (wrong) path"
+    sendLine bogusSavePath (Substring "openBinaryFile: does not exist")
+
+    step "show save to disk editor (again)"
+    sendKeys "s" (Regex $ "Save to file:\\s+" <> buildAnsiRegex [] ["37"] [] <> "\\s+")
+
+    step "enter (correct) path"
+    sendLine tmpfile (Substring "Attachment saved")
+
+    snapshot
+    assertConditionS (Not (Substring "Save to file"))
+
+    contents <- liftIO $ B.readFile tmpfile
+    let decoded = chr . fromEnum <$> B.unpack contents
+    assertSubstr mailbody decoded
+
 
 testAutoview :: PurebredTestCase
 testAutoview = purebredTmuxSession "automatically copies output for display" $

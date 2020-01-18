@@ -80,6 +80,7 @@ statusbar s =
                 MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
                 MailAttachmentPipeToEditor -> renderStatusbar (view (asMailView . mvPipeCommand) s) s
                 ScrollingMailViewFindWordEditor -> renderStatusbar (view (asMailView . mvFindWordEditor) s) s
+                SaveToDiskPathEditor -> renderStatusbar (view (asMailView . mvSaveToDiskPath) s) s
                 ListOfThreads -> renderStatusbar (view (asMailIndex . miThreads) s) s
                 ListOfMails -> renderStatusbar (view (asMailIndex . miMails) s) s
                 ScrollingMailView -> renderStatusbar (view (asMailIndex . miMails) s) s

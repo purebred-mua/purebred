@@ -84,6 +84,8 @@ renderWidget s _ ComposeListOfAttachments = attachmentsEditor s
 renderWidget s _ MailListOfAttachments = renderAttachmentsList s
 renderWidget s _ ListOfFiles = renderFileBrowser s
 renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor s
+renderWidget s _ SaveToDiskPathEditor =
+  renderEditorWithLabel (Proxy :: Proxy 'SaveToDiskPathEditor) "Save to file:" s
 renderWidget s _ SearchThreadsEditor =
   renderEditorWithLabel (Proxy :: Proxy 'SearchThreadsEditor) "Query:" s
 renderWidget s _ ManageMailTagsEditor =
@@ -120,6 +122,7 @@ handleViewEvent = f where
   f ViewMail MailAttachmentOpenWithEditor = dispatch eventHandlerMailAttachmentOpenWithEditor
   f ViewMail MailAttachmentPipeToEditor = dispatch eventHandlerMailAttachmentPipeToEditor
   f ViewMail ScrollingMailViewFindWordEditor = dispatch eventHandlerScrollingMailViewFind
+  f ViewMail SaveToDiskPathEditor = dispatch eventHandlerSaveToDiskEditor
   f ViewMail _ = dispatch eventHandlerScrollingMailView
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
   f _ ListOfFiles = dispatch eventHandlerComposeFileBrowser
@@ -163,6 +166,7 @@ initialState conf =
            (MailBody mempty [])
            Filtered
            (L.list MailListOfAttachments mempty 1)
+           (E.editorText SaveToDiskPathEditor Nothing "")
            (E.editorText MailAttachmentOpenWithEditor Nothing "")
            (E.editorText MailAttachmentPipeToEditor Nothing "")
            (E.editorText ScrollingMailViewFindWordEditor Nothing "")

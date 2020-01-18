@@ -77,6 +77,7 @@ module UI.Actions (
   , createAttachments
   , openAttachment
   , setTags
+  , saveAttachmentToPath
 
   -- ** Actions for scrolling
   , scrollUp
@@ -151,7 +152,8 @@ import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
        ( parseMail, getTo, getFrom, getSubject, toQuotedMail
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
-       , removeMatchingWords, findMatchingWords, makeScrollSteps)
+       , removeMatchingWords, findMatchingWords, makeScrollSteps
+       , writeEntityToPath)
 import Types
 import Error
 import UI.Utils (selectedFiles)
@@ -237,6 +239,9 @@ instance HasEditor 'SearchThreadsEditor where
 
 instance HasEditor 'ManageThreadTagsEditor where
   editorL _ = asMailIndex . miThreadTagsEditor
+
+instance HasEditor 'SaveToDiskPathEditor where
+  editorL _ = asMailView . mvSaveToDiskPath
 
 -- | Contexts that have a navigable (Brick) list
 class HasList (n :: Name) where
@@ -358,6 +363,11 @@ instance Completable 'ScrollingMailViewFindWordEditor where
        . set (asMailView . mvScrollSteps) (Brick.focusRing (makeScrollSteps mbody))
        . set (asMailView . mvBody) mbody
 
+instance Completable 'SaveToDiskPathEditor where
+  complete _ = pure
+               . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                      . ix SaveToDiskPathEditor . veState) Hidden
+
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
 --
@@ -432,6 +442,11 @@ instance Resetable 'ViewMail 'ScrollingMailViewFindWordEditor where
 
 instance Resetable 'ViewMail 'ScrollingMailView where
   reset _ _ = pure . resetMatchingWords
+
+instance Resetable 'ViewMail 'SaveToDiskPathEditor where
+  reset _ _ = pure . over (asMailView . mvSaveToDiskPath . E.editContentsL) clearZipper
+            . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                   . ix SaveToDiskPathEditor . veState) Hidden
 
 -- | Reset the composition state for a new mail
 --
@@ -508,6 +523,18 @@ instance Focusable 'ViewMail 'MailAttachmentPipeToEditor where
   switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentPipeToEditor
                     . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
                            . ix MailAttachmentPipeToEditor . veState) Visible
+
+instance Focusable 'ViewMail 'SaveToDiskPathEditor where
+  switchFocus _ _ s =
+    let charsets = view (asConfig . confCharsets) s
+        maybeFilePath = preview (asMailView . mvAttachments . to L.listSelectedElement
+                                 . _Just . _2 . contentDisposition . folded . filename charsets) s
+        fname = view (non mempty) maybeFilePath
+        switch = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) SaveToDiskPathEditor
+                       . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
+                           . ix SaveToDiskPathEditor . veState) Visible
+                       . over (asMailView . mvSaveToDiskPath . E.editContentsL) (insertMany fname . clearZipper)
+    in switch s
 
 instance Focusable 'Help 'ScrollingHelpView where
   switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
@@ -628,6 +655,9 @@ instance HasName 'MailAttachmentPipeToEditor where
 
 instance HasName 'ConfirmDialog where
   name _ = ConfirmDialog
+
+instance HasName 'SaveToDiskPathEditor where
+  name _ = SaveToDiskPathEditor
 
 -- | Allow to switch from the current active view to a different
 -- view. Instances are view transitions we only permit.
@@ -758,6 +788,23 @@ pipeToCommand =
     let cmd = view (asMailView . mvPipeCommand . E.editContentsL . to (T.unpack . currentLine)) s
     in Brick.suspendAndResume $ liftIO $ pipeCommand' s cmd
   }
+
+-- | Save a currently selected attachment to the given path on
+-- disk. Shows an error if the path is invalid or can not be written
+-- to.
+saveAttachmentToPath :: Action 'ViewMail 'SaveToDiskPathEditor AppState
+saveAttachmentToPath =
+  Action
+  { _aDescription = ["save attachment to disk"]
+  , _aAction = \s ->
+      let filePath = view (asMailView . mvSaveToDiskPath . E.editContentsL . to (T.unpack . currentLine)) s
+          resetEditor = over (asMailView . mvSaveToDiskPath . E.editContentsL) clearZipper
+      in ($ s)
+         . either
+         (\e s' -> s' & resetEditor . setError e)
+         (\fp -> setError (GenericError $ "Attachment saved to: " <> fp))
+         <$> runExceptT (selectedAttachmentOrError s >>= writeEntityToPath filePath)
+}
 
 -- | Chain sequences of actions to create a keybinding
 --
