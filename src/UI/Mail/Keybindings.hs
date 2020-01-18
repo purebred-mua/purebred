@@ -72,6 +72,7 @@ mailAttachmentsKeybindings =
     , Keybinding (V.EvKey V.KEnter []) openAttachment
     , Keybinding (V.EvKey (V.KChar 'o') []) (noop `chain'` (focus :: Action 'ViewMail 'MailAttachmentOpenWithEditor AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar '|') []) (noop `chain'` (focus :: Action 'ViewMail 'MailAttachmentPipeToEditor AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 's') []) (noop `chain'` (focus :: Action 'ViewMail 'SaveToDiskPathEditor AppState) `chain` continue)
     ]
 
 openWithKeybindings :: [Keybinding 'ViewMail 'MailAttachmentOpenWithEditor]
@@ -96,3 +97,10 @@ mailViewManageMailTagsKeybindings =
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
     ]
+
+saveToDiskKeybindings :: [Keybinding 'ViewMail 'SaveToDiskPathEditor]
+saveToDiskKeybindings =
+  [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
+  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
+  , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` saveAttachmentToPath `chain` continue)
+  ]

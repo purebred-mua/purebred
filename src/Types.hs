@@ -87,6 +87,7 @@ data Name =
     | MailAttachmentPipeToEditor
     | StatusBar
     | ConfirmDialog
+    | SaveToDiskPathEditor
     deriving (Eq,Show,Ord)
 
 -- | A brick list, with a field that optionally contains its length.
@@ -239,6 +240,7 @@ data MailView = MailView
     , _mvBody:: MailBody
     , _mvHeadersState :: HeadersState
     , _mvAttachments :: L.List Name WireEntity
+    , _mvSaveToDiskPath :: E.Editor T.Text Name
     , _mvOpenCommand:: E.Editor T.Text Name
     , _mvPipeCommand :: E.Editor T.Text Name
     , _mvFindWordEditor :: E.Editor T.Text Name
@@ -253,6 +255,9 @@ mvHeadersState = lens _mvHeadersState (\mv hs -> mv { _mvHeadersState = hs })
 
 mvAttachments :: Lens' MailView (L.List Name WireEntity)
 mvAttachments = lens _mvAttachments (\mv hs -> mv { _mvAttachments = hs })
+
+mvSaveToDiskPath :: Lens' MailView (E.Editor T.Text Name)
+mvSaveToDiskPath = lens _mvSaveToDiskPath (\mv hs -> mv { _mvSaveToDiskPath = hs })
 
 mvOpenCommand :: Lens' MailView (E.Editor T.Text Name)
 mvOpenCommand = lens _mvOpenCommand (\mv hs -> mv { _mvOpenCommand = hs })
@@ -494,6 +499,7 @@ data MailViewSettings = MailViewSettings
     , _mvPipeToKeybindings :: [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
     , _mvFindWordEditorKeybindings :: [Keybinding 'ViewMail 'ScrollingMailViewFindWordEditor]
     , _mvMailcap :: [(ContentType -> Bool, MailcapHandler)]
+    , _mvSaveToDiskKeybindings :: [Keybinding 'ViewMail 'SaveToDiskPathEditor]
     }
     deriving (Generic, NFData)
 
@@ -529,6 +535,9 @@ mvFindWordEditorKeybindings = lens _mvFindWordEditorKeybindings (\s x -> s { _mv
 
 mvMailcap :: Lens' MailViewSettings [(ContentType -> Bool, MailcapHandler)]
 mvMailcap = lens _mvMailcap (\s x -> s { _mvMailcap = x })
+
+mvSaveToDiskKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'SaveToDiskPathEditor]
+mvSaveToDiskKeybindings = lens _mvSaveToDiskKeybindings (\s x -> s { _mvSaveToDiskKeybindings = x })
 
 hasCopiousoutput :: Traversal' [(ContentType -> Bool, MailcapHandler)] (ContentType -> Bool, MailcapHandler)
 hasCopiousoutput = traversed . filtered (view (_2 . mhCopiousoutput . to isCopiousOutput))

@@ -42,6 +42,7 @@ module UI.Keybindings (
   , eventHandlerScrollingHelpView
   , eventHandlerComposeFileBrowser
   , eventHandlerScrollingMailViewFind
+  , eventHandlerSaveToDiskEditor
   ) where
 
 import Control.Monad ((<=<))
@@ -161,6 +162,11 @@ eventHandlerMailAttachmentPipeToEditor :: EventHandler 'ViewMail 'MailAttachment
 eventHandlerMailAttachmentPipeToEditor = EventHandler
   (asConfig . confMailView . mvPipeToKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvPipeCommand) E.handleEditorEvent)
+
+eventHandlerSaveToDiskEditor :: EventHandler 'ViewMail 'SaveToDiskPathEditor
+eventHandlerSaveToDiskEditor = EventHandler
+  (asConfig . confMailView . mvSaveToDiskKeybindings)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvSaveToDiskPath) E.handleEditorEvent)
 
 eventHandlerManageThreadTagsEditor :: EventHandler 'Threads 'ManageThreadTagsEditor
 eventHandlerManageThreadTagsEditor =

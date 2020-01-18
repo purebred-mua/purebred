@@ -40,6 +40,7 @@ module Storage.ParsedMail (
   , chooseEntity
   , entityToText
   , entityToBytes
+  , writeEntityToPath
   ) where
 
 import Control.Applicative ((<|>))
@@ -61,6 +62,7 @@ import Data.MIME
 import Error
 import Storage.Notmuch (mailFilepath)
 import Types
+import Purebred.System (tryIO)
 import Purebred.Types.IFC (sanitiseText)
 import Purebred.Parsing.Text (parseMailbody)
 import Purebred.System.Process
@@ -263,3 +265,11 @@ toMIMEMessage charsets m@(Message _ bs) =
 --
 takeFileName :: T.Text -> T.Text
 takeFileName = T.pack . FP.takeFileName . T.unpack
+
+-- | Low-level function to save the 'WireEntity' to disk.
+--
+writeEntityToPath ::
+     (MonadError Error m, MonadIO m) => FilePath -> WireEntity -> m FilePath
+writeEntityToPath filepath entity = do
+  entityToBytes entity >>= tryIO . B.writeFile filepath
+  pure filepath
