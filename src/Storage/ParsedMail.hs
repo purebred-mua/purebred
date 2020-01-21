@@ -233,16 +233,17 @@ quoteText = ("> " <>)
 -- b) the text entity can be successfully decoded
 -- otherwise an empty plain text body is created
 toQuotedMail
-  :: MailBody
+  :: [Mailbox]
+  -> MailBody
   -> MIMEMessage
   -> MIMEMessage
-toQuotedMail mbody msg =
+toQuotedMail mailboxes mbody msg =
     let contents = T.unlines $ toListOf (mbParagraph . pLine . lText . to quoteText) mbody
         replyToAddress m =
             firstOf (headers . header "reply-to") m
             <|> firstOf (headers . header "from") m
     in createTextPlainMessage contents
-                 & set (headers . at "from") (view (headers . at "to") msg)
+                 & set (headers . at "from") (Just $ renderMailboxes mailboxes)
                  . set (headers . at "to") (replyToAddress msg)
                  . set (headers . at "references") (view (headers . replyHeaderReferences) msg)
                  . set (headers . at "subject") (("Re: " <>) <$> view (headers . at "subject") msg)

@@ -1259,7 +1259,8 @@ replyToMail s =
       over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) .
       setError (GenericError "No mail selected for replying")
     Just pmail ->
-      let quoted = toQuotedMail mbody pmail
+      let mailboxes = view (asConfig . confComposeView . cvIdentities) s
+          quoted = toQuotedMail mailboxes mbody pmail
           mbody = view (asMailView . mvBody) s
           charsets = view (asConfig . confCharsets) s
        in s &

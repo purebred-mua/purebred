@@ -218,15 +218,15 @@ testCursorPositionedEndOnReply = purebredTmuxSession "cursor positioned on EOL w
     sendKeys ": x\r" (Substring "Attachments")
 
     step "focus from field"
-    sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "<frase@host.example>")
+    sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
     sendKeys ", fromuser@foo.test\r" (Substring $ "From: "
-                                      <> "<frase@host.example>, fromuser@foo.test")
+                                      <> "\"Joe Bloggs\" <joe@foo.test>, fromuser@foo.test")
 
     step "user can change to header"
-    sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "<roman@host.example>")
+    sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "<frase@host.example>")
 
     step "append an additional from email"
-    sendKeys ", touser@foo.test\r" (Substring "To: <roman@host.example>, touser@foo.test")
+    sendKeys ", touser@foo.test\r" (Substring "To: <frase@host.example>, touser@foo.test")
 
     step "change subject"
     sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> ".*subject\\s+$")
@@ -595,8 +595,8 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     step "pick first mail"
     sendKeys "Enter" (Substring "This is a test mail for purebred") >>= put
 
-    assertSubstringS "From: <roman@host.example>"
-    assertSubstringS "To: <frase@host.example>"
+    assertSubstringS "From: <frase@host.example>"
+    assertSubstringS "To: <roman@host.example>"
     assertSubstringS ("Subject: " <> subject)
 
     step "start replying"
@@ -605,8 +605,8 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     step "exit vim"
     sendKeys ": x\r" (Substring "Attachments") >>= put
 
-    assertSubstringS "From: <frase@host.example>"
-    assertSubstringS "To: <roman@host.example>"
+    assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>\\s+$"
+    assertSubstringS "To: <frase@host.example>"
     assertSubstringS ("Subject: Re: " <> subject)
 
     step "send mail"
@@ -616,8 +616,8 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     contents <- liftIO $ B.readFile fpath
     let decoded = chr . fromEnum <$> B.unpack contents
     assertSubstr ("Subject: Re: " <> subject) decoded
-    assertSubstr "From: frase@host.example" decoded
-    assertSubstr "To: roman@host.example" decoded
+    assertSubstr "From: \"Joe Bloggs\" <joe@foo.test>" decoded
+    assertSubstr "To: frase@host.example" decoded
     assertSubstr "> This is a test mail for purebred" decoded
 
 testFromAddressIsProperlyReset :: PurebredTestCase
