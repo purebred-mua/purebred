@@ -3,8 +3,8 @@ X-Original-To: rjoost
 Delivered-To: rjoost@host.example
 Received: by host.example (Postfix, from userid 20845)
 	id 55C4580B8F; Thu, 17 Aug 2017 13:50:04 +1000 (AEST)
-From: <roman@host.example>
-To: <frase@host.example>
+From: <frase@host.example>
+To: <roman@host.example>, <frase@host.example>, <joe@host.example>
 Subject: Testmail with whitespace in the
 	subject
 MIME-Version: 1.0
