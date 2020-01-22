@@ -116,6 +116,7 @@ mailView =
               , Tile Hidden MailAttachmentPipeToEditor
               , Tile Hidden ScrollingMailViewFindWordEditor
               , Tile Hidden SaveToDiskPathEditor
+              , Tile Hidden ComposeTo
               ]
           ]
     , _vFocus = ListOfMails

@@ -500,6 +500,8 @@ data MailViewSettings = MailViewSettings
     , _mvFindWordEditorKeybindings :: [Keybinding 'ViewMail 'ScrollingMailViewFindWordEditor]
     , _mvMailcap :: [(ContentType -> Bool, MailcapHandler)]
     , _mvSaveToDiskKeybindings :: [Keybinding 'ViewMail 'SaveToDiskPathEditor]
+    -- used for forwarding mails
+    , _mvToKeybindings :: [Keybinding 'ViewMail 'ComposeTo]
     }
     deriving (Generic, NFData)
 
@@ -538,6 +540,9 @@ mvMailcap = lens _mvMailcap (\s x -> s { _mvMailcap = x })
 
 mvSaveToDiskKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'SaveToDiskPathEditor]
 mvSaveToDiskKeybindings = lens _mvSaveToDiskKeybindings (\s x -> s { _mvSaveToDiskKeybindings = x })
+
+mvToKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'ComposeTo]
+mvToKeybindings = lens _mvToKeybindings (\s x -> s { _mvToKeybindings = x })
 
 hasCopiousoutput :: Traversal' [(ContentType -> Bool, MailcapHandler)] (ContentType -> Bool, MailcapHandler)
 hasCopiousoutput = traversed . filtered (view (_2 . mhCopiousoutput . to isCopiousOutput))

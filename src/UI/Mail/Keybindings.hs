@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2017-2020 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -53,6 +53,10 @@ displayMailKeybindings =
     , Keybinding (V.EvKey (V.KChar 'e') []) (composeAsNew `chain'` (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar '/') []) (noop `chain'` (focus :: Action 'ViewMail 'ScrollingMailViewFindWordEditor AppState) `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'n') []) (scrollNextWord `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'f') []) (noop
+                                             `chain` encapsulateMail
+                                             `chain'` (focus :: Action 'ViewMail 'ComposeTo AppState)
+                                             `chain` continue)
     , Keybinding (V.EvKey V.KEnter []) (removeHighlights `chain` continue)
     ]
 
@@ -104,3 +108,10 @@ saveToDiskKeybindings =
   , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` continue)
   , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ViewMail 'MailListOfAttachments AppState) `chain` saveAttachmentToPath `chain` continue)
   ]
+
+mailviewComposeToKeybindings :: [Keybinding 'ViewMail 'ComposeTo]
+mailviewComposeToKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'ViewMail 'ScrollingMailView AppState) `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain'` (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain` invokeEditor)
+    ]

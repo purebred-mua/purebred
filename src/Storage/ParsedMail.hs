@@ -31,6 +31,7 @@ module Storage.ParsedMail (
   -- ** Header data
   , getTo
   , getSubject
+  , getForwardedSubject
   , getFrom
   , toQuotedMail
   , takeFileName
@@ -99,6 +100,13 @@ getSubject = getHeader "subject"
 
 getTo :: Message s a -> T.Text
 getTo = getHeader "to"
+
+-- | Returns the subject line formatted for forwarding.
+--
+getForwardedSubject ::
+     Message s a -- ^ the encapsulated mail
+  -> T.Text
+getForwardedSubject m = "[" <> getFrom m <> ": " <> getSubject m <> "]"
 
 -- | Create a list of steps to record which absolute positions
 -- brick/the terminal should scroll.
