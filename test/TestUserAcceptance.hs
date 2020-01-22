@@ -115,7 +115,53 @@ main = defaultMain $ testTmux pre post tests
       , testSubstringMatchesAreCleared
       , testAutoview
       , testSavesEntitySuccessfully
+      , testForwardsMailSuccessfully
       ]
+
+testForwardsMailSuccessfully :: PurebredTestCase
+testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" $
+  \step -> do
+    startApplication
+
+    let subject = "[<frase@host.example>: Testmail with whitespace in the subject]"
+
+    step "view mail"
+    sendKeys "Enter" (Substring "This is a test mail")
+
+    step "Start forwarding composition"
+    sendKeys "f" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "\\s+$")
+
+    step "enter receipient address"
+    sendLine "to_user@foo.test" (Substring "~")
+
+    step "enter mail body"
+    sendKeys "iFind attached a forwarded mail" (Substring "mail")
+
+    step "exit insert mode in vim"
+    sendKeys "Escape" (Substring "mail")
+
+    step "exit vim"
+    sendKeys ": x\r" (Substring "Attachments") >>= put
+
+    assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>\\s+$"
+    assertSubstringS "To: to_user@foo.test"
+    assertSubstringS ("Subject: " <> subject)
+    assertSubstringS "text/plain"
+    assertSubstringS "message/rfc822"
+
+    step "send mail"
+    sendKeys "y" (Substring "Query")
+
+    testdir <- view effectiveDir
+    let fpath = testdir </> "sentMail"
+
+    assertMailSuccessfullyParsed fpath
+
+    contents <- liftIO $ B.readFile fpath
+    let decoded = chr . fromEnum <$> B.unpack contents
+    assertSubstr subject decoded
+    assertSubstr "This is a test mail" decoded
+    assertSubstr "Find attached a forwarded mail" decoded
 
 testSavesEntitySuccessfully :: PurebredTestCase
 testSavesEntitySuccessfully = purebredTmuxSession "saves entity to disk successfully" $

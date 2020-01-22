@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2017-2020 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -43,6 +43,7 @@ module UI.Keybindings (
   , eventHandlerComposeFileBrowser
   , eventHandlerScrollingMailViewFind
   , eventHandlerSaveToDiskEditor
+  , eventHandlerViewMailComposeTo
   ) where
 
 import Control.Monad ((<=<))
@@ -241,3 +242,8 @@ eventHandlerManageFileBrowserSearchPath :: EventHandler 'FileBrowser 'ManageFile
 eventHandlerManageFileBrowserSearchPath = EventHandler
   (asConfig . confFileBrowserView . fbSearchPathKeybindings)
   (\s -> Brick.continue <=< Brick.handleEventLensed s (asFileBrowser . fbSearchPath) E.handleEditorEvent)
+
+eventHandlerViewMailComposeTo :: EventHandler 'ViewMail 'ComposeTo
+eventHandlerViewMailComposeTo = EventHandler
+  (asConfig . confMailView . mvToKeybindings)
+  composeToHandler

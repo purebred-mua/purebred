@@ -47,7 +47,8 @@ import UI.Index.Keybindings
 import UI.Mail.Keybindings
        (displayMailKeybindings, mailViewManageMailTagsKeybindings,
         mailAttachmentsKeybindings, openWithKeybindings,
-        pipeToKeybindings, findWordEditorKeybindings, saveToDiskKeybindings)
+        pipeToKeybindings, findWordEditorKeybindings,
+        saveToDiskKeybindings, mailviewComposeToKeybindings)
 import UI.Help.Keybindings (helpKeybindings)
 import UI.ComposeEditor.Keybindings
        (listOfAttachmentsKeybindings, composeFromKeybindings,
@@ -221,6 +222,7 @@ defaultConfig =
       , _mvPipeToKeybindings = pipeToKeybindings
       , _mvFindWordEditorKeybindings = findWordEditorKeybindings
       , _mvSaveToDiskKeybindings = saveToDiskKeybindings
+      , _mvToKeybindings = mailviewComposeToKeybindings
       , _mvMailcap =
           [ ( matchContentType "text" (Just "html")
             , MailcapHandler (Shell (fromList "elinks -force-html")) CopiousOutput DiscardTempfile)

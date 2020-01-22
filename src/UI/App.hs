@@ -123,6 +123,7 @@ handleViewEvent = f where
   f ViewMail MailAttachmentPipeToEditor = dispatch eventHandlerMailAttachmentPipeToEditor
   f ViewMail ScrollingMailViewFindWordEditor = dispatch eventHandlerScrollingMailViewFind
   f ViewMail SaveToDiskPathEditor = dispatch eventHandlerSaveToDiskEditor
+  f ViewMail ComposeTo = dispatch eventHandlerViewMailComposeTo
   f ViewMail _ = dispatch eventHandlerScrollingMailView
   f _ ScrollingHelpView = dispatch eventHandlerScrollingHelpView
   f _ ListOfFiles = dispatch eventHandlerComposeFileBrowser
