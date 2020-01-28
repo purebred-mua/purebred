@@ -1142,8 +1142,7 @@ makeAttachmentsFromSelected s = do
     . set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
   where
     go :: [MIMEMessage] -> L.List Name MIMEMessage -> L.List Name MIMEMessage
-    go parts l = foldr (upsertPart charsets) l parts
-    charsets = view (asConfig . confCharsets) s
+    go parts l = foldr upsertPart l parts
     makeFullPath path = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> path
 
 -- | Determine if the selected directory entry is a file or not. We do
@@ -1309,12 +1308,11 @@ replyToMail s =
       let mailboxes = view (asConfig . confComposeView . cvIdentities) s
           quoted = toQuotedMail mailboxes mbody pmail
           mbody = view (asMailView . mvBody) s
-          charsets = view (asConfig . confCharsets) s
        in s &
           over (asCompose . cTo . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
           . over (asCompose . cFrom . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
           . over (asCompose . cSubject . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
-          . over (asCompose . cAttachments) (upsertPart charsets quoted)
+          . over (asCompose . cAttachments) (upsertPart quoted)
 
 -- | Build the MIMEMessage, sanitize filepaths, serialize and send it
 --
@@ -1422,11 +1420,10 @@ invokeEditor' s =
                              . _Just . _2 . to getTextPlainPart . _Just) s
       maildir = view (asConfig . confNotmuch . nmDatabase) s
       cmd = view (asConfig . confEditor) s
-      updatePart = over (asCompose . cAttachments) . upsertPart charsets . createTextPlainMessage
+      updatePart = over (asCompose . cAttachments) . upsertPart . createTextPlainMessage
       mkEntity :: (MonadError Error m) => m B.ByteString
       mkEntity = maybe (pure mempty) entityToBytes maybeEntity
       entityCmd = EntityCommand handleExitCodeTempfileContents (draftFileResoure maildir) (\_ fp -> proc cmd [fp]) tryReadProcessStderr
-      charsets = view (asConfig . confCharsets) s
   in
     either (`setError` s) (`updatePart` s)
     <$> runExceptT (mkEntity >>= runEntityCommand . entityCmd)
@@ -1486,16 +1483,14 @@ editAttachment s =
 -- is needed when editing parts during composition of an e-mail.
 --
 upsertPart ::
-     CharsetLookup
-  -> MIMEMessage
+  MIMEMessage
   -> L.List Name MIMEMessage
   -> L.List Name MIMEMessage
-upsertPart charsets newPart l =
+upsertPart newPart l =
   case L.listSelectedElement l of
     Nothing -> L.listInsert 0 newPart l
     Just (_, part) ->
-      if view (headers . contentDisposition . folded . filename charsets) part
-          == view (headers . contentDisposition . folded . filename charsets) newPart
+      if view headers part == view headers newPart
       then
         -- replace
         L.listModify (const newPart) l
