@@ -33,12 +33,12 @@ import qualified Brick.Widgets.List as L
 import Types
 
 
-toggledItems :: L.List Name (Bool, a) -> [(Bool, a)]
+toggledItems :: L.List Name (SelectableItem a) -> [SelectableItem a]
 toggledItems = toListOf (L.listElementsL . folded . filtered fst)
 
 -- | Toggle file list entries to be selected
 --
-selectedFiles :: L.List Name (Bool, FileSystemEntry) -> [FilePath]
+selectedFiles :: L.List Name (SelectableItem FileSystemEntry) -> [FilePath]
 selectedFiles l = let cur = case L.listSelectedElement l of
                         Just (_, (_, File fsname)) -> [(False, File fsname)]
                         _ -> []

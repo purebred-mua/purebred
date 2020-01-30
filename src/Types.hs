@@ -642,6 +642,11 @@ vsViews = lens _vsViews (\settings x -> settings { _vsViews = x })
 vsFocusedView :: Lens' ViewSettings (Brick.FocusRing ViewName)
 vsFocusedView = lens _vsFocusedView (\settings x -> settings { _vsFocusedView = x})
 
+-- | An item which carries it's selected state.
+-- Used in order to mark list items.
+--
+type SelectableItem a = (Bool, a)
+
 data FileSystemEntry
     = Directory String
     | File String
@@ -653,11 +658,11 @@ fsEntryName = let toName (Directory n) = n
               in to toName
 
 data FileBrowser = CreateFileBrowser
-  { _fbEntries :: L.List Name (Bool, FileSystemEntry)
+  { _fbEntries :: L.List Name (SelectableItem FileSystemEntry)
   , _fbSearchPath :: E.Editor FilePath Name
   }
 
-fbEntries :: Lens' FileBrowser (L.List Name (Bool, FileSystemEntry))
+fbEntries :: Lens' FileBrowser (L.List Name (SelectableItem FileSystemEntry))
 fbEntries = lens _fbEntries (\cv x -> cv { _fbEntries = x })
 
 fbSearchPath :: Lens' FileBrowser (E.Editor FilePath Name)
