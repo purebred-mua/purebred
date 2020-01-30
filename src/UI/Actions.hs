@@ -411,7 +411,7 @@ instance Resetable 'ComposeView 'ComposeTo where
 instance Resetable 'ComposeView 'ComposeSubject where
   reset _ _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
                 . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
-                       . ix ComposeTo . veState) Hidden
+                       . ix ComposeSubject . veState) Hidden
 
 revertEditorContents :: AppState -> TextZipper T.Text -> TextZipper T.Text
 revertEditorContents s z = let saved = view (asCompose . cTemp) s
