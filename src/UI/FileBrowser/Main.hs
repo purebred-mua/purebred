@@ -32,7 +32,7 @@ renderFileBrowser :: AppState -> Widget Name
 renderFileBrowser s = L.renderList drawListItem (ListOfFiles == focusedViewWidget s)
                       $ view (asFileBrowser . fbEntries) s
 
-drawListItem :: Bool -> (Bool, FileSystemEntry) -> Widget Name
+drawListItem :: Bool -> SelectableItem FileSystemEntry -> Widget Name
 drawListItem sel (toggled, x) =
   let attr = withAttr $ if sel then listSelectedAttr else listAttr
       toggledWidget = txt $ if toggled then " ☑ " else " ☐ "

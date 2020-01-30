@@ -289,7 +289,7 @@ instance HasList 'MailListOfAttachments where
 
 instance HasList 'ListOfFiles where
   type T 'ListOfFiles = Vector.Vector
-  type E 'ListOfFiles = (Bool, FileSystemEntry)
+  type E 'ListOfFiles = SelectableItem FileSystemEntry
   list _ = asFileBrowser . fbEntries
 
 
