@@ -313,7 +313,7 @@ data NotmuchSettings a = NotmuchSettings
     , _nmDraftTag :: Tag
     , _nmSentTag :: Tag
     , _nmHasNewMailSearch :: T.Text
-    , _nmHasNewMailCheckDelay :: Maybe Int
+    , _nmHasNewMailCheckDelay :: Maybe Delay
     }
     deriving (Generic, NFData)
 
@@ -335,7 +335,7 @@ nmSentTag = lens _nmSentTag (\nm x -> nm { _nmSentTag = x })
 nmHasNewMailSearch :: Lens' (NotmuchSettings a) T.Text
 nmHasNewMailSearch = lens _nmHasNewMailSearch (\nm x -> nm { _nmHasNewMailSearch = x })
 
-nmHasNewMailCheckDelay :: Lens' (NotmuchSettings a) (Maybe Int)
+nmHasNewMailCheckDelay :: Lens' (NotmuchSettings a) (Maybe Delay)
 nmHasNewMailCheckDelay = lens _nmHasNewMailCheckDelay (\nm x -> nm { _nmHasNewMailCheckDelay = x })
 
 data FileBrowserSettings a = FileBrowserSettings
@@ -368,6 +368,11 @@ data Configuration extra a b c = Configuration
     , _confExtra :: extra  -- data specific to a particular "phase" of configuration
     }
     deriving (Generic, NFData)
+
+data Delay 
+  = Seconds Int 
+  | Minutes Int
+  deriving (Generic, NFData)
 
 type UserConfiguration = Configuration () (IO FilePath) (IO String) (IO FilePath)
 type InternalConfiguration = Configuration (BChan PurebredEvent, String) FilePath String FilePath
