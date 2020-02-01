@@ -43,7 +43,7 @@ import Error
 import Config.Main (statusbarAttr, statusbarErrorAttr)
 import qualified Storage.Notmuch as Notmuch
 
-checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Int -> IO ()
+checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()
 checkForNewMail chan dbpath query delay = do
   r <- runExceptT (Notmuch.countThreads query dbpath)
   case r of
@@ -52,9 +52,12 @@ checkForNewMail chan dbpath query delay = do
   where
     notify = writeBChan chan . NotifyNewMailArrived
 
-rescheduleMailcheck :: BChan PurebredEvent -> FilePath -> Text -> Int -> IO ()
+rescheduleMailcheck :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()
 rescheduleMailcheck chan dbpath query delay =
-  void $ forkIO (threadDelay delay *> checkForNewMail chan dbpath query delay)
+  void $ forkIO (threadDelay (toMilisecond delay) *> checkForNewMail chan dbpath query delay)
+    where
+      toMilisecond (Seconds x) = x * 1000000
+      toMilisecond (Minutes x) = x * 60 * 1000000
 
 data StatusbarContext a
     = ListContext a

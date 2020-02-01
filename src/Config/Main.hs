@@ -207,7 +207,7 @@ defaultConfig =
       , _nmDraftTag = "draft"
       , _nmSentTag = "sent"
       , _nmHasNewMailSearch = "tag:inbox and tag:unread"
-      , _nmHasNewMailCheckDelay = Just (5 * 10000 * 60)  -- 3 seconds
+      , _nmHasNewMailCheckDelay = Just (Seconds 3)
       }
     , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
     , _confMailView = MailViewSettings
