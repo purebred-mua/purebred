@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2018 Fraser Tweedale
+-- Copyright (C) 2018-2020 Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -16,6 +16,8 @@
 
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {- |
 
@@ -40,10 +42,11 @@ import Data.Monoid (Monoid(..))
 import Data.Ord (Ord(..))
 import Data.Semigroup (Semigroup(..))
 import Data.Traversable (Traversable)
-import Prelude ((-))
+import Prelude ((+), (-), uncurry)
 import Text.Show (Show)
 
 import qualified Brick.Widgets.List as Brick
+import Control.Lens
 import qualified Data.Vector as V
 
 -- | A lazy vector.  Linked list of chunks.
@@ -97,3 +100,16 @@ splitAt i (V chunks) = case chunks of
     | otherwise ->
       let (V h', V t') = splitAt (i - length h) (V t)
       in (V (h : h'), V t')
+
+type instance Index (V a) = Int
+type instance IxValue (V a) = a
+
+instance Ixed (V a) where
+  ix n = splitIso (n + 1) . _1 . _VIso . _last . _last
+    where
+    splitIso :: Int -> Iso' (V a) (V a, V a)
+    splitIso i = iso (splitAt i) (uncurry (<>))
+
+    -- type checker needs some help
+    _VIso :: Iso' (V a) [V.Vector a]
+    _VIso = coerced
