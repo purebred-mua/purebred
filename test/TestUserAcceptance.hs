@@ -239,7 +239,7 @@ testSubstringMatchesAreCleared = purebredTmuxSession "substring match indicator 
 
     step "No match indicator is shown"
     snapshot
-    assertRegexS "New:\\s[0-9]\\]\\s+Threads"
+    assertRegexS "New:\\s[0-9]\\s+\\]\\s+Threads"
 
     step "search for Lorem mail"
     sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
@@ -258,7 +258,7 @@ testSubstringMatchesAreCleared = purebredTmuxSession "substring match indicator 
     sendKeys "et\r" (Substring "1 of 20 matches")
 
     step "go back to threads"
-    sendKeys "Escape" (Regex "New:\\s[0-9]\\]\\s+Threads")
+    sendKeys "Escape" (Regex "New:\\s[0-9]\\s+\\]\\s+Threads")
 
 
 testSubstringSearchInMailBody :: PurebredTestCase

@@ -28,6 +28,7 @@ displayMailKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'q') []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
     , Keybinding (V.EvKey V.KBS []) (scrollPageUp `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '*') []) (toggleListItem `chain` listDown `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
     , Keybinding (V.EvKey (V.KChar ' ') []) (scrollPageDown `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'h') []) (toggleHeaders `chain` continue)
@@ -100,7 +101,7 @@ pipeToKeybindings =
 mailViewManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor]
 mailViewManageMailTagsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'ViewMail @'ScrollingMailView `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (done `chain'` focus @'ViewMail @'ScrollingMailView `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain'` untoggleListItems @'ViewMail @'ScrollingMailView `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'ViewMail @'ScrollingMailView `chain` continue)
     ]
 

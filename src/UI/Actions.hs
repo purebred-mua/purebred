@@ -65,6 +65,7 @@ module UI.Actions (
   , listJumpToStart
   , reloadList
   , toggleListItem
+  , untoggleListItems
 
   -- ** Mail specific Actions
   , displayMail
@@ -264,17 +265,17 @@ class HasList (n :: Name) where
 
 instance HasList 'ListOfThreads where
   type T 'ListOfThreads = V
-  type E 'ListOfThreads = NotmuchThread
+  type E 'ListOfThreads = SelectableItem NotmuchThread
   list _ = asMailIndex . miListOfThreads
 
 instance HasList 'ListOfMails where
   type T 'ListOfMails = Vector.Vector
-  type E 'ListOfMails = NotmuchMail
+  type E 'ListOfMails = SelectableItem NotmuchMail
   list _ = asMailIndex . miListOfMails
 
 instance HasList 'ScrollingMailView where
   type T 'ScrollingMailView = Vector.Vector
-  type E 'ScrollingMailView = NotmuchMail
+  type E 'ScrollingMailView = SelectableItem NotmuchMail
   list _ = asMailIndex . miListOfMails
 
 instance HasList 'ComposeListOfAttachments where
@@ -292,6 +293,31 @@ instance HasList 'ListOfFiles where
   type E 'ListOfFiles = SelectableItem FileSystemEntry
   list _ = asFileBrowser . fbEntries
 
+-- | contexts which have selectable items in a list
+class HasList (n :: Name) => HasSelectableItemList n where
+  toggle :: Proxy n -> Int -> StateT AppState (T.EventM Name) ()
+  selected :: Proxy n -> AppState -> [(E n)]
+
+instance HasSelectableItemList 'ListOfThreads where
+  toggle _ i = modifying (list (Proxy @'ListOfThreads) . L.listElementsL . ix i . _1) not
+  selected _ s =
+    let selectedItem = toListOf (list (Proxy @'ListOfThreads) . to L.listSelectedElement . traversed . _2) s
+        toggled = toListOf (list (Proxy @'ListOfThreads) . traversed . filtered fst) s
+    in if null toggled then selectedItem else toggled
+
+instance HasSelectableItemList 'ScrollingMailView where
+  toggle _ i = modifying (list (Proxy @'ScrollingMailView) . L.listElementsL . ix i . _1) not
+  selected _ s =
+    let selectedItem = toListOf (list (Proxy @'ScrollingMailView) . to L.listSelectedElement . traversed . _2) s
+        toggled = toListOf (list (Proxy @'ScrollingMailView) . traversed . filtered fst) s
+    in if null toggled then selectedItem else toggled
+
+instance HasSelectableItemList 'ListOfFiles where
+  toggle _ i = modifying (list (Proxy @'ListOfFiles) . L.listElementsL . ix i . _1) not
+  selected _ s =
+    let selectedItem = toListOf (list (Proxy @'ListOfFiles) . to L.listSelectedElement . traversed . _2) s
+        toggled = toListOf (list (Proxy @'ListOfFiles) . traversed . filtered fst) s
+    in if null toggled then selectedItem else toggled
 
 -- | A function which is run at the end of a chained sequence of actions.
 --
@@ -320,8 +346,11 @@ completeMailTags s =
     case getEditorTagOps (Proxy @'ManageMailTagsEditor) s of
         Left err -> pure $ setError err s
         Right ops' -> flip execStateT s $ do
-          modifying (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
-          selectedItemHelper (asMailIndex . miListOfMails) (manageMailTags ops')
+          result <- applyTagOps ops' (selected (Proxy @'ScrollingMailView) s) s
+          case result of
+            Left err -> assignError err
+            Right _ -> modifying (asMailIndex . miListOfMails . traversed . filtered fst)
+                       (over _2 (Notmuch.tagItem ops'))
 
 
 hide, unhide :: (MonadState AppState m) => ViewName -> Int -> Name -> m ()
@@ -370,7 +399,7 @@ instance Completable 'ManageThreadTagsEditor where
     case getEditorTagOps (Proxy @'ManageThreadTagsEditor) s of
       Left err -> assignError err
       Right ops -> do
-        selectedItemHelper (asMailIndex . miListOfThreads) (manageThreadTags ops)
+        manageThreadTags ops (selected (Proxy @'ListOfThreads) s)
         modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Completable 'ManageFileBrowserSearchPath where
@@ -1006,8 +1035,8 @@ displayThreadMails =
         -- Update the Application state with all mails found for the
         -- currently selected thread.
         dbpath <- use (asConfig . confNotmuch . nmDatabase)
-        selectedItemHelper (asMailIndex . miListOfThreads) $ \t ->
-          runExceptT (Notmuch.getThreadMessages dbpath t)
+        selectedItemHelper (asMailIndex . miListOfThreads) $ \(_, t) ->
+          runExceptT (Notmuch.getThreadMessages dbpath (Identity t))
             >>= either assignError (\vec -> do
               modifying (asMailIndex . miMails . listList) (L.listReplace vec Nothing)
               assign (asMailIndex . miMails . listLength) (Just (length vec)) )
@@ -1112,15 +1141,19 @@ toggleHeaders = Action
 -- | Apply given tag operations on the currently selected thread or
 -- mail.
 --
-setTags :: [TagOp] -> Action v ctx ()
+setTags :: forall v ctx. HasSelectableItemList ctx => [TagOp] -> Action v ctx ()
 setTags ops =
     Action
     { _aDescription = ["apply given tags"]
     , _aAction = do
         w <- gets focusedViewWidget
+        s <- get
         case w of
-          ListOfMails -> selectedItemHelper (asMailIndex . miListOfMails) (manageMailTags ops)
-          _ -> selectedItemHelper (asMailIndex . miListOfThreads) (manageThreadTags ops)
+          ScrollingMailView -> do
+            manageMailTags ops (selected (Proxy @'ScrollingMailView) s)
+          _ -> do
+            manageThreadTags ops (selected (Proxy @'ListOfThreads) s)
+
     }
 
 -- | Reloads the list of threads by executing the notmuch query given
@@ -1140,20 +1173,33 @@ selectNextUnread = Action
       -- but if there is no resulting selection, move to the
       -- last element in the list
       let f l = maybe (L.listMoveTo (-1) l) (const l) (view L.listSelectedL l)
-      modifying (asMailIndex . miListOfMails) (f . L.listFindBy p)
+      modifying (asMailIndex . miListOfMails) (f . L.listFindBy (p . view _2))
   }
 
 -- | Selects a list item. Currently only used in the file browser to
 -- select a file for attaching.
 --
-toggleListItem :: Action v 'ListOfFiles ()
+toggleListItem :: forall v ctx. HasSelectableItemList ctx => Action v ctx ()
 toggleListItem =
     Action
     { _aDescription = ["toggle selected state of a list item"]
-    , _aAction = use (asFileBrowser . fbEntries . L.listSelectedL) >>= traverse_ f
+    , _aAction = use (list (Proxy @ctx) . L.listSelectedL) >>= traverse_ (toggle (Proxy @ctx))
     }
-    where
-      f i = modifying (asFileBrowser . fbEntries . L.listElementsL . ix i . _1) not
+
+untoggleListItems :: forall v ctx. HasSelectableItemList ctx => Action v ctx ()
+untoggleListItems =
+    Action
+    { _aDescription = ["untoggle all selected list items"]
+    , _aAction = do
+        w <- gets focusedViewWidget
+        case w of
+          ScrollingMailView ->
+            modifying (asMailIndex . miListOfMails . traverse . filtered fst) (\m -> set _1 False m)
+          ListOfFiles ->
+            modifying (asFileBrowser . fbEntries . traverse . filtered fst) (\m -> set _1 False m)
+          _ ->
+            modifying (asMailIndex . miListOfThreads . traverse . filtered fst) (\t -> set _1 False t)
+    }
 
 -- | Delete an attachment from a mail currently being composed.
 --
@@ -1226,7 +1272,7 @@ handleConfirm = Action ["handle confirmation"] keepOrDiscardDraft
 --
 composeAsNew :: Action 'ViewMail 'ScrollingMailView ()
 composeAsNew = Action ["edit mail as new"] $
-  preuse (asMailIndex .  miListOfMails . to L.listSelectedElement . _Just . _2)
+  preuse (asMailIndex .  miListOfMails . to L.listSelectedElement . _Just . _2 . _2)
     >>= maybe
       (assignError (GenericError "No mail selected"))
       (\mail -> do
@@ -1326,12 +1372,13 @@ getEditorTagOps p s =
 applyTagOps
   :: (Traversable t, MonadIO m)
   => [TagOp]
-  -> t NotmuchMail
+  -> t (SelectableItem NotmuchMail)
   -> AppState
   -> m (Either Error (t NotmuchMail))
 applyTagOps ops mails s =
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
-  in runExceptT (Notmuch.messageTagModify dbpath ops mails)
+      ms = snd <$> mails
+  in runExceptT (Notmuch.messageTagModify dbpath ops ms)
 
 updateStateWithParsedMail :: (MonadIO m, MonadMask m, MonadState AppState m) => m ()
 updateStateWithParsedMail = do
@@ -1340,7 +1387,7 @@ updateStateWithParsedMail = do
   textwidth <- use (asConfig . confMailView . mvTextWidth)
   preferredContentType <- use (asConfig . confMailView . mvPreferredContentType)
   s <- get
-  selectedItemHelper (asMailIndex . miListOfMails) $ \m ->
+  selectedItemHelper (asMailIndex . miListOfMails) $ \(_, m) ->
     runExceptT (parseMail m db >>= bodyToDisplay s textwidth charsets preferredContentType)
     >>= either
       (\e -> do
@@ -1365,15 +1412,19 @@ updateReadState con = do
   -- navigated back to the index of threads, but does not
   -- always garantee an updated tag list. See #249
   op <- con <$> use (asConfig . confNotmuch . nmNewTag)
-  selectedItemHelper (asMailIndex . miListOfMails) (manageMailTags [op])
-  modifying (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem [op]))
+  selectedItemHelper (asMailIndex . miListOfMails) (manageMailTags [op] . Identity)
+  modifying (asMailIndex . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem [op]))
 
-manageMailTags :: (MonadIO m, MonadState AppState m) => [TagOp] -> NotmuchMail -> m ()
-manageMailTags ops m = do
-  result <- applyTagOps ops (Identity m) =<< get
+manageMailTags ::
+     (Traversable t, MonadIO m, MonadState AppState m)
+  => [TagOp]
+  -> t (SelectableItem NotmuchMail)
+  -> m ()
+manageMailTags ops ms = do
+  result <- applyTagOps ops ms =<< get
   case result of
     Left e -> assignError e
-    Right (Identity m') -> modifying (asMailIndex . miListOfMails) (L.listModify (const m'))
+    Right _ -> pure ()
 
 -- | Convenience function to set an error state in the 'AppState'
 --
@@ -1575,13 +1626,23 @@ mimeType :: FilePath -> ContentType
 mimeType x = let parsed = parseOnly parseContentType $ defaultMimeLookup (T.pack x)
              in either (const contentTypeApplicationOctetStream) id parsed
 
-manageThreadTags :: (MonadIO m, MonadState AppState m) => [TagOp] -> NotmuchThread -> m ()
-manageThreadTags ops t = do
-  let update ops' = modifying (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
+manageThreadTags ::
+     (Traversable t, MonadIO m, MonadState AppState m)
+  => [TagOp]
+  -> t (SelectableItem NotmuchThread)
+  -> m ()
+manageThreadTags ops ts = do
+  let update ops' s' =
+        if null (toggled s')
+        then modifying (asMailIndex . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops'))
+        else modifying (asMailIndex . miListOfThreads . traversed . filtered fst)
+                    (over _2 (Notmuch.tagItem ops'))
+      toggled = toListOf (list (Proxy @'ScrollingMailView) . traversed . filtered fst)
+  s <- get
   dbpath <- use (asConfig . confNotmuch . nmDatabase)
-  (either (const mempty) id <$> runExceptT (Notmuch.getThreadMessages dbpath t))
+  (either (const mempty) id <$> runExceptT (Notmuch.getThreadMessages dbpath $ toListOf (traversed . _2) ts))
     >>= \ms -> (get >>= applyTagOps ops ms)
-    >>= either assignError (const (update ops))
+    >>= either assignError (const (update ops s))
 
 
 keepOrDiscardDraft :: (MonadMask m, MonadIO m, MonadState AppState m) => m ()

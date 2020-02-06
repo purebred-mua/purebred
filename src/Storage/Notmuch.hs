@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Róman Joost
+-- Copyright (C) 2017-2020 Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -17,6 +17,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TupleSections #-}
 
 module Storage.Notmuch (
     -- * Synopsis
@@ -49,6 +51,7 @@ module Storage.Notmuch (
 import Control.Monad ((>=>), when)
 import Data.Function (on)
 import System.IO.Unsafe (unsafeInterleaveIO)
+import Data.Foldable (foldlM)
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError, ExceptT, runExceptT)
@@ -226,30 +229,33 @@ getThreads
   :: (MonadError Error m, MonadIO m)
   => T.Text
   -> NotmuchSettings FilePath
-  -> m (V NotmuchThread)
+  -> m (V (SelectableItem NotmuchThread))
 getThreads s settings =
   withDatabaseReadOnly (view nmDatabase settings) $
     flip Notmuch.query (Notmuch.Bare $ T.unpack s)
     >=> Notmuch.threads
-    >=> liftIO . fmap (fromList 128) . lazyTraverse threadToThread
+    >=> liftIO . fmap (fromList 128) . lazyTraverse (fmap (False,) . threadToThread)
 
 lazyTraverse :: (a -> IO b) -> [a] -> IO [b]
 lazyTraverse f =
   foldr (\x ys -> (:) <$> f x <*> unsafeInterleaveIO ys) (pure [])
 
--- | returns a vector of *all* messages belonging to the given thread
+-- | Returns a vector of *all* messages belonging to the list of threads
 --
 getThreadMessages
-  :: (MonadError Error m, MonadIO m)
+  :: (MonadError Error m, MonadIO m, Traversable t)
   => FilePath
-  -> NotmuchThread
-  -> m (Vec.Vector NotmuchMail)
-getThreadMessages fp t =
-  withDatabaseReadOnly fp go
-  where go db = do
-          msgs <- getThread db (view thId t) >>= Notmuch.messages
-          mails <- liftIO $ traverse messageToMail msgs
-          pure $ Vec.fromList mails
+  -> t NotmuchThread
+  -> m (Vec.Vector (SelectableItem NotmuchMail))
+getThreadMessages fp ts = withDatabaseReadOnly fp go
+  where
+    go db = do
+      msgs <- foldlM (allMessages db) [] ts
+      mails <- liftIO $ traverse messageToMail msgs
+      pure $ Vec.fromList $ fmap (False,) mails
+    allMessages db acc t =
+      mappend acc <$> (getThread db (view thId t) >>= Notmuch.messages)
+
 
 -- | retrieve a given thread from the notmuch database by it's id
 -- Note: The notmuch API does not provide a designated endpoint for retrieving
