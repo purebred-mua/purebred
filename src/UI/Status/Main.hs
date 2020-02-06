@@ -20,17 +20,17 @@
 module UI.Status.Main where
 
 import Brick.BChan (BChan, writeBChan)
-import Brick.Types (Widget)
+import Brick.Types (Widget, Padding(..))
 import Brick.Focus (focusGetCurrent, focusRingLength)
 import Brick.Widgets.Core
-  (hBox, txt, str, withAttr, (<+>), strWrap, padLeftRight,
-  emptyWidget)
+  (hBox, txt, str, withAttr, (<+>), strWrap,
+  emptyWidget, padRight, padLeft, padLeftRight)
 import Brick.Widgets.Center (hCenter)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
 import Control.Monad.Except (runExceptT)
 import Control.Monad (void)
-import Control.Lens (view, views, to, _Just, preview, non)
+import Control.Lens
 import Control.Concurrent (forkIO, threadDelay)
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
@@ -108,14 +108,24 @@ renderStatusbar :: WithContext w => w -> AppState -> Widget Name
 renderStatusbar w s = withAttr statusbarAttr $ hBox
   [ str "Purebred: "
   , renderContext s w
+  , padLeftRight 1 (str "[")
   , renderNewMailIndicator s
   , renderMatches s
+  , renderToggled s
+  , padLeft (Pad 1) (str "]")
   , fillLine
   , txt (
       titleize (focusedViewName s) <> "-"
       <> titleize (focusedViewWidget s) <> " "
       )
   ]
+
+renderToggled :: AppState -> Widget n
+renderToggled s =
+  let currentL = case focusedViewWidget s of
+        ListOfThreads -> length $ toListOf (asMailIndex . miListOfThreads . traversed . filtered fst) s
+        _ -> length $ toListOf (asMailIndex . miListOfMails . traversed . filtered fst) s
+  in if currentL > 0 then str $ "Tag: " <> show currentL else emptyWidget
 
 renderMatches :: AppState -> Widget n
 renderMatches s =
@@ -130,8 +140,8 @@ renderMatches s =
 renderNewMailIndicator :: AppState -> Widget n
 renderNewMailIndicator s =
   let newMailCount = view (asMailIndex . miNewMail) s
-      indicator = str $ "[New: " <> show newMailCount <> "]"
-   in padLeftRight 1 indicator
+      indicator = str $ "New: " <> show newMailCount
+   in padRight (Pad 1) indicator
 
 currentItemW :: ListWithLength t e -> Widget n
 currentItemW (ListWithLength l len) = str $

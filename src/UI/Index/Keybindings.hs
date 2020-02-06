@@ -39,6 +39,7 @@ browseThreadsKeybindings =
     , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
     , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
+    , Keybinding (V.EvKey (V.KChar '*') []) (toggleListItem `chain` listDown `chain` continue)
     ]
 
 searchThreadsKeybindings :: [Keybinding 'Threads 'SearchThreadsEditor]
@@ -52,5 +53,5 @@ manageThreadTagsKeybindings :: [Keybinding 'Threads 'ManageThreadTagsEditor]
 manageThreadTagsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (done `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain'` untoggleListItems @'Threads @'ListOfThreads `chain` continue)
     ]

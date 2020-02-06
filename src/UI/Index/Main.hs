@@ -37,7 +37,7 @@ import Storage.Notmuch (hasTag)
 import Types
 import Config.Main
        (listNewMailAttr, listNewMailSelectedAttr, mailTagAttr,
-        listSelectedAttr, listAttr, mailAuthorsAttr,
+        listSelectedAttr, listAttr, listToggledAttr, mailAuthorsAttr,
         mailSelectedAuthorsAttr)
 
 renderListOfThreads :: AppState -> Widget Name
@@ -46,8 +46,8 @@ renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex
 renderListOfMails :: AppState -> Widget Name
 renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . miListOfMails) s
 
-listDrawMail :: AppState -> Bool -> NotmuchMail -> Widget Name
-listDrawMail s sel a =
+listDrawMail :: AppState -> Bool -> SelectableItem NotmuchMail -> Widget Name
+listDrawMail s sel (toggled, a) =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
         widget = hBox
@@ -59,10 +59,10 @@ listDrawMail s sel a =
           , txt (view mailSubject a)
           , fillLine
           ]
-    in withAttr (getListAttr isNewMail sel) widget
+    in withAttr (getListAttr (makeListItemState isNewMail sel toggled)) widget
 
-listDrawThread :: AppState -> Bool -> NotmuchThread -> Widget Name
-listDrawThread s sel a =
+listDrawThread :: AppState -> Bool -> SelectableItem NotmuchThread -> Widget Name
+listDrawThread s sel (toggled, a) =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
         widget = hBox
@@ -73,15 +73,36 @@ listDrawThread s sel a =
           , txt (view thSubject a)
           , fillLine
           ]
-    in withAttr (getListAttr isNewMail sel) widget
+    in withAttr (getListAttr $ makeListItemState isNewMail sel toggled) widget
 
-getListAttr :: Bool  -- ^ new?
-            -> Bool  -- ^ selected?
-            -> AttrName
-getListAttr True True = listNewMailSelectedAttr  -- new and selected
-getListAttr True False = listNewMailAttr  -- new and not selected
-getListAttr False True = listSelectedAttr  -- not new but selected
-getListAttr False False = listAttr  -- not selected and not new
+-- | The rendering state for the list item, whether it's selected, new
+-- or toggled for bulk actions.
+--
+data ListItemState
+  = New
+  | NewAndSelected
+  | Selected
+  | Toggled
+  | Normal
+
+makeListItemState ::
+     Bool -- ^ new?
+  -> Bool -- ^ selected?
+  -> Bool -- ^ toggled
+  -> ListItemState
+makeListItemState _ _ True = Toggled
+makeListItemState True True _ = NewAndSelected
+makeListItemState True False _ = New
+makeListItemState False True _ = Selected
+makeListItemState _ _ _ = Normal
+
+getListAttr :: ListItemState -> AttrName
+getListAttr NewAndSelected = listNewMailSelectedAttr
+getListAttr New = listNewMailAttr
+getListAttr Selected = listSelectedAttr
+getListAttr Toggled = listToggledAttr
+getListAttr Normal = listAttr
+
 
 calendarYear :: NominalDiffTime
 calendarYear = nominalDay * 365

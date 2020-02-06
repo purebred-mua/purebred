@@ -87,6 +87,7 @@ solarizedDark =
         , (listSelectedAttr, V.white `on` V.yellow)
         , (listNewMailAttr, fg V.white `V.withStyle` V.bold)
         , (listNewMailSelectedAttr, V.white `on` V.yellow `V.withStyle` V.bold)
+        , (listToggledAttr, V.currentAttr `V.withStyle` V.reverseVideo)
         , (mailTagAttr, fg V.cyan)
         , (mailAuthorsAttr, fg V.white)
         , (E.editFocusedAttr, V.white `on` V.brightBlack)
@@ -146,6 +147,9 @@ listNewMailAttr = L.listAttr <> "newmail"
 
 listNewMailSelectedAttr :: A.AttrName
 listNewMailSelectedAttr = listNewMailAttr <> L.listSelectedAttr
+
+listToggledAttr :: A.AttrName
+listToggledAttr = L.listAttr <> "toggled"
 
 mailAttr :: A.AttrName
 mailAttr = "mail"
