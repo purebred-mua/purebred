@@ -832,17 +832,22 @@ chain (Action d1 f1) (Action d2 f2) = Action (d1 <> d2) (f1 >=> f2)
 --
 chain'
     :: forall ctx ctx' a v v'.
-       (HasName ctx', HasViewName v', ViewTransition v v')
+       (HasName ctx, HasViewName v, HasName ctx', HasViewName v', ViewTransition v v')
     => Action v ctx AppState
     -> Action v' ctx' a
     -> Action v ctx a
 chain' (Action d1 f1) (Action d2 f2) =
   Action (d1 <> d2) (f1 >=> switchMode >=> f2)
   where
-    switchMode s = pure $ s &
-      transitionHook (Proxy :: Proxy v) (Proxy :: Proxy v')
-      . over (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy :: Proxy v')))
-      . set (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (name (Proxy :: Proxy ctx'))
+    switchMode s = do
+      liftIO . view (asConfig . confLogSink) s . T.pack $
+        "chain' "
+          <> show (viewname (Proxy :: Proxy v)) <> "/" <> show (name (Proxy :: Proxy ctx)) <> " -> "
+          <> show (viewname (Proxy :: Proxy v')) <> "/" <> show (name (Proxy :: Proxy ctx'))
+      pure $ s &
+        transitionHook (Proxy :: Proxy v) (Proxy :: Proxy v')
+        . over (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy :: Proxy v')))
+        . set (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (name (Proxy :: Proxy ctx'))
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a AppState
 done = Action ["apply"] (complete (Proxy :: Proxy a))
@@ -860,7 +865,14 @@ abort = Action ["cancel"] (reset (Proxy :: Proxy v) (Proxy :: Proxy a))
 focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState
 focus = Action
   ["switch mode to " <> T.pack (show (name (Proxy :: Proxy a)))]
-  (switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a))
+  (\s -> do
+    liftIO . view (asConfig . confLogSink) s . T.pack $
+      "switchFocus "
+        <> show (viewname (Proxy :: Proxy v)) <> " "
+        <> show (name (Proxy :: Proxy a))
+    switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a) s
+
+  )
 
 -- | A no-op action returning the current 'AppState'. This action can
 -- be used at the start of a sequence with an immediate switch of
