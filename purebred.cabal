@@ -83,6 +83,7 @@ library
                      , Purebred.Types.IFC
   autogen-modules:     Paths_purebred
   build-depends:       base >= 4.11 && < 5
+                     , stm >= 2.4
                      , deepseq >= 1.4.2
                      , dyre >= 0.8.12
                      , lens

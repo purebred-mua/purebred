@@ -140,15 +140,20 @@ module Purebred (
 import UI.App (theApp, initialState)
 
 import qualified Config.Dyre as Dyre
+import Control.Concurrent (forkIO)
+import Control.Concurrent.STM (atomically, newTQueueIO, readTQueue, writeTQueue)
 import qualified Control.DeepSeq
-import Control.Monad ((>=>), void)
+import Control.Monad ((>=>), forever, void)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import Data.List (elemIndex, isInfixOf, isPrefixOf)
 import System.Environment (lookupEnv)
 import System.FilePath (dropTrailingPathSeparator, joinPath, splitPath)
 import System.FilePath.Posix ((</>))
+import System.IO (BufferMode(LineBuffering), IOMode(AppendMode), hSetBuffering, openFile)
 import System.Random (RandomGen, getStdGen, randomRs)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
 
@@ -165,7 +170,7 @@ import Error
 import qualified Graphics.Vty
 import Graphics.Vty.Attributes
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
-import Brick.BChan (BChan, newBChan)
+import Brick.BChan (newBChan)
 import Brick.Main (customMain)
 import Brick.Types (Next)
 import Brick.Util (on, fg, bg)
@@ -177,6 +182,7 @@ import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 data AppConfig = AppConfig
     { databaseFilepath :: Maybe String
     , searchOverride :: Maybe String
+    , debugFile :: Maybe FilePath
     }
 
 appconfig :: Parser AppConfig
@@ -193,6 +199,13 @@ appconfig = AppConfig
       ( long "search"
       <> metavar "SEARCH-TERM"
       <> help "Override the initial notmuch search"
+      )
+    )
+  <*> optional
+    ( Builder.option Builder.str
+      ( long "debug"
+      <> metavar "FILE"
+      <> help "Write debug information to FILE"
       )
     )
   <* Builder.infoOption versionString
@@ -234,7 +247,18 @@ launch cfg = do
   --
   bchan <- newBChan 32
 
-  cfg' <- processConfig (bchan, b) (pre cfg)
+  -- Create log sink.
+  logSink <- case debugFile opts of
+    Nothing -> pure $ \_ -> pure ()
+    Just fp -> do
+      h <- openFile fp AppendMode
+      hSetBuffering h LineBuffering
+      T.hPutStrLn h $ T.pack "Opened log file"
+      q <- newTQueueIO
+      _ <- forkIO $ forever $ atomically (readTQueue q) >>= T.hPutStrLn h
+      pure $ atomically . writeTQueue q
+
+  cfg' <- processConfig (bchan, b, logSink) (pre cfg)
 
   s <- initialState cfg'
   let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
@@ -251,7 +275,7 @@ launch cfg = do
 -- | Fully evaluate the 'UserConfiguration', then set the extra data to
 -- turn it into an 'InternalConfiguration'.
 processConfig
-  :: (BChan PurebredEvent, String)  -- ^ extra data for internal conf
+  :: InternalConfigurationFields
   -> UserConfiguration
   -> IO InternalConfiguration
 processConfig z = fmap (set confExtra z . Control.DeepSeq.force) . unIO

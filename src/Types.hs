@@ -354,6 +354,11 @@ fbSearchPathKeybindings = lens _fbSearchPathKeybindings (\cv x -> cv { _fbSearch
 fbHomePath :: Lens (FileBrowserSettings a) (FileBrowserSettings a') a a'
 fbHomePath = lens _fbHomePath (\s a -> s { _fbHomePath = a })
 
+data Delay
+  = Seconds Int
+  | Minutes Int
+  deriving (Generic, NFData)
+
 data Configuration extra a b c = Configuration
     { _confTheme :: AttrMap
     , _confNotmuch :: NotmuchSettings a
@@ -369,13 +374,10 @@ data Configuration extra a b c = Configuration
     }
     deriving (Generic, NFData)
 
-data Delay 
-  = Seconds Int 
-  | Minutes Int
-  deriving (Generic, NFData)
+type InternalConfigurationFields = (BChan PurebredEvent, String, T.Text -> IO ())
 
 type UserConfiguration = Configuration () (IO FilePath) (IO String) (IO FilePath)
-type InternalConfiguration = Configuration (BChan PurebredEvent, String) FilePath String FilePath
+type InternalConfiguration = Configuration InternalConfigurationFields FilePath String FilePath
 
 type ConfigurationLens v = forall z a b c. Lens' (Configuration z a b c) v
 
@@ -417,6 +419,9 @@ confBChan = confExtra . _1
 
 confBoundary :: Lens' InternalConfiguration String
 confBoundary = confExtra . _2
+
+confLogSink :: Lens' InternalConfiguration (T.Text -> IO ())
+confLogSink = confExtra . _3
 
 
 data ComposeViewSettings = ComposeViewSettings
