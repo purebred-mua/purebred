@@ -45,7 +45,7 @@ focusedViewWidgets :: AppState -> [[Name]]
 focusedViewWidgets s =
   let defaultV = view (asConfig . confDefaultView) s
       focused = fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
-      allLayers = view (asViews . vsViews . at focused . _Just . vLayers) s
+      allLayers = view (asViews . vsViews . ix focused . vLayers) s
    in toList $ toListOf
         (layeriso . traversed . filtered (\t -> view veState t == Visible) . veName)
         <$> allLayers

@@ -330,7 +330,7 @@ unhide = setViewState Visible
 
 setViewState :: (MonadState AppState m) => ViewState -> ViewName -> Int -> Name -> m ()
 setViewState v n i m =
-  assign (asViews . vsViews . at n . _Just . vLayers . ix i . ix m . veState) v
+  assign (asViews . vsViews . ix n . vLayers . ix i . ix m . veState) v
 
 instance Completable 'ComposeTo where
   complete _ = do
@@ -523,33 +523,33 @@ instance Focusable 'Threads 'ListOfThreads where
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
   switchFocus _ _ = do
     unhide ViewMail 0 ManageMailTagsEditor
-    assign (asViews . vsViews . at ViewMail . _Just . vFocus) ManageMailTagsEditor
+    assign (asViews . vsViews . ix ViewMail . vFocus) ManageMailTagsEditor
 
 instance Focusable 'ViewMail 'ScrollingMailView where
-  switchFocus _ _ = assign (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailView
+  switchFocus _ _ = assign (asViews . vsViews . ix ViewMail . vFocus) ScrollingMailView
 
 instance Focusable 'ViewMail 'ScrollingMailViewFindWordEditor where
   switchFocus _ _ = do
     modifying (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
-    assign (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailViewFindWordEditor
+    assign (asViews. vsViews . ix ViewMail . vFocus) ScrollingMailViewFindWordEditor
     unhide ViewMail 0 ScrollingMailViewFindWordEditor
 
 instance Focusable 'ViewMail 'ListOfMails where
-  switchFocus _ _ = assign (asViews . vsViews . at ViewMail . _Just . vFocus) ListOfMails
+  switchFocus _ _ = assign (asViews . vsViews . ix ViewMail . vFocus) ListOfMails
 
 instance Focusable 'ViewMail 'MailListOfAttachments where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ViewMail . _Just . vFocus) MailListOfAttachments
+    assign (asViews . vsViews . ix ViewMail . vFocus) MailListOfAttachments
     unhide ViewMail 0 MailListOfAttachments
 
 instance Focusable 'ViewMail 'MailAttachmentOpenWithEditor where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentOpenWithEditor
+    assign (asViews . vsViews . ix ViewMail . vFocus) MailAttachmentOpenWithEditor
     unhide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Focusable 'ViewMail 'MailAttachmentPipeToEditor where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentPipeToEditor
+    assign (asViews . vsViews . ix ViewMail . vFocus) MailAttachmentPipeToEditor
     unhide ViewMail 0 MailAttachmentPipeToEditor
 
 instance Focusable 'ViewMail 'SaveToDiskPathEditor where
@@ -559,13 +559,13 @@ instance Focusable 'ViewMail 'SaveToDiskPathEditor where
     let maybeFilePath = preview (asMailView . mvAttachments . to L.listSelectedElement
                                  . _Just . _2 . contentDisposition . folded . filename charsets) s
         fname = view (non mempty) maybeFilePath
-    assign (asViews . vsViews . at ViewMail . _Just . vFocus) SaveToDiskPathEditor
+    assign (asViews . vsViews . ix ViewMail . vFocus) SaveToDiskPathEditor
     unhide ViewMail 0 SaveToDiskPathEditor
     modifying (asMailView . mvSaveToDiskPath . E.editContentsL) (insertMany fname . clearZipper)
 
 instance Focusable 'ViewMail 'ComposeTo where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ViewMail . _Just . vFocus) ComposeTo
+    assign (asViews . vsViews . ix ViewMail . vFocus) ComposeTo
     unhide ViewMail 0 ComposeTo
 
 instance Focusable 'Help 'ScrollingHelpView where
@@ -573,33 +573,33 @@ instance Focusable 'Help 'ScrollingHelpView where
 
 instance Focusable 'ComposeView 'ComposeListOfAttachments where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
+    assign (asViews . vsViews . ix ComposeView . vFocus) ComposeListOfAttachments
     modify (resetView Threads indexView)
 
 instance Focusable 'ComposeView 'ComposeFrom where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeFrom
+    assign (asViews . vsViews . ix ComposeView . vFocus) ComposeFrom
     curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
     assign (asCompose . cTemp) curLine
     unhide ComposeView 1 ComposeFrom
 
 instance Focusable 'ComposeView 'ComposeTo where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeTo
+    assign (asViews . vsViews . ix ComposeView . vFocus) ComposeTo
     curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
     assign (asCompose . cTemp) curLine
     unhide ComposeView 1 ComposeTo
 
 instance Focusable 'ComposeView 'ComposeSubject where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeSubject
+    assign (asViews . vsViews . ix ComposeView . vFocus) ComposeSubject
     curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
     assign (asCompose . cTemp) curLine
     unhide ComposeView 1 ComposeSubject
 
 instance Focusable 'ComposeView 'ConfirmDialog where
   switchFocus _ _ = do
-    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ConfirmDialog
+    assign (asViews . vsViews . ix ComposeView . vFocus) ConfirmDialog
     unhide ComposeView 0 ConfirmDialog
 
 instance Focusable 'FileBrowser 'ListOfFiles where
@@ -1209,7 +1209,7 @@ makeAttachmentsFromSelected s = do
   parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (selectedFiles (view (asFileBrowser . fbEntries) s))
   pure $ s & over (asCompose . cAttachments) (go parts)
     . over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
-    . set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
+    . set (asViews . vsViews . ix ComposeView . vFocus) ComposeListOfAttachments
   where
     go :: [MIMEMessage] -> L.List Name MIMEMessage -> L.List Name MIMEMessage
     go parts l = foldr upsertPart l parts
