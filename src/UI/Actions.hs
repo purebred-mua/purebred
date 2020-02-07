@@ -507,16 +507,9 @@ instance Focusable 'Threads 'ManageThreadTagsEditor where
     modify (toggleLastVisibleWidget ManageThreadTagsEditor)
 
 instance Focusable 'Threads 'ComposeFrom where
-  -- In case the user is already composing a new mail, go back to the compose
-  -- editor, otherwise focus the editor to input the from address.
   switchFocus _ _ = do
-    l <- use (asCompose . cAttachments)
-    if null l
-      then
-        modifying (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
-      else do
-        modify (toggleLastVisibleWidget ComposeFrom)
-        modifying (asCompose . cFrom) (E.applyEdit gotoEOL)
+    modify (toggleLastVisibleWidget ComposeFrom)
+    modifying (asCompose . cFrom) (E.applyEdit gotoEOL)
 
 instance Focusable 'Threads 'ComposeTo where
   switchFocus _ _ = modify (toggleLastVisibleWidget ComposeTo)
