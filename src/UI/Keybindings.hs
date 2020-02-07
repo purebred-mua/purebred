@@ -53,8 +53,9 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Brick.Widgets.Dialog (handleDialogEvent)
 import Graphics.Vty (Event (..))
-import Control.Lens (Getter, (&), _Left, preview, set, to, view)
+import Control.Lens (Getter, _Left, preview, set, to, view)
 import Control.Monad.IO.Class (liftIO)
+import Control.Monad.State
 import Data.Attoparsec.Text (parseOnly)
 import Data.List (find)
 import Data.Text.Zipper (currentLine)
@@ -85,7 +86,7 @@ lookupKeybinding e = find (\x -> view kbEvent x == e)
 dispatch :: EventHandler v m -> AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
 dispatch (EventHandler l fallback) s ev =
   case lookupKeybinding ev (view l s) of
-    Just kb -> s & view (kbAction . aAction) kb . set asError Nothing
+    Just kb -> evalStateT (view (kbAction . aAction) kb) (set asError Nothing s)
     Nothing -> fallback s ev
 
 

@@ -13,7 +13,9 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 
 module UI.Mail.Keybindings where
 
@@ -35,14 +37,14 @@ displayMailKeybindings =
     , Keybinding (V.EvKey V.KDown []) (noop `chain'` (focus :: Action 'ViewMail 'ListOfMails AppState) `chain` listDown `chain'` displayMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain'` displayMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'J') []) (noop
-                                             `chain'` (listDown :: Action 'Threads 'ListOfThreads AppState)
+                                             `chain'` listDown @'Threads @'ListOfThreads
                                              `chain'` displayThreadMails
                                              `chain'` selectNextUnread
                                              `chain'` displayMail
                                              `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain'` displayMail `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'K') []) (noop
-                                             `chain'` (listUp :: Action 'Threads 'ListOfThreads AppState)
+                                             `chain'` listUp @'Threads @'ListOfThreads
                                              `chain'` displayThreadMails
                                              `chain'` selectNextUnread
                                              `chain'` displayMail

@@ -40,6 +40,7 @@ import Brick.Widgets.Dialog (Dialog)
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Lens
 import qualified Data.Map as Map
+import Control.Monad.State
 import Control.Monad.Except (MonadError)
 import Control.Monad.Reader (MonadIO)
 import Control.Concurrent (ThreadId)
@@ -699,12 +700,18 @@ asAsync = lens _asAsync (\as x -> as { _asAsync = x })
 data Action (v :: ViewName) (ctx :: Name) a = Action
     { _aDescription :: [T.Text]
     -- ^ sequential list of things that the action does
-    , _aAction :: AppState -> EventM Name a
+    , _aAction :: StateT AppState (EventM Name) a
     }
-    deriving (Generic, NFData)
 
-aAction :: Getter (Action v ctx a) (AppState -> EventM Name a)
+instance NFData (Action v ctx a) where
+  rnf (Action desc (StateT f)) = Action (force desc) (StateT (force f)) `seq` ()
+
+aAction :: Getter (Action v ctx a) (StateT AppState (EventM Name) a)
 aAction = to (\(Action _ b) -> b)
+
+aDescription :: Getter (Action v ctx a) [T.Text]
+aDescription = to (\(Action a _ ) -> a)
+
 
 data Keybinding (v :: ViewName) (ctx :: Name) = Keybinding
     { _kbEvent :: Vty.Event
@@ -726,9 +733,6 @@ kbEvent = to (\(Keybinding b _) -> b)
 
 kbAction :: Getter (Keybinding v ctx) (Action v ctx (Next AppState))
 kbAction = to (\(Keybinding _ c) -> c)
-
-aDescription :: Getter (Action v ctx a) [T.Text]
-aDescription = to (\(Action a _ ) -> a)
 
 -- | an email from the notmuch database
 data NotmuchMail = NotmuchMail
