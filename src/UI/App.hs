@@ -27,6 +27,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty.Input.Events as Vty
 import Control.Lens ((&), set, view)
+import Control.Monad.State (execStateT)
 import qualified Data.Map as Map
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
@@ -190,7 +191,7 @@ initialState conf =
     epoch = UTCTime (fromGregorian 2018 07 18) 1
     async = Async Nothing
     s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
-  in applySearch s
+  in execStateT applySearch s
 
 -- | Application event loop.
 theApp ::

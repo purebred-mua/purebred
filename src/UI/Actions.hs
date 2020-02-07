@@ -23,6 +23,10 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 
+-- needed for orphan MonadThrow/MonadCatch/MonadMask instances
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 module UI.Actions (
   -- * Overview
   -- $overview
@@ -123,14 +127,16 @@ import Data.List.NonEmpty (NonEmpty(..))
 import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
+import Data.Foldable (traverse_)
 import Data.Functor (($>))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has, snoc,
-        filtered, set, over, preview, view, views, (&), nullOf, firstOf, non,
-        Getting, Lens', folded)
+        filtered, set, over, preview, view, (&), firstOf, non,
+        Getting, Lens', folded, assign, modifying, preuse, use, uses)
 import Control.Concurrent (forkIO)
-import Control.Monad ((>=>))
-import Control.Monad.Catch (MonadMask)
+import Control.Monad (void)
+import Control.Monad.State
+import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask)
 import Control.Monad.Except (runExceptT, MonadError, throwError)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
@@ -166,6 +172,12 @@ import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
 import Purebred.System.Process
+
+
+{- ORPHAN INSTANCES -}
+deriving instance MonadThrow (T.EventM n)
+deriving instance MonadCatch (T.EventM n)
+deriving instance MonadMask (T.EventM n)
 
 {- $overview
 
@@ -287,17 +299,19 @@ instance HasList 'ListOfFiles where
 -- particular mail. To apply his changes, he 'completes' his typed in
 -- text by pressing Enter.
 --
-class Completable (m :: Name) where
-  complete :: Proxy m -> AppState -> T.EventM Name AppState
+class Completable (n :: Name) where
+  complete :: (MonadIO m, MonadState AppState m) => Proxy n -> m ()
 
 instance Completable 'SearchThreadsEditor where
   complete _ = applySearch
 
 instance Completable 'ManageMailTagsEditor where
-  complete _ s = liftIO $ over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper <$> completeMailTags s
+  complete _ = do
+    get >>= liftIO . completeMailTags >>= put
+    modifying (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Completable 'ComposeListOfAttachments where
-  complete _ = sendMail
+  complete _ = get >>= sendMail >>= put
 
 -- | Apply all given tag operations to existing mails
 --
@@ -305,26 +319,32 @@ completeMailTags :: AppState -> IO AppState
 completeMailTags s =
     case getEditorTagOps (Proxy :: Proxy 'ManageMailTagsEditor) s of
         Left err -> pure $ setError err s
-        Right ops' -> over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
-                      <$> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops')
+        Right ops' -> flip execStateT s $ do
+          modifying (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
+          selectedItemHelper (asMailIndex . miListOfMails) (manageMailTags ops')
+
+
+hide, unhide :: (MonadState AppState m) => ViewName -> Int -> Name -> m ()
+hide = setViewState Hidden
+unhide = setViewState Visible
+
+setViewState :: (MonadState AppState m) => ViewState -> ViewName -> Int -> Name -> m ()
+setViewState v n i m =
+  assign (asViews . vsViews . at n . _Just . vLayers . ix i . ix m . veState) v
 
 instance Completable 'ComposeTo where
-  complete _ = pure
-               . set (asViews . vsViews . at ComposeView . _Just
-                      . vLayers . ix 1 . ix ComposeTo . veState) Hidden
-               . set (asViews . vsViews . at ViewMail . _Just
-                      . vLayers . ix 0 . ix ComposeTo . veState) Hidden
+  complete _ = do
+    hide ComposeView 1 ComposeTo
+    hide ViewMail 0 ComposeTo
 
 instance Completable 'ComposeFrom where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just
-                           . vLayers . ix 1 . ix ComposeFrom . veState) Hidden
+  complete _ = hide ComposeView 1 ComposeFrom
 
 instance Completable 'ComposeSubject where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just
-                           . vLayers . ix 1 . ix ComposeSubject . veState) Hidden
+  complete _ = hide ComposeView 1 ComposeSubject
 
 instance Completable 'ConfirmDialog where
-  complete _ = pure . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0 . ix ConfirmDialog . veState) Hidden
+  complete _ = hide ComposeView 0 ConfirmDialog
 
 -- | Applying tag operations on threads
 -- Note: notmuch does not support adding tags to threads themselves, instead we'll
@@ -335,83 +355,81 @@ instance Completable 'ConfirmDialog where
 -- don't show up in the UI.
 --
 instance Completable 'ManageThreadTagsEditor where
-  complete _ s = case getEditorTagOps (Proxy :: Proxy 'ManageThreadTagsEditor) s of
-                      Left err -> pure $ setError err s
-                      Right ops ->
-                        toggleLastVisibleWidget SearchThreadsEditor
-                        <$> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
+  complete _ = do
+    s <- get
+    case getEditorTagOps (Proxy :: Proxy 'ManageThreadTagsEditor) s of
+      Left err -> assignError err
+      Right ops -> do
+        selectedItemHelper (asMailIndex . miListOfThreads) (manageThreadTags ops)
+        modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Completable 'ManageFileBrowserSearchPath where
-  complete _ s =
-    ($ s)
-    <$> (either setError updateBrowseFileContents
-         <$> runExceptT (listDirectory' (currentLine $ view (asFileBrowser . fbSearchPath . E.editContentsL) s)))
+  complete _ = do
+    paths <- use (asFileBrowser . fbSearchPath . E.editContentsL)
+    f <- either setError updateBrowseFileContents
+       <$> runExceptT (listDirectory' (currentLine paths))
+    modify f
 
 instance Completable 'MailAttachmentOpenWithEditor where
-  complete _ = pure
-               . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                      . ix MailAttachmentOpenWithEditor . veState) Hidden
+  complete _ = hide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Completable 'MailAttachmentPipeToEditor where
-  complete _ = pure
-               . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                      . ix MailAttachmentPipeToEditor . veState) Hidden
-
-instance Completable 'ScrollingMailViewFindWordEditor where
-  complete _ s =
-    let needle = view (asMailView . mvFindWordEditor . E.editContentsL . to currentLine) s
-        mbody = findMatchingWords needle $ view (asMailView . mvBody) s
-    in pure $ s &
-       set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                      . ix ScrollingMailViewFindWordEditor . veState) Hidden
-       . set (asMailView . mvScrollSteps) (Brick.focusRing (makeScrollSteps mbody))
-       . set (asMailView . mvBody) mbody
+  complete _ = hide ViewMail 0 MailAttachmentPipeToEditor
 
 instance Completable 'SaveToDiskPathEditor where
-  complete _ = pure
-               . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                      . ix SaveToDiskPathEditor . veState) Hidden
+  complete _ = hide ViewMail 0 SaveToDiskPathEditor
+
+instance Completable 'ScrollingMailViewFindWordEditor where
+  complete _ = do
+    needle <- uses (asMailView . mvFindWordEditor . E.editContentsL) currentLine
+    body <- uses (asMailView . mvBody) (findMatchingWords needle)
+    hide ViewMail 0 ScrollingMailViewFindWordEditor
+    assign (asMailView . mvScrollSteps) (Brick.focusRing (makeScrollSteps body))
+    assign (asMailView . mvBody) body
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
 --
-class Resetable (v :: ViewName) (m :: Name) where
-  reset :: Proxy v -> Proxy m -> AppState -> T.EventM Name AppState
+class Resetable (v :: ViewName) (n :: Name) where
+  reset :: (MonadIO m, MonadState AppState m) => Proxy v -> Proxy n -> m ()
 
 instance Resetable 'Threads 'SearchThreadsEditor where
-  reset _ _ = pure
+  reset _ _ = pure ()
 
 instance Resetable 'ViewMail 'ManageMailTagsEditor where
-  reset _ _ = pure . over (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+  reset _ _ = modifying (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Resetable 'Threads 'ManageThreadTagsEditor where
-  reset _ _ s = pure $ s
-              & over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
-              . toggleLastVisibleWidget SearchThreadsEditor
+  reset _ _ = do
+    modifying (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+    modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Resetable 'Threads 'ComposeFrom where
-  reset _ _ = pure . clearMailComposition
+  reset _ _ = modify clearMailComposition
 
 instance Resetable 'Threads 'ComposeSubject where
-  reset _ _ = pure . clearMailComposition
+  reset _ _ = modify clearMailComposition
 
 instance Resetable 'Threads 'ComposeTo where
-  reset _ _ = pure . clearMailComposition
+  reset _ _ = modify clearMailComposition
 
 instance Resetable 'ComposeView 'ComposeFrom where
-  reset _ _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
-                . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
-                       . ix ComposeFrom . veState) Hidden
+  reset _ _ = do
+    s <- get
+    modifying (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
+    hide ComposeView 1 ComposeFrom
 
 instance Resetable 'ComposeView 'ComposeTo where
-  reset _ _ s = pure $ s & over (asCompose . cTo . E.editContentsL) (revertEditorContents s)
-                . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
-                       . ix ComposeTo . veState) Hidden
+  reset _ _ = do
+    s <- get
+    modifying (asCompose . cTo . E.editContentsL) (revertEditorContents s)
+    hide ComposeView 1 ComposeTo
 
 instance Resetable 'ComposeView 'ComposeSubject where
-  reset _ _ s = pure $ s & over (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
-                . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
-                       . ix ComposeSubject . veState) Hidden
+  reset _ _ = do
+    s <- get
+    modifying (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
+    hide ComposeView 1 ComposeSubject
 
 revertEditorContents :: AppState -> TextZipper T.Text -> TextZipper T.Text
 revertEditorContents s z = let saved = view (asCompose . cTemp) s
@@ -419,44 +437,44 @@ revertEditorContents s z = let saved = view (asCompose . cTemp) s
                            in replace z
 
 instance Resetable 'ComposeView 'ComposeListOfAttachments where
-  reset _ _ = pure . clearMailComposition
+  reset _ _ = modify clearMailComposition
 
 instance Resetable 'FileBrowser 'ManageFileBrowserSearchPath where
-  reset _ _ = pure . over (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
+  reset _ _ = modifying (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
 
 instance Resetable 'ViewMail 'MailListOfAttachments where
-  reset _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                          . ix MailListOfAttachments . veState) Hidden
+  reset _ _ = hide ViewMail 0 MailListOfAttachments
 
 instance Resetable 'ViewMail 'MailAttachmentOpenWithEditor where
-  reset _ _ = pure . over (asMailView . mvOpenCommand . E.editContentsL) clearZipper
-            . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                   . ix MailAttachmentOpenWithEditor . veState) Hidden
+  reset _ _ = do
+    modifying (asMailView . mvOpenCommand . E.editContentsL) clearZipper
+    hide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
-  reset _ _ = pure . over (asMailView . mvPipeCommand . E.editContentsL) clearZipper
-            . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                   . ix MailAttachmentPipeToEditor . veState) Hidden
+  reset _ _ = do
+    modifying (asMailView . mvPipeCommand . E.editContentsL) clearZipper
+    hide ViewMail 0 MailAttachmentPipeToEditor
 
 instance Resetable 'ViewMail 'ScrollingMailViewFindWordEditor where
-  reset _ _ = pure . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
-              . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                    . ix ScrollingMailViewFindWordEditor . veState) Hidden
-              . resetMatchingWords
+  reset _ _ = do
+    modifying (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
+    hide ViewMail 0 ScrollingMailViewFindWordEditor
+    modify resetMatchingWords
 
 instance Resetable 'ViewMail 'ScrollingMailView where
-  reset _ _ = pure . resetMatchingWords
+  reset _ _ = modify resetMatchingWords
 
 instance Resetable 'ViewMail 'SaveToDiskPathEditor where
-  reset _ _ = pure . over (asMailView . mvSaveToDiskPath . E.editContentsL) clearZipper
-            . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                   . ix SaveToDiskPathEditor . veState) Hidden
+  reset _ _ = do
+    modifying (asMailView . mvSaveToDiskPath . E.editContentsL) clearZipper
+    hide ViewMail 0 SaveToDiskPathEditor
 
 instance Resetable 'ViewMail 'ComposeTo where
-  reset _ _ s = pure $ s & over (asCompose . cTo . E.editContentsL) (revertEditorContents s)
-                . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                       . ix ComposeTo . veState) Hidden
-                . clearMailComposition
+  reset _ _ = do
+    s <- get
+    modifying (asCompose . cTo . E.editContentsL) (revertEditorContents s)
+    hide ViewMail 0 ComposeTo
+    modify clearMailComposition
 
 -- | Reset the composition state for a new mail
 --
@@ -477,139 +495,132 @@ clearMailComposition s =
 -- | Generalisation of focus changes between widgets on the same
 -- "view" expressed with the mode in the application state.
 --
-class Focusable (v :: ViewName) (m :: Name) where
-  switchFocus :: Proxy v -> Proxy m -> AppState -> T.EventM Name AppState
+class Focusable (v :: ViewName) (n :: Name) where
+  switchFocus :: (MonadState AppState m, MonadIO m) => Proxy v -> Proxy n -> m ()
 
 instance Focusable 'Threads 'SearchThreadsEditor where
-  switchFocus _ _ = pure . over (asMailIndex . miSearchThreadsEditor) (E.applyEdit gotoEOL)
+  switchFocus _ _ = modifying (asMailIndex . miSearchThreadsEditor) (E.applyEdit gotoEOL)
 
 instance Focusable 'Threads 'ManageThreadTagsEditor where
-  switchFocus _ _ s = pure $ s &
-                    over (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
-                    . toggleLastVisibleWidget ManageThreadTagsEditor
+  switchFocus _ _ = do
+    modifying (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+    modify (toggleLastVisibleWidget ManageThreadTagsEditor)
 
 instance Focusable 'Threads 'ComposeFrom where
-  switchFocus = focusComposeFrom
+  -- In case the user is already composing a new mail, go back to the compose
+  -- editor, otherwise focus the editor to input the from address.
+  switchFocus _ _ = do
+    l <- use (asCompose . cAttachments)
+    if null l
+      then
+        modifying (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
+      else do
+        modify (toggleLastVisibleWidget ComposeFrom)
+        modifying (asCompose . cFrom) (E.applyEdit gotoEOL)
 
 instance Focusable 'Threads 'ComposeTo where
-  switchFocus _ _ = pure . toggleLastVisibleWidget ComposeTo
+  switchFocus _ _ = modify (toggleLastVisibleWidget ComposeTo)
 
 instance Focusable 'Threads 'ComposeSubject where
-  switchFocus _ _ = pure . toggleLastVisibleWidget ComposeSubject
+  switchFocus _ _ = modify (toggleLastVisibleWidget ComposeSubject)
 
 instance Focusable 'Threads 'ListOfThreads where
-  switchFocus _ _ = pure
+  switchFocus _ _ = pure ()
 
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
-  switchFocus _ _ s = pure $ s &
-                      set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                           . ix ManageMailTagsEditor . veState) Visible
-                      . set (asViews . vsViews . at ViewMail . _Just . vFocus) ManageMailTagsEditor
+  switchFocus _ _ = do
+    unhide ViewMail 0 ManageMailTagsEditor
+    assign (asViews . vsViews . at ViewMail . _Just . vFocus) ManageMailTagsEditor
 
 instance Focusable 'ViewMail 'ScrollingMailView where
-  switchFocus _ _ = pure . set (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailView
+  switchFocus _ _ = assign (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailView
 
 instance Focusable 'ViewMail 'ScrollingMailViewFindWordEditor where
-  switchFocus _ _ = pure
-                    . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
-                    . set (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailViewFindWordEditor
-                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                           . ix ScrollingMailViewFindWordEditor . veState) Visible
+  switchFocus _ _ = do
+    modifying (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
+    assign (asViews. vsViews . at ViewMail . _Just . vFocus) ScrollingMailViewFindWordEditor
+    unhide ViewMail 0 ScrollingMailViewFindWordEditor
 
 instance Focusable 'ViewMail 'ListOfMails where
-  switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) ListOfMails
+  switchFocus _ _ = assign (asViews . vsViews . at ViewMail . _Just . vFocus) ListOfMails
 
 instance Focusable 'ViewMail 'MailListOfAttachments where
-  switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailListOfAttachments
-                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                           . ix MailListOfAttachments . veState) Visible
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ViewMail . _Just . vFocus) MailListOfAttachments
+    unhide ViewMail 0 MailListOfAttachments
 
 instance Focusable 'ViewMail 'MailAttachmentOpenWithEditor where
-  switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentOpenWithEditor
-                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                           . ix MailAttachmentOpenWithEditor . veState) Visible
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentOpenWithEditor
+    unhide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Focusable 'ViewMail 'MailAttachmentPipeToEditor where
-  switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentPipeToEditor
-                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                           . ix MailAttachmentPipeToEditor . veState) Visible
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentPipeToEditor
+    unhide ViewMail 0 MailAttachmentPipeToEditor
 
 instance Focusable 'ViewMail 'SaveToDiskPathEditor where
-  switchFocus _ _ s =
-    let charsets = view (asConfig . confCharsets) s
-        maybeFilePath = preview (asMailView . mvAttachments . to L.listSelectedElement
+  switchFocus _ _ = do
+    charsets <- use (asConfig . confCharsets)
+    s <- get
+    let maybeFilePath = preview (asMailView . mvAttachments . to L.listSelectedElement
                                  . _Just . _2 . contentDisposition . folded . filename charsets) s
         fname = view (non mempty) maybeFilePath
-        switch = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) SaveToDiskPathEditor
-                       . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                           . ix SaveToDiskPathEditor . veState) Visible
-                       . over (asMailView . mvSaveToDiskPath . E.editContentsL) (insertMany fname . clearZipper)
-    in switch s
+    assign (asViews . vsViews . at ViewMail . _Just . vFocus) SaveToDiskPathEditor
+    unhide ViewMail 0 SaveToDiskPathEditor
+    modifying (asMailView . mvSaveToDiskPath . E.editContentsL) (insertMany fname . clearZipper)
 
 instance Focusable 'ViewMail 'ComposeTo where
-  switchFocus _ _ = pure . set (asViews . vsViews . at ViewMail . _Just . vFocus) ComposeTo
-                    . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                           . ix ComposeTo . veState) Visible
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ViewMail . _Just . vFocus) ComposeTo
+    unhide ViewMail 0 ComposeTo
 
 instance Focusable 'Help 'ScrollingHelpView where
-  switchFocus _ _ = pure . over (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
+  switchFocus _ _ = modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
 
 instance Focusable 'ComposeView 'ComposeListOfAttachments where
-  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
-                    . resetView Threads indexView
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeListOfAttachments
+    modify (resetView Threads indexView)
 
 instance Focusable 'ComposeView 'ComposeFrom where
-  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeFrom
-                      . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
-                      . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
-                             . ix ComposeFrom . veState) Visible
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeFrom
+    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
+    assign (asCompose . cTemp) curLine
+    unhide ComposeView 1 ComposeFrom
 
 instance Focusable 'ComposeView 'ComposeTo where
-  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeTo
-                      . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
-                      . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
-                             . ix ComposeTo . veState) Visible
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeTo
+    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
+    assign (asCompose . cTemp) curLine
+    unhide ComposeView 1 ComposeTo
 
 instance Focusable 'ComposeView 'ComposeSubject where
-  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeSubject
-                      . set (asCompose . cTemp) (view (asCompose . cTo . E.editContentsL . to currentLine) s)
-                      . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 1
-                             . ix ComposeSubject . veState) Visible
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ComposeSubject
+    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
+    assign (asCompose . cTemp) curLine
+    unhide ComposeView 1 ComposeSubject
 
 instance Focusable 'ComposeView 'ConfirmDialog where
-  switchFocus _ _ s = pure $ s & set (asViews . vsViews . at ComposeView . _Just . vFocus) ConfirmDialog
-                      . set (asViews . vsViews . at ComposeView . _Just . vLayers . ix 0
-                             . ix ConfirmDialog . veState) Visible
+  switchFocus _ _ = do
+    assign (asViews . vsViews . at ComposeView . _Just . vFocus) ConfirmDialog
+    unhide ComposeView 0 ConfirmDialog
 
 instance Focusable 'FileBrowser 'ListOfFiles where
-  switchFocus _ _ s = let path = view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine) s
-                      in ($ s)
-                         <$> (either setError (\x -> over (asFileBrowser . fbSearchPath . E.editContentsL)
-                                                     (insertMany path . clearZipper)
-                                                     . updateBrowseFileContents x)
-                              <$> runExceptT (listDirectory' path))
+  switchFocus _ _ = do
+    path <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
+    runExceptT (listDirectory' path) >>= either
+      assignError
+      (\x -> do
+        modifying (asFileBrowser . fbSearchPath . E.editContentsL) (insertMany path . clearZipper)
+        modify (updateBrowseFileContents x))
 
 instance Focusable 'FileBrowser 'ManageFileBrowserSearchPath where
-  switchFocus _ _ = pure
+  switchFocus _ _ = pure ()
 
-
--- In case the user is already composing a new mail, go back to the compose
--- editor, otherwise focus the editor to input the from address.
-focusComposeFrom
-    :: Applicative f
-    => proxy1
-    -> proxy2
-    -> AppState
-    -> f AppState
-focusComposeFrom _ _ s =
-    if nullOf (asCompose . cAttachments) s
-        then pure $
-             over
-                 (asViews . vsFocusedView)
-                 (Brick.focusSetCurrent ComposeView)
-                 s
-        else pure $ s & toggleLastVisibleWidget ComposeFrom
-             . over (asCompose . cFrom) (E.applyEdit gotoEOL)
 
 -- | Generalisation in order to access the widget name from a phantom
 -- type
@@ -737,30 +748,33 @@ instance HasViewName 'FileBrowser where
 -- ways to modularise them. See #294
 --
 quit :: Action v ctx (T.Next AppState)
-quit = Action ["quit the application"] Brick.halt
+quit = Action ["quit the application"] (get >>= lift . Brick.halt)
 
 -- | A noop used to continue the Brick event loop.
 --
 continue :: Action v ctx (T.Next AppState)
-continue = Action mempty Brick.continue
+continue = Action mempty (get >>= lift . Brick.continue)
 
 -- | Suspends Purebred and invokes the configured editor.
 --
 invokeEditor :: Action v ctx (T.Next AppState)
-invokeEditor = Action ["invoke external editor"] (Brick.suspendAndResume . liftIO . invokeEditor')
+invokeEditor = Action ["invoke external editor"]
+  (lift . Brick.suspendAndResume . liftIO . invokeEditor' =<< get)
+  -- TODO abstract invokeEditor'
 
 -- | Suspends Purebred to invoke a command for editing an
 -- attachment. Currently only supports re-editing the body text of an
 -- e-mail.
 --
 edit :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
-edit = Action ["edit file"] (Brick.suspendAndResume . liftIO . editAttachment)
+edit = Action ["edit file"] (lift . Brick.suspendAndResume . liftIO . editAttachment =<< get)
 
 openAttachment :: Action 'ViewMail ctx (T.Next AppState)
 openAttachment =
   Action
   { _aDescription = ["open attachment with external command"]
-  , _aAction = \s ->
+  , _aAction = do
+      s <- get
       let
         match ct = firstOf (asConfig . confMailView . mvMailcap . traversed
                             . filtered (`fst` ct)
@@ -768,13 +782,13 @@ openAttachment =
         maybeCommand =
           match
           =<< preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2 . headers . contentType) s
-      in case maybeCommand of
-           (Just cmd) -> Brick.suspendAndResume $ liftIO $ openCommand' s cmd
-           Nothing ->
-             Brick.continue
-             $ s & set (asViews . vsViews . at ViewMail . _Just . vFocus) MailAttachmentOpenWithEditor
-             . set (asViews . vsViews . at ViewMail . _Just . vLayers . ix 0
-                    . ix MailAttachmentOpenWithEditor . veState) Visible
+      case maybeCommand of
+        Just cmd -> openCommand' cmd *> get >>= (lift . Brick.continue)
+        Nothing -> do
+          let l = asViews . vsViews . ix ViewMail
+          assign (l . vFocus) MailAttachmentOpenWithEditor
+          assign (l . vLayers . ix 0 . ix MailAttachmentOpenWithEditor . veState) Visible
+          lift . Brick.continue =<< get
   }
 
 -- | Open the selected entity with the command given from the editor widget.
@@ -783,15 +797,22 @@ openWithCommand :: Action 'ViewMail 'MailAttachmentOpenWithEditor (T.Next AppSta
 openWithCommand =
   Action
     { _aDescription = ["ask for command to open attachment"]
-    , _aAction =
-        \s ->
-          let cmd = view (asMailView . mvOpenCommand . E.editContentsL . to (T.unpack . currentLine)) s
-           in case cmd of
-            [] -> Brick.continue $ setError (GenericError "Empty command") s
-            (x:xs) -> Brick.suspendAndResume
-                      $ liftIO
-                      $ openCommand' s (MailcapHandler (Process (x :| xs) []) IgnoreOutput DiscardTempfile)
+    , _aAction = do
+      cmd <- uses (asMailView . mvOpenCommand . E.editContentsL) (T.unpack . currentLine)
+      case cmd of
+        [] -> lift . Brick.continue . setError (GenericError "Empty command") =<< get
+        (x:xs) -> stateSuspendAndResume $
+          openCommand' (MailcapHandler (Process (x :| xs) []) IgnoreOutput DiscardTempfile)
     }
+
+-- | Wrapper for 'Brick.suspendAndResume' that reads state from
+-- state monad.  The resulting (post-resume) state is returned, but
+-- it is NOT set as the new state.  (To do this would, I think,
+-- require some MVar trickery, because we can't get at the value
+-- in the 'T.Next AppState' returned by 'Brick.suspendAndResume'.
+-- It is feasible, but we don't have a use case yet.)
+stateSuspendAndResume :: StateT AppState IO a -> StateT AppState (T.EventM n) (T.Next AppState)
+stateSuspendAndResume go = lift . Brick.suspendAndResume . execStateT (go *> get) =<< get
 
 -- | Pipe the selected entity to the command given from the editor widget.
 --
@@ -799,60 +820,61 @@ pipeToCommand :: Action 'ViewMail 'MailAttachmentPipeToEditor (T.Next AppState)
 pipeToCommand =
   Action
   { _aDescription = ["pipe to external command"]
-  , _aAction = \s ->
-    let cmd = view (asMailView . mvPipeCommand . E.editContentsL . to (T.unpack . currentLine)) s
-    in Brick.suspendAndResume $ liftIO $ pipeCommand' s cmd
+  , _aAction = do
+      cmd <- uses (asMailView . mvPipeCommand . E.editContentsL) (T.unpack . currentLine)
+      stateSuspendAndResume (pipeCommand' cmd)
   }
 
 -- | Save a currently selected attachment to the given path on
 -- disk. Shows an error if the path is invalid or can not be written
 -- to.
-saveAttachmentToPath :: Action 'ViewMail 'SaveToDiskPathEditor AppState
+saveAttachmentToPath :: Action 'ViewMail 'SaveToDiskPathEditor ()
 saveAttachmentToPath =
   Action
   { _aDescription = ["save attachment to disk"]
-  , _aAction = \s ->
-      let filePath = view (asMailView . mvSaveToDiskPath . E.editContentsL . to (T.unpack . currentLine)) s
-          resetEditor = over (asMailView . mvSaveToDiskPath . E.editContentsL) clearZipper
-      in ($ s)
-         . either
-         (\e s' -> s' & resetEditor . setError e)
-         (\fp -> setError (GenericError $ "Attachment saved to: " <> fp))
-         <$> runExceptT (selectedAttachmentOrError s >>= writeEntityToPath filePath)
-}
+  , _aAction =
+      selectedItemHelper (asMailView . mvAttachments) $ \ent -> do
+        filePath <- uses (asMailView . mvSaveToDiskPath . E.editContentsL) (T.unpack . currentLine)
+        runExceptT (writeEntityToPath filePath ent)
+          >>= either
+            (\e -> do
+              assignError e
+              modifying (asMailView . mvSaveToDiskPath . E.editContentsL) clearZipper )
+            (\fp -> assignError (GenericError $ "Attachment saved to: " <> fp))
+  }
 
 -- | Chain sequences of actions to create a keybinding
 --
-chain :: Action v ctx AppState -> Action v ctx a -> Action v ctx a
-chain (Action d1 f1) (Action d2 f2) = Action (d1 <> d2) (f1 >=> f2)
+chain :: Action v ctx a -> Action v ctx b -> Action v ctx b
+chain (Action d1 f1) (Action d2 f2) = Action (d1 <> d2) (f1 *> f2)
 
 -- | /Special/ form of chain allowing to sequencing actions registered
 -- for a different view/widget. This is useful to perform actions on
 -- widget focus changes.
 --
 chain'
-    :: forall ctx ctx' a v v'.
+    :: forall v v' ctx ctx' a b.
        (HasName ctx, HasViewName v, HasName ctx', HasViewName v', ViewTransition v v')
-    => Action v ctx AppState
-    -> Action v' ctx' a
-    -> Action v ctx a
+    => Action v ctx a
+    -> Action v' ctx' b
+    -> Action v ctx b
 chain' (Action d1 f1) (Action d2 f2) =
-  Action (d1 <> d2) (f1 >=> switchMode >=> f2)
+  Action (d1 <> d2) (f1 *> switchMode *> f2)
   where
-    switchMode s = do
-      liftIO . view (asConfig . confLogSink) s . T.pack $
+    switchMode = do
+      sink <- use (asConfig . confLogSink)
+      liftIO . sink . T.pack $
         "chain' "
           <> show (viewname (Proxy :: Proxy v)) <> "/" <> show (name (Proxy :: Proxy ctx)) <> " -> "
           <> show (viewname (Proxy :: Proxy v')) <> "/" <> show (name (Proxy :: Proxy ctx'))
-      pure $ s &
-        transitionHook (Proxy :: Proxy v) (Proxy :: Proxy v')
-        . over (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy :: Proxy v')))
-        . set (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (name (Proxy :: Proxy ctx'))
+      modify (transitionHook (Proxy :: Proxy v) (Proxy :: Proxy v'))
+      modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy :: Proxy v')))
+      assign (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (name (Proxy :: Proxy ctx'))
 
-done :: forall a v. (HasViewName v, Completable a) => Action v a AppState
+done :: forall a v. (HasViewName v, Completable a) => Action v a ()
 done = Action ["apply"] (complete (Proxy :: Proxy a))
 
-abort :: forall a v. (HasViewName v, Resetable v a) => Action v a AppState
+abort :: forall a v. (HasViewName v, Resetable v a) => Action v a ()
 abort = Action ["cancel"] (reset (Proxy :: Proxy v) (Proxy :: Proxy a))
 
 -- $keybinding_actions
@@ -862,316 +884,328 @@ abort = Action ["cancel"] (reset (Proxy :: Proxy v) (Proxy :: Proxy a))
 
 -- | Used to switch the focus from one widget to another on the same view.
 --
-focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState
+focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState  --FIXME ()
 focus = Action
-  ["switch mode to " <> T.pack (show (name (Proxy :: Proxy a)))]
-  (\s -> do
-    liftIO . view (asConfig . confLogSink) s . T.pack $
+  ["switch mode to " <> T.pack (show (name (Proxy :: Proxy a)))] $ do
+    sink <- use (asConfig . confLogSink)
+    liftIO . sink . T.pack $ 
       "switchFocus "
         <> show (viewname (Proxy :: Proxy v)) <> " "
         <> show (name (Proxy :: Proxy a))
-    switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a) s
+    switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a) *> get
 
-  )
-
--- | A no-op action returning the current 'AppState'. This action can
+-- | A no-op action can
 -- be used at the start of a sequence with an immediate switch of
 -- focus to a different widget (see 'focus').
 --
-noop :: Action v ctx AppState
-noop = Action mempty pure
+noop :: Action v ctx ()
+noop = Action mempty (pure ())
 
-scrollUp :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollUp :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollUp = Action
   { _aDescription = ["scroll up"]
-  , _aAction = (<$ Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) (-1))
+  , _aAction = lift (Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) (-1))
   }
 
-scrollDown :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollDown :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollDown = Action
   { _aDescription = ["scroll down"]
-  , _aAction = \s -> s <$ Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) 1
+  , _aAction = lift (Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) 1)
   }
 
-scrollPageUp :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollPageUp :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPageUp = Action
   { _aDescription = ["page up"]
-  , _aAction = \s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Up >> pure s
+  , _aAction = lift (Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Up)
   }
 
-scrollPageDown :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollPageDown :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPageDown = Action
   { _aDescription = ["page down"]
-  , _aAction = \s -> Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down >> pure s
+  , _aAction = lift (Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down)
   }
 
-scrollNextWord :: forall ctx v. (Scrollable ctx) => Action v ctx AppState
+scrollNextWord :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollNextWord =
   Action
     { _aDescription = ["find next word in mail body"]
-    , _aAction =
-        \s -> Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy ctx))
-          *> if has (asMailView . mvScrollSteps) s
-               then
-                 let s' = s & over (asMailView . mvScrollSteps) Brick.focusNext
-                     nextLine = preview (asMailView . mvScrollSteps
-                                         . to Brick.focusGetCurrent . _Just . _1) s'
-                     scrollBy = view (non 0) nextLine
-                 in Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) scrollBy >> pure s'
-               else pure $ s & setError (GenericError "No match")
+    , _aAction = do
+        lift $ Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy ctx))
+        b <- gets (has (asMailView . mvScrollSteps))
+        if b
+          then do
+            modifying (asMailView . mvScrollSteps) Brick.focusNext
+            nextLine <- preuse (asMailView . mvScrollSteps . to Brick.focusGetCurrent . _Just . _1)
+            let scrollBy = view (non 0) nextLine
+            lift $ Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) scrollBy
+          else
+            assignError (GenericError "No match")
     }
 
 -- | Removes any highlighting done by searching in the body text
 --
-removeHighlights :: Action 'ViewMail 'ScrollingMailView AppState
+removeHighlights :: Action 'ViewMail 'ScrollingMailView ()
 removeHighlights =
   Action
     { _aDescription = ["remove search results highlights"]
-    , _aAction = pure . resetMatchingWords
+    , _aAction = modify resetMatchingWords
     }
 
-displayMail :: Action 'ViewMail 'ScrollingMailView AppState
+displayMail :: Action 'ViewMail 'ScrollingMailView ()
 displayMail =
     Action
     { _aDescription = ["display an e-mail"]
-    , _aAction = \s -> do
-        resetScrollState
-        liftIO $ updateStateWithParsedMail s
-          >>= updateReadState (RemoveTag $ view (asConfig . confNotmuch . nmNewTag) s)
+    , _aAction = do
+        lift $ Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy 'ScrollingMailView))
+        updateStateWithParsedMail
+        updateReadState RemoveTag
     }
-  where resetScrollState = Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy 'ScrollingMailView))
 
 -- | Sets the mail list to the mails for the selected thread. Does
 -- not select a mail; a movement action such as 'displayNextUnread'
 -- should follow this action.
 --
-displayThreadMails :: Action 'Threads 'ListOfThreads AppState
+displayThreadMails :: Action 'Threads 'ListOfThreads ()
 displayThreadMails =
     Action
     { _aDescription = ["display an e-mail for threads"]
-    , _aAction = liftIO . setMailsForThread
+    , _aAction = do
+        -- Update the Application state with all mails found for the
+        -- currently selected thread.
+        dbpath <- use (asConfig . confNotmuch . nmDatabase)
+        selectedItemHelper (asMailIndex . miListOfThreads) $ \t ->
+          runExceptT (Notmuch.getThreadMessages dbpath t)
+            >>= either assignError (\vec -> do
+              modifying (asMailIndex . miMails . listList) (L.listReplace vec Nothing)
+              assign (asMailIndex . miMails . listLength) (Just (length vec)) )
     }
 
-setUnread :: Action 'ViewMail 'ScrollingMailView AppState
+setUnread :: Action 'ViewMail 'ScrollingMailView ()
 setUnread =
     Action
     { _aDescription = ["toggle unread"]
-    , _aAction = \s -> liftIO $ updateReadState (AddTag $ view (asConfig . confNotmuch . nmNewTag) s) s
+    , _aAction = updateReadState AddTag
     }
 
 listUp
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
-  => Action v ctx AppState
-listUp = Action ["list up"] (pure . over (list (Proxy :: Proxy ctx)) L.listMoveUp)
+  => Action v ctx ()
+listUp = Action ["list up"] (modifying (list (Proxy :: Proxy ctx)) L.listMoveUp)
 
 listDown
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
-  => Action v ctx AppState
-listDown = Action ["list down"] (pure . over (list (Proxy :: Proxy ctx)) L.listMoveDown)
+  => Action v ctx ()
+listDown = Action ["list down"] (modifying (list (Proxy :: Proxy ctx)) L.listMoveDown)
 
 listJumpToStart
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
-  => Action v ctx AppState
-listJumpToStart = Action ["list top"] (pure . over (list (Proxy :: Proxy ctx)) (L.listMoveTo 0))
+  => Action v ctx ()
+listJumpToStart = Action ["list top"] (modifying (list (Proxy :: Proxy ctx)) (L.listMoveTo 0))
 
 listJumpToEnd
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
-  => Action v ctx AppState
-listJumpToEnd = Action ["list bottom"] (pure . over (list (Proxy :: Proxy ctx)) (L.listMoveTo (-1)))
+  => Action v ctx ()
+listJumpToEnd = Action ["list bottom"] (modifying (list (Proxy :: Proxy ctx)) (L.listMoveTo (-1)))
 
 -- | Action used to either start a composition of a new mail or switch
 -- the view to the composition editor if we've already been editing a new
 -- mail. The use case here is to continue editing an e-mail while
 -- still having the ability to browse existing e-mails.
 --
-switchComposeEditor :: Action 'Threads 'ListOfThreads AppState
+switchComposeEditor :: Action 'Threads 'ListOfThreads ()
 switchComposeEditor =
     Action
     { _aDescription = ["switch to compose editor"]
-    , _aAction = \s -> if has (asCompose . cAttachments . traversed) s
-                          then pure $ over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView) s
-                          else pure s
+    , _aAction = do
+        l <- use (asCompose . cAttachments)
+        unless (null l) $
+          modifying (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
     }
 
 -- | Update the AppState with a 'MIMEMessage'. The instance will have
 -- the current selected 'MIMEMessage' encapsulated as an @inline@
 -- message.
-encapsulateMail :: Action 'ViewMail 'ScrollingMailView AppState
+encapsulateMail :: Action 'ViewMail 'ScrollingMailView ()
 encapsulateMail =
   Action
     { _aDescription = ["forward selected e-mail"]
-    , _aAction =
-        \s ->
-          let createForwarded s' m = s'
-                & over (asCompose . cAttachments)
-                (L.listInsert 1 (encapsulate m) . L.listInsert 0 (createTextPlainMessage mempty))
-                . over (asCompose . cSubject . E.editContentsL)
-                (insertMany (getForwardedSubject m) . clearZipper)
-              handleError = setError (GenericError "No mail selected for forwarding")
-          in pure $ maybe (handleError s) (createForwarded s) $ view (asMailView . mvMail) s
+    , _aAction = do
+        mail <- use (asMailView . mvMail)
+        case mail of
+          Nothing -> assignError (GenericError "No mail selected for forwarding")
+          Just m -> do
+            modifying (asCompose . cAttachments)
+              (L.listInsert 1 (encapsulate m) . L.listInsert 0 (createTextPlainMessage mempty))
+            modifying (asCompose . cSubject . E.editContentsL)
+              (insertMany (getForwardedSubject m) . clearZipper)
     }
 
 -- | Update the 'AppState' with a quoted form of the first preferred
 -- entity in order to reply to the e-mail.
+-- | Update the 'AppState' with a quoted version of the currently
+-- selected mail in order to reply to it.
 --
-replyMail :: Action 'ViewMail 'ScrollingMailView AppState
-replyMail =
-    Action
-    { _aDescription = ["reply to an e-mail"]
-    , _aAction = pure . replyToMail
-    }
+replyMail :: Action 'ViewMail 'ScrollingMailView ()
+replyMail = Action
+  { _aDescription = ["reply to an e-mail"]
+  , _aAction = do
+      mail <- use (asMailView . mvMail)
+      case mail of
+        Nothing -> do
+          modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Threads)
+          assignError (GenericError "No mail selected for replying")
+        Just m -> do
+          mailboxes <- use (asConfig . confComposeView . cvIdentities)
+          mbody <- use (asMailView . mvBody)
+          let quoted = toQuotedMail mailboxes mbody m
+          modifying (asCompose . cTo . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
+          modifying (asCompose . cFrom . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
+          modifying (asCompose . cSubject . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
+          modifying (asCompose . cAttachments) (upsertPart quoted)
+  }
 
 -- | Toggles whether we want to show all headers from an e-mail or a
 -- filtered list in the 'AppState'.
 --
-toggleHeaders :: Action 'ViewMail 'ScrollingMailView AppState
+toggleHeaders :: Action 'ViewMail 'ScrollingMailView ()
 toggleHeaders = Action
   { _aDescription = ["toggle mail headers"]
-  , _aAction = pure . go
+  , _aAction = modifying (asMailView . mvHeadersState) f
   }
   where
-    go :: AppState -> AppState
-    go s = case view (asMailView . mvHeadersState) s of
-      Filtered -> set (asMailView . mvHeadersState) ShowAll s
-      ShowAll -> set (asMailView . mvHeadersState) Filtered s
+    f Filtered = ShowAll
+    f ShowAll = Filtered
 
 -- | Apply given tag operations on the currently selected thread or
 -- mail.
 --
-setTags :: [TagOp] -> Action v ctx AppState
+setTags :: [TagOp] -> Action v ctx ()
 setTags ops =
     Action
     { _aDescription = ["apply given tags"]
-    , _aAction = \s -> case focusedViewWidget s of
-          ListOfMails -> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s ops)
-          _ -> selectedItemHelper (asMailIndex . miListOfThreads) s (manageThreadTags s ops)
+    , _aAction = do
+        w <- gets focusedViewWidget
+        case w of
+          ListOfMails -> selectedItemHelper (asMailIndex . miListOfMails) (manageMailTags ops)
+          _ -> selectedItemHelper (asMailIndex . miListOfThreads) (manageThreadTags ops)
     }
 
 -- | Reloads the list of threads by executing the notmuch query given
 -- by the search widget.
 --
-reloadList :: Action 'Threads 'ListOfThreads AppState
+reloadList :: Action 'Threads 'ListOfThreads ()
 reloadList = Action ["reload list of threads"] applySearch
 
 -- | Selects the next unread mail in a thread.
 --
-selectNextUnread :: Action 'ViewMail 'ListOfMails AppState
-selectNextUnread =
-  Action { _aDescription = ["select next unread"]
-         , _aAction = \s ->
-           let
-             -- find by unread tag...
-             p = Notmuch.hasTag (view (asConfig . confNotmuch . nmNewTag) s)
-             -- but if there is no resulting selection, move to the
-             -- last element in the list
-             f l = maybe (L.listMoveTo (-1) l) (const l) (view L.listSelectedL l)
-           in pure $ over (asMailIndex . miListOfMails) (f . L.listFindBy p) s
-         }
+selectNextUnread :: Action 'ViewMail 'ListOfMails ()
+selectNextUnread = Action
+  { _aDescription = ["select next unread"]
+  , _aAction = do
+      -- find by unread tag...
+      p <- uses (asConfig . confNotmuch . nmNewTag) Notmuch.hasTag
+      -- but if there is no resulting selection, move to the
+      -- last element in the list
+      let f l = maybe (L.listMoveTo (-1) l) (const l) (view L.listSelectedL l)
+      modifying (asMailIndex . miListOfMails) (f . L.listFindBy p)
+  }
 
 -- | Selects a list item. Currently only used in the file browser to
 -- select a file for attaching.
 --
-toggleListItem :: Action v 'ListOfFiles AppState
+toggleListItem :: Action v 'ListOfFiles ()
 toggleListItem =
     Action
     { _aDescription = ["toggle selected state of a list item"]
-    , _aAction = \s ->
-                      maybe
-                          (pure s)
-                          (\i -> pure $ over (asFileBrowser . fbEntries . L.listElementsL . ix i . _1) not s)
-                          (view (asFileBrowser . fbEntries . L.listSelectedL) s)
+    , _aAction = use (asFileBrowser . fbEntries . L.listSelectedL) >>= traverse_ f
     }
+    where
+      f i = modifying (asFileBrowser . fbEntries . L.listElementsL . ix i . _1) not
 
 -- | Delete an attachment from a mail currently being composed.
 --
-delete :: Action 'ComposeView 'ComposeListOfAttachments AppState
+-- TODO: could this be generalised over a type class?
+-- (See https://github.com/purebred-mua/purebred/issues/366)
+--
+delete :: Action 'ComposeView 'ComposeListOfAttachments ()
 delete =
     Action
     { _aDescription = ["delete entry"]
-    , _aAction = \s ->
-                      if view (asCompose . cAttachments . L.listElementsL . to length) s < 2
-                          then pure $ setError (GenericError "You may not remove the only attachment") s
-                          else let sel = view (asCompose . cAttachments . L.listSelectedL) s
-                               in pure $ over (asCompose . cAttachments) (\l -> maybe l (`L.listRemove` l) sel) s
+    , _aAction = do
+        len <- uses (asCompose . cAttachments . L.listElementsL) length
+        if len < 2
+          then
+            assignError (GenericError "You may not remove the only attachment")
+          else
+            use (asCompose . cAttachments . L.listSelectedL)
+            >>= modifying (asCompose . cAttachments) . maybe id L.listRemove
     }
 
 -- | Go to the parent directory.
 --
-parentDirectory :: Action 'FileBrowser 'ListOfFiles AppState
-parentDirectory = Action ["go to parent directory"]
-                      (\s ->
-                       let fp = view (asFileBrowser .fbSearchPath . E.editContentsL . to currentLine . to takeDirectory) s
-                           s' = over (asFileBrowser . fbSearchPath . E.editContentsL)
-                                (insertMany fp . clearZipper) s
-                       in ($ s')
-                          <$> (either setError updateBrowseFileContents
-                               <$> runExceptT (view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine . to listDirectory') s'))
-                      )
+parentDirectory :: Action 'FileBrowser 'ListOfFiles ()
+parentDirectory = Action ["go to parent directory"] $
+  uses (asFileBrowser . fbSearchPath . E.editContentsL) (takeDirectory . currentLine) >>= cd
+
+cd :: (MonadState AppState m, MonadIO m) => FilePath -> m ()
+cd fp = do
+  modifying (asFileBrowser . fbSearchPath . E.editContentsL) (insertMany fp . clearZipper)
+  fp' <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
+  runExceptT (listDirectory' fp')
+    >>= either assignError (modify . updateBrowseFileContents)
 
 -- | Open a directory and set the contents in the 'AppState'.
 --
-enterDirectory :: Action 'FileBrowser 'ListOfFiles AppState
+enterDirectory :: Action 'FileBrowser 'ListOfFiles ()
 enterDirectory =
   Action
   { _aDescription = ["enter directory"]
-  , _aAction = \s -> liftIO $ case view (asFileBrowser . fbEntries . to L.listSelectedElement) s of
-      Just (_, item) ->
-        case view _2 item of
-          Directory _ ->
-            let fp = fullpath s item
-                s' = over (asFileBrowser . fbSearchPath . E.editContentsL) (insertMany fp. clearZipper) s
-            in ($ s') <$> (either setError updateBrowseFileContents
-                           <$> runExceptT (view (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine . to listDirectory') s'))
-          _ -> pure s
-      Nothing -> pure s
+  , _aAction =
+      selectedItemHelper (asFileBrowser . fbEntries) $ \(_, entry) -> do
+        -- | Construct the full path to the attachment. The file browser only
+        -- lists the file names (otherwise we wouldn't have the ability to
+        -- display the full paths for deeper file hirarchies). However when
+        -- attaching the file, we need the full paths so we can find, edit and
+        -- update the attachments later.
+        curLine <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
+        case entry of
+          Directory dir -> cd (curLine </> dir)
+          _ -> pure ()
   }
 
 -- | Adds all selected files as attachments to the e-mail.
 --
-createAttachments :: Action 'FileBrowser 'ListOfFiles AppState
-createAttachments =
-    Action
-        ["adds selected files as attachments"]
-        (\s ->
-              if isFileUnderCursor $ L.listSelectedElement $ view (asFileBrowser . fbEntries) s
-              then liftIO $ makeAttachmentsFromSelected s
-              else pure s)
+createAttachments :: Action 'FileBrowser 'ListOfFiles ()
+createAttachments = Action ["adds selected files as attachments"] $ do
+  sel <- uses (asFileBrowser . fbEntries) L.listSelectedElement
+  when (isFileUnderCursor sel) $
+    put =<< liftIO . makeAttachmentsFromSelected =<< get
 
 -- | Action to deal with a choice from the confirmation dialog.
 --
-handleConfirm :: Action 'ComposeView 'ConfirmDialog AppState
+handleConfirm :: Action 'ComposeView 'ConfirmDialog ()
 handleConfirm =
   Action
     ["handle confirmation"]
-    (liftIO . keepOrDiscardDraft)
+    (get >>= liftIO . keepOrDiscardDraft >>= put)
 
 -- | Edit an e-mail as a new mail. This is typically used by saving a
 -- mail under composition for later and continuing the draft. Another
 -- use case can be editing an already sent mail in order to send it to
 -- anther recipient.
 --
-composeAsNew :: Action 'ViewMail 'ScrollingMailView AppState
-composeAsNew =
-  Action
-    ["edit mail as new"]
-    (\s ->
-       case preview
-              (asMailIndex .
-               miListOfMails . to L.listSelectedElement . _Just . _2)
-              s of
-         Nothing -> pure $ setError (GenericError "No mail selected") s
-         Just mail ->
-           let pmail = view (asMailView . mvMail) s
-               dbpath = view (asConfig . confNotmuch . nmDatabase) s
-               charsets = view (asConfig . confCharsets) s
-            in liftIO $
-               either
-                 (`setError` s)
-                 (set asCompose (newComposeFromMail charsets pmail)) <$>
-               runExceptT
-                 (Notmuch.mailFilepath mail dbpath >>=
-                  Notmuch.unindexFilePath dbpath >>
-                  pure s))
+composeAsNew :: Action 'ViewMail 'ScrollingMailView ()
+composeAsNew = Action ["edit mail as new"] $
+  preuse (asMailIndex .  miListOfMails . to L.listSelectedElement . _Just . _2)
+    >>= maybe
+      (assignError (GenericError "No mail selected"))
+      (\mail -> do
+        pmail <- use (asMailView . mvMail)
+        dbpath <- use (asConfig . confNotmuch . nmDatabase)
+        charsets <- use (asConfig . confCharsets)
+        runExceptT (Notmuch.mailFilepath mail dbpath >>= Notmuch.unindexFilePath dbpath)
+          >>= either assignError (const $ assign asCompose (newComposeFromMail charsets pmail))
+      )
 
 
 -- Function definitions for actions
@@ -1198,15 +1232,6 @@ isFileUnderCursor i = maybe False isFile (preview (_Just . _2 . _2) i)
   where isFile (File _) = True
         isFile _ = False
 
--- | Construct the full path to the attachment. The file browser only
--- lists the file names (otherwise we wouldn't have the ability to
--- display the full paths for deeper file hirarchies). However when
--- attaching the file, we need the full paths so we can find, edit and
--- update the attachments later.
---
-fullpath :: AppState -> (a, FileSystemEntry) -> FilePath
-fullpath s i = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> view (_2 . fsEntryName) i
-
 -- | Update the result of a file system listing in the 'AppState'
 --
 updateBrowseFileContents :: [FileSystemEntry] -> AppState -> AppState
@@ -1217,56 +1242,46 @@ updateBrowseFileContents contents s =
 -- | Take the notmuch query given by the user and update the
 -- 'AppState' with notmuch query result.
 --
-applySearch :: (MonadIO m) => AppState -> m AppState
-applySearch s = do
-  r <- runExceptT (Notmuch.getThreads searchterms (view (asConfig . confNotmuch) s))
-  t <- liftIO (zonedTimeToUTC <$> getZonedTime)
+applySearch :: (MonadIO m, MonadState AppState m) => m ()
+applySearch = do
+  searchterms <- currentLine <$> use (asMailIndex . miSearchThreadsEditor . E.editContentsL)
+  nmconf <- use (asConfig . confNotmuch)
+  r <- runExceptT (Notmuch.getThreads searchterms nmconf)
   case r of
-    Left e -> pure $ setError e s
-    Right threads -> set asLocalTime t . updateList threads <$> notifyNumThreads s threads
-   where searchterms = currentLine $ view (asMailIndex . miSearchThreadsEditor . E.editContentsL) s
-         updateList vec =
-           over (asMailIndex . miThreads . listList) (L.listReplace vec (Just 0))
-           . set (asMailIndex . miThreads . listLength) Nothing
+    Left e -> assignError e
+    Right threads -> do
+      liftIO (zonedTimeToUTC <$> getZonedTime) >>= assign asLocalTime
+      notifyNumThreads threads
+      modifying (asMailIndex . miThreads . listList) (L.listReplace threads (Just 0))
+      assign (asMailIndex . miThreads . listLength) Nothing
 
 -- | Fork a thread to compute the length of the container and send a
 -- NotifyNumThreads event.  'seq' ensures that the work is actually
 -- done by the spawned thread.  Increments the generation and updates
 -- the 'AppState' with it.
-notifyNumThreads :: (MonadIO m, Foldable t) => AppState -> t a -> m AppState
-notifyNumThreads s l =
-  let
-    len = length l
-    nextGen = views (asMailIndex . miListOfThreadsGeneration) nextGeneration s
-    s' = set (asMailIndex . miListOfThreadsGeneration) nextGen s
-    go = len `seq` writeBChan (view (asConfig . confBChan) s) (NotifyNumThreads len nextGen)
-  in
-    liftIO $ forkIO go $> s'
-
--- | Update the Application state with all mails found for the
--- currently selected thread.
---
-setMailsForThread :: AppState -> IO AppState
-setMailsForThread s = selectedItemHelper (asMailIndex . miListOfThreads) s $ \t ->
-  let dbpath = view (asConfig . confNotmuch . nmDatabase) s
-      updateThreadMails vec =
-        over (asMailIndex . miMails . listList) (L.listReplace vec Nothing)
-        . set (asMailIndex . miMails . listLength) (Just (length vec))
-  in either setError updateThreadMails <$> runExceptT (Notmuch.getThreadMessages dbpath t)
+notifyNumThreads :: (MonadState AppState m, MonadIO m, Foldable t) => t a -> m ()
+notifyNumThreads l = do
+  nextGen <- uses (asMailIndex . miListOfThreadsGeneration) nextGeneration
+  chan <- use (asConfig . confBChan)
+  void . liftIO . forkIO $
+    let len = length l
+    in len `seq` writeBChan chan (NotifyNumThreads len nextGen)
+  assign (asMailIndex . miListOfThreadsGeneration) nextGen
 
 -- | Helper function to either show an error if no list item is
--- selected or apply the given function.
+-- selected, or apply given action to the item (the result of
+-- which is discarded)
 --
 selectedItemHelper
-    :: (Applicative f, Foldable t, L.Splittable t)
+    :: (Foldable t, L.Splittable t, MonadState AppState m)
     => Getting (L.GenericList n t a) AppState (L.GenericList n t a)
-    -> AppState
-    -> (a -> f (AppState -> AppState))
-    -> f AppState
-selectedItemHelper l s func =
-  ($ s) <$> case L.listSelectedElement (view l s) of
-  Just (_, a) -> func a
-  Nothing -> pure $ setError (GenericError "No item selected.")
+    -> (a -> m b)
+    -> m ()
+selectedItemHelper l f = do
+  item <- use l
+  case L.listSelectedElement item of
+    Just (_, a) -> void $ f a
+    Nothing -> assignError (GenericError "No item selected.")
 
 -- | Retrieve the given tag operations from the given editor widget
 -- and parse them.
@@ -1288,80 +1303,60 @@ applyTagOps ops mails s =
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
   in runExceptT (Notmuch.messageTagModify dbpath ops mails)
 
-updateStateWithParsedMail :: AppState -> IO AppState
-updateStateWithParsedMail s =
-  selectedItemHelper (asMailIndex . miListOfMails) s $ \m ->
-    either
-      (\e ->
-         setError e .
-         over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads))
-      (\(pmail, mbody) s' ->
-         s' &
-         set (asMailView . mvMail) (Just pmail) .
-         set (asMailView . mvBody) mbody .
-         over (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail) .
-         set (asMailView . mvAttachments) (setEntities pmail)) <$>
-    runExceptT
-      (parseMail m (view (asConfig . confNotmuch . nmDatabase) s) >>=
-       bodyToDisplay s textwidth charsets preferredContentType)
+updateStateWithParsedMail :: (MonadIO m, MonadMask m, MonadState AppState m) => m ()
+updateStateWithParsedMail = do
+  db <- use (asConfig . confNotmuch . nmDatabase)
+  charsets <- use (asConfig . confCharsets)
+  textwidth <- use (asConfig . confMailView . mvTextWidth)
+  preferredContentType <- use (asConfig . confMailView . mvPreferredContentType)
+  s <- get
+  selectedItemHelper (asMailIndex . miListOfMails) $ \m ->
+    runExceptT (parseMail m db >>= bodyToDisplay s textwidth charsets preferredContentType)
+    >>= either
+      (\e -> do
+        assignError e
+        modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) )
+      (\(pmail, mbody) -> do
+         assign (asMailView . mvMail) (Just pmail)
+         assign (asMailView . mvBody) mbody
+         modifying (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail)
+         assign (asMailView . mvAttachments) (setEntities pmail) )
   where
-    charsets = view (asConfig . confCharsets) s
-    textwidth = view (asConfig . confMailView . mvTextWidth) s
     setEntities m =
       L.list MailListOfAttachments (view vector $ toListOf entities m) 0
-    preferredContentType =
-      view (asConfig . confMailView . mvPreferredContentType) s
 
 -- | Tag the currently selected mail as /read/. This is reflected as a
 -- visual change in the UI.
 --
-updateReadState :: TagOp -> AppState -> IO AppState
-updateReadState op s =
+updateReadState :: (MonadState AppState m, MonadIO m) => (Tag -> TagOp) -> m ()
+updateReadState con = do
   -- Also update the thread to reflect the change. We used
   -- to pull the thread out of the database again when we
   -- navigated back to the index of threads, but does not
   -- always garantee an updated tag list. See #249
-  over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem [op]))
-  <$> selectedItemHelper (asMailIndex . miListOfMails) s (manageMailTags s [op])
+  op <- con <$> use (asConfig . confNotmuch . nmNewTag)
+  selectedItemHelper (asMailIndex . miListOfMails) (manageMailTags [op])
+  modifying (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem [op]))
 
-manageMailTags
-    :: MonadIO m
-    => AppState
-    -> [TagOp]
-    -> NotmuchMail
-    -> m (AppState -> AppState)
-manageMailTags s tagop m =
-  either setError (over (asMailIndex . miListOfMails) . L.listModify . const . runIdentity)
-  <$> applyTagOps tagop (Identity m) s
+manageMailTags :: (MonadIO m, MonadState AppState m) => [TagOp] -> NotmuchMail -> m ()
+manageMailTags ops m = do
+  result <- applyTagOps ops (Identity m) =<< get
+  case result of
+    Left e -> assignError e
+    Right (Identity m') -> modifying (asMailIndex . miListOfMails) (L.listModify (const m'))
 
 -- | Convenience function to set an error state in the 'AppState'
 --
 setError :: Error -> AppState -> AppState
 setError = set asError . Just
 
--- | Update the 'AppState' with a quoted version of the currently
--- selected mail in order to reply to it.
---
-replyToMail :: AppState -> AppState
-replyToMail s =
-  case view (asMailView . mvMail) s of
-    Nothing ->
-      s &
-      over (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) .
-      setError (GenericError "No mail selected for replying")
-    Just pmail ->
-      let mailboxes = view (asConfig . confComposeView . cvIdentities) s
-          quoted = toQuotedMail mailboxes mbody pmail
-          mbody = view (asMailView . mvBody) s
-       in s &
-          over (asCompose . cTo . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
-          . over (asCompose . cFrom . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
-          . over (asCompose . cSubject . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
-          . over (asCompose . cAttachments) (upsertPart quoted)
+-- | Assign error into the state
+assignError :: (MonadState AppState m) => Error -> m ()
+assignError = assign asError . Just
 
 -- | Build the MIMEMessage, sanitize filepaths, serialize and send it
 --
-sendMail :: AppState -> T.EventM Name AppState
+sendMail :: (MonadIO m) => AppState -> m AppState
 sendMail s =
   let charsets = view (asConfig . confCharsets) s
       maildir = view (asConfig . confNotmuch . nmDatabase) s
@@ -1478,8 +1473,8 @@ invokeEditor' s =
 -- programs using sub-shells will be able to read the temporary file. Return an
 -- error if either the WireEntity doesn't exist (e.g. not selected) or it can
 -- not be serialised.
-openCommand' :: AppState -> MailcapHandler -> IO AppState
-openCommand' s cmd =
+openCommand' :: (MonadIO m, MonadMask m, MonadState AppState m) => MailcapHandler -> m ()
+openCommand' cmd = do
   let
     mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m FilePath)
     mkConfig =
@@ -1489,32 +1484,29 @@ openCommand' s cmd =
             (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
             tryReadProcessStderr
       in fmap con . entityToBytes
-  in either (`setError` s) (const s)
-      <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= runEntityCommand)
+  selectedItemHelper (asMailView . mvAttachments) $ \ent ->
+    runExceptT (mkConfig ent >>= runEntityCommand)
+      >>= either assignError (const $ pure ())
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
 -- temporary file is used. If either no WireEntity exists (e.g. none selected)
 -- or it can not be serialised an error is returned.
-pipeCommand' :: AppState -> FilePath -> IO AppState
-pipeCommand' s cmd
-  | null cmd = pure $ s & setError (GenericError "Empty command")
-  | otherwise =
-    let
-      mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m ())
-      mkConfig =
-        let con = EntityCommand
-              handleExitCodeThrow
-              emptyResource
-              (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
-              tryReadProcessStderr
-        in fmap con . entityToBytes
-     in either (`setError` s) (const s)
-        <$> runExceptT (selectedAttachmentOrError s >>= mkConfig >>= runEntityCommand)
-
-selectedAttachmentOrError :: MonadError Error m => AppState -> m WireEntity
-selectedAttachmentOrError =
-  maybe (throwError $ GenericError "No attachment selected") pure
-  . preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2)
+pipeCommand' :: (MonadIO m, MonadMask m, MonadState AppState m) => FilePath -> m ()
+pipeCommand' cmd
+  | null cmd = assignError (GenericError "Empty command")
+  | otherwise = do
+      let
+        mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m ())
+        mkConfig =
+          let con = EntityCommand
+                handleExitCodeThrow
+                emptyResource
+                (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
+                tryReadProcessStderr
+          in fmap con . entityToBytes
+      selectedItemHelper (asMailView . mvAttachments) $ \ent ->
+        runExceptT (mkConfig ent >>= runEntityCommand)
+          >>= either assignError (const $ pure ())
 
 editAttachment :: AppState -> IO AppState
 editAttachment s =
@@ -1553,28 +1545,13 @@ mimeType :: FilePath -> ContentType
 mimeType x = let parsed = parseOnly parseContentType $ defaultMimeLookup (T.pack x)
              in either (const contentTypeApplicationOctetStream) id parsed
 
-manageThreadTags
-    :: MonadIO m
-    => AppState
-    -> [TagOp]
-    -> NotmuchThread
-    -> m (AppState -> AppState)
-manageThreadTags s ops t =
-  let update ops' _ = over (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
-  in getMailsForThread t s
-     >>= \ms -> applyTagOps ops ms s
-     >>= either (pure . setError) (pure . update ops)
-
-getMailsForThread
-    :: MonadIO f
-    => NotmuchThread
-    -> AppState
-    -> f (Vector.Vector NotmuchMail)
-getMailsForThread ts s =
-  let dbpath = view (asConfig . confNotmuch . nmDatabase) s
-  in
-    either (const mempty) id
-    <$> runExceptT (Notmuch.getThreadMessages dbpath ts)
+manageThreadTags :: (MonadIO m, MonadState AppState m) => [TagOp] -> NotmuchThread -> m ()
+manageThreadTags ops t = do
+  let update ops' = modifying (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
+  dbpath <- use (asConfig . confNotmuch . nmDatabase)
+  (either (const mempty) id <$> runExceptT (Notmuch.getThreadMessages dbpath t))
+    >>= \ms -> (get >>= applyTagOps ops ms)
+    >>= either assignError (const (update ops))
 
 
 keepOrDiscardDraft :: AppState -> IO AppState
