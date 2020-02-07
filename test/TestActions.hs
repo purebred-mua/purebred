@@ -13,8 +13,11 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+
 module TestActions where
 
 import qualified Brick.Widgets.List as L
@@ -44,7 +47,7 @@ testModeDescription :: TestTree
 testModeDescription = testCase "mode present in the switch action"
                       $ view aDescription a @?= ["switch mode to ManageMailTagsEditor"]
   where
-    a = focus :: Action 'ViewMail 'ManageMailTagsEditor AppState
+    a = focus @'ViewMail @'ManageMailTagsEditor
 
 testNoDupes :: TestTree
 testNoDupes =

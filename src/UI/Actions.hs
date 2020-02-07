@@ -875,7 +875,7 @@ abort = Action ["cancel"] (reset (Proxy :: Proxy v) (Proxy :: Proxy a))
 
 -- | Used to switch the focus from one widget to another on the same view.
 --
-focus :: forall a v. (HasViewName v, HasName a, Focusable v a) => Action v a AppState  --FIXME ()
+focus :: forall v a. (HasViewName v, HasName a, Focusable v a) => Action v a ()
 focus = Action
   ["switch mode to " <> T.pack (show (name (Proxy :: Proxy a)))] $ do
     sink <- use (asConfig . confLogSink)
@@ -883,7 +883,7 @@ focus = Action
       "switchFocus "
         <> show (viewname (Proxy :: Proxy v)) <> " "
         <> show (name (Proxy :: Proxy a))
-    switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a) *> get
+    switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a)
 
 -- | A no-op action can
 -- be used at the start of a sequence with an immediate switch of

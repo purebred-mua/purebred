@@ -13,7 +13,10 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+
 module UI.GatherHeaders.Keybindings where
 
 import qualified Graphics.Vty as V
@@ -22,21 +25,21 @@ import UI.Actions
 
 gatherFromKeybindings :: [Keybinding 'Threads 'ComposeFrom]
 gatherFromKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'Threads 'ComposeTo AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` focus @'Threads @'ComposeTo `chain` continue)
     ]
 
 gatherToKeybindings :: [Keybinding 'Threads 'ComposeTo]
 gatherToKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'Threads 'ComposeSubject AppState) `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` focus @'Threads @'ComposeSubject `chain` continue)
     ]
 
 gatherSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject]
 gatherSubjectKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` (focus :: Action 'ComposeView 'ComposeListOfAttachments AppState) `chain` invokeEditor)
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` invokeEditor)
     ]
