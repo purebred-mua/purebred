@@ -751,16 +751,14 @@ continue = Action mempty (get >>= lift . Brick.continue)
 -- | Suspends Purebred and invokes the configured editor.
 --
 invokeEditor :: Action v ctx (T.Next AppState)
-invokeEditor = Action ["invoke external editor"]
-  (lift . Brick.suspendAndResume . liftIO . invokeEditor' =<< get)
-  -- TODO abstract invokeEditor'
+invokeEditor = Action ["invoke external editor"] (stateSuspendAndResume invokeEditor')
 
 -- | Suspends Purebred to invoke a command for editing an
 -- attachment. Currently only supports re-editing the body text of an
 -- e-mail.
 --
 edit :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
-edit = Action ["edit file"] (lift . Brick.suspendAndResume . liftIO . editAttachment =<< get)
+edit = Action ["edit file"] (stateSuspendAndResume editAttachment)
 
 openAttachment :: Action 'ViewMail ctx (T.Next AppState)
 openAttachment =
@@ -1447,19 +1445,19 @@ initialDraftConfirmDialog = dialog (Just "Keep draft?") (Just (0, [("Keep", Keep
 -- serialising fails, we return an error. Once the editor exits, read the
 -- contents from the temporary file, delete it and create a MIME message out of
 -- it. Set it in the Appstate.
-invokeEditor' :: AppState -> IO AppState
-invokeEditor' s =
-  let maybeEntity = preview (asCompose . cAttachments . to L.listSelectedElement
-                             . _Just . _2 . to getTextPlainPart . _Just) s
-      maildir = view (asConfig . confNotmuch . nmDatabase) s
-      cmd = view (asConfig . confEditor) s
-      updatePart = over (asCompose . cAttachments) . upsertPart . createTextPlainMessage
-      mkEntity :: (MonadError Error m) => m B.ByteString
-      mkEntity = maybe (pure mempty) entityToBytes maybeEntity
-      entityCmd = EntityCommand handleExitCodeTempfileContents (draftFileResoure maildir) (\_ fp -> proc cmd [fp]) tryReadProcessStderr
-  in
-    either (`setError` s) (`updatePart` s)
-    <$> runExceptT (mkEntity >>= runEntityCommand . entityCmd)
+invokeEditor' :: (MonadState AppState m, MonadIO m, MonadMask m) => m ()
+invokeEditor' = do
+  maildir <- use (asConfig . confNotmuch . nmDatabase)
+  cmd <- use (asConfig . confEditor)
+  maybeEntity <- preuse (asCompose . cAttachments . to L.listSelectedElement . _Just . _2 . to getTextPlainPart . _Just)
+  let
+    mkEntity :: (MonadError Error m) => m B.ByteString
+    mkEntity = maybe (pure mempty) entityToBytes maybeEntity
+    entityCmd = EntityCommand handleExitCodeTempfileContents
+      (draftFileResoure maildir) (\_ fp -> proc cmd [fp]) tryReadProcessStderr
+    updatePart = modifying (asCompose . cAttachments) . upsertPart . createTextPlainMessage
+  runExceptT (mkEntity >>= runEntityCommand . entityCmd)
+    >>= either assignError updatePart
 
 -- | Write the serialised WireEntity to a temporary file. Pass the FilePath of
 -- the temporary file to the command. Do not remove the temporary file, so
@@ -1501,13 +1499,11 @@ pipeCommand' cmd
         runExceptT (mkConfig ent >>= runEntityCommand)
           >>= either assignError (const $ pure ())
 
-editAttachment :: AppState -> IO AppState
-editAttachment s =
-    case L.listSelectedElement $ view (asCompose . cAttachments) s of
-        Nothing -> pure $ setError (GenericError "No file selected to edit") s
-        Just (_, m) -> case preview (headers . contentDisposition . folded . dispositionType) m of
-          (Just Inline) -> invokeEditor' s
-          _ -> pure $ setError (GenericError "Not implemented. See #182") s
+editAttachment :: (MonadState AppState m, MonadIO m, MonadMask m) => m ()
+editAttachment = selectedItemHelper (asCompose . cAttachments) $ \m ->
+  case preview (headers . contentDisposition . folded . dispositionType) m of
+    Just Inline -> invokeEditor'
+    _           -> assignError (GenericError "Not implemented. See #182")
 
 -- | Either inserts or updates a part in a list of attachments. This
 -- is needed when editing parts during composition of an e-mail.
