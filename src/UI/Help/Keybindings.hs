@@ -13,7 +13,9 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 
 module UI.Help.Keybindings where
 
@@ -24,8 +26,8 @@ import Types
 -- | Default Keybindings
 helpKeybindings :: [Keybinding 'Help 'ScrollingHelpView]
 helpKeybindings =
-    [ Keybinding (EvKey KEsc []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
-    , Keybinding (EvKey (KChar 'q') []) (noop `chain'` (focus :: Action 'Threads 'ListOfThreads AppState) `chain` continue)
+    [ Keybinding (EvKey KEsc []) (noop `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    , Keybinding (EvKey (KChar 'q') []) (noop `chain'` focus @'Threads @'ListOfThreads `chain` continue)
     , Keybinding (EvKey KBS []) (scrollPageUp `chain` continue)
     , Keybinding (EvKey (KChar ' ') []) (scrollPageDown `chain` continue)
     , Keybinding (EvKey KBS []) (scrollPageUp `chain` continue)
