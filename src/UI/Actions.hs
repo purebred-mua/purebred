@@ -1153,7 +1153,7 @@ enterDirectory =
   { _aDescription = ["enter directory"]
   , _aAction =
       selectedItemHelper (asFileBrowser . fbEntries) $ \(_, entry) -> do
-        -- | Construct the full path to the attachment. The file browser only
+        -- Construct the full path to the attachment. The file browser only
         -- lists the file names (otherwise we wouldn't have the ability to
         -- display the full paths for deeper file hirarchies). However when
         -- attaching the file, we need the full paths so we can find, edit and
