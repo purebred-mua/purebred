@@ -141,10 +141,24 @@ testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" 
     sendKeys "Escape" (Substring "mail")
 
     step "exit vim"
-    sendKeys ": x\r" (Substring "Attachments") >>= put
+    sendKeys ": x\r" (Substring "Attachments")
+
+    step "start editing cc"
+    sendKeys "c" (Substring "Cc")
+
+    step "add cc email"
+    sendKeys "cc_user@foo.test\r" (Substring "Cc: cc_user@foo.test")
+
+    step "start editing bcc"
+    sendKeys "b" (Regex $ "Bcc: " <> buildAnsiRegex [] ["37"] [] <> "\\s+$")
+
+    step "add bcc email"
+    sendKeys "bcc_user@foo.test\r" (Substring "Bcc: bcc_user@foo.test") >>= put
 
     assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>\\s+$"
     assertSubstringS "To: to_user@foo.test"
+    assertSubstringS "Cc: cc_user@foo.test"
+    assertSubstringS "Bcc: bcc_user@foo.test"
     assertSubstringS ("Subject: " <> subject)
     assertSubstringS "text/plain"
     assertSubstringS "message/rfc822"
@@ -512,7 +526,10 @@ testKeepDraftMail = purebredTmuxSession "compose mail from draft" $
     sendKeys "Enter" (Substring "Draft mail subject")
 
     step "edit as new"
-    sendKeys "e" (Regex "From: \"Joe Bloggs\" <joe@foo.test>\\s+To: user@to.test\\s+Subject:\\sDraft mail subject")
+    sendKeys "e" (Regex "From: \"Joe Bloggs\" <joe@foo.test>") >>= put
+
+    assertSubstringS "To: user@to.test"
+    assertSubstringS "Subject: Draft mail subject"
 
     step "assert draft has been removed"
     mdir <- view envMaildir
@@ -568,6 +585,34 @@ testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
 
     step "append an additional from email"
     sendKeys ", testuser@foo.test\r" (Substring "To: user@to.test, testuser@foo.test")
+      >>= assertRegex lastLineIsStatusLine
+
+    step "user can add cc header"
+    sendKeys "c" (Substring "Cc")
+
+    step "enter cc: email"
+    sendKeys "user@cc.test\r" (Substring "Cc: user@cc.test")
+      >>= assertRegex lastLineIsStatusLine
+
+    step "user can change cc header"
+    sendKeys "c" (Regex $ "Cc: " <> buildAnsiRegex [] ["37"] [] <> "user@cc.test")
+
+    step "append an additional from email"
+    sendKeys ", testuser@foo.test\r" (Substring "Cc: user@cc.test, testuser@foo.test")
+      >>= assertRegex lastLineIsStatusLine
+
+    step "user can add bcc header"
+    sendKeys "b" (Substring "Bcc")
+
+    step "enter bcc: email"
+    sendKeys "user@bcc.test\r" (Substring "Bcc: user@bcc.test")
+      >>= assertRegex lastLineIsStatusLine
+
+    step "user can change bcc header"
+    sendKeys "b" (Regex $ "Bcc: " <> buildAnsiRegex [] ["37"] [] <> "user@bcc.test")
+
+    step "append an additional from email"
+    sendKeys ", testuser@foo.test\r" (Substring "Bcc: user@bcc.test, testuser@foo.test")
       >>= assertRegex lastLineIsStatusLine
 
     step "change subject"
@@ -1187,8 +1232,10 @@ testUserCanAbortMailComposition =
             sendKeys "Escape" Unconditional
 
             step "exit vim"
-            sendKeys ": x\r" (Regex ("To: new@second.test\\s+"
-                                     <> "Subject: test subject"))
+            sendKeys ": x\r" (Substring "text/plain") >>= put
+
+            assertSubstringS "To: new@second.test"
+            assertSubstringS "Subject: test subject"
 
             step "edit body"
             sendKeys "e" (Regex "This is my second mail\\s+")

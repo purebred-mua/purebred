@@ -76,6 +76,8 @@ data Name =
     | ComposeHeaders
     | ComposeFrom
     | ComposeTo
+    | ComposeCc
+    | ComposeBcc
     | ComposeSubject
     | ComposeListOfAttachments
     | ScrollingHelpView
@@ -283,6 +285,8 @@ data ConfirmDraft
 data Compose = Compose
     { _cFrom :: E.Editor T.Text Name
     , _cTo :: E.Editor T.Text Name
+    , _cCc :: E.Editor T.Text Name
+    , _cBcc :: E.Editor T.Text Name
     , _cSubject :: E.Editor T.Text Name
     , _cTemp :: T.Text
     , _cAttachments :: L.List Name MIMEMessage
@@ -294,6 +298,12 @@ cFrom = lens _cFrom (\c x -> c { _cFrom = x })
 
 cTo :: Lens' Compose (E.Editor T.Text Name)
 cTo = lens _cTo (\c x -> c { _cTo = x })
+
+cCc :: Lens' Compose (E.Editor T.Text Name)
+cCc = lens _cCc (\c x -> c { _cCc = x })
+
+cBcc :: Lens' Compose (E.Editor T.Text Name)
+cBcc = lens _cBcc (\c x -> c { _cBcc = x })
 
 cSubject :: Lens' Compose (E.Editor T.Text Name)
 cSubject = lens _cSubject (\c x -> c { _cSubject = x })
@@ -428,6 +438,8 @@ confLogSink = confExtra . _3
 data ComposeViewSettings = ComposeViewSettings
     { _cvFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
     , _cvToKeybindings :: [Keybinding 'ComposeView 'ComposeTo]
+    , _cvCcKeybindings :: [Keybinding 'ComposeView 'ComposeCc]
+    , _cvBccKeybindings :: [Keybinding 'ComposeView 'ComposeBcc]
     , _cvSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
     , _cvSendMailCmd :: B.ByteString -> IO (Either Error ())
     , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ComposeListOfAttachments]
@@ -441,6 +453,12 @@ cvFromKeybindings = lens _cvFromKeybindings (\cv x -> cv { _cvFromKeybindings = 
 
 cvToKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeTo]
 cvToKeybindings = lens _cvToKeybindings (\cv x -> cv { _cvToKeybindings = x })
+
+cvCcKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeCc]
+cvCcKeybindings = lens _cvCcKeybindings (\cv x -> cv { _cvCcKeybindings = x })
+
+cvBccKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeBcc]
+cvBccKeybindings = lens _cvBccKeybindings (\cv x -> cv { _cvBccKeybindings = x })
 
 cvSubjectKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeSubject]
 cvSubjectKeybindings = lens _cvSubjectKeybindings (\cv x -> cv { _cvSubjectKeybindings = x })

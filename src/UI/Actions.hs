@@ -224,6 +224,12 @@ instance HasEditor 'ComposeFrom where
 instance HasEditor 'ComposeTo where
   editorL _ = asCompose . cTo
 
+instance HasEditor 'ComposeCc where
+  editorL _ = asCompose . cCc
+
+instance HasEditor 'ComposeBcc where
+  editorL _ = asCompose . cBcc
+
 instance HasEditor 'ComposeSubject where
   editorL _ = asCompose . cSubject
 
@@ -329,6 +335,16 @@ instance Completable 'ComposeTo where
     hide ComposeView 1 ComposeTo
     hide ViewMail 0 ComposeTo
 
+instance Completable 'ComposeCc where
+  complete _ = do
+    hide ComposeView 1 ComposeCc
+    hide ViewMail 0 ComposeCc
+
+instance Completable 'ComposeBcc where
+  complete _ = do
+    hide ComposeView 1 ComposeBcc
+    hide ViewMail 0 ComposeBcc
+
 instance Completable 'ComposeFrom where
   complete _ = hide ComposeView 1 ComposeFrom
 
@@ -416,6 +432,18 @@ instance Resetable 'ComposeView 'ComposeTo where
     s <- get
     modifying (asCompose . cTo . E.editContentsL) (revertEditorContents s)
     hide ComposeView 1 ComposeTo
+
+instance Resetable 'ComposeView 'ComposeCc where
+  reset _ _ = do
+    s <- get
+    modifying (asCompose . cCc . E.editContentsL) (revertEditorContents s)
+    hide ComposeView 1 ComposeCc
+
+instance Resetable 'ComposeView 'ComposeBcc where
+  reset _ _ = do
+    s <- get
+    modifying (asCompose . cBcc . E.editContentsL) (revertEditorContents s)
+    hide ComposeView 1 ComposeBcc
 
 instance Resetable 'ComposeView 'ComposeSubject where
   reset _ _ = do
@@ -582,6 +610,20 @@ instance Focusable 'ComposeView 'ComposeTo where
     assign (asCompose . cTemp) curLine
     unhide ComposeView 1 ComposeTo
 
+instance Focusable 'ComposeView 'ComposeCc where
+  switchFocus _ _ = do
+    assign (asViews . vsViews . ix ComposeView . vFocus) ComposeCc
+    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
+    assign (asCompose . cTemp) curLine
+    unhide ComposeView 1 ComposeCc
+
+instance Focusable 'ComposeView 'ComposeBcc where
+  switchFocus _ _ = do
+    assign (asViews . vsViews . ix ComposeView . vFocus) ComposeBcc
+    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
+    assign (asCompose . cTemp) curLine
+    unhide ComposeView 1 ComposeBcc
+
 instance Focusable 'ComposeView 'ComposeSubject where
   switchFocus _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeSubject
@@ -639,6 +681,12 @@ instance HasName 'ComposeFrom where
 
 instance HasName 'ComposeTo where
   name _ = ComposeTo
+
+instance HasName 'ComposeCc where
+  name _ = ComposeCc
+
+instance HasName 'ComposeBcc where
+  name _ = ComposeBcc
 
 instance HasName 'ComposeSubject where
   name _ = ComposeSubject
@@ -1404,6 +1452,8 @@ initialCompose mailboxes =
   Compose
     (E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
     (E.editorText ComposeTo (Just 1) "")
+    (E.editorText ComposeCc (Just 1) "")
+    (E.editorText ComposeBcc (Just 1) "")
     (E.editorText ComposeSubject (Just 1) "")
     T.empty
     (L.list ComposeListOfAttachments mempty 1)
@@ -1417,12 +1467,16 @@ newComposeFromMail charsets m =
         preview (_Just . headers . at "subject" . _Just . to decodeLenient) m
       from = preview (_Just . headers . at "from" . _Just . to decodeLenient) m
       to' = preview (_Just . headers . at "to" . _Just . to decodeLenient) m
+      cc = preview (_Just . headers . at "cc" . _Just . to decodeLenient) m
+      bcc = preview (_Just . headers . at "bcc" . _Just . to decodeLenient) m
       attachments' =
         view vector $ toMIMEMessage charsets <$> toListOf (_Just . entities) m
       orEmpty = view (non "")
    in Compose
         (E.editorText ComposeFrom (Just 1) (orEmpty from))
         (E.editorText ComposeTo (Just 1) (orEmpty to'))
+        (E.editorText ComposeCc (Just 1) (orEmpty cc))
+        (E.editorText ComposeBcc (Just 1) (orEmpty bcc))
         (E.editorText ComposeSubject (Just 1) (orEmpty subject))
         T.empty
         (L.list ComposeListOfAttachments attachments' 1)

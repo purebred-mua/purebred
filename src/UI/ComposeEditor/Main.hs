@@ -51,7 +51,9 @@ attachmentsEditor s =
     in attachmentsHeader <=> attachmentsList
 
 drawHeaders :: AppState -> Widget Name
-drawHeaders s = padBottom (Pad 1) $ foldr (drawTableRows s) (txt T.empty) [ComposeSubject, ComposeTo, ComposeFrom]
+drawHeaders s = 
+  let headers' = [ComposeSubject, ComposeBcc, ComposeCc, ComposeTo, ComposeFrom]
+  in padBottom (Pad 1) $ foldr (drawTableRows s) (txt T.empty) headers'
 
 -- | align labels to the right and values to the left, e.g.
 --
@@ -67,11 +69,15 @@ drawTableRows s name w = w
 makeLabel :: Name -> Widget Name
 makeLabel ComposeFrom = txt "From:"
 makeLabel ComposeTo = txt "To:"
+makeLabel ComposeCc = txt "Cc:"
+makeLabel ComposeBcc = txt "Bcc:"
 makeLabel _ = txt "Subject:"
 
 widgetValue :: Name -> AppState -> T.Text
 widgetValue ComposeFrom = view (asCompose . cFrom . E.editContentsL . to currentLine)
 widgetValue ComposeTo = view (asCompose . cTo . E.editContentsL . to currentLine)
+widgetValue ComposeCc = view (asCompose . cCc . E.editContentsL . to currentLine)
+widgetValue ComposeBcc = view (asCompose . cBcc . E.editContentsL . to currentLine)
 widgetValue ComposeSubject = view (asCompose . cSubject . E.editContentsL . to currentLine)
 widgetValue _ = const T.empty
 
