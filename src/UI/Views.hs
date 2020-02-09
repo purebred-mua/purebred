@@ -135,6 +135,8 @@ composeView =
               , Tile Visible StatusBar
               , Tile Hidden ComposeFrom
               , Tile Hidden ComposeTo
+              , Tile Hidden ComposeCc
+              , Tile Hidden ComposeBcc
               , Tile Hidden ComposeSubject
               ]
           ]

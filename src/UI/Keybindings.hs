@@ -24,6 +24,8 @@ module UI.Keybindings (
   , nullEventHandler
   , eventHandlerComposeFrom
   , eventHandlerComposeTo
+  , eventHandlerComposeCc
+  , eventHandlerComposeBcc
   , eventHandlerComposeSubject
   , eventHandlerThreadComposeFrom
   , eventHandlerThreadComposeTo
@@ -107,7 +109,7 @@ runValidation fx l s =
 
 -- | Handlers capable of running used in more than one view
 --
-composeFromHandler, composeToHandler, manageMailTagHandler ::
+composeFromHandler, composeToHandler, composeCcHandler, composeBccHandler, manageMailTagHandler ::
      AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
 
 composeFromHandler s e =
@@ -121,6 +123,20 @@ composeToHandler s e =
   >>= liftIO . runValidation
   (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
   (asCompose . cTo)
+  >>= Brick.continue
+
+composeCcHandler s e =
+  Brick.handleEventLensed s (asCompose . cCc) E.handleEditorEvent e
+  >>= liftIO . runValidation
+  (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
+  (asCompose . cCc)
+  >>= Brick.continue
+
+composeBccHandler s e =
+  Brick.handleEventLensed s (asCompose . cBcc) E.handleEditorEvent e
+  >>= liftIO . runValidation
+  (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
+  (asCompose . cBcc)
   >>= Brick.continue
 
 manageMailTagHandler s e =
@@ -218,6 +234,16 @@ eventHandlerComposeTo :: EventHandler 'ComposeView 'ComposeTo
 eventHandlerComposeTo = EventHandler
   (asConfig . confComposeView . cvToKeybindings)
   composeToHandler
+
+eventHandlerComposeCc :: EventHandler 'ComposeView 'ComposeCc
+eventHandlerComposeCc = EventHandler
+  (asConfig . confComposeView . cvCcKeybindings)
+  composeCcHandler
+
+eventHandlerComposeBcc :: EventHandler 'ComposeView 'ComposeBcc
+eventHandlerComposeBcc = EventHandler
+  (asConfig . confComposeView . cvBccKeybindings)
+  composeBccHandler
 
 eventHandlerComposeSubject :: EventHandler 'ComposeView 'ComposeSubject
 eventHandlerComposeSubject = EventHandler

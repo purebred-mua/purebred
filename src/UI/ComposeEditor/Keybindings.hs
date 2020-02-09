@@ -46,6 +46,20 @@ composeToKeybindings =
     , Keybinding (V.EvKey V.KEnter []) (done `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
     ]
 
+composeCcKeybindings :: [Keybinding 'ComposeView 'ComposeCc]
+composeCcKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
+    ]
+
+composeBccKeybindings :: [Keybinding 'ComposeView 'ComposeBcc]
+composeBccKeybindings =
+    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (done `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
+    ]
+
 confirmKeybindings :: [Keybinding 'ComposeView 'ConfirmDialog]
 confirmKeybindings =
   [ Keybinding
@@ -86,6 +100,8 @@ listOfAttachmentsKeybindings =
     , Keybinding (V.EvKey (V.KChar 'D') []) (delete `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'a') []) (noop `chain'` focus @'FileBrowser @'ListOfFiles `chain` continue)
     , Keybinding (V.EvKey (V.KChar 't') []) (noop `chain'` focus @'ComposeView @'ComposeTo `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'c') []) (noop `chain'` focus @'ComposeView @'ComposeCc `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'b') []) (noop `chain'` focus @'ComposeView @'ComposeBcc `chain` continue)
     , Keybinding (V.EvKey (V.KChar 's') []) (noop `chain'` focus @'ComposeView @'ComposeSubject `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'f') []) (noop `chain'` focus @'ComposeView @'ComposeFrom `chain` continue)
     ]

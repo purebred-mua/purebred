@@ -52,7 +52,8 @@ import UI.Mail.Keybindings
 import UI.Help.Keybindings (helpKeybindings)
 import UI.ComposeEditor.Keybindings
        (listOfAttachmentsKeybindings, composeFromKeybindings,
-        composeToKeybindings, composeSubjectKeybindings, confirmKeybindings)
+        composeToKeybindings, composeSubjectKeybindings, confirmKeybindings,
+        composeCcKeybindings, composeBccKeybindings)
 
 import Error
 import Types
@@ -238,6 +239,8 @@ defaultConfig =
     , _confComposeView = ComposeViewSettings
       { _cvFromKeybindings = composeFromKeybindings
       , _cvToKeybindings = composeToKeybindings
+      , _cvCcKeybindings = composeCcKeybindings
+      , _cvBccKeybindings = composeBccKeybindings
       , _cvSubjectKeybindings = composeSubjectKeybindings
       , _cvSendMailCmd = sendmail "/usr/sbin/sendmail"
       , _cvListOfAttachmentsKeybindings = listOfAttachmentsKeybindings
