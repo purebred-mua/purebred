@@ -21,6 +21,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- needed for orphan MonadThrow/MonadCatch/MonadMask instances
@@ -317,7 +318,7 @@ instance Completable 'ComposeListOfAttachments where
 --
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
-    case getEditorTagOps (Proxy :: Proxy 'ManageMailTagsEditor) s of
+    case getEditorTagOps (Proxy @'ManageMailTagsEditor) s of
         Left err -> pure $ setError err s
         Right ops' -> flip execStateT s $ do
           modifying (asMailIndex . miListOfThreads) (L.listModify (Notmuch.tagItem ops'))
@@ -357,7 +358,7 @@ instance Completable 'ConfirmDialog where
 instance Completable 'ManageThreadTagsEditor where
   complete _ = do
     s <- get
-    case getEditorTagOps (Proxy :: Proxy 'ManageThreadTagsEditor) s of
+    case getEditorTagOps (Proxy @'ManageThreadTagsEditor) s of
       Left err -> assignError err
       Right ops -> do
         selectedItemHelper (asMailIndex . miListOfThreads) (manageThreadTags ops)
@@ -856,17 +857,17 @@ chain' (Action d1 f1) (Action d2 f2) =
       sink <- use (asConfig . confLogSink)
       liftIO . sink . T.pack $
         "chain' "
-          <> show (viewname (Proxy :: Proxy v)) <> "/" <> show (name (Proxy :: Proxy ctx)) <> " -> "
-          <> show (viewname (Proxy :: Proxy v')) <> "/" <> show (name (Proxy :: Proxy ctx'))
-      modify (transitionHook (Proxy :: Proxy v) (Proxy :: Proxy v'))
-      modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy :: Proxy v')))
-      assign (asViews . vsViews . at (viewname (Proxy :: Proxy v')) . _Just . vFocus) (name (Proxy :: Proxy ctx'))
+          <> show (viewname (Proxy @v)) <> "/" <> show (name (Proxy @ctx)) <> " -> "
+          <> show (viewname (Proxy @v')) <> "/" <> show (name (Proxy @ctx'))
+      modify (transitionHook (Proxy @v) (Proxy @v'))
+      modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy @v')))
+      assign (asViews . vsViews . at (viewname (Proxy @v')) . _Just . vFocus) (name (Proxy @ctx'))
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a ()
-done = Action ["apply"] (complete (Proxy :: Proxy a))
+done = Action ["apply"] (complete (Proxy @a))
 
 abort :: forall a v. (HasViewName v, Resetable v a) => Action v a ()
-abort = Action ["cancel"] (reset (Proxy :: Proxy v) (Proxy :: Proxy a))
+abort = Action ["cancel"] (reset (Proxy @v) (Proxy @a))
 
 -- $keybinding_actions
 -- These actions are used to sequence other actions together. Think of
@@ -877,13 +878,13 @@ abort = Action ["cancel"] (reset (Proxy :: Proxy v) (Proxy :: Proxy a))
 --
 focus :: forall v a. (HasViewName v, HasName a, Focusable v a) => Action v a ()
 focus = Action
-  ["switch mode to " <> T.pack (show (name (Proxy :: Proxy a)))] $ do
+  ["switch mode to " <> T.pack (show (name (Proxy @a)))] $ do
     sink <- use (asConfig . confLogSink)
     liftIO . sink . T.pack $ 
       "switchFocus "
-        <> show (viewname (Proxy :: Proxy v)) <> " "
-        <> show (name (Proxy :: Proxy a))
-    switchFocus (Proxy :: Proxy v) (Proxy :: Proxy a)
+        <> show (viewname (Proxy @v)) <> " "
+        <> show (name (Proxy @a))
+    switchFocus (Proxy @v) (Proxy @a)
 
 -- | A no-op action can
 -- be used at the start of a sequence with an immediate switch of
@@ -895,25 +896,25 @@ noop = Action mempty (pure ())
 scrollUp :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollUp = Action
   { _aDescription = ["scroll up"]
-  , _aAction = lift (Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) (-1))
+  , _aAction = lift (Brick.vScrollBy (makeViewportScroller (Proxy @ctx)) (-1))
   }
 
 scrollDown :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollDown = Action
   { _aDescription = ["scroll down"]
-  , _aAction = lift (Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) 1)
+  , _aAction = lift (Brick.vScrollBy (makeViewportScroller (Proxy @ctx)) 1)
   }
 
 scrollPageUp :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPageUp = Action
   { _aDescription = ["page up"]
-  , _aAction = lift (Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Up)
+  , _aAction = lift (Brick.vScrollPage (makeViewportScroller (Proxy @ctx)) T.Up)
   }
 
 scrollPageDown :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPageDown = Action
   { _aDescription = ["page down"]
-  , _aAction = lift (Brick.vScrollPage (makeViewportScroller (Proxy :: Proxy ctx)) T.Down)
+  , _aAction = lift (Brick.vScrollPage (makeViewportScroller (Proxy @ctx)) T.Down)
   }
 
 scrollNextWord :: forall ctx v. (Scrollable ctx) => Action v ctx ()
@@ -921,14 +922,14 @@ scrollNextWord =
   Action
     { _aDescription = ["find next word in mail body"]
     , _aAction = do
-        lift $ Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy ctx))
+        lift $ Brick.vScrollToBeginning (makeViewportScroller (Proxy @ctx))
         b <- gets (has (asMailView . mvScrollSteps))
         if b
           then do
             modifying (asMailView . mvScrollSteps) Brick.focusNext
             nextLine <- preuse (asMailView . mvScrollSteps . to Brick.focusGetCurrent . _Just . _1)
             let scrollBy = view (non 0) nextLine
-            lift $ Brick.vScrollBy (makeViewportScroller (Proxy :: Proxy ctx)) scrollBy
+            lift $ Brick.vScrollBy (makeViewportScroller (Proxy @ctx)) scrollBy
           else
             assignError (GenericError "No match")
     }
@@ -947,7 +948,7 @@ displayMail =
     Action
     { _aDescription = ["display an e-mail"]
     , _aAction = do
-        lift $ Brick.vScrollToBeginning (makeViewportScroller (Proxy :: Proxy 'ScrollingMailView))
+        lift $ Brick.vScrollToBeginning (makeViewportScroller (Proxy @'ScrollingMailView))
         updateStateWithParsedMail
         updateReadState RemoveTag
     }
@@ -981,22 +982,22 @@ setUnread =
 listUp
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
   => Action v ctx ()
-listUp = Action ["list up"] (modifying (list (Proxy :: Proxy ctx)) L.listMoveUp)
+listUp = Action ["list up"] (modifying (list (Proxy @ctx)) L.listMoveUp)
 
 listDown
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
   => Action v ctx ()
-listDown = Action ["list down"] (modifying (list (Proxy :: Proxy ctx)) L.listMoveDown)
+listDown = Action ["list down"] (modifying (list (Proxy @ctx)) L.listMoveDown)
 
 listJumpToStart
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
   => Action v ctx ()
-listJumpToStart = Action ["list top"] (modifying (list (Proxy :: Proxy ctx)) (L.listMoveTo 0))
+listJumpToStart = Action ["list top"] (modifying (list (Proxy @ctx)) (L.listMoveTo 0))
 
 listJumpToEnd
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
   => Action v ctx ()
-listJumpToEnd = Action ["list bottom"] (modifying (list (Proxy :: Proxy ctx)) (L.listMoveTo (-1)))
+listJumpToEnd = Action ["list bottom"] (modifying (list (Proxy @ctx)) (L.listMoveTo (-1)))
 
 -- | Action used to either start a composition of a new mail or switch
 -- the view to the composition editor if we've already been editing a new
