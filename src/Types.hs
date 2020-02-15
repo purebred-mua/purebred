@@ -48,6 +48,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Encoding.Error as T
 import qualified Data.Vector as V
@@ -386,7 +387,7 @@ data Configuration extra a b c = Configuration
     }
     deriving (Generic, NFData)
 
-type InternalConfigurationFields = (BChan PurebredEvent, String, T.Text -> IO ())
+type InternalConfigurationFields = (BChan PurebredEvent, String, LT.Text -> IO ())
 
 type UserConfiguration = Configuration () (IO FilePath) (IO String) (IO FilePath)
 type InternalConfiguration = Configuration InternalConfigurationFields FilePath String FilePath
@@ -432,7 +433,7 @@ confBChan = confExtra . _1
 confBoundary :: Lens' InternalConfiguration String
 confBoundary = confExtra . _2
 
-confLogSink :: Lens' InternalConfiguration (T.Text -> IO ())
+confLogSink :: Lens' InternalConfiguration (LT.Text -> IO ())
 confLogSink = confExtra . _3
 
 

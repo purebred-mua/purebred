@@ -114,6 +114,7 @@ import Brick.Widgets.Dialog (dialog, dialogSelection, Dialog)
 import Network.Mime (defaultMimeLookup)
 import Data.Proxy
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
@@ -895,7 +896,7 @@ chain' (Action d1 f1) (Action d2 f2) =
   where
     switchMode = do
       sink <- use (asConfig . confLogSink)
-      liftIO . sink . T.pack $
+      liftIO . sink . LT.pack $
         "chain' "
           <> show (viewname (Proxy @v)) <> "/" <> show (name (Proxy @ctx)) <> " -> "
           <> show (viewname (Proxy @v')) <> "/" <> show (name (Proxy @ctx'))
@@ -920,7 +921,7 @@ focus :: forall v a. (HasViewName v, HasName a, Focusable v a) => Action v a ()
 focus = Action
   ["switch mode to " <> T.pack (show (name (Proxy @a)))] $ do
     sink <- use (asConfig . confLogSink)
-    liftIO . sink . T.pack $ 
+    liftIO . sink . LT.pack $
       "switchFocus "
         <> show (viewname (Proxy @v)) <> " "
         <> show (name (Proxy @a))
