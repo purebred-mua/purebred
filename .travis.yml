@@ -48,7 +48,7 @@ matrix:
        - nix-channel --update
        - nix-env --install --attr nixpkgs.elinks
        - nix-build
-       - nix-shell --command 'PATH=$PATH:result/bin cabal test --show-details=streaming uat'
+       - nix-shell --command 'PATH=$PATH:result/bin cabal v2-test --test-show-details=streaming uat'
     - compiler: "hlint"
       language: c
       addons:
