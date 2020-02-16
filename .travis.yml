@@ -47,7 +47,7 @@ matrix:
        - nix-channel --add https://nixos.org/channels/nixos-19.09 nixpkgs
        - nix-channel --update
        - nix-env --install --attr nixpkgs.elinks
-       - nix-build
+       - nix-build -j 2
        - nix-shell --command 'PATH=$PATH:result/bin cabal v2-test --test-show-details=streaming uat'
     - compiler: "hlint"
       language: c
