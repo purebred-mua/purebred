@@ -24,10 +24,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
--- needed for orphan MonadThrow/MonadCatch/MonadMask instances
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-
 module UI.Actions (
   -- * Overview
   -- $overview
@@ -137,7 +133,7 @@ import Control.Lens
 import Control.Concurrent (forkIO)
 import Control.Monad (void)
 import Control.Monad.State
-import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask)
+import Control.Monad.Catch (MonadMask)
 import Control.Monad.Except (runExceptT, MonadError, throwError)
 import Control.Exception (catch, IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
@@ -174,11 +170,6 @@ import Purebred.Tags (parseTagOps)
 import Purebred.System.Directory (listDirectory')
 import Purebred.System.Process
 
-
-{- ORPHAN INSTANCES -}
-deriving instance MonadThrow (T.EventM n)
-deriving instance MonadCatch (T.EventM n)
-deriving instance MonadMask (T.EventM n)
 
 {- $overview
 
