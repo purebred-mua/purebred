@@ -116,6 +116,7 @@ import Data.Proxy
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as LB
 import Data.Attoparsec.ByteString.Char8 (parseOnly)
@@ -144,7 +145,7 @@ import Data.Time.LocalTime (getZonedTime, zonedTimeToUTC)
 import qualified Data.RFC5322.Address.Text as AddressText (renderMailboxes)
 import Data.MIME
        (createMultipartMixedMessage, contentTypeApplicationOctetStream,
-        createTextPlainMessage, createAttachmentFromFile, renderMessage,
+        createTextPlainMessage, createAttachmentFromFile, buildMessage,
         contentDisposition, dispositionType, headers, filename,
         parseContentType, attachments, entities, matchContentType,
         contentType, mailboxList, renderMailboxes, addressList, renderAddresses,
@@ -166,6 +167,7 @@ import UI.Views
 import Purebred.Events (nextGeneration)
 import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
+import Purebred.System (tryIO)
 import Purebred.System.Directory (listDirectory')
 import Purebred.System.Process
 
@@ -1390,12 +1392,13 @@ sendMail = do
   buildMail $ \bs -> do
     trySendAndCatch bs
     runExceptT ( do
-        sentFP <- createSentFilePath maildir
-        Notmuch.indexMail bs maildir sentFP sentTag )
+        fp <- createSentFilePath maildir
+        tryIO $ LB.writeFile fp (B.toLazyByteString bs)
+        Notmuch.indexFilePath maildir fp [sentTag] )
       >>= either assignError (const $ pure ())
 
 -- | Build a mail from the current @AppState@ and execute the continuation.
-buildMail :: (MonadState AppState m, MonadIO m) => (B.ByteString -> m ()) -> m ()
+buildMail :: (MonadState AppState m, MonadIO m) => (B.Builder -> m ()) -> m ()
 buildMail k = do
   attachments' <- uses (asCompose . cAttachments . L.listElementsL) toList
   mail <- case attachments' of
@@ -1422,11 +1425,11 @@ buildMail k = do
         & set (headers . at "To") (Just $ renderAddresses to')
         & set (headers . at "Date") (Just $ renderRFC5422Date now)
         & sanitizeMail charsets
-        & renderMessage
+        & buildMessage
         & k
 
 -- | Send the mail, but catch and show an error if it happened.
-trySendAndCatch :: (MonadState AppState m, MonadIO m, MonadCatch m) => B.ByteString -> m ()
+trySendAndCatch :: (MonadState AppState m, MonadIO m, MonadCatch m) => B.Builder -> m ()
 trySendAndCatch m = do
   cmd <- use (asConfig . confComposeView . cvSendMailCmd)
   defMailboxes <- use (asConfig . confComposeView . cvIdentities)
@@ -1592,7 +1595,10 @@ keepDraft :: (MonadMask m, MonadState AppState m, MonadIO m) => m ()
 keepDraft = buildMail $ \bs -> do
   maildir <- use (asConfig . confNotmuch . nmDatabase)
   draftTag <- use (asConfig . confNotmuch . nmDraftTag)
-  runExceptT (createDraftFilePath maildir >>= \fp -> Notmuch.indexMail bs maildir fp draftTag)
+  runExceptT ( do
+      fp <- createDraftFilePath maildir
+      tryIO $ LB.writeFile fp (B.toLazyByteString bs)
+      Notmuch.indexFilePath maildir fp [draftTag] )
     >>= either assignError (const $ assignError (GenericError "Draft saved"))
 
 resetMatchingWords :: AppState -> AppState
