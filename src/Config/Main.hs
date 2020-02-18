@@ -60,16 +60,13 @@ import Purebred.System.Process
 import Purebred.Types.IFC (sanitiseText, untaint)
 import Storage.Notmuch (getDatabasePath)
 
-sendmailPath :: FilePath
-sendmailPath = "/usr/sbin/sendmail"
-
--- | Invoke a sendmail compatible program to send the email
+-- | Invoke a @sendmail(1)@-compatible program to send the email
 --
-renderSendMail ::
+sendmail ::
      FilePath
   -> B.ByteString -- ^ the rendered mail
   -> IO (Either Error ())
-renderSendMail sendmail m = do
+sendmail bin m = do
   -- -t which extracts recipients from the mail
   result <- runExceptT $ tryReadProcessStderr config
   pure $ case result of
@@ -77,7 +74,7 @@ renderSendMail sendmail m = do
     Right (ExitFailure _, stderr) -> Left $ SendMailError (untaint decode stderr)
     Right (ExitSuccess, _) -> Right ()
   where
-    config = setStdin (byteStringInput (LB.fromStrict m)) $ proc sendmail ["-t", "-v"]
+    config = setStdin (byteStringInput (LB.fromStrict m)) $ proc bin ["-t", "-v"]
     decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
 -- | Default theme
@@ -242,8 +239,7 @@ defaultConfig =
       { _cvFromKeybindings = composeFromKeybindings
       , _cvToKeybindings = composeToKeybindings
       , _cvSubjectKeybindings = composeSubjectKeybindings
-      , _cvSendMailCmd = renderSendMail
-      , _cvSendMailPath = sendmailPath
+      , _cvSendMailCmd = sendmail "/usr/sbin/sendmail"
       , _cvListOfAttachmentsKeybindings = listOfAttachmentsKeybindings
       , _cvIdentities = []
       , _cvConfirmKeybindings = confirmKeybindings
