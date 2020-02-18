@@ -31,7 +31,7 @@ module Storage.Notmuch (
     -- ** Messages
   , messageTagModify
   , mailFilepath
-  , indexMail
+  , indexFilePath
   , unindexFilePath
 
     -- ** Tagging (Labels)
@@ -292,19 +292,6 @@ indexFilePath dbpath fp tgs =
   withDatabase
     dbpath
     (\db -> Notmuch.indexFile db fp >>= Notmuch.messageSetTags tgs)
-
--- | Writes given mail as ByteString to a file and indexes it
---
-indexMail ::
-     (MonadError Error m, MonadIO m)
-  => B.ByteString -- ^ rendered mail
-  -> FilePath -- ^ path to the maildir
-  -> FilePath -- ^ path to file under which the mail is stored
-  -> Tag -- ^ tag to attach the mail
-  -> m ()
-indexMail bs maildir fp tag = do
-    tryIO $ B.writeFile fp bs
-    indexFilePath maildir fp [tag]
 
 unindexFilePath ::
      (MonadError Error m, MonadIO m)

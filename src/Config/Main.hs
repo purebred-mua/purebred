@@ -24,8 +24,8 @@ import Data.Monoid ((<>))
 import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString.Builder as B
+import qualified Data.ByteString.Lazy as L
 import qualified Data.Text as T
 import Control.Monad.Except (runExceptT)
 import System.Environment (lookupEnv)
@@ -65,7 +65,7 @@ import Storage.Notmuch (getDatabasePath)
 --
 sendmail ::
      FilePath
-  -> B.ByteString -- ^ the rendered mail
+  -> B.Builder -- ^ the rendered mail
   -> IO (Either Error ())
 sendmail bin m = do
   -- -t which extracts recipients from the mail
@@ -75,8 +75,8 @@ sendmail bin m = do
     Right (ExitFailure _, stderr) -> Left $ SendMailError (untaint decode stderr)
     Right (ExitSuccess, _) -> Right ()
   where
-    config = setStdin (byteStringInput (LB.fromStrict m)) $ proc bin ["-t", "-v"]
-    decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
+    config = setStdin (byteStringInput (B.toLazyByteString m)) $ proc bin ["-t", "-v"]
+    decode = T.unpack . sanitiseText . decodeLenient . L.toStrict
 
 -- | Default theme
 solarizedDark :: A.AttrMap

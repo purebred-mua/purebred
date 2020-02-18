@@ -45,6 +45,7 @@ import Control.Monad.Except (MonadError)
 import Control.Monad.Reader (MonadIO)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -441,7 +442,7 @@ data ComposeViewSettings = ComposeViewSettings
     , _cvCcKeybindings :: [Keybinding 'ComposeView 'ComposeCc]
     , _cvBccKeybindings :: [Keybinding 'ComposeView 'ComposeBcc]
     , _cvSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
-    , _cvSendMailCmd :: B.ByteString -> IO (Either Error ())
+    , _cvSendMailCmd :: B.Builder -> IO (Either Error ())
     , _cvListOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ComposeListOfAttachments]
     , _cvIdentities :: [Mailbox]
     , _cvConfirmKeybindings :: [Keybinding 'ComposeView 'ConfirmDialog]
@@ -463,7 +464,7 @@ cvBccKeybindings = lens _cvBccKeybindings (\cv x -> cv { _cvBccKeybindings = x }
 cvSubjectKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeSubject]
 cvSubjectKeybindings = lens _cvSubjectKeybindings (\cv x -> cv { _cvSubjectKeybindings = x })
 
-cvSendMailCmd :: Lens' ComposeViewSettings (B.ByteString -> IO (Either Error ()))
+cvSendMailCmd :: Lens' ComposeViewSettings (B.Builder -> IO (Either Error ()))
 cvSendMailCmd = lens _cvSendMailCmd (\cv x -> cv { _cvSendMailCmd = x })
 
 cvListOfAttachmentsKeybindings :: Lens' ComposeViewSettings [Keybinding 'ComposeView 'ComposeListOfAttachments]
