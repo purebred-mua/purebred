@@ -1384,10 +1384,9 @@ buildMail s = do
 trySendAndCatch :: String -> B.ByteString -> AppState -> IO AppState
 trySendAndCatch l' m s = do
     let cmd = view (asConfig . confComposeView . cvSendMailCmd) s
-        sendmail = view (asConfig . confComposeView . cvSendMailPath) s
         defMailboxes = view (asConfig . confComposeView . cvIdentities) s
     catch
-        (cmd sendmail m $> (s
+        (cmd m $> (s
          & set asCompose (initialCompose defMailboxes)
          . set (asConfig . confBoundary) l'))
         (\e ->
