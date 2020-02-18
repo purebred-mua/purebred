@@ -124,8 +124,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
-import Data.Foldable (traverse_)
-import Data.Functor (($>))
+import Data.Foldable (toList, traverse_)
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has, snoc,
         filtered, set, over, preview, view, (&), firstOf, non,
@@ -133,9 +132,9 @@ import Control.Lens
 import Control.Concurrent (forkIO)
 import Control.Monad (void)
 import Control.Monad.State
-import Control.Monad.Catch (MonadMask)
-import Control.Monad.Except (runExceptT, MonadError, throwError)
-import Control.Exception (catch, IOException)
+import Control.Monad.Catch (MonadCatch, MonadMask, catch)
+import Control.Monad.Except (runExceptT, MonadError)
+import Control.Exception (IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper, TextZipper)
@@ -298,7 +297,7 @@ instance HasList 'ListOfFiles where
 -- text by pressing Enter.
 --
 class Completable (n :: Name) where
-  complete :: (MonadIO m, MonadState AppState m) => Proxy n -> m ()
+  complete :: (MonadIO m, MonadMask m, MonadState AppState m) => Proxy n -> m ()
 
 instance Completable 'SearchThreadsEditor where
   complete _ = applySearch
@@ -309,7 +308,7 @@ instance Completable 'ManageMailTagsEditor where
     modifying (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Completable 'ComposeListOfAttachments where
-  complete _ = get >>= sendMail >>= put
+  complete _ = sendMail
 
 -- | Apply all given tag operations to existing mails
 --
@@ -1215,10 +1214,7 @@ createAttachments = Action ["adds selected files as attachments"] $ do
 -- | Action to deal with a choice from the confirmation dialog.
 --
 handleConfirm :: Action 'ComposeView 'ConfirmDialog ()
-handleConfirm =
-  Action
-    ["handle confirmation"]
-    (get >>= liftIO . keepOrDiscardDraft >>= put)
+handleConfirm = Action ["handle confirmation"] keepOrDiscardDraft
 
 -- | Edit an e-mail as a new mail. This is typically used by saving a
 -- mail under composition for later and continuing the draft. Another
@@ -1387,59 +1383,55 @@ assignError = assign asError . Just
 
 -- | Build the MIMEMessage, sanitize filepaths, serialize and send it
 --
-sendMail :: (MonadIO m) => AppState -> m AppState
-sendMail s =
-  let charsets = view (asConfig . confCharsets) s
-      maildir = view (asConfig . confNotmuch . nmDatabase) s
-      sentTag = view (asConfig . confNotmuch . nmSentTag) s
-      send = do
-        (bs, randomg) <- over _1 (renderMessage . sanitizeMail charsets) <$> buildMail s
-        s' <- liftIO $ trySendAndCatch randomg bs s
+sendMail :: (MonadState AppState m, MonadCatch m, MonadIO m) => m ()
+sendMail = do
+  maildir <- use (asConfig . confNotmuch . nmDatabase)
+  sentTag <- use (asConfig . confNotmuch . nmSentTag)
+  buildMail $ \bs -> do
+    trySendAndCatch bs
+    runExceptT ( do
         sentFP <- createSentFilePath maildir
-        Notmuch.indexMail bs maildir sentFP sentTag
-        pure s'
-   in either (`setError` s) id <$> runExceptT send
+        Notmuch.indexMail bs maildir sentFP sentTag )
+      >>= either assignError (const $ pure ())
 
--- | Build the MIMEMessage from the compose editor fields including Date and Boundary
---
-buildMail :: (MonadError Error m, MonadIO m) => AppState -> m (MIMEMessage, String)
-buildMail s = do
-    dateTimeNow <- liftIO getCurrentTime
-    let to' = either (pure []) id $ parseOnly addressList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cTo) s
-        from = either (pure []) id $ parseOnly mailboxList $ T.encodeUtf8 $ T.unlines $ E.getEditContents $ view (asCompose . cFrom) s
-        subject = T.unlines $ E.getEditContents $ view (asCompose . cSubject) s
-        (b, l') = splitAt 50 $ view (asConfig . confBoundary) s
-        attachments' = toListOf (asCompose . cAttachments . L.listElementsL . traversed) s
-        mail = case attachments' of
-          x:xs  -> Just $ createMultipartMixedMessage (C8.pack b) (x:|xs)
-          _     -> firstOf (asCompose . cAttachments . L.listElementsL . traversed) s
-    case mail of
-        Nothing -> throwError (GenericError "Black hole detected")
-        (Just m) -> let m' = m
-                            & set (headers . at "Subject") (Just $ T.encodeUtf8 subject)
-                            . set (headers . at "From") (Just $ renderMailboxes from)
-                            . set (headers . at "To") (Just $ renderAddresses to')
-                            . set (headers . at "Date") (Just $ renderRFC5422Date dateTimeNow)
-                    in pure (m', l')
+-- | Build a mail from the current @AppState@ and execute the continuation.
+buildMail :: (MonadState AppState m, MonadIO m) => (B.ByteString -> m ()) -> m ()
+buildMail k = do
+  attachments' <- uses (asCompose . cAttachments . L.listElementsL) toList
+  mail <- case attachments' of
+    [x] -> pure (Just x)
+    x:xs -> do
+      (boundary, newBoundary) <- uses (asConfig . confBoundary) (splitAt 50)
+      assign (asConfig . confBoundary) newBoundary
+      pure . Just $ createMultipartMixedMessage (C8.pack boundary) (x:|xs)
+    [] -> pure Nothing
 
--- Handler to send the mail, but catch and show an error if it happened. This is
--- really a TODO to improve this, since ideally we can do this in the
--- cvSendMailCmd. However what prevented me from simply moving there is using
--- the MonadError typeclass. Using that, the typevariable has to be carried into
--- the configuration as another? type variable. So all in all it was non
--- trivial.
--- See #200
-trySendAndCatch :: String -> B.ByteString -> AppState -> IO AppState
-trySendAndCatch l' m s = do
-    let cmd = view (asConfig . confComposeView . cvSendMailCmd) s
-        defMailboxes = view (asConfig . confComposeView . cvIdentities) s
-    catch
-        (cmd m $> (s
-         & set asCompose (initialCompose defMailboxes)
-         . set (asConfig . confBoundary) l'))
-        (\e ->
-              let err = show (e :: IOException)
-              in pure $ s & setError (SendMailError err))
+  case mail of
+    Nothing -> assignError (GenericError "Black hole detected")
+    Just m -> do
+      charsets <- use (asConfig . confCharsets)
+      now <- liftIO getCurrentTime
+      to' <- uses (asCompose . cTo)
+        (either (pure []) id . parseOnly addressList . T.encodeUtf8 . T.unlines . E.getEditContents)
+      from <- uses (asCompose . cFrom)
+        (either (pure []) id . parseOnly mailboxList . T.encodeUtf8 . T.unlines . E.getEditContents)
+      subject <- uses (asCompose . cSubject) (T.unlines . E.getEditContents)
+      m
+        & set (headers . at "Subject") (Just $ T.encodeUtf8 subject)
+        & set (headers . at "From") (Just $ renderMailboxes from)
+        & set (headers . at "To") (Just $ renderAddresses to')
+        & set (headers . at "Date") (Just $ renderRFC5422Date now)
+        & sanitizeMail charsets
+        & renderMessage
+        & k
+
+-- | Send the mail, but catch and show an error if it happened.
+trySendAndCatch :: (MonadState AppState m, MonadIO m, MonadCatch m) => B.ByteString -> m ()
+trySendAndCatch m = do
+  cmd <- use (asConfig . confComposeView . cvSendMailCmd)
+  defMailboxes <- use (asConfig . confComposeView . cvIdentities)
+  (liftIO (cmd m) >>= either assignError pure >> assign asCompose (initialCompose defMailboxes))
+    `catch` (assignError . SendMailError . (show :: IOException -> String))
 
 -- | santize the mail before we send it out
 -- Note: currently only strips away path names from files
@@ -1588,27 +1580,20 @@ manageThreadTags ops t = do
     >>= either assignError (const (update ops))
 
 
-keepOrDiscardDraft :: AppState -> IO AppState
-keepOrDiscardDraft s =
-  case view (asCompose . cKeepDraft . to dialogSelection) s of
-    Just Keep ->
-      let maildir = view (asConfig . confNotmuch . nmDatabase) s
-       in either (`setError` s) (clearMailComposition . setError (GenericError "Draft saved")) <$>
-          runExceptT (keepDraft s maildir)
-    _ -> pure $ s & clearMailComposition . setError (GenericError "Draft discarded")
+keepOrDiscardDraft :: (MonadMask m, MonadIO m, MonadState AppState m) => m ()
+keepOrDiscardDraft = do
+  r <- use (asCompose . cKeepDraft . to dialogSelection)
+  case r of
+    Just Keep -> keepDraft
+    _ -> assignError (GenericError "Draft discarded")
+  modify clearMailComposition
 
-keepDraft ::
-     (MonadMask m, MonadError Error m, MonadIO m)
-  => AppState
-  -> FilePath
-  -> m AppState
-keepDraft s maildir =
-  let draftTag = view (asConfig . confNotmuch . nmDraftTag) s
-  in do
-    bs <- renderMessage . fst <$> buildMail s
-    fp <- createDraftFilePath maildir
-    Notmuch.indexMail bs maildir fp draftTag
-    pure s
+keepDraft :: (MonadMask m, MonadState AppState m, MonadIO m) => m ()
+keepDraft = buildMail $ \bs -> do
+  maildir <- use (asConfig . confNotmuch . nmDatabase)
+  draftTag <- use (asConfig . confNotmuch . nmDraftTag)
+  runExceptT (createDraftFilePath maildir >>= \fp -> Notmuch.indexMail bs maildir fp draftTag)
+    >>= either assignError (const $ assignError (GenericError "Draft saved"))
 
 resetMatchingWords :: AppState -> AppState
 resetMatchingWords =
