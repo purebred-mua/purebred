@@ -41,7 +41,7 @@ import Control.Monad (filterM, void, when)
 import Data.Maybe (fromMaybe, isJust)
 import Data.List (intercalate, isInfixOf, sort)
 import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy as LB
+import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Control.Monad.IO.Class (liftIO)
@@ -62,7 +62,7 @@ import Test.Tasty.Tmux
 
 import Data.MIME
   (MIMEMessage, createTextPlainMessage, message, mime, parse,
-  headers, renderMessage)
+  headers, buildMessage)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 
@@ -374,7 +374,7 @@ testShowsNewMail = purebredTmuxSession "shows newly delivered mail" $
 
     let notmuchcfg = mdir </> "notmuch-config"
         m = set (headers . at "subject") (Just "new mail notification") $ createTextPlainMessage "Hello there"
-        rendered = LB.fromStrict $ renderMessage m
+        rendered = toLazyByteString (buildMessage m)
         config = setStdin (byteStringInput rendered) $ proc "notmuch"
             [ "--config=" <> notmuchcfg
             , "insert"
