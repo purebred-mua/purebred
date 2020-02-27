@@ -135,7 +135,8 @@ module Purebred (
   Mailbox(..),
   AddrSpec(..),
   Domain(..),
-  purebred) where
+  purebred,
+  sendmail) where
 
 import UI.App (theApp, initialState)
 
@@ -162,7 +163,7 @@ import UI.Mail.Keybindings
 import UI.Actions
 import UI.Status.Main (rescheduleMailcheck)
 import Storage.Notmuch (getDatabasePath)
-import Config.Main (defaultConfig, solarizedDark, mailTagAttr)
+import Config.Main (defaultConfig, solarizedDark, mailTagAttr, sendmail)
 import Types
 import Error
 
