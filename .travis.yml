@@ -56,15 +56,9 @@ matrix:
       install:
       script:
         - curl -sSL https://raw.github.com/ndmitchell/hlint/master/misc/run.sh | sh -s .
-    - compiler: "ghcHEAD"
-      language: nix
-      before_install:
-      install:
-      script: nix-build --arg compiler \"ghcHEAD\"
 
   allow_failures:
     - compiler: "ghc-head"
-    - compiler: "ghcHEAD"
 
 before_install:
   - HC=${CC}
