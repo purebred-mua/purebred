@@ -23,6 +23,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module UI.Actions (
   -- * Overview
@@ -103,8 +104,6 @@ module UI.Actions (
   , initialCompose
   ) where
 
-import Data.Functor.Identity (Identity(..))
-
 import qualified Brick
 import Brick.BChan (writeBChan)
 import qualified Brick.Focus as Brick
@@ -128,11 +127,11 @@ import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Data.Foldable (toList, traverse_)
-import Control.Lens.Internal.Indexed (Indexable)
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has, snoc,
-        filtered, set, over, preview, view, (&), firstOf, non,
-        Getting, Lens', folded, assign, modifying, preuse, use, uses)
+        filtered, set, over, preview, view, (&), firstOf, non, Traversal',
+        Getting, Lens', folded, assign, modifying, preuse, use, uses
+        , Ixed, Index, IxValue)
 import Control.Concurrent (forkIO)
 import Control.Monad (void)
 import Control.Monad.State
@@ -295,40 +294,42 @@ instance HasList 'ListOfFiles where
   list _ = asFileBrowser . fbEntries
 
 -- | contexts which have selectable items in a list
-class HasList (n :: Name) =>
+class (HasList (n :: Name), Traversable (T n)) =>
       HasSelectableItemList n
   where
+  selectE :: Proxy n -> E n -> E n
+  deselectE :: Proxy n -> E n -> E n
+  toggleE :: Proxy n -> E n -> E n
+  isSelectedE :: Proxy n -> E n -> Bool
+
+  {-
+  selectAll :: (MonadState AppState m) => Proxy n -> m ()
+  selectAll proxy = modifying (list proxy . traversed) (selectE proxy)
+  -}
+
+  deselectAll :: (MonadState AppState m) => Proxy n -> m ()
+  deselectAll proxy = modifying (list proxy . traversed) (deselectE proxy)
+
   toggle :: Proxy n -> Int -> StateT AppState (T.EventM Name) ()
-  selected :: Proxy n -> AppState -> [(E n)]
-  selectedItemsL ::
-       (Indexable Int p1, Applicative f)
-    => Proxy n
-    -> p1 (E n) (f (E n))
-    -> AppState
-    -> f AppState
 
-instance HasSelectableItemList 'ListOfThreads where
-  selectedItemsL _ = list (Proxy @'ListOfThreads) . traversed
-  toggle _ i = modifying (list (Proxy @'ListOfThreads) . L.listElementsL . ix i . _1) not
-  selected _ s =
-    let selectedItem = toListOf (list (Proxy @'ListOfThreads) . to L.listSelectedElement . traversed . _2) s
-        toggled = toListOf (list (Proxy @'ListOfThreads) . traversed . filtered fst) s
-    in if null toggled then selectedItem else toggled
+  -- | Traversal of selected items.  NOT a valid Traversal unless
+  -- selected state is preserved
+  selectedItemsL :: Proxy n -> Traversal' AppState (E n)
+  selectedItemsL proxy = list proxy . traversed . filtered (isSelectedE proxy)
 
-instance HasSelectableItemList 'ScrollingMailView where
-  selectedItemsL _ = list (Proxy @'ScrollingMailView) . traversed
-  toggle _ i = modifying (list (Proxy @'ScrollingMailView) . L.listElementsL . ix i . _1) not
-  selected _ s =
-    let selectedItem = toListOf (list (Proxy @'ScrollingMailView) . to L.listSelectedElement . traversed . _2) s
-        toggled = toListOf (list (Proxy @'ScrollingMailView) . traversed . filtered fst) s
-    in if null toggled then selectedItem else toggled
-
-instance HasSelectableItemList 'ListOfFiles where
-  toggle _ i = modifying (list (Proxy @'ListOfFiles) . L.listElementsL . ix i . _1) not
-  selected _ s =
-    let selectedItem = toListOf (list (Proxy @'ListOfFiles) . to L.listSelectedElement . traversed . _2) s
-        toggled = toListOf (list (Proxy @'ListOfFiles) . traversed . filtered fst) s
-    in if null toggled then selectedItem else toggled
+instance
+  ( HasList n
+  , Traversable (T n)
+  , E n ~ (Bool, a)
+  , Index (T n (Bool, a)) ~ Int
+  , IxValue (T n (Bool, a)) ~ (Bool, a)
+  , Ixed (T n (Bool, a))
+  ) => HasSelectableItemList n where
+  selectE _ = set _1 True
+  deselectE _ = set _1 False
+  toggleE _ = over _1 not
+  isSelectedE _ = fst
+  toggle proxy i = modifying (list proxy . L.listElementsL . ix i) (toggleE proxy)
 
 
 -- | A function which is run at the end of a chained sequence of actions.
@@ -358,7 +359,8 @@ completeMailTags s =
     case getEditorTagOps (Proxy @'ManageMailTagsEditor) s of
         Left err -> pure $ setError err s
         Right ops' -> flip execStateT s $ do
-          result <- applyTagOps ops' (selected (Proxy @'ScrollingMailView) s) s
+          selected <- toListOf (selectedItemsL (Proxy @'ScrollingMailView)) <$> get
+          result <- applyTagOps ops' selected s
           case result of
             Left err -> assignError err
             Right _ -> modifying (asMailIndex . miListOfMails . traversed . filtered fst)
@@ -411,7 +413,8 @@ instance Completable 'ManageThreadTagsEditor where
     case getEditorTagOps (Proxy @'ManageThreadTagsEditor) s of
       Left err -> assignError err
       Right ops -> do
-        manageThreadTags ops (selected (Proxy @'ListOfThreads) s)
+        selected <- toListOf (selectedItemsL (Proxy @'ListOfThreads)) <$> get
+        manageThreadTags ops selected
         modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Completable 'ManageFileBrowserSearchPath where
@@ -1159,12 +1162,13 @@ setTags ops =
     { _aDescription = ["apply tag operations: " <> T.intercalate ", " (T.pack . show <$> ops) ]
     , _aAction = do
         w <- gets focusedViewWidget
-        s <- get
         case w of
           ScrollingMailView -> do
-            manageMailTags ops (selected (Proxy @'ScrollingMailView) s)
+            selected <- toListOf (selectedItemsL (Proxy @'ScrollingMailView)) <$> get
+            manageMailTags ops selected
           _ -> do
-            manageThreadTags ops (selected (Proxy @'ListOfThreads) s)
+            selected <- toListOf (selectedItemsL (Proxy @'ListOfThreads)) <$> get
+            manageThreadTags ops selected
 
     }
 
@@ -1202,7 +1206,7 @@ untoggleListItems :: forall v ctx. HasSelectableItemList ctx => Action v ctx ()
 untoggleListItems =
     Action
     { _aDescription = ["untoggle all selected list items"]
-    , _aAction = modifying (selectedItemsL (Proxy @ctx)) (\m -> set _1 False m)
+    , _aAction = deselectAll (Proxy @ctx)
     }
 
 -- | Delete an attachment from a mail currently being composed.
