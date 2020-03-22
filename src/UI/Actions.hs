@@ -128,6 +128,7 @@ import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Data.Foldable (toList, traverse_)
+import Control.Lens.Internal.Indexed (Indexable)
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has, snoc,
         filtered, set, over, preview, view, (&), firstOf, non,
@@ -294,11 +295,20 @@ instance HasList 'ListOfFiles where
   list _ = asFileBrowser . fbEntries
 
 -- | contexts which have selectable items in a list
-class HasList (n :: Name) => HasSelectableItemList n where
+class HasList (n :: Name) =>
+      HasSelectableItemList n
+  where
   toggle :: Proxy n -> Int -> StateT AppState (T.EventM Name) ()
   selected :: Proxy n -> AppState -> [(E n)]
+  selectedItemsL ::
+       (Indexable Int p1, Applicative f)
+    => Proxy n
+    -> p1 (E n) (f (E n))
+    -> AppState
+    -> f AppState
 
 instance HasSelectableItemList 'ListOfThreads where
+  selectedItemsL _ = list (Proxy @'ListOfThreads) . traversed
   toggle _ i = modifying (list (Proxy @'ListOfThreads) . L.listElementsL . ix i . _1) not
   selected _ s =
     let selectedItem = toListOf (list (Proxy @'ListOfThreads) . to L.listSelectedElement . traversed . _2) s
@@ -306,6 +316,7 @@ instance HasSelectableItemList 'ListOfThreads where
     in if null toggled then selectedItem else toggled
 
 instance HasSelectableItemList 'ScrollingMailView where
+  selectedItemsL _ = list (Proxy @'ScrollingMailView) . traversed
   toggle _ i = modifying (list (Proxy @'ScrollingMailView) . L.listElementsL . ix i . _1) not
   selected _ s =
     let selectedItem = toListOf (list (Proxy @'ScrollingMailView) . to L.listSelectedElement . traversed . _2) s
@@ -318,6 +329,7 @@ instance HasSelectableItemList 'ListOfFiles where
     let selectedItem = toListOf (list (Proxy @'ListOfFiles) . to L.listSelectedElement . traversed . _2) s
         toggled = toListOf (list (Proxy @'ListOfFiles) . traversed . filtered fst) s
     in if null toggled then selectedItem else toggled
+
 
 -- | A function which is run at the end of a chained sequence of actions.
 --
@@ -1190,15 +1202,7 @@ untoggleListItems :: forall v ctx. HasSelectableItemList ctx => Action v ctx ()
 untoggleListItems =
     Action
     { _aDescription = ["untoggle all selected list items"]
-    , _aAction = do
-        w <- gets focusedViewWidget
-        case w of
-          ScrollingMailView ->
-            modifying (asMailIndex . miListOfMails . traverse . filtered fst) (\m -> set _1 False m)
-          ListOfFiles ->
-            modifying (asFileBrowser . fbEntries . traverse . filtered fst) (\m -> set _1 False m)
-          _ ->
-            modifying (asMailIndex . miListOfThreads . traverse . filtered fst) (\t -> set _1 False t)
+    , _aAction = modifying (selectedItemsL (Proxy @ctx)) (\m -> set _1 False m)
     }
 
 -- | Delete an attachment from a mail currently being composed.
