@@ -1159,9 +1159,10 @@ setTags ops =
           ScrollingMailView -> do
             selected <- toListOf (selectedItemsL (Proxy @'ScrollingMailView)) <$> get
             manageMailTags ops selected
-          _ -> do
+          ListOfThreads -> do
             selected <- toListOf (selectedItemsL (Proxy @'ListOfThreads)) <$> get
             manageThreadTags ops selected
+          _ -> error "setTags called on widget without a registered handler"
 
     }
 
