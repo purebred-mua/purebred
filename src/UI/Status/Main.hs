@@ -125,7 +125,7 @@ renderToggled s =
   let currentL = case focusedViewWidget s of
         ListOfThreads -> length $ toListOf (asMailIndex . miListOfThreads . traversed . filtered fst) s
         _ -> length $ toListOf (asMailIndex . miListOfMails . traversed . filtered fst) s
-  in if currentL > 0 then str $ "Tag: " <> show currentL else emptyWidget
+  in if currentL > 0 then str $ "Marked: " <> show currentL else emptyWidget
 
 renderMatches :: AppState -> Widget n
 renderMatches s =
