@@ -297,15 +297,9 @@ instance HasList 'ListOfFiles where
 class (HasList (n :: Name), Traversable (T n)) =>
       HasSelectableItemList n
   where
-  selectE :: Proxy n -> E n -> E n
   deselectE :: Proxy n -> E n -> E n
   toggleE :: Proxy n -> E n -> E n
   isSelectedE :: Proxy n -> E n -> Bool
-
-  {-
-  selectAll :: (MonadState AppState m) => Proxy n -> m ()
-  selectAll proxy = modifying (list proxy . traversed) (selectE proxy)
-  -}
 
   deselectAll :: (MonadState AppState m) => Proxy n -> m ()
   deselectAll proxy = modifying (list proxy . traversed) (deselectE proxy)
@@ -325,7 +319,6 @@ instance
   , IxValue (T n (Bool, a)) ~ (Bool, a)
   , Ixed (T n (Bool, a))
   ) => HasSelectableItemList n where
-  selectE _ = set _1 True
   deselectE _ = set _1 False
   toggleE _ = over _1 not
   isSelectedE _ = fst
