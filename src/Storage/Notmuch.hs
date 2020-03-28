@@ -230,7 +230,7 @@ getThreads
   :: (MonadError Error m, MonadIO m)
   => T.Text
   -> NotmuchSettings FilePath
-  -> m (V (SelectableItem NotmuchThread))
+  -> m (V (Toggleable NotmuchThread))
 getThreads s settings =
   withDatabaseReadOnly (view nmDatabase settings) $
     flip Notmuch.query (Notmuch.Bare $ T.unpack s)
@@ -247,7 +247,7 @@ getThreadMessages
   :: (MonadError Error m, MonadIO m, Traversable t)
   => FilePath
   -> t NotmuchThread
-  -> m (Vec.Vector (SelectableItem NotmuchMail))
+  -> m (Vec.Vector (Toggleable NotmuchMail))
 getThreadMessages fp ts = withDatabaseReadOnly fp go
   where
     go db = do
