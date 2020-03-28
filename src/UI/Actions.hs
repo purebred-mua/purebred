@@ -265,17 +265,17 @@ class HasList (n :: Name) where
 
 instance HasList 'ListOfThreads where
   type T 'ListOfThreads = V
-  type E 'ListOfThreads = SelectableItem NotmuchThread
+  type E 'ListOfThreads = Toggleable NotmuchThread
   list _ = asMailIndex . miListOfThreads
 
 instance HasList 'ListOfMails where
   type T 'ListOfMails = Vector.Vector
-  type E 'ListOfMails = SelectableItem NotmuchMail
+  type E 'ListOfMails = Toggleable NotmuchMail
   list _ = asMailIndex . miListOfMails
 
 instance HasList 'ScrollingMailView where
   type T 'ScrollingMailView = Vector.Vector
-  type E 'ScrollingMailView = SelectableItem NotmuchMail
+  type E 'ScrollingMailView = Toggleable NotmuchMail
   list _ = asMailIndex . miListOfMails
 
 instance HasList 'ComposeListOfAttachments where
@@ -290,26 +290,24 @@ instance HasList 'MailListOfAttachments where
 
 instance HasList 'ListOfFiles where
   type T 'ListOfFiles = Vector.Vector
-  type E 'ListOfFiles = SelectableItem FileSystemEntry
+  type E 'ListOfFiles = Toggleable FileSystemEntry
   list _ = asFileBrowser . fbEntries
 
 -- | contexts which have selectable items in a list
 class (HasList (n :: Name), Traversable (T n)) =>
-      HasSelectableItemList n
+      HasToggleableList n
   where
-  deselectE :: Proxy n -> E n -> E n
+  untoggleE :: Proxy n -> E n -> E n
   toggleE :: Proxy n -> E n -> E n
-  isSelectedE :: Proxy n -> E n -> Bool
-
-  deselectAll :: (MonadState AppState m) => Proxy n -> m ()
-  deselectAll proxy = modifying (list proxy . traversed) (deselectE proxy)
-
+  isToggledE :: Proxy n -> E n -> Bool
+  untoggleAll :: (MonadState AppState m) => Proxy n -> m ()
+  untoggleAll proxy = modifying (list proxy . traversed) (untoggleE proxy)
   toggle :: Proxy n -> Int -> StateT AppState (T.EventM Name) ()
 
   -- | Traversal of selected items.  NOT a valid Traversal unless
   -- selected state is preserved
-  selectedItemsL :: Proxy n -> Traversal' AppState (E n)
-  selectedItemsL proxy = list proxy . traversed . filtered (isSelectedE proxy)
+  toggledItemsL :: Proxy n -> Traversal' AppState (E n)
+  toggledItemsL proxy = list proxy . traversed . filtered (isToggledE proxy)
 
 instance
   ( HasList n
@@ -318,10 +316,10 @@ instance
   , Index (T n (Bool, a)) ~ Int
   , IxValue (T n (Bool, a)) ~ (Bool, a)
   , Ixed (T n (Bool, a))
-  ) => HasSelectableItemList n where
-  deselectE _ = set _1 False
+  ) => HasToggleableList n where
+  untoggleE _ = set _1 False
   toggleE _ = over _1 not
-  isSelectedE _ = fst
+  isToggledE _ = fst
   toggle proxy i = modifying (list proxy . L.listElementsL . ix i) (toggleE proxy)
 
 
@@ -352,7 +350,7 @@ completeMailTags s =
     case getEditorTagOps (Proxy @'ManageMailTagsEditor) s of
         Left err -> pure $ setError err s
         Right ops' -> flip execStateT s $ do
-          selected <- toListOf (selectedItemsL (Proxy @'ScrollingMailView)) <$> get
+          selected <- toListOf (toggledItemsL (Proxy @'ScrollingMailView)) <$> get
           result <- applyTagOps ops' selected s
           case result of
             Left err -> assignError err
@@ -1149,7 +1147,7 @@ toggleHeaders = Action
 -- | Apply given tag operations on the currently selected thread or
 -- mail.
 --
-setTags :: forall v ctx. HasSelectableItemList ctx => [TagOp] -> Action v ctx ()
+setTags :: forall v ctx. HasToggleableList ctx => [TagOp] -> Action v ctx ()
 setTags ops =
     Action
     { _aDescription = ["apply tag operations: " <> T.intercalate ", " (T.pack . show <$> ops) ]
@@ -1189,18 +1187,18 @@ selectNextUnread = Action
 -- | Selects a list item. Currently only used in the file browser to
 -- select a file for attaching.
 --
-toggleListItem :: forall v ctx. HasSelectableItemList ctx => Action v ctx ()
+toggleListItem :: forall v ctx. HasToggleableList ctx => Action v ctx ()
 toggleListItem =
     Action
     { _aDescription = ["toggle selected state of a list item"]
     , _aAction = use (list (Proxy @ctx) . L.listSelectedL) >>= traverse_ (toggle (Proxy @ctx))
     }
 
-untoggleListItems :: forall v ctx. HasSelectableItemList ctx => Action v ctx ()
+untoggleListItems :: forall v ctx. HasToggleableList ctx => Action v ctx ()
 untoggleListItems =
     Action
     { _aDescription = ["untoggle all selected list items"]
-    , _aAction = deselectAll (Proxy @ctx)
+    , _aAction = untoggleAll (Proxy @ctx)
     }
 
 -- | Delete an attachment from a mail currently being composed.
@@ -1374,7 +1372,7 @@ getEditorTagOps p s =
 applyTagOps
   :: (Traversable t, MonadIO m)
   => [TagOp]
-  -> t (SelectableItem NotmuchMail)
+  -> t (Toggleable NotmuchMail)
   -> AppState
   -> m (Either Error (t NotmuchMail))
 applyTagOps ops mails s =
@@ -1420,7 +1418,7 @@ updateReadState con = do
 manageMailTags ::
      (Traversable t, MonadIO m, MonadState AppState m)
   => [TagOp]
-  -> t (SelectableItem NotmuchMail)
+  -> t (Toggleable NotmuchMail)
   -> m ()
 manageMailTags ops ms = do
   result <- applyTagOps ops ms =<< get
@@ -1631,7 +1629,7 @@ mimeType x = let parsed = parseOnly parseContentType $ defaultMimeLookup (T.pack
 manageThreadTags ::
      (Traversable t, MonadIO m, MonadState AppState m)
   => [TagOp]
-  -> t (SelectableItem NotmuchThread)
+  -> t (Toggleable NotmuchThread)
   -> m ()
 manageThreadTags ops ts = do
   let update ops' s' =

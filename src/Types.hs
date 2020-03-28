@@ -123,8 +123,8 @@ search and composes e-mails from here.
 
 -}
 data MailIndex = MailIndex
-    { _miListOfMails  :: ListWithLength V.Vector (SelectableItem NotmuchMail)
-    , _miListOfThreads :: ListWithLength V (SelectableItem NotmuchThread)
+    { _miListOfMails  :: ListWithLength V.Vector (Toggleable NotmuchMail)
+    , _miListOfThreads :: ListWithLength V (Toggleable NotmuchThread)
     , _miListOfThreadsGeneration :: Generation
     , _miSearchThreadsEditor :: E.Editor T.Text Name
     , _miMailTagsEditor :: E.Editor T.Text Name
@@ -132,16 +132,16 @@ data MailIndex = MailIndex
     , _miNewMail :: Int
     }
 
-miMails :: Lens' MailIndex (ListWithLength V.Vector (SelectableItem NotmuchMail))
+miMails :: Lens' MailIndex (ListWithLength V.Vector (Toggleable NotmuchMail))
 miMails = lens _miListOfMails (\m v -> m { _miListOfMails = v })
 
-miThreads :: Lens' MailIndex (ListWithLength V (SelectableItem NotmuchThread))
+miThreads :: Lens' MailIndex (ListWithLength V (Toggleable NotmuchThread))
 miThreads = lens _miListOfThreads (\m v -> m { _miListOfThreads = v})
 
-miListOfMails :: Lens' MailIndex (L.GenericList Name V.Vector (SelectableItem NotmuchMail))
+miListOfMails :: Lens' MailIndex (L.GenericList Name V.Vector (Toggleable NotmuchMail))
 miListOfMails = miMails . listList
 
-miListOfThreads :: Lens' MailIndex (L.GenericList Name V (SelectableItem NotmuchThread))
+miListOfThreads :: Lens' MailIndex (L.GenericList Name V (Toggleable NotmuchThread))
 miListOfThreads = miThreads . listList
 
 miListOfThreadsGeneration :: Lens' MailIndex Generation
@@ -642,10 +642,10 @@ vsViews = lens _vsViews (\settings x -> settings { _vsViews = x })
 vsFocusedView :: Lens' ViewSettings (Brick.FocusRing ViewName)
 vsFocusedView = lens _vsFocusedView (\settings x -> settings { _vsFocusedView = x})
 
--- | An item which carries it's selected state.
+-- | An item carrying it's selected state.
 -- Used in order to mark list items.
 --
-type SelectableItem a = (Bool, a)
+type Toggleable a = (Bool, a)
 
 data FileSystemEntry
     = Directory String
@@ -658,11 +658,11 @@ fsEntryName = let toName (Directory n) = n
               in to toName
 
 data FileBrowser = CreateFileBrowser
-  { _fbEntries :: L.List Name (SelectableItem FileSystemEntry)
+  { _fbEntries :: L.List Name (Toggleable FileSystemEntry)
   , _fbSearchPath :: E.Editor FilePath Name
   }
 
-fbEntries :: Lens' FileBrowser (L.List Name (SelectableItem FileSystemEntry))
+fbEntries :: Lens' FileBrowser (L.List Name (Toggleable FileSystemEntry))
 fbEntries = lens _fbEntries (\cv x -> cv { _fbEntries = x })
 
 fbSearchPath :: Lens' FileBrowser (E.Editor FilePath Name)

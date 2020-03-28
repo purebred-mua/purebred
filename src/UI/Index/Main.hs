@@ -46,7 +46,7 @@ renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex
 renderListOfMails :: AppState -> Widget Name
 renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . miListOfMails) s
 
-listDrawMail :: AppState -> Bool -> SelectableItem NotmuchMail -> Widget Name
+listDrawMail :: AppState -> Bool -> Toggleable NotmuchMail -> Widget Name
 listDrawMail s sel (toggled, a) =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
@@ -61,7 +61,7 @@ listDrawMail s sel (toggled, a) =
           ]
     in withAttr (getListAttr (makeListItemState isNewMail sel toggled)) widget
 
-listDrawThread :: AppState -> Bool -> SelectableItem NotmuchThread -> Widget Name
+listDrawThread :: AppState -> Bool -> Toggleable NotmuchThread -> Widget Name
 listDrawThread s sel (toggled, a) =
     let settings = view (asConfig . confNotmuch) s
         isNewMail = hasTag (view nmNewTag settings) a
