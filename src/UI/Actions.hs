@@ -127,6 +127,7 @@ import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Data.Foldable (toList, traverse_)
+import Data.Functor.Identity (Identity(..))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has, snoc,
         filtered, set, over, preview, view, (&), firstOf, non, Traversal',
@@ -303,7 +304,6 @@ class (HasList (n :: Name), Traversable (T n)) =>
   untoggleAll :: (MonadState AppState m) => Proxy n -> m ()
   untoggleAll proxy = modifying (list proxy . traversed) (untoggleE proxy)
   toggle :: Proxy n -> Int -> StateT AppState (T.EventM Name) ()
-
   -- | Traversal of selected items.  NOT a valid Traversal unless
   -- selected state is preserved
   toggledItemsL :: Proxy n -> Traversal' AppState (E n)
@@ -321,7 +321,6 @@ instance
   toggleE _ = over _1 not
   isToggledE _ = fst
   toggle proxy i = modifying (list proxy . L.listElementsL . ix i) (toggleE proxy)
-
 
 -- | A function which is run at the end of a chained sequence of actions.
 --
@@ -349,14 +348,13 @@ completeMailTags :: AppState -> IO AppState
 completeMailTags s =
     case getEditorTagOps (Proxy @'ManageMailTagsEditor) s of
         Left err -> pure $ setError err s
-        Right ops' -> flip execStateT s $ do
-          selected <- toListOf (toggledItemsL (Proxy @'ScrollingMailView)) <$> get
-          result <- applyTagOps ops' selected s
-          case result of
-            Left err -> assignError err
-            Right _ -> modifying (asMailIndex . miListOfMails . traversed . filtered fst)
-                       (over _2 (Notmuch.tagItem ops'))
-
+        Right ops -> flip execStateT s $ do
+            modifying (asMailIndex . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops))
+            toggledOrSelectedItemHelper
+              (Proxy @'ScrollingMailView)
+              (manageMailTags ops)
+              (over _2 (Notmuch.tagItem ops))
+            modify (toggleLastVisibleWidget ManageMailTagsEditor)
 
 hide, unhide :: (MonadState AppState m) => ViewName -> Int -> Name -> m ()
 hide = setViewState Hidden
@@ -404,8 +402,10 @@ instance Completable 'ManageThreadTagsEditor where
     case getEditorTagOps (Proxy @'ManageThreadTagsEditor) s of
       Left err -> assignError err
       Right ops -> do
-        selected <- toListOf (selectedItemsL (Proxy @'ListOfThreads)) <$> get
-        manageThreadTags ops selected
+        toggledOrSelectedItemHelper
+          (Proxy @'ListOfThreads)
+          (manageThreadTags ops)
+          (over _2 (Notmuch.tagItem ops))
         modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Completable 'ManageFileBrowserSearchPath where
@@ -1154,12 +1154,16 @@ setTags ops =
     , _aAction = do
         w <- gets focusedViewWidget
         case w of
-          ScrollingMailView -> do
-            selected <- toListOf (selectedItemsL (Proxy @'ScrollingMailView)) <$> get
-            manageMailTags ops selected
-          ListOfThreads -> do
-            selected <- toListOf (selectedItemsL (Proxy @'ListOfThreads)) <$> get
-            manageThreadTags ops selected
+          ScrollingMailView ->
+            toggledOrSelectedItemHelper
+              (Proxy @'ScrollingMailView)
+              (manageMailTags ops)
+              (over _2 (Notmuch.tagItem ops))
+          ListOfThreads ->
+            toggledOrSelectedItemHelper
+              (Proxy @'ListOfThreads)
+              (manageThreadTags ops)
+              (over _2 (Notmuch.tagItem ops))
           _ -> error "setTags called on widget without a registered handler"
 
     }
@@ -1344,6 +1348,23 @@ notifyNumThreads l = do
     in len `seq` writeBChan chan (NotifyNumThreads len nextGen)
   assign (asMailIndex . miListOfThreadsGeneration) nextGen
 
+-- | Operate over either toggled or a single selected list item
+--
+toggledOrSelectedItemHelper ::
+     (HasToggleableList n, L.Splittable (T n), MonadState AppState m)
+  => Proxy n
+  -> ([E n] -> m b)
+  -> (E n -> E n)
+  -> m ()
+toggledOrSelectedItemHelper proxy fx updateFx = do
+  toggled <- gets (toListOf (toggledItemsL proxy))
+  selected <-
+    gets (toListOf (list proxy . to L.listSelectedElement . _Just . to snd))
+  if null toggled
+    then fx selected >> modifying (list proxy) (L.listModify updateFx)
+    else fx toggled >> modifying (toggledItemsL proxy) updateFx
+  pure ()
+
 -- | Helper function to either show an error if no list item is
 -- selected, or apply given action to the item (the result of
 -- which is discarded)
@@ -1412,7 +1433,10 @@ updateReadState con = do
   -- navigated back to the index of threads, but does not
   -- always garantee an updated tag list. See #249
   op <- con <$> use (asConfig . confNotmuch . nmNewTag)
-  selectedItemHelper (asMailIndex . miListOfMails) (manageMailTags [op] . Identity)
+  toggledOrSelectedItemHelper
+    (Proxy @'ScrollingMailView)
+    (manageMailTags [op])
+    (over _2 (Notmuch.tagItem [op]))
   modifying (asMailIndex . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem [op]))
 
 manageMailTags ::
@@ -1632,17 +1656,10 @@ manageThreadTags ::
   -> t (Toggleable NotmuchThread)
   -> m ()
 manageThreadTags ops ts = do
-  let update ops' s' =
-        if null (toggled s')
-        then modifying (asMailIndex . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops'))
-        else modifying (asMailIndex . miListOfThreads . traversed . filtered fst)
-                    (over _2 (Notmuch.tagItem ops'))
-      toggled = toListOf (list (Proxy @'ScrollingMailView) . traversed . filtered fst)
-  s <- get
   dbpath <- use (asConfig . confNotmuch . nmDatabase)
   (either (const mempty) id <$> runExceptT (Notmuch.getThreadMessages dbpath $ toListOf (traversed . _2) ts))
     >>= \ms -> (get >>= applyTagOps ops ms)
-    >>= either assignError (const (update ops s))
+    >>= either assignError (const $ pure ())
 
 
 keepOrDiscardDraft :: (MonadMask m, MonadIO m, MonadState AppState m) => m ()
