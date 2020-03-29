@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Fraser Tweedale and Róman Joost
+-- Copyright (C) 2017-2020 Fraser Tweedale and Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -20,30 +20,12 @@
 module UI.Utils
   ( titleize
   , Titleize
-  , toggledItems
-  , selectedFiles
   ) where
-import Data.List (union)
 
 import Data.Text (Text, pack)
-import Control.Lens
-       (folded, traversed, filtered, toListOf, view, _2)
-import qualified Brick.Widgets.List as L
 
 import Types
 
-
-toggledItems :: L.List Name (Toggleable a) -> [Toggleable a]
-toggledItems = toListOf (L.listElementsL . folded . filtered fst)
-
--- | Toggle file list entries to be selected
---
-selectedFiles :: L.List Name (Toggleable FileSystemEntry) -> [FilePath]
-selectedFiles l = let cur = case L.listSelectedElement l of
-                        Just (_, (_, File fsname)) -> [(False, File fsname)]
-                        _ -> []
-                      toggled = view (_2 . fsEntryName) <$> toggledItems l
-                  in toggled `union` toListOf (traversed . _2 . fsEntryName) cur
 
 -- | Show a descriptive name
 --
