@@ -116,7 +116,104 @@ main = defaultMain $ testTmux pre post tests
       , testAutoview
       , testSavesEntitySuccessfully
       , testForwardsMailSuccessfully
+      , testBulkActionsOnThreadsByKeybinding
+      , testBulkActionsOnThreadsByInput
+      , testBulkActionsOnMailsByInput
       ]
+
+testBulkActionsOnMailsByInput :: PurebredTestCase
+testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on mails by editor" $
+  \step -> do
+    startApplication
+
+    step "navigate to thread with two mails"
+    sendKeys "Down" (Substring "Item 2 of 4")
+    sendKeys "Down" (Substring "Item 3 of 4")
+    sendKeys "Enter" (Substring "Lorem ipsum dolor sit amet")
+
+    step "toggle first mail"
+    sendKeys "*" (Substring "Marked: 1")
+
+    step "toggle second mail"
+    sendKeys "*" (Substring "Marked: 2")
+
+    step "open mail tag editor"
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
+      >>= put
+
+    -- guard against a case in which mails are already tagged with our test tag
+    assertConditionS (Not (Substring "testTag"))
+
+    step "add new tag"
+    sendLine "+testTag" (
+      Regex (
+          "testTag"
+          -- first list item starting with the tag
+          <> buildAnsiRegex [] ["34"] [] <> "\\s+WIP Refactor\\s+\n"
+          -- next mail/list item
+          <> buildAnsiRegex [] ["37"] ["43"] <> "\\s+Feb'17.*testTag"
+          <> buildAnsiRegex [] ["37"] [] <> "\\s+Re: WIP Refactor"
+          )
+      ) >>= put
+
+    -- Editor is not displayed any more
+    assertConditionS (Not (Substring "Labels:"))
+    -- Every toggled list item is now untoggled
+    assertConditionS (Not (Substring "Marked"))
+
+
+testBulkActionsOnThreadsByInput :: PurebredTestCase
+testBulkActionsOnThreadsByInput = purebredTmuxSession "perform bulk labeling on threads by editor" $
+  \step -> do
+    startApplication
+
+    step "Toggle two thread items"
+    sendKeys "*" (Substring "Marked: 1")
+    sendKeys "*" (Substring "Marked: 2")
+
+    step "open thread tag editor"
+    sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
+      >>= put
+
+    -- guard against a case in which mails are already tagged with our test tag
+    assertConditionS (Not (Substring "testTag"))
+
+    step "add tag"
+    sendLine "+testTag" (
+      Regex (
+          "testTag"
+          <> buildAnsiRegex [] ["37"] []
+          <> "\\s+Testmail with whitespace in the subject\\s*\n"
+          <> buildAnsiRegex [] ["34"] [] <> "\\s+Aug'17.*testTag"
+          <> buildAnsiRegex [] ["34"] [] <> "\\s+This is Purebred\\s+\n"
+          )
+      )
+    
+
+testBulkActionsOnThreadsByKeybinding :: PurebredTestCase
+testBulkActionsOnThreadsByKeybinding =
+  purebredTmuxSession "perform bulk labeling on threads by keybinding" $
+  \step -> do
+    startApplication
+
+    step "Toggle thread and list cursor moves to next list item"
+    sendKeys "*" (Substring "Marked: 1")
+      >>= assertRegex (
+        -- toggled
+        buildAnsiRegex ["7"] ["34"] ["43"] <> "\\sAug'17.*whitespace in the subject\\s+\n"
+        -- current selection
+        <> buildAnsiRegex ["0"] ["34"] ["43"] <> "\\sAug'17 rjoost@url.use.*This is Purebred\\s+\n"
+        -- unselected rest
+        <> buildAnsiRegex [] ["37"] ["49"] <> "\\sFeb'17.*WIP Refactor"
+      )
+
+    step "Toggle thread and list cursor moves to next list item"
+    sendKeys "*" (Substring "Marked: 2")
+
+    step "Tag toggled list items using key binding"
+    sendKeys "a" (Substring "New: 3  ]")
+      -- untoggled
+      >>= assertRegex (buildAnsiRegex [] ["37"] [] <> "\\sAug'17.*whitespace in the subject\\s+\n")
 
 testForwardsMailSuccessfully :: PurebredTestCase
 testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" $

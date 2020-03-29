@@ -31,12 +31,16 @@ import Data.List.NonEmpty (NonEmpty(..))
 
 myBrowseThreadsKbs :: [Keybinding 'Threads 'ListOfThreads]
 myBrowseThreadsKbs =
-  [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
+  [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"]
+                                       `chain` untoggleListItems
+                                       `chain` continue)
   ]
 
 myMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 myMailKeybindings =
-    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"] `chain` continue)
+    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"]
+                                         `chain` untoggleListItems
+                                         `chain` continue)
     ]
 
 writeMailtoFile :: B.Builder -> IO (Either Error ())
