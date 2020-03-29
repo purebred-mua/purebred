@@ -29,7 +29,6 @@ import qualified Data.Vector as Vector
 
 import Types
 import UI.Actions
-import UI.Utils (selectedFiles)
 import UI.Views (swapWidget)
 
 
@@ -39,7 +38,6 @@ actionTests =
     testGroup
         "action tests"
         [ testModeDescription
-        , testNoDupes
         , testSwapBottom
         ]
 
@@ -48,17 +46,6 @@ testModeDescription = testCase "mode present in the switch action"
                       $ view aDescription a @?= ["switch mode to ManageMailTagsEditor"]
   where
     a = focus @'ViewMail @'ManageMailTagsEditor
-
-testNoDupes :: TestTree
-testNoDupes =
-    let vec =
-            Vector.fromList
-                [ (True, File "file 1")
-                , (True, File "file 2")
-                , (False, File "file 3")]
-        l = set L.listSelectedL (Just 1) $ L.list ListOfFiles vec 1
-    in testCase "no duplicates when multiple items are selected" $
-       selectedFiles l @?= ["file 1", "file 2"]
 
 testSwapBottom :: TestTree
 testSwapBottom = testCase "swaps last visible widget" $ swapWidget ListOfThreads ManageThreadTagsEditor tiles @?= expected

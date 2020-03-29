@@ -45,7 +45,7 @@ renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex
 renderListOfMails :: AppState -> Widget Name
 renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . miListOfMails) s
 
-notmuchConfig :: AppState -> (NotmuchSettings FilePath)
+notmuchConfig :: AppState -> NotmuchSettings FilePath
 notmuchConfig = view (asConfig . confNotmuch)
 
 isNewMail :: ManageTags a => a -> AppState -> Bool
@@ -58,9 +58,9 @@ renderListAttr, authorsAttr, tagsAttr ::
   -> Bool -- ^ selected
   -> Bool -- ^ Toggled
   -> AttrName
-renderListAttr a s sel toggled = makeListStateAttr listAttr (isNewMail a s) sel toggled
-authorsAttr a s sel toggled = makeListStateAttr mailAuthorsAttr (isNewMail a s) sel toggled
-tagsAttr a s sel toggled = makeListStateAttr mailTagAttr (isNewMail a s) sel toggled
+renderListAttr a s = makeListStateAttr listAttr (isNewMail a s)
+authorsAttr a s = makeListStateAttr mailAuthorsAttr (isNewMail a s)
+tagsAttr a s = makeListStateAttr mailTagAttr (isNewMail a s)
 
 
 listDrawMail :: AppState -> Bool -> Toggleable NotmuchMail -> Widget Name

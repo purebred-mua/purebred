@@ -123,6 +123,7 @@ import qualified Data.ByteString.Lazy as LB
 import Data.Attoparsec.ByteString.Char8 (parseOnly)
 import Data.Vector.Lens (vector)
 import Data.List.NonEmpty (NonEmpty(..))
+import Data.List (union)
 import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
@@ -163,7 +164,6 @@ import Storage.ParsedMail
        , writeEntityToPath)
 import Types
 import Error
-import UI.Utils (selectedFiles)
 import UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
@@ -1295,7 +1295,9 @@ composeAsNew = Action ["edit mail as new"] $
 -- browser.
 makeAttachmentsFromSelected :: AppState -> IO AppState
 makeAttachmentsFromSelected s = do
-  parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (selectedFiles (view (asFileBrowser . fbEntries) s))
+  let toggled = view (_2 . fsEntryName) <$> toListOf (toggledItemsL (Proxy @'ListOfFiles)) s
+      selected = toListOf (list (Proxy @'ListOfFiles) . to L.listSelectedElement . _Just . _2 . _2 . fsEntryName) s
+  parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (toggled `union` selected)
   pure $ s & over (asCompose . cAttachments) (go parts)
     . over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
     . set (asViews . vsViews . ix ComposeView . vFocus) ComposeListOfAttachments
