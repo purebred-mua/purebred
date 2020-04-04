@@ -83,13 +83,18 @@ solarizedDark :: A.AttrMap
 solarizedDark =
     A.attrMap
         V.defAttr
-        [ (listAttr, V.brightBlue `on` V.brightBlack)
-        , (listSelectedAttr, V.white `on` V.yellow)
-        , (listNewMailAttr, fg V.white `V.withStyle` V.bold)
-        , (listNewMailSelectedAttr, V.white `on` V.yellow `V.withStyle` V.bold)
-        , (listToggledAttr, V.currentAttr `V.withStyle` V.reverseVideo)
+        [ (listAttr, fg V.brightBlue)
+        , (listSelectedAttr, bg V.yellow)
+        , (listNewMailAttr, fg V.white)
+        , (listSelectedNewmailAttr, fg V.white)
+        , (listToggledAttr, bg V.yellow `V.withStyle` V.reverseVideo)
+        , (listSelectedToggledAttr, bg V.red `V.withStyle` V.reverseVideo)
         , (mailTagAttr, fg V.cyan)
-        , (mailAuthorsAttr, fg V.white)
+        , (mailTagToggledAttr, bg V.brightBlue)
+        , (mailAuthorsAttr, fg V.brightBlue)
+        , (mailNewmailAuthorsAttr, fg V.white)
+        , (mailSelectedNewmailAuthorsAttr, fg V.white)
+        , (mailToggledAuthorsAttr, V.yellow `on` V.brightBlue)
         , (E.editFocusedAttr, V.white `on` V.brightBlack)
         , (editorAttr, V.brightBlue `on` V.brightBlack)
         , (editorLabelAttr, V.brightYellow `on` V.brightBlack)
@@ -111,6 +116,27 @@ solarizedDark =
 -- * Attributes
 -- $attributes
 -- These attributes are used as keys in widgets to assign color values.
+--
+
+-- ** State Attributes used to indicate list item state
+-- List attributes are generated based on three possible states:
+--
+--   * selected (first)
+--   * toggled
+--   * new (last)
+--
+-- That means that for example, any new list items will inherit colour
+-- definitions from selected and toggled attributes.
+listStateSelectedAttr :: A.AttrName
+listStateSelectedAttr = "selected"
+
+listStateNewmailAttr :: A.AttrName
+listStateNewmailAttr = "newmail"
+
+listStateToggledAttr :: A.AttrName
+listStateToggledAttr = "toggled"
+
+-- ** Widget Attributes
 --
 defaultAttr :: A.AttrName
 defaultAttr = "default"
@@ -139,17 +165,23 @@ editorLabelAttr = editorAttr <> "label"
 listAttr :: A.AttrName
 listAttr = L.listAttr
 
+-- Note: Brick exports a L.listSelectedAttr, yet in order to make our
+-- use of our listState attributes consistent across the application
+-- we need to use our own listState attributes.
 listSelectedAttr :: A.AttrName
-listSelectedAttr = L.listSelectedAttr
+listSelectedAttr = L.listAttr <> listStateSelectedAttr
 
 listNewMailAttr :: A.AttrName
-listNewMailAttr = L.listAttr <> "newmail"
+listNewMailAttr = L.listAttr <> listStateNewmailAttr
 
-listNewMailSelectedAttr :: A.AttrName
-listNewMailSelectedAttr = listNewMailAttr <> L.listSelectedAttr
+listSelectedNewmailAttr :: A.AttrName
+listSelectedNewmailAttr = L.listSelectedAttr <> listStateNewmailAttr
 
 listToggledAttr :: A.AttrName
-listToggledAttr = L.listAttr <> "toggled"
+listToggledAttr = L.listAttr <> listStateToggledAttr
+
+listSelectedToggledAttr :: A.AttrName
+listSelectedToggledAttr = listStateSelectedAttr <> listToggledAttr
 
 mailAttr :: A.AttrName
 mailAttr = "mail"
@@ -157,11 +189,26 @@ mailAttr = "mail"
 mailTagAttr :: A.AttrName
 mailTagAttr = mailAttr <> "tag"
 
+mailTagToggledAttr :: A.AttrName
+mailTagToggledAttr = mailTagAttr <> listStateToggledAttr
+
 mailAuthorsAttr :: A.AttrName
 mailAuthorsAttr = mailAttr <> "authors"
 
+mailNewmailAuthorsAttr :: A.AttrName
+mailNewmailAuthorsAttr = mailAuthorsAttr <> listStateNewmailAttr
+
+mailToggledAuthorsAttr :: A.AttrName
+mailToggledAuthorsAttr = mailAuthorsAttr <> listStateToggledAttr
+
 mailSelectedAuthorsAttr :: A.AttrName
-mailSelectedAuthorsAttr = mailAuthorsAttr <> "selected"
+mailSelectedAuthorsAttr = mailAuthorsAttr <> listStateSelectedAttr
+
+mailSelectedNewmailAuthorsAttr :: A.AttrName
+mailSelectedNewmailAuthorsAttr = mailAuthorsAttr <> listStateSelectedAttr <> listStateNewmailAttr
+
+mailSelectedToggledAuthorsAttr :: A.AttrName
+mailSelectedToggledAuthorsAttr = mailSelectedAuthorsAttr <> listStateToggledAttr
 
 headerAttr :: A.AttrName
 headerAttr = "header"

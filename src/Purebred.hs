@@ -129,6 +129,9 @@ module Purebred (
   defaultConfig,
   solarizedDark,
   mailTagAttr,
+  listStateSelectedAttr,
+  listStateToggledAttr,
+  listStateNewmailAttr,
   (</>),
   module Control.Lens,
   genBoundary,
@@ -160,7 +163,9 @@ import UI.Mail.Keybindings
 import UI.Actions
 import UI.Status.Main (rescheduleMailcheck)
 import Storage.Notmuch (getDatabasePath)
-import Config.Main (defaultConfig, solarizedDark, mailTagAttr, sendmail)
+import Config.Main
+    (defaultConfig, solarizedDark, mailTagAttr, sendmail,
+    listStateSelectedAttr, listStateToggledAttr, listStateNewmailAttr)
 import Types
 import Error
 

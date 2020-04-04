@@ -708,7 +708,7 @@ testUserCanMoveBetweenThreads = purebredTmuxSession "user can navigate between t
     -- assert that the first mail is really the one we're later navigating back
     -- to
     snapshot
-    assertRegexS (buildAnsiRegex ["1"] ["37"] ["43"] <> "\\sAug'17.*Testmail with whitespace")
+    assertRegexS (buildAnsiRegex [] ["37"] ["43"] <> "\\sAug'17.*Testmail with whitespace")
 
     step "View Mail"
     sendKeys "Enter" (Substring "This is a test mail for purebred")
@@ -793,16 +793,16 @@ testUpdatesReadState = purebredTmuxSession "updates read state for mail and thre
     sendKeys "Down" (Substring "2 of 2")
 
     step "go back to thread list which is now read"
-    sendKeys "q" (Regex (buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
+    sendKeys "q" (Regex (buildAnsiRegex [] ["34"] ["43"] <> T.encodeUtf8 " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
 
     step "set one mail to unread"
     sendKeys "Enter" (Substring "Beginning of large text")
-    sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] []
+    sendKeys "t" (Regex (buildAnsiRegex [] ["37"] []
                            <> "\\sRe: WIP Refactor\\s+"
-                           <> buildAnsiRegex ["0"] ["34"] ["40"]))
+                           <> buildAnsiRegex [] ["34"] ["49"]))
 
     step "returning to thread list shows entire thread as unread"
-    sendKeys "q" (Regex (buildAnsiRegex ["1"] ["37"] [] <> "\\sWIP Refactor\\s"))
+    sendKeys "q" (Regex (buildAnsiRegex [] ["37"] [] <> "\\sWIP Refactor\\s"))
 
 testConfig :: PurebredTestCase
 testConfig = purebredTmuxSession "test custom config" $
@@ -851,7 +851,7 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
     step "jump to the end of the list"
-    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> lastFile)
+    sendKeys "G" (Regex $ buildAnsiRegex [] [] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> lastFile)
 
     step "add first selected file"
     sendKeys "Enter" (Substring lastFile)
@@ -900,13 +900,13 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
     step "jump to the end of the list"
-    sendKeys "G" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> lastFile)
+    sendKeys "G" (Regex $ buildAnsiRegex [] [] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> lastFile)
 
     step "select the file"
-    sendKeys "Space" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 "\\s\9745 - " <> lastFile)
+    sendKeys "Space" (Regex $ buildAnsiRegex [] [] ["43"] <> T.encodeUtf8 "\\s\9745 - " <> lastFile)
 
     step "move one item up"
-    sendKeys "Up" (Regex $ buildAnsiRegex [] ["37"] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> secondLastFile)
+    sendKeys "Up" (Regex $ buildAnsiRegex [] [] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> secondLastFile)
 
     step "add selected files"
     out <- sendKeys "Enter" (Substring "Item 3 of 3")
@@ -936,7 +936,7 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
 
     step "enter new tag"
     sendLine "+inbox +foo +bar" (Regex ("foo"
-                             <> buildAnsiRegex [] ["37"] []
+                             <> buildAnsiRegex [] ["34"] []
                              <> "\\s"
                              <> buildAnsiRegex [] ["36"] []
                              <> "bar"))
@@ -996,7 +996,7 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
 
     step "thread tags shows new tags"
     sendKeys "Escape" (Regex ("archive"
-                              <> buildAnsiRegex [] ["37"] []
+                              <> buildAnsiRegex [] ["34"] []
                               <> "\\s"
                               <> buildAnsiRegex [] ["36"] []
                               <> "replied"))
@@ -1009,9 +1009,9 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     -- "-only" will fail due to tmux parsing it as an argument, but the mail is
     -- already tagged with "thread" so the additional adding won't do anything
     sendLine "+thread" (Regex ("archive"
-                             <> buildAnsiRegex [] ["37"] []
+                             <> buildAnsiRegex [] ["34"] []
                              <> "\\s"
-                             <> buildAnsiRegex [] ["36"] [] <> "replied" <> buildAnsiRegex [] ["37"] []
+                             <> buildAnsiRegex [] ["36"] [] <> "replied" <> buildAnsiRegex [] ["34"] []
                              <> "\\s"
                              <> buildAnsiRegex [] ["36"] [] <> "thread"))
 
@@ -1020,11 +1020,11 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
 
     step "second mail shows old tag"
     sendKeys "Escape" (Regex ("replied"
-                              <> buildAnsiRegex [] ["37"] []
+                              <> buildAnsiRegex [] ["34"] []
                               <> "\\s"
                               <> buildAnsiRegex [] ["36"] []
                               <> "thread"
-                              <> buildAnsiRegex [] ["37"] []
+                              <> buildAnsiRegex [] ["34"] []
                               <> "\\sWIP Refactor"))
 
     step "open thread tag editor"
@@ -1071,13 +1071,13 @@ testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
 
     step "first unread mail is opened"
     sendKeys "Escape" (Substring "List of Threads")
-      >>= assertRegex (buildAnsiRegex [] ["37"] ["43"] <> ".*Testmail")
+      >>= assertRegex (buildAnsiRegex [] ["34"] [] <> ".*Testmail")
 
     step "show mail"
     sendKeys "Enter" (Substring "This is a test mail for purebred")
 
     step "toggle single mail back to unread (bold again)"
-    sendKeys "t" (Regex (buildAnsiRegex ["1"] ["37"] ["43"] <> ".*Testmail"))
+    sendKeys "t" (Regex (buildAnsiRegex [] ["37"] [] <> ".*Testmail"))
 
 testCanToggleHeaders :: PurebredTestCase
 testCanToggleHeaders = purebredTmuxSession "user can toggle Headers" $
@@ -1260,7 +1260,7 @@ testSendMail =
           sendKeys "Escape" (Substring "body")
 
           step "exit vim"
-          sendKeys ": x\r" (Regex ("text/plain; charset=us-ascii\\s" <> buildAnsiRegex [] ["34"] ["40"] <> "\\s+"))
+          sendKeys ": x\r" (Regex ("text/plain; charset=us-ascii\\s" <> buildAnsiRegex [] [] ["49"] <> "\\s+"))
 
           -- pre-check before we sent:
           --   * Drafts is empty before sending

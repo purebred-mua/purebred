@@ -33,12 +33,11 @@ import Data.Text as T (Text, pack, unpack, unwords)
 import Notmuch (getTag)
 
 import UI.Draw.Main (fillLine)
-import Storage.Notmuch (hasTag)
+import Storage.Notmuch (hasTag, ManageTags)
 import Types
 import Config.Main
-       (listNewMailAttr, listNewMailSelectedAttr, mailTagAttr,
-        listSelectedAttr, listAttr, listToggledAttr, mailAuthorsAttr,
-        mailSelectedAuthorsAttr)
+  (listAttr, listStateNewmailAttr, listStateSelectedAttr,
+  listStateToggledAttr, mailAuthorsAttr, mailTagAttr)
 
 renderListOfThreads :: AppState -> Widget Name
 renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex . miListOfThreads) s
@@ -46,63 +45,71 @@ renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex
 renderListOfMails :: AppState -> Widget Name
 renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . miListOfMails) s
 
+notmuchConfig :: AppState -> (NotmuchSettings FilePath)
+notmuchConfig = view (asConfig . confNotmuch)
+
+isNewMail :: ManageTags a => a -> AppState -> Bool
+isNewMail a s = hasTag (view nmNewTag (notmuchConfig s)) a
+
+renderListAttr, authorsAttr, tagsAttr ::
+     ManageTags a
+  => a
+  -> AppState
+  -> Bool -- ^ selected
+  -> Bool -- ^ Toggled
+  -> AttrName
+renderListAttr a s sel toggled = makeListStateAttr listAttr (isNewMail a s) sel toggled
+authorsAttr a s sel toggled = makeListStateAttr mailAuthorsAttr (isNewMail a s) sel toggled
+tagsAttr a s sel toggled = makeListStateAttr mailTagAttr (isNewMail a s) sel toggled
+
+
 listDrawMail :: AppState -> Bool -> Toggleable NotmuchMail -> Widget Name
 listDrawMail s sel (toggled, a) =
-    let settings = view (asConfig . confNotmuch) s
-        isNewMail = hasTag (view nmNewTag settings) a
-        widget = hBox
+    let widget = hBox
           -- NOTE: I believe that inserting a `str " "` is more efficient than
           -- `padLeft/Right (Pad 1)`.  This hypothesis should be tested.
           [ padLeft (Pad 1) (txt $ formatDate (view mailDate a) (view asLocalTime s))
-          , padLeft (Pad 1) (renderAuthors sel $ view mailFrom a)
-          , padLeft (Pad 1) (renderTagsWidget (view mailTags a) (view nmNewTag settings))
+          , padLeft (Pad 1) (renderAuthors (authorsAttr a s sel toggled) $ view mailFrom a)
+          , padLeft (Pad 1) (renderTagsWidget' (tagsAttr a s sel toggled) (view mailTags a) (view nmNewTag (notmuchConfig s)))
           , txt (view mailSubject a)
           , fillLine
           ]
-    in withAttr (getListAttr (makeListItemState isNewMail sel toggled)) widget
+    in withAttr (renderListAttr a s sel toggled) widget
+
 
 listDrawThread :: AppState -> Bool -> Toggleable NotmuchThread -> Widget Name
 listDrawThread s sel (toggled, a) =
-    let settings = view (asConfig . confNotmuch) s
-        isNewMail = hasTag (view nmNewTag settings) a
-        widget = hBox
+    let widget = hBox
           [ padLeft (Pad 1) (txt $ formatDate (view thDate a) (view asLocalTime s))
-          , padLeft (Pad 1) (renderAuthors sel $ T.unwords $ view thAuthors a)
+          , padLeft (Pad 1) (renderAuthors (authorsAttr a s sel toggled) $ T.unwords $ view thAuthors a)
           , padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")")
-          , padLeft (Pad 1) (renderTagsWidget (view thTags a) (view nmNewTag settings))
+          , padLeft (Pad 1) (renderTagsWidget' (tagsAttr a s sel toggled) (view thTags a) (view nmNewTag (notmuchConfig s)))
           , txt (view thSubject a)
           , fillLine
           ]
-    in withAttr (getListAttr $ makeListItemState isNewMail sel toggled) widget
+    in withAttr (renderListAttr a s sel toggled) widget
 
--- | The rendering state for the list item, whether it's selected, new
--- or toggled for bulk actions.
+-- | Creates a widget attribute based on list item states: whether the
+-- list item is new, currently selected (a.k.a focused) or
+-- toggled. Outcome is an Attribute which has each state encoded in
+-- the attribute if the state is true. For example:
 --
-data ListItemState
-  = New
-  | NewAndSelected
-  | Selected
-  | Toggled
-  | Normal
-
-makeListItemState ::
-     Bool -- ^ new?
+-- @
+-- $ let attr = makeListStateAttr listAttr True False True
+-- $ show attr
+-- AttrName ["list", "newmail", "toggled"]
+--
+makeListStateAttr ::
+     AttrName
+  -> Bool -- ^ new?
   -> Bool -- ^ selected?
-  -> Bool -- ^ toggled
-  -> ListItemState
-makeListItemState _ _ True = Toggled
-makeListItemState True True _ = NewAndSelected
-makeListItemState True False _ = New
-makeListItemState False True _ = Selected
-makeListItemState _ _ _ = Normal
-
-getListAttr :: ListItemState -> AttrName
-getListAttr NewAndSelected = listNewMailSelectedAttr
-getListAttr New = listNewMailAttr
-getListAttr Selected = listSelectedAttr
-getListAttr Toggled = listToggledAttr
-getListAttr Normal = listAttr
-
+  -> Bool -- ^ toggled?
+  -> AttrName
+makeListStateAttr baseAttr isNew isSelected isToggled =
+  let newAttr = if isNew then listStateNewmailAttr else mempty
+      selectedAttr = if isSelected then listStateSelectedAttr else mempty
+      toggledAttr = if isToggled then listStateToggledAttr else mempty
+  in baseAttr <> selectedAttr <> toggledAttr <> newAttr
 
 calendarYear :: NominalDiffTime
 calendarYear = nominalDay * 365
@@ -115,19 +122,15 @@ formatDate mail now =
           else "%d/%b"  -- 01/Apr
    in pack $ formatTime defaultTimeLocale format (utctDay mail)
 
-renderAuthors :: Bool -> Text -> Widget Name
-renderAuthors isSelected authors =
-    let attribute =
-            if isSelected
-                then mailSelectedAuthorsAttr
-                else mailAuthorsAttr
-    in withAttr attribute $ hLimitPercent 20 (txt authors <+> fillLine)
+renderAuthors :: AttrName -> Text -> Widget Name
+renderAuthors attr authors =
+    withAttr attr $ hLimitPercent 20 (txt authors <+> fillLine)
 
-renderTagsWidget :: [Tag] -> Tag -> Widget Name
-renderTagsWidget tgs ignored =
+renderTagsWidget' :: AttrName -> [Tag] -> Tag -> Widget Name
+renderTagsWidget' baseattr tgs ignored =
     let ts = filter (/= ignored) tgs
-        render tag = padRight (Pad 1) $ withAttr (toAttrName tag) $ txt (decodeLenient $ getTag tag)
+        render tag = padRight (Pad 1) $ withAttr (toAttrName baseattr tag) $ txt (decodeLenient $ getTag tag)
     in vLimit 1 $ hBox $ render  <$> ts
 
-toAttrName :: Tag -> AttrName
-toAttrName = (mailTagAttr <>) . attrName . unpack . decodeLenient . getTag
+toAttrName :: AttrName -> Tag -> AttrName
+toAttrName baseattr = (baseattr <>) . attrName . unpack . decodeLenient . getTag
