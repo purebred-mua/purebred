@@ -48,10 +48,11 @@ module Storage.Notmuch (
   , withDatabase
   ) where
 
-import Control.Monad ((>=>), when)
+import Control.Monad ((<=<), (>=>), when)
 import Data.Function (on)
 import System.IO.Unsafe (unsafeInterleaveIO)
-import Data.Foldable (foldlM)
+import Data.Foldable (toList)
+import Data.Functor.Compose (Compose(..))
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError, ExceptT, runExceptT)
@@ -250,11 +251,11 @@ getThreadMessages
 getThreadMessages fp ts = withDatabaseReadOnly fp go
   where
     go db = do
-      msgs <- foldlM (allMessages db) [] ts
-      mails <- liftIO $ traverse messageToMail msgs
-      pure $ Vec.fromList $ fmap (False,) mails
-    allMessages db acc t =
-      mappend acc <$> (getThread db (view thId t) >>= Notmuch.messages)
+      msgs <-
+        Data.Functor.Compose.Compose  -- 'collapse' nested 't ([] a)'
+        <$> traverse (Notmuch.messages <=< getThread db . view thId) ts
+      mails <- traverse (liftIO . messageToMail) msgs
+      pure . Vec.fromList . toList $ fmap (False,) mails
 
 
 -- | retrieve a given thread from the notmuch database by it's id
