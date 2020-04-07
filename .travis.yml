@@ -30,15 +30,15 @@ matrix:
     - compiler: "ghc-8.6.3"
       language: c
       env: NOTMUCHVER=0.28
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.6.3], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.6.3], sources: [hvr-ghc,{sourceline: "ppa:jamesw05/tmux", key_url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x51a89e9c35f79436"}]}}
     - compiler: "ghc-8.4.4"
       language: c
       env: NOTMUCHVER=0.28
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.4.4], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.4.4], sources: [hvr-ghc,{sourceline: "ppa:jamesw05/tmux", key_url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x51a89e9c35f79436"}]}}
     - compiler: "ghc-head"
       language: c
       env: NOTMUCHVER=0.28 GHCHEAD=true
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-head,ghc-head], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-head,ghc-head], sources: [hvr-ghc,{sourceline: "ppa:jamesw05/tmux", key_url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x51a89e9c35f79436"}]}}
     - compiler: "ghc865 (default)"
       language: nix
       before_install:
