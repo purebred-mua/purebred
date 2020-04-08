@@ -32,10 +32,18 @@ apt_sources: &apt_sources
 
 matrix:
   include:
-    - compiler: "ghc-8.6.3"
+    - compiler: "ghc-8.10.1"
+      language: c
+      env: NOTMUCHVER=0.28 GHCHEAD=true
+      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-3.2,ghc-8.10.1], sources: *apt_sources}}
+    - compiler: "ghc-8.8.3"
       language: c
       env: NOTMUCHVER=0.28
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.6.3], sources: *apt_sources}}
+      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-3.0,ghc-8.8.3], sources: *apt_sources}}
+    - compiler: "ghc-8.6.5"
+      language: c
+      env: NOTMUCHVER=0.28
+      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.6.5], sources: *apt_sources}}
     - compiler: "ghc-8.4.4"
       language: c
       env: NOTMUCHVER=0.28
