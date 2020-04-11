@@ -834,11 +834,22 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     sendKeys "r" (Substring "> This is a test mail for purebred")
 
     step "exit vim"
-    sendKeys ": x\r" (Substring "Attachments") >>= put
+    sendLine ": x" (Substring "Attachments") >>= put
 
     assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>\\s+$"
     assertSubstringS "To: <frase@host.example>"
     assertSubstringS ("Subject: Re: " <> subject)
+
+    -- https://github.com/purebred-mua/purebred/issues/379
+    step "edit the mail one more time"
+    sendKeys "e" (Substring "> This is a test mail for purebred")
+
+    step "insert body"
+    sendKeys "oThis is more information" (Substring "This is more information")
+    sendKeys "Escape" Unconditional
+
+    step "exit vim"
+    sendLine ": x" (Substring "Item 1 of 1")
 
     step "send mail"
     sendKeys "y" (Substring "Query")
