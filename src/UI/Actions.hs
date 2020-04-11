@@ -130,7 +130,7 @@ import Prelude hiding (readFile, unlines)
 import Data.Foldable (toList, traverse_)
 import Data.Functor.Identity (Identity(..))
 import Control.Lens
-       (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has, snoc,
+       (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has,
         filtered, set, over, preview, view, (&), firstOf, non, Traversal',
         Getting, Lens', folded, assign, modifying, preuse, use, uses
         , Ixed, Index, IxValue)
@@ -828,7 +828,7 @@ continue = Action mempty (get >>= lift . Brick.continue)
 -- | Suspends Purebred and invokes the configured editor.
 --
 invokeEditor :: Action v ctx (T.Next AppState)
-invokeEditor = Action ["invoke external editor"] (stateSuspendAndResume invokeEditor')
+invokeEditor = Action ["invoke external editor"] (stateSuspendAndResume $ invokeEditor' insertOrReplaceAttachment)
 
 -- | Suspends Purebred to invoke a command for editing an
 -- attachment. Currently only supports re-editing the body text of an
@@ -1129,7 +1129,7 @@ replyMail = Action
           modifying (asCompose . cTo . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
           modifying (asCompose . cFrom . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
           modifying (asCompose . cSubject . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
-          modifying (asCompose . cAttachments) (upsertPart quoted)
+          modifying (asCompose . cAttachments) (insertOrReplaceAttachment quoted)
   }
 
 -- | Toggles whether we want to show all headers from an e-mail or a
@@ -1298,13 +1298,12 @@ makeAttachmentsFromSelected s = do
   let toggled = view (_2 . fsEntryName) <$> toListOf (toggledItemsL (Proxy @'ListOfFiles)) s
       selected = toListOf (list (Proxy @'ListOfFiles) . to L.listSelectedElement . _Just . _2 . _2 . fsEntryName) s
   parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (toggled `union` selected)
-  pure $ s & over (asCompose . cAttachments) (go parts)
+  pure $ s & over (asCompose . cAttachments) (listAppendAttachments parts)
     . over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
     . set (asViews . vsViews . ix ComposeView . vFocus) ComposeListOfAttachments
   where
-    go :: [MIMEMessage] -> L.List Name MIMEMessage -> L.List Name MIMEMessage
-    go parts l = foldr upsertPart l parts
     makeFullPath path = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> path
+    listAppendAttachments parts = L.listMoveTo (-1) . over L.listElementsL (<> Vector.fromList parts)
 
 -- | Determine if the selected directory entry is a file or not. We do
 -- not support adding entire directories to the e-mail.
@@ -1563,8 +1562,11 @@ initialDraftConfirmDialog = dialog (Just "Keep draft?") (Just (0, [("Keep", Keep
 -- serialising fails, we return an error. Once the editor exits, read the
 -- contents from the temporary file, delete it and create a MIME message out of
 -- it. Set it in the Appstate.
-invokeEditor' :: (MonadState AppState m, MonadIO m, MonadMask m) => m ()
-invokeEditor' = do
+invokeEditor' ::
+     (MonadState AppState m, MonadIO m, MonadMask m)
+  => (MIMEMessage -> L.List Name MIMEMessage -> L.List Name MIMEMessage)
+  -> m ()
+invokeEditor' listUpdate = do
   maildir <- use (asConfig . confNotmuch . nmDatabase)
   cmd <- use (asConfig . confEditor)
   maybeEntity <- preuse (asCompose . cAttachments . to L.listSelectedElement . _Just . _2 . to getTextPlainPart . _Just)
@@ -1573,7 +1575,7 @@ invokeEditor' = do
     mkEntity = maybe (pure mempty) entityToBytes maybeEntity
     entityCmd = EntityCommand handleExitCodeTempfileContents
       (draftFileResoure maildir) (\_ fp -> proc cmd [fp]) tryReadProcessStderr
-    updatePart = modifying (asCompose . cAttachments) . upsertPart . createTextPlainMessage
+    updatePart = modifying (asCompose . cAttachments) . listUpdate . createTextPlainMessage
   runExceptT (mkEntity >>= runEntityCommand . entityCmd)
     >>= either assignError updatePart
 
@@ -1620,28 +1622,22 @@ pipeCommand' cmd
 editAttachment :: (MonadState AppState m, MonadIO m, MonadMask m) => m ()
 editAttachment = selectedItemHelper (asCompose . cAttachments) $ \m ->
   case preview (headers . contentDisposition . folded . dispositionType) m of
-    Just Inline -> invokeEditor'
+    Just Inline -> invokeEditor' (\newPart l -> L.listModify (const newPart) l)
     _           -> assignError (GenericError "Not implemented. See #182")
 
--- | Either inserts or updates a part in a list of attachments. This
--- is needed when editing parts during composition of an e-mail.
+-- | If the list is empty, insert the attachment otherwise replace the
+-- currently selected item.
 --
-upsertPart ::
+insertOrReplaceAttachment ::
   MIMEMessage
   -> L.List Name MIMEMessage
   -> L.List Name MIMEMessage
-upsertPart newPart l =
+insertOrReplaceAttachment newPart l =
   case L.listSelectedElement l of
     Nothing -> L.listInsert 0 newPart l
-    Just (_, part) ->
-      if view headers part == view headers newPart
-      then
+    Just _ ->
         -- replace
         L.listModify (const newPart) l
-      else
-        -- append
-        l & over L.listElementsL (`snoc` newPart)
-             . set L.listSelectedL (Just (view (L.listElementsL . to length) l))
 
 getTextPlainPart :: MIMEMessage -> Maybe WireEntity
 getTextPlainPart = firstOf (entities . filtered f)
