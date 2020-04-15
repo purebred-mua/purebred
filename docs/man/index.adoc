@@ -1,0 +1,156 @@
+= Purebred(1)
+:doctype: manpage
+:author: Róman Joost
+:email: roman@bromeco.de
+:source-highlighter:pygments
+:experimental:
+
+== NAME
+
+purebred - A terminal based mail user agent based on notmuch
+
+== SYNOPSIS
+
+purebred [--database DATABASE]
+         [--search SEARCH-TERM]
+         [--debug FILE]
+         [-v|--version]
+
+== Description
+
+Purebred is a powerful text based program for reading and sending
+email. It uses the notmuch database for finding and managing email.
+
+== UI
+
+=== How do I change labels?
+
+Labels a.k.a. tags on mails and threads are changed by using a special syntax.
+
+|===
+|Syntax | Operation
+
+|=
+|Remove all tags
+
+|+tag
+|Add `tag` to thread or mail
+
+|-tag
+|Remove `tag` to thread or mail
+|===
+
+Thus for example, removing all existing tags, and archiving a mail you
+would type the following in the editor in Purebred:
+
+[source]
+----
+= +archive
+----
+
+== Configuration
+=== What functions can I use to customize the configuration
+
+Purebreds configuration is a nested data structure. In order to
+navigate it we export functions based on the <<lens>> package. The best way to
+find what to use is to browse the Haddock documentation.
+
+.Example configuration using lens functions to customize Purebred
+:sourcedir: ../../configs
+[source,haskell]
+----
+include::{sourcedir}/purebred.hs[lines=61..69]
+----
+== UI
+
+=== What view and widget is focused?
+
+A Purebred view consists of many widgets (e.g. a list, a status bar
+and an input field). A widget can receive focus and input. Views and
+widgets have unique identifiers in Purebred.
+
+Purebred shows the view name and the widget name in the lower right
+hand side of the status bar.
+
+== Keybindings
+
+Keybindings are composite functions performing a dedicated action when
+a key is pressed.
+
+.Example keybinding setting labels and untoggling any toggled list items
+[source,haskell]
+----
+include::{sourcedir}/purebred.hs[lines=39..44]
+----
+
+=== How Purebred handles keys
+
+All bindings are stored in a list and looked up based on a key
+event. A pressed key is then matched against the list of bindings. A
+match makes Purebred to run the action. If no key matches, Purebred
+falls back to the default key handler of the used widget. Falling back
+to the default key handling for Brick widgets provides the convenience
+that we do not need to register handlers for each possible key in a
+text editor widget.
+
+=== Figuring out where to change keybindings
+In order to change keybindings, you need to find out:
+
+. the view the widget is in, and
+. the widget name, and
+. the key event created by the low-level vty framework (see
+https://hackage.haskell.org/package/vty[Graphics.Vty.Input.Events] on
+https://hackage.haskell.org)
+
+=== How to change a keybinding
+
+Creating a new keybinding is easy, by merging the default list of key
+bindings with your preferred list of key bindings.
+
+For example, if you want to change labels on your mail by pressing the
+kbd:[a] key, you create a new list of keybindings for the
+`'ListOfThreads` widget.
+
+.Example shows keybindings and the main config function to overwrite them
+[source,haskell]
+----
+import Purebred
+
+myMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]    -- <1>
+myMailKeybindings =
+    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"]  -- <2>
+                                         `chain` continue)  -- <3>
+    ]
+
+-- Tweak the default configuration before starting Purebred
+main :: IO ()
+main = purebred $ tweak defaultConfig where
+  tweak = over (confMailView . mvKeybindings) (`union` myMailKeybindings)  -- <4>
+
+----
+<1> The type indicates that this list holds key bindings for the
+`ViewMail` view and the `ScrollingMailView` widget.
+<2> The keybinding starts by calling the `setTags` action, removing
+and adding labels.
+<3> Every keybinding will have to end with a Brick event loop
+action. The `continue` action continues the event loop and therefore
+Purebred.
+<4> For the custom key bindings to take effect, register them when
+calling `purebred`. We rely heavily on the use
+of <<lens>> functions to
+overwrite the default keybindings by `union` the default list with our
+custom list.
+
+
+== Keybinding Reference
+
+Bindings are registered for a widget and a view in Purebred. This
+allows re-usability of widgets between different views.
+
+The following sections lists the view names, their respective widgets
+and their registered keybindings.
+
+include::keybindings.adoc[]
+
+== References
+- lens: https://hackage.haskell.org/package/lens

@@ -48,6 +48,8 @@ let
     pkgs.notmuch
     pkgs.tmux
     pkgs.gnumake
+    pkgs.asciidoctor
+    pkgs.python3Packages.pygments
   ];
 in
     if pkgs.lib.inNixShell
