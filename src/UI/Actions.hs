@@ -115,12 +115,12 @@ import Network.Mime (defaultMimeLookup)
 import Data.Proxy
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as LB
 import Data.Attoparsec.ByteString.Char8 (parseOnly)
+import qualified Data.Attoparsec.Text as AT (parseOnly)
 import Data.Vector.Lens (vector)
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.List (union)
@@ -146,16 +146,17 @@ import Data.Text.Zipper
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.LocalTime (getZonedTime, zonedTimeToUTC)
 
-import qualified Data.RFC5322.Address.Text as AddressText (renderMailboxes)
+import qualified Data.RFC5322.Address.Text as AddressText
+  ( renderMailboxes, addressList, mailboxList )
 import Data.MIME
        (createMultipartMixedMessage, contentTypeApplicationOctetStream,
         createTextPlainMessage, createAttachmentFromFile, buildMessage,
         contentDisposition, dispositionType, headers, filename,
         parseContentType, attachments, entities, matchContentType,
-        contentType, mailboxList, renderMailboxes, addressList, renderAddresses,
-        renderRFC5422Date, encapsulate, MIMEMessage, WireEntity, DispositionType(..),
+        contentType,
+        encapsulate, MIMEMessage, WireEntity, DispositionType(..),
         ContentType(..), Mailbox(..),
-        CharsetLookup)
+        CharsetLookup, headerDate, headerTo, headerFrom, headerSubject)
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
        ( parseMail, getTo, getFrom, getSubject, getForwardedSubject, toQuotedMail
@@ -1492,15 +1493,15 @@ buildMail k = do
       charsets <- use (asConfig . confCharsets)
       now <- liftIO getCurrentTime
       to' <- uses (asCompose . cTo)
-        (either (pure []) id . parseOnly addressList . T.encodeUtf8 . T.unlines . E.getEditContents)
+        (either (pure []) id . AT.parseOnly AddressText.addressList . T.unlines . E.getEditContents)
       from <- uses (asCompose . cFrom)
-        (either (pure []) id . parseOnly mailboxList . T.encodeUtf8 . T.unlines . E.getEditContents)
+        (either (pure []) id . AT.parseOnly AddressText.mailboxList . T.unlines . E.getEditContents)
       subject <- uses (asCompose . cSubject) (T.unlines . E.getEditContents)
       m
-        & set (headers . at "Subject") (Just $ T.encodeUtf8 subject)
-        & set (headers . at "From") (Just $ renderMailboxes from)
-        & set (headers . at "To") (Just $ renderAddresses to')
-        & set (headers . at "Date") (Just $ renderRFC5422Date now)
+        & set (headerSubject charsets) (Just subject)
+        & set (headerFrom charsets) from
+        & set (headerTo charsets) to'
+        & set headerDate (Just now)
         & sanitizeMail charsets
         & buildMessage
         & k
