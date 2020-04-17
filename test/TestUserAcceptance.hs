@@ -653,7 +653,7 @@ testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
     sendKeys "Enter" (Substring "To")
 
     step "enter to: email"
-    sendKeys "user@to.test\r" (Substring "Subject")
+    sendLine "user@to.test" (Substring "Subject")
 
     step "leave default"
     sendKeys "Enter" (Substring "~")
@@ -665,59 +665,58 @@ testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
     sendKeys "Escape" (Substring "body")
 
     step "exit vim"
-    sendKeys ": x\r" (Substring "text/plain")
+    sendLine ": x" (Substring "text/plain")
       >>= assertSubstring "From: \"Joe Bloggs\" <joe@foo.test>"
 
     step "user can change from header"
     sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
 
-    let lastLineIsStatusLine = "Purebred:.*ComposeView-Attachments\\s+$^$"
+    let lastLineIsStatusLine = Regex "Purebred:.*ComposeView-Attachments\\s+$^$"
     step "append an email"
-    sendKeys ", testuser@foo.test\r" (Substring $ "From: "
-                                      <> "\"Joe Bloggs\" <joe@foo.test>, testuser@foo.test")
-      >>= assertRegex lastLineIsStatusLine
+    sendLine ", testuser@foo.test" lastLineIsStatusLine
+      >>= assertSubstring "From: \"Joe Bloggs\" <joe@foo.test>, testuser@foo.test"
 
     step "user can change to header"
     sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "user@to.test")
 
     step "append an additional from email"
-    sendKeys ", testuser@foo.test\r" (Substring "To: user@to.test, testuser@foo.test")
-      >>= assertRegex lastLineIsStatusLine
+    sendLine ", testuser@foo.test" lastLineIsStatusLine
+      >>= assertSubstring "To: user@to.test, testuser@foo.test"
 
     step "user can add cc header"
     sendKeys "c" (Substring "Cc")
 
     step "enter cc: email"
-    sendKeys "user@cc.test\r" (Substring "Cc: user@cc.test")
-      >>= assertRegex lastLineIsStatusLine
+    sendLine "user@cc.test" lastLineIsStatusLine
+      >>= assertSubstring "Cc: user@cc.test"
 
     step "user can change cc header"
     sendKeys "c" (Regex $ "Cc: " <> buildAnsiRegex [] ["37"] [] <> "user@cc.test")
 
     step "append an additional from email"
-    sendKeys ", testuser@foo.test\r" (Substring "Cc: user@cc.test, testuser@foo.test")
-      >>= assertRegex lastLineIsStatusLine
+    sendLine ", testuser@foo.test" lastLineIsStatusLine
+      >>= assertSubstring "Cc: user@cc.test, testuser@foo.test"
 
     step "user can add bcc header"
     sendKeys "b" (Substring "Bcc")
 
     step "enter bcc: email"
-    sendKeys "user@bcc.test\r" (Substring "Bcc: user@bcc.test")
-      >>= assertRegex lastLineIsStatusLine
+    sendLine "user@bcc.test" lastLineIsStatusLine
+      >>= assertSubstring "Bcc: user@bcc.test"
 
     step "user can change bcc header"
     sendKeys "b" (Regex $ "Bcc: " <> buildAnsiRegex [] ["37"] [] <> "user@bcc.test")
 
     step "append an additional from email"
-    sendKeys ", testuser@foo.test\r" (Substring "Bcc: user@bcc.test, testuser@foo.test")
-      >>= assertRegex lastLineIsStatusLine
+    sendLine ", testuser@foo.test" lastLineIsStatusLine
+      >>= assertSubstring "Bcc: user@bcc.test, testuser@foo.test"
 
     step "change subject"
     sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> "")
 
     step "enter subject"
-    sendKeys "foo subject\r" (Substring "Subject: foo subject")
-      >>= assertRegex lastLineIsStatusLine
+    sendLine "foo subject" lastLineIsStatusLine
+      >>= assertSubstring "Subject: foo subject"
 
 testPipeEntitiesSuccessfully :: PurebredTestCase
 testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" $
