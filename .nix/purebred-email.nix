@@ -1,13 +1,13 @@
 { mkDerivation, attoparsec, base, base64-bytestring, bytestring
-, case-insensitive, concise, deepseq, lens, QuickCheck
+, case-insensitive, concise, deepseq, hedgehog, lens, QuickCheck
 , quickcheck-instances, semigroupoids, semigroups, stdenv
-, stringsearch, tasty, tasty-golden, tasty-hunit, tasty-quickcheck
-, text, time
+, stringsearch, tasty, tasty-golden, tasty-hedgehog, tasty-hunit
+, tasty-quickcheck, text, time
 }:
 mkDerivation {
   pname = "purebred-email";
-  version = "0.3.0.0";
-  sha256 = "367ddcc75640ea3d6473f20a1f8e611668b61f8187ce9bfe2cd0ae9b04af5830";
+  version = "0.4";
+  sha256 = "9f19032e956fc62861b5c90ab8e70918d14ce6c958379817d313828029f55793";
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
@@ -16,12 +16,10 @@ mkDerivation {
     time
   ];
   testHaskellDepends = [
-    attoparsec base bytestring case-insensitive lens QuickCheck
-    quickcheck-instances semigroups tasty tasty-golden tasty-hunit
-    tasty-quickcheck text time
+    attoparsec base bytestring case-insensitive hedgehog lens
+    QuickCheck quickcheck-instances semigroups tasty tasty-golden
+    tasty-hedgehog tasty-hunit tasty-quickcheck text time
   ];
-  # Tests are currently busted
-  doCheck = false;
   homepage = "https://github.com/purebred-mua/purebred-email";
   description = "types and parser for email messages (including MIME)";
   license = stdenv.lib.licenses.agpl3;
