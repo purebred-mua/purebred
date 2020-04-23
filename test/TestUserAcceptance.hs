@@ -1226,7 +1226,7 @@ testHelp = purebredTmuxSession "help view" $
     startApplication
 
     step "shows Keybindings"
-    sendKeys "?" (Substring "quit the application")
+    sendKeys "?" (Regex "Escape>\\s+cancel")
 
     sendKeys "Escape" (Substring "Purebred")
 

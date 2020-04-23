@@ -33,8 +33,6 @@ import Data.Maybe (fromMaybe)
 import Prelude hiding (splitAt)
 
 import Control.Lens
-  ((&), _Just, ix, at, set, lastOf, view, filtered, over, toListOf,
-   traversed)
 import Brick.Focus (focusGetCurrent)
 import Types
 
