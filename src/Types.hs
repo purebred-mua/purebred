@@ -72,29 +72,29 @@ import Purebred.Types.IFC (Tainted)
 
 -- | Used to identify widgets in brick
 data Name =
-    SearchThreadsEditor
+    ComposeBcc
+    | ComposeCc
+    | ComposeFrom
+    | ComposeHeaders
+    | ComposeListOfAttachments
+    | ComposeSubject
+    | ComposeTo
+    | ConfirmDialog
+    | ListOfFiles
     | ListOfMails
     | ListOfThreads
-    | ScrollingMailView
-    | ScrollingMailViewFindWordEditor
-    | ComposeHeaders
-    | ComposeFrom
-    | ComposeTo
-    | ComposeCc
-    | ComposeBcc
-    | ComposeSubject
-    | ComposeListOfAttachments
-    | ScrollingHelpView
-    | ManageMailTagsEditor
-    | ManageThreadTagsEditor
-    | ListOfFiles
-    | ManageFileBrowserSearchPath
-    | MailListOfAttachments
     | MailAttachmentOpenWithEditor
     | MailAttachmentPipeToEditor
-    | StatusBar
-    | ConfirmDialog
+    | MailListOfAttachments
+    | ManageFileBrowserSearchPath
+    | ManageMailTagsEditor
+    | ManageThreadTagsEditor
     | SaveToDiskPathEditor
+    | SearchThreadsEditor
+    | ScrollingHelpView
+    | ScrollingMailView
+    | ScrollingMailViewFindWordEditor
+    | StatusBar
     deriving (Eq,Show,Ord)
 
 -- | A brick list, with a field that optionally contains its length.
