@@ -47,6 +47,7 @@ let
     hlint
     pkgs.notmuch
     pkgs.tmux
+    pkgs.gnumake
   ];
 in
     if pkgs.lib.inNixShell
