@@ -243,7 +243,8 @@ mailbodySourceAttr = mailbodyAttr <> "source"
 
 
 -- * Purebred's Configuration
--- The default configuration used in Purebred.
+
+-- | The default configuration used in Purebred.
 --
 defaultConfig :: UserConfiguration
 defaultConfig =
