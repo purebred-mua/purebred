@@ -13,6 +13,11 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+-- | This module provides core types and lens functions to customize
+-- Purebred.
+--
+
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -20,10 +25,236 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 
--- | Basic types for the UI used by this library
 module Types
-  ( module Types
+  ( -- * Application state
+    AppState(..)
+  , asConfig
+  , asMailIndex
+  , asMailView
+  , asCompose
+  , asError
+  , asViews
+  , asFileBrowser
+  , asLocalTime
+  , Async(..)
+  , asAsync
+
+    -- ** Threads and Mails Lists
+  , MailIndex(..)
+  , miListOfMails
+  , miListOfThreads
+  , miListOfThreadsGeneration
+  , miSearchThreadsEditor
+  , miMailTagsEditor
+  , miThreadTagsEditor
+  , miThreads
+  , miNewMail
+  , miMails
+  , NotmuchMail(..)
+  , mailSubject
+  , mailFrom
+  , mailDate
+  , mailTags
+  , mailId
+  , NotmuchThread(..)
+  , thSubject
+  , thAuthors
+  , thDate
+  , thTags
+  , thReplies
+  , thId
+
+    -- ** Mail Viewer
+  , MailView(..)
+  , mvMail
+  , mvBody
+  , mvAttachments
+  , mvSaveToDiskPath
+  , mvOpenCommand
+  , mvPipeCommand
+  , mvFindWordEditor
+  , mvScrollSteps
+  , Toggleable
+  , MailBody(..)
+  , mbParagraph
+  , mbSource
+  , matchCount
+  , Source
+  , Paragraph(..)
+  , pLine
+  , Line(..)
+  , hasMatches
+  , lMatches
+  , lText
+  , lNumber
+  , ScrollStep
+  , stNumber
+  , stMatch
+  , Match(..)
+  , mLinenumber
+
+    -- ** Mail Composer
+  , Compose(..)
+  , cFrom
+  , cTo
+  , cCc
+  , cBcc
+  , cSubject
+  , cAttachments
+  , cKeepDraft
+  , ConfirmDraft(..)
+
+    -- ** File Browser
+  , FileBrowser(..)
+  , fbEntries
+  , fbSearchPath
+  , FileSystemEntry(..)
+  , fsEntryName
+
+    -- ** Concurrent actions
+  , aValidation
+
+    -- ** Widgets
+  , Name(..)
+  , HeadersState(..)
+
+    -- ** View implementation
+  , ViewSettings(..)
+  , vsViews
+  , vsFocusedView
+  , ViewName(..)
+  , View(..)
+  , ViewState(..)
+  , vFocus
+  , vLayers
+  , Layer(..)
+  , Layers
+  , layeriso
+  , Tile(..)
+  , veName
+  , veState
+
+    -- ** Keybindings
+  , Keybinding(..)
+  , kbEvent
+  , kbAction
+  , Action(..)
+  , aDescription
+  , aAction
+
+    -- * Configuration
+  , UserConfiguration
+  , InternalConfiguration
+  , InternalConfigurationFields
+  , confBChan
+  , confBoundary
+  , confLogSink
+  , PurebredEvent(..)
+  , Configuration(..)
+  , confTheme
+  , confNotmuch
+  , confEditor
+  , confMailView
+  , confIndexView
+  , confComposeView
+  , confHelpView
+  , confDefaultView
+  , confFileBrowserView
+  , confCharsets
+  , confExtra
+
+    -- ** Notmuch Configuration
+  , NotmuchSettings(..)
+  , nmSearch
+  , nmDatabase
+  , nmNewTag
+  , nmDraftTag
+  , nmSentTag
+  , nmHasNewMailSearch
+  , nmHasNewMailCheckDelay
+  , Delay(..)
   , Tag
+  , TagOp(..)
+
+  -- ** Mail Viewer
+  , MailViewSettings(..)
+  , mvIndexRows
+  , mvTextWidth
+  , mvHeadersToShow
+  , mvPreferredContentType
+  , mvHeadersState
+  , mvMailcap
+  , MailcapHandler(..)
+  , mhMakeProcess
+  , mhCopiousoutput
+  , mhKeepTemp
+  , MakeProcess(..)
+  , mpCommand
+  , CopiousOutput(..)
+  , isCopiousOutput
+  , hasCopiousoutput
+  , TempfileOnExit(..)
+
+  -- *** Mail Viewer Keybindings
+  , mvKeybindings
+  , mvManageMailTagsKeybindings
+  , mvMailListOfAttachmentsKeybindings
+  , mvOpenWithKeybindings
+  , mvPipeToKeybindings
+  , mvFindWordEditorKeybindings
+  , mvSaveToDiskKeybindings
+  , mvToKeybindings
+
+  -- ** Threads Viewer
+  , IndexViewSettings(..)
+  -- *** Threads Viewer Keybindings
+  , ivBrowseThreadsKeybindings
+  , ivSearchThreadsKeybindings
+  , ivManageThreadTagsKeybindings
+  , ivFromKeybindings
+  , ivToKeybindings
+  , ivSubjectKeybindings
+
+  -- ** Mail Composer
+  , ComposeViewSettings(..)
+  , cvSendMailCmd
+  , cvIdentities
+  -- *** Mail Composer Keybindings
+  , cvFromKeybindings
+  , cvToKeybindings
+  , cvCcKeybindings
+  , cvBccKeybindings
+  , cvSubjectKeybindings
+  , cvListOfAttachmentsKeybindings
+  , cvConfirmKeybindings
+  
+  -- ** Help Viewer
+  , HelpViewSettings(..)
+  , hvKeybindings
+
+  -- ** File Browser
+  , FileBrowserSettings(..)
+  , fbHomePath
+  -- *** Keybindings
+  , fbKeybindings
+  , fbSearchPathKeybindings
+
+  -- * Internals
+  , ListWithLength(..)
+  , listList
+  , listLength
+  , EntityCommand(..)
+  , ccResource
+  , ccRunProcess
+  , ccAfterExit
+  , ccEntity
+  , ccProcessConfig
+  , ResourceSpec(..)
+  , rsAcquire
+  , rsUpdate
+  , rsFree
+  , decodeLenient
+  , Generation(..)
   ) where
 
 import Prelude hiding (Word)
@@ -70,7 +301,9 @@ import Purebred.Types.IFC (Tainted)
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
--- | Used to identify widgets in brick
+-- | Widget identifiers. Each rendered widget has one unique
+-- identifier in Purebred's UI.
+--
 data Name =
     ComposeBcc
     | ComposeCc
@@ -319,16 +552,19 @@ cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
 cKeepDraft :: Lens' Compose (Dialog ConfirmDraft)
 cKeepDraft = lens _cKeepDraft (\c x -> c { _cKeepDraft = x })
 
-data NotmuchSettings a = NotmuchSettings
-    { _nmSearch :: T.Text
-    , _nmDatabase :: a
-    , _nmNewTag :: Tag
-    , _nmDraftTag :: Tag
-    , _nmSentTag :: Tag
-    , _nmHasNewMailSearch :: T.Text
+data NotmuchSettings a =
+  NotmuchSettings
+    { _nmSearch :: T.Text -- ^ The default query used on startup.
+    , _nmDatabase :: a -- ^ The 'FilePath' to the database.
+    , _nmNewTag :: Tag -- ^ The 'Tag' indicating a new mail or thread.
+    , _nmDraftTag :: Tag -- ^ The 'Tag' to attach mails during composition when saved as drafts.
+    , _nmSentTag :: Tag -- ^ The 'Tag' to attach to mails once successfully sent.
+    , _nmHasNewMailSearch :: T.Text -- ^ Search carried out by Purebred to determine the number of new mail.
     , _nmHasNewMailCheckDelay :: Maybe Delay
+    -- ^ The interval in which Purebred queries for new mail. Set to 'Nothing' to disable
+    -- the check.
     }
-    deriving (Generic, NFData)
+  deriving (Generic, NFData)
 
 nmSearch :: Lens' (NotmuchSettings a) T.Text
 nmSearch = lens _nmSearch (\nm x -> nm { _nmSearch = x })
@@ -389,7 +625,13 @@ data Configuration extra a b c = Configuration
 
 type InternalConfigurationFields = (BChan PurebredEvent, String, LT.Text -> IO ())
 
+-- | The configuration from the user holding IO side effects. This
+-- configuration is evaluated to 'InternalConfiguration' by evaluating
+-- all the IO side effects during start up. See 'Purebred'
+--
 type UserConfiguration = Configuration () (IO FilePath) (IO String) (IO FilePath)
+
+-- | Purebred's configuration with all IO actions evaluated to pure form.
 type InternalConfiguration = Configuration InternalConfigurationFields FilePath String FilePath
 
 type ConfigurationLens v = forall z a b c. Lens' (Configuration z a b c) v
@@ -679,7 +921,9 @@ aValidation :: Lens' Async (Maybe ThreadId)
 aValidation = lens _aValidation (\as x -> as { _aValidation = x })
 
 
--- | Overall application state
+-- | The application state holding state to render widgets, error
+-- management, as well as views and more.
+--
 data AppState = AppState
     { _asConfig :: InternalConfiguration
     , _asMailIndex :: MailIndex
@@ -756,7 +1000,7 @@ kbEvent = to (\(Keybinding b _) -> b)
 kbAction :: Getter (Keybinding v ctx) (Action v ctx (Next AppState))
 kbAction = to (\(Keybinding _ c) -> c)
 
--- | an email from the notmuch database
+-- | An email from the notmuch database represented in Purebred.
 data NotmuchMail = NotmuchMail
     { _mailSubject :: T.Text
     , _mailFrom :: T.Text
@@ -780,6 +1024,7 @@ mailTags = lens _mailTags (\m t -> m { _mailTags = t })
 mailId :: Lens' NotmuchMail B.ByteString
 mailId = lens _mailId (\m i -> m { _mailId = i })
 
+-- | A thread of mails from the notmuch database represented in Purebred.
 data NotmuchThread = NotmuchThread
     { _thSubject :: T.Text
     , _thAuthors :: [T.Text]
