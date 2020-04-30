@@ -30,28 +30,38 @@ apt_sources: &apt_sources
   - sourceline: "ppa:jamesw05/tmux"
     key_url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x51a89e9c35f79436"
 
+common_packages: &common_packages
+  - elinks
+  - tmux
+  - g++
+  - libxapian-dev
+  - libgmime-2.6-dev
+  - libtalloc-dev
+  - zlib1g-dev
+  - ghc-ppa-tools
+
 matrix:
   include:
     - compiler: "ghc-8.10.1"
       language: c
       env: NOTMUCHVER=0.28 GHCHEAD=true
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-3.2,ghc-8.10.1], sources: *apt_sources}}
+      addons: {apt: {packages: [*common_packages,cabal-install-3.2,ghc-8.10.1], sources: *apt_sources}}
     - compiler: "ghc-8.8.3"
       language: c
       env: NOTMUCHVER=0.28
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-3.0,ghc-8.8.3], sources: *apt_sources}}
+      addons: {apt: {packages: [*common_packages,cabal-install-3.0,ghc-8.8.3], sources: *apt_sources}}
     - compiler: "ghc-8.6.5"
       language: c
       env: NOTMUCHVER=0.28 CABAL_TEST_SHOW_DETAILS=-v 1
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.6.5], sources: *apt_sources}}
+      addons: {apt: {packages: [*common_packages,cabal-install-2.4,ghc-8.6.5], sources: *apt_sources}}
     - compiler: "ghc-8.4.4"
       language: c
       env: NOTMUCHVER=0.28 CABAL_TEST_SHOW_DETAILS=-v 1
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.4.4], sources: *apt_sources}}
+      addons: {apt: {packages: [*common_packages,cabal-install-2.4,ghc-8.4.4], sources: *apt_sources}}
     - compiler: "ghc-head"
       language: c
       env: NOTMUCHVER=0.28 GHCHEAD=true
-      addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-head,ghc-head], sources: *apt_sources}}
+      addons: {apt: {packages: [*common_packages,cabal-install-head,ghc-head], sources: *apt_sources}}
     - compiler: "ghc865 (default)"
       language: nix
       before_install:
@@ -62,6 +72,8 @@ matrix:
        - nix-env --install --attr nixpkgs.elinks
        - nix-build -j 2
        - nix-shell --command 'PATH=$PATH:result/bin cabal v2-test --test-show-details=streaming uat'
+       - echo -e "[database]\npath=$(pwd)" > ${HOME}/.notmuch-config
+       - nix-shell --command 'pushd docs/man && PATH=$PATH:../../result/bin make && popd'
     - compiler: "hlint"
       language: c
       addons:
@@ -151,7 +163,7 @@ script:
   - cabal new-build -w ${HC} --disable-tests --disable-benchmarks all
 
   # install the program (required for UAT)
-  - cabal new-install -w ${HC} exe:purebred
+  - cabal new-install -w ${HC} exe:purebred purebred-dump-keybinding
   # trick the UAT into looking for configs / data in the right place
   - export SRCDIR=$(find ${PWD} -maxdepth 1 -type d -name 'purebred-*')
 
