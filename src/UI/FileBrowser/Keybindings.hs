@@ -42,6 +42,7 @@ fileBrowserKeybindings =
 
 manageSearchPathKeybindings :: [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
 manageSearchPathKeybindings =
-  [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` focus @'FileBrowser @'ListOfFiles `chain` continue)
-  , Keybinding (V.EvKey V.KEnter []) (done `chain` continue)
+  [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'FileBrowser @'ListOfFiles `chain` continue)
+  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'FileBrowser @'ListOfFiles `chain` continue)
+  , Keybinding (V.EvKey V.KEnter []) (done `chain'` focus @'FileBrowser @'ListOfFiles `chain` continue)
   ]
