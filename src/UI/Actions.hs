@@ -239,7 +239,7 @@ instance HasEditor 'ComposeSubject where
   editorL _ = asCompose . cSubject . editEditorL
 
 instance HasEditor 'ManageMailTagsEditor where
-  editorL _ = asMailIndex . miMailTagsEditor
+  editorL _ = asThreadsView . miMailTagsEditor
 
 instance HasEditor 'MailAttachmentOpenWithEditor where
   editorL _ = asMailView . mvOpenCommand
@@ -251,10 +251,10 @@ instance HasEditor 'ScrollingMailViewFindWordEditor where
   editorL _ = asMailView . mvFindWordEditor
 
 instance HasEditor 'SearchThreadsEditor where
-  editorL _ = asMailIndex . miSearchThreadsEditor . editEditorL
+  editorL _ = asThreadsView . miSearchThreadsEditor . editEditorL
 
 instance HasEditor 'ManageThreadTagsEditor where
-  editorL _ = asMailIndex . miThreadTagsEditor
+  editorL _ = asThreadsView . miThreadTagsEditor
 
 instance HasEditor 'SaveToDiskPathEditor where
   editorL _ = asMailView . mvSaveToDiskPath
@@ -268,17 +268,17 @@ class HasList (n :: Name) where
 instance HasList 'ListOfThreads where
   type T 'ListOfThreads = V
   type E 'ListOfThreads = Toggleable NotmuchThread
-  list _ = asMailIndex . miListOfThreads
+  list _ = asThreadsView . miListOfThreads
 
 instance HasList 'ListOfMails where
   type T 'ListOfMails = Vector.Vector
   type E 'ListOfMails = Toggleable NotmuchMail
-  list _ = asMailIndex . miListOfMails
+  list _ = asThreadsView . miListOfMails
 
 instance HasList 'ScrollingMailView where
   type T 'ScrollingMailView = Vector.Vector
   type E 'ScrollingMailView = Toggleable NotmuchMail
-  list _ = asMailIndex . miListOfMails
+  list _ = asThreadsView . miListOfMails
 
 instance HasList 'ComposeListOfAttachments where
   type T 'ComposeListOfAttachments = Vector.Vector
@@ -334,6 +334,7 @@ instance Completable 'ManageMailTagsEditor where
   complete _ = do
     get >>= liftIO . completeMailTags >>= put
     hide ViewMail 0 ManageMailTagsEditor
+    modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Completable 'ComposeListOfAttachments where
   complete _ = sendMail
@@ -345,7 +346,7 @@ completeMailTags s =
     case getEditorTagOps (Proxy @'ManageMailTagsEditor) s of
         Left err -> pure $ setError err s
         Right ops -> flip execStateT s $ do
-            modifying (asMailIndex . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops))
+            modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops))
             toggledOrSelectedItemHelper
               (Proxy @'ScrollingMailView)
               (manageMailTags ops)
@@ -431,15 +432,15 @@ class Resetable (v :: ViewName) (n :: Name) where
   reset :: (MonadIO m, MonadState AppState m) => Proxy v -> Proxy n -> m ()
 
 instance Resetable 'Threads 'SearchThreadsEditor where
-  reset _ _ = modifying (asMailIndex . miSearchThreadsEditor) revertEditorState
+  reset _ _ = modifying (asThreadsView . miSearchThreadsEditor) revertEditorState
 
 instance Resetable 'ViewMail 'ManageMailTagsEditor where
-  reset _ _ = modifying (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+  reset _ _ = modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
               *> hide ViewMail 0 ManageMailTagsEditor
 
 instance Resetable 'Threads 'ManageThreadTagsEditor where
   reset _ _ = do
-    modifying (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+    modifying (asThreadsView . miThreadTagsEditor . E.editContentsL) clearZipper
     modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Resetable 'Threads 'ComposeFrom where
@@ -539,12 +540,12 @@ class Focusable (v :: ViewName) (n :: Name) where
 
 instance Focusable 'Threads 'SearchThreadsEditor where
   switchFocus _ _ = do
-    modifying (asMailIndex . miSearchThreadsEditor . editEditorL) (E.applyEdit gotoEOL)
-    modifying (asMailIndex . miSearchThreadsEditor) saveEditorState
+    modifying (asThreadsView . miSearchThreadsEditor . editEditorL) (E.applyEdit gotoEOL)
+    modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
 
 instance Focusable 'Threads 'ManageThreadTagsEditor where
   switchFocus _ _ = do
-    modifying (asMailIndex . miThreadTagsEditor . E.editContentsL) clearZipper
+    modifying (asThreadsView . miThreadTagsEditor . E.editContentsL) clearZipper
     modify (toggleLastVisibleWidget ManageThreadTagsEditor)
 
 instance Focusable 'Threads 'ComposeFrom where
@@ -563,7 +564,7 @@ instance Focusable 'Threads 'ListOfThreads where
 
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
   switchFocus _ _ = do
-    modifying (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+    modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
     unhide ViewMail 0 ManageMailTagsEditor
     assign (asViews . vsViews . ix ViewMail . vFocus) ManageMailTagsEditor
 
@@ -1015,11 +1016,11 @@ displayThreadMails =
         -- Update the Application state with all mails found for the
         -- currently selected thread.
         dbpath <- use (asConfig . confNotmuch . nmDatabase)
-        selectedItemHelper (asMailIndex . miListOfThreads) $ \(_, t) ->
+        selectedItemHelper (asThreadsView . miListOfThreads) $ \(_, t) ->
           runExceptT (Notmuch.getThreadMessages dbpath (Identity t))
             >>= either assignError (\vec -> do
-              modifying (asMailIndex . miMails . listList) (L.listReplace vec Nothing)
-              assign (asMailIndex . miMails . listLength) (Just (length vec)) )
+              modifying (asThreadsView . miMails . listList) (L.listReplace vec Nothing)
+              assign (asThreadsView . miMails . listLength) (Just (length vec)) )
     }
 
 setUnread :: Action 'ViewMail 'ScrollingMailView ()
@@ -1159,7 +1160,7 @@ selectNextUnread = Action
       -- but if there is no resulting selection, move to the
       -- last element in the list
       let f l = maybe (L.listMoveTo (-1) l) (const l) (view L.listSelectedL l)
-      modifying (asMailIndex . miListOfMails) (f . L.listFindBy (p . view _2))
+      modifying (asThreadsView . miListOfMails) (f . L.listFindBy (p . view _2))
   }
 
 -- | Selects a list item. Currently only used in the file browser to
@@ -1219,7 +1220,7 @@ handleConfirm = Action ["handle confirmation"] keepOrDiscardDraft
 --
 composeAsNew :: Action 'ViewMail 'ScrollingMailView ()
 composeAsNew = Action ["edit mail as new"] $
-  preuse (asMailIndex .  miListOfMails . to L.listSelectedElement . _Just . _2 . _2)
+  preuse (asThreadsView .  miListOfMails . to L.listSelectedElement . _Just . _2 . _2)
     >>= maybe
       (assignError (GenericError "No mail selected"))
       (\mail -> do
@@ -1268,7 +1269,7 @@ isFileUnderCursor = maybe False (FB.fileTypeMatch [FB.RegularFile])
 --
 applySearch :: (MonadIO m, MonadState AppState m) => m ()
 applySearch = do
-  searchterms <- currentLine <$> use (asMailIndex . miSearchThreadsEditor . editEditorL . E.editContentsL)
+  searchterms <- currentLine <$> use (asThreadsView . miSearchThreadsEditor . editEditorL . E.editContentsL)
   nmconf <- use (asConfig . confNotmuch)
   r <- runExceptT (Notmuch.getThreads searchterms nmconf)
   case r of
@@ -1276,8 +1277,8 @@ applySearch = do
     Right threads -> do
       liftIO (zonedTimeToUTC <$> getZonedTime) >>= assign asLocalTime
       notifyNumThreads threads
-      modifying (asMailIndex . miThreads . listList) (L.listReplace threads (Just 0))
-      assign (asMailIndex . miThreads . listLength) Nothing
+      modifying (asThreadsView . miThreads . listList) (L.listReplace threads (Just 0))
+      assign (asThreadsView . miThreads . listLength) Nothing
 
 -- | Fork a thread to compute the length of the container and send a
 -- NotifyNumThreads event.  'seq' ensures that the work is actually
@@ -1285,12 +1286,12 @@ applySearch = do
 -- the 'AppState' with it.
 notifyNumThreads :: (MonadState AppState m, MonadIO m, Foldable t) => t a -> m ()
 notifyNumThreads l = do
-  nextGen <- uses (asMailIndex . miListOfThreadsGeneration) nextGeneration
+  nextGen <- uses (asThreadsView . miListOfThreadsGeneration) nextGeneration
   chan <- use (asConfig . confBChan)
   void . liftIO . forkIO $
     let len = length l
     in len `seq` writeBChan chan (NotifyNumThreads len nextGen)
-  assign (asMailIndex . miListOfThreadsGeneration) nextGen
+  assign (asThreadsView . miListOfThreadsGeneration) nextGen
 
 -- | Operate over either toggled or a single selected list item
 --
@@ -1352,7 +1353,7 @@ updateStateWithParsedMail = do
   textwidth <- use (asConfig . confMailView . mvTextWidth)
   preferredContentType <- use (asConfig . confMailView . mvPreferredContentType)
   s <- get
-  selectedItemHelper (asMailIndex . miListOfMails) $ \(_, m) ->
+  selectedItemHelper (asThreadsView . miListOfMails) $ \(_, m) ->
     runExceptT (parseMail m db >>= bodyToDisplay s textwidth charsets preferredContentType)
     >>= either
       (\e -> do
@@ -1381,7 +1382,7 @@ updateReadState con = do
     (Proxy @'ScrollingMailView)
     (manageMailTags [op])
     (over _2 (Notmuch.tagItem [op]))
-  modifying (asMailIndex . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem [op]))
+  modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem [op]))
 
 manageMailTags ::
      (Traversable t, MonadIO m, MonadState AppState m)
