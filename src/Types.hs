@@ -29,7 +29,7 @@ module Types
   ( -- * Application state
     AppState(..)
   , asConfig
-  , asMailIndex
+  , asThreadsView
   , asMailView
   , asCompose
   , asError
@@ -40,7 +40,7 @@ module Types
   , asAsync
 
     -- ** Threads and Mails Lists
-  , MailIndex(..)
+  , ThreadsView(..)
   , miListOfMails
   , miListOfThreads
   , miListOfThreadsGeneration
@@ -352,13 +352,10 @@ listLength :: Lens' (ListWithLength t a) (Maybe Int)
 listLength f (ListWithLength a b) = (\b' -> ListWithLength a b') <$> f b
 
 
-{- | main application interface
-
-The main UI shows a list of e-mails, allows the user to manipulate the notmuch
-search and composes e-mails from here.
-
--}
-data MailIndex = MailIndex
+-- | A view showing a list of threads.
+-- This is the default view of the Purebred on startup.
+--
+data ThreadsView = ThreadsView
     { _miListOfMails  :: ListWithLength V.Vector (Toggleable NotmuchMail)
     , _miListOfThreads :: ListWithLength V (Toggleable NotmuchThread)
     , _miListOfThreadsGeneration :: Generation
@@ -368,32 +365,32 @@ data MailIndex = MailIndex
     , _miNewMail :: Int
     }
 
-miMails :: Lens' MailIndex (ListWithLength V.Vector (Toggleable NotmuchMail))
+miMails :: Lens' ThreadsView (ListWithLength V.Vector (Toggleable NotmuchMail))
 miMails = lens _miListOfMails (\m v -> m { _miListOfMails = v })
 
-miThreads :: Lens' MailIndex (ListWithLength V (Toggleable NotmuchThread))
+miThreads :: Lens' ThreadsView (ListWithLength V (Toggleable NotmuchThread))
 miThreads = lens _miListOfThreads (\m v -> m { _miListOfThreads = v})
 
-miListOfMails :: Lens' MailIndex (L.GenericList Name V.Vector (Toggleable NotmuchMail))
+miListOfMails :: Lens' ThreadsView (L.GenericList Name V.Vector (Toggleable NotmuchMail))
 miListOfMails = miMails . listList
 
-miListOfThreads :: Lens' MailIndex (L.GenericList Name V (Toggleable NotmuchThread))
+miListOfThreads :: Lens' ThreadsView (L.GenericList Name V (Toggleable NotmuchThread))
 miListOfThreads = miThreads . listList
 
-miListOfThreadsGeneration :: Lens' MailIndex Generation
+miListOfThreadsGeneration :: Lens' ThreadsView Generation
 miListOfThreadsGeneration =
   lens _miListOfThreadsGeneration (\s b -> s { _miListOfThreadsGeneration = b })
 
-miSearchThreadsEditor :: Lens' MailIndex (StatefulEditor T.Text Name)
+miSearchThreadsEditor :: Lens' ThreadsView (StatefulEditor T.Text Name)
 miSearchThreadsEditor = lens _miSearchThreadsEditor (\m v -> m { _miSearchThreadsEditor = v})
 
-miMailTagsEditor :: Lens' MailIndex (E.Editor T.Text Name)
+miMailTagsEditor :: Lens' ThreadsView (E.Editor T.Text Name)
 miMailTagsEditor = lens _miMailTagsEditor (\m v -> m { _miMailTagsEditor = v})
 
-miThreadTagsEditor :: Lens' MailIndex (E.Editor T.Text Name)
+miThreadTagsEditor :: Lens' ThreadsView (E.Editor T.Text Name)
 miThreadTagsEditor = lens _miThreadTagsEditor (\m v -> m { _miThreadTagsEditor = v})
 
-miNewMail :: Lens' MailIndex Int
+miNewMail :: Lens' ThreadsView Int
 miNewMail = lens _miNewMail (\m v -> m { _miNewMail = v})
 
 -- | A loose annotation what produced the rendered output of the
@@ -926,7 +923,7 @@ aValidation = lens _aValidation (\as x -> as { _aValidation = x })
 --
 data AppState = AppState
     { _asConfig :: InternalConfiguration
-    , _asMailIndex :: MailIndex
+    , _asThreadsView :: ThreadsView
     , _asMailView  :: MailView
     , _asCompose   :: Compose  -- ^ state to keep when user creates a new mail
     , _asError     :: Maybe Error -- ^ in case of errors, show this error message
@@ -939,8 +936,8 @@ data AppState = AppState
 asConfig :: Lens' AppState InternalConfiguration
 asConfig = lens _asConfig (\appstate x -> appstate { _asConfig = x })
 
-asMailIndex :: Lens' AppState MailIndex
-asMailIndex = lens _asMailIndex (\appstate x -> appstate { _asMailIndex = x })
+asThreadsView :: Lens' AppState ThreadsView
+asThreadsView = lens _asThreadsView (\appstate x -> appstate { _asThreadsView = x })
 
 asMailView :: Lens' AppState MailView
 asMailView = lens _asMailView (\appstate x -> appstate { _asMailView = x })

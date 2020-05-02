@@ -143,8 +143,8 @@ composeBccHandler s e =
   >>= Brick.continue
 
 manageMailTagHandler s e =
-  Brick.handleEventLensed s (asMailIndex . miMailTagsEditor) E.handleEditorEvent e
-  >>= liftIO . runValidation (preview _Left . parseTagOps) (asMailIndex . miMailTagsEditor)
+  Brick.handleEventLensed s (asThreadsView . miMailTagsEditor) E.handleEditorEvent e
+  >>= liftIO . runValidation (preview _Left . parseTagOps) (asThreadsView . miMailTagsEditor)
   >>= Brick.continue
 
 -- | Do nothing.  It might be worthwhile to enhance this to display
@@ -157,14 +157,14 @@ nullEventHandler = EventHandler (\f s -> s <$ f []) (const . Brick.continue)
 eventHandlerListOfThreads :: EventHandler 'Threads 'ListOfThreads
 eventHandlerListOfThreads = EventHandler
   (asConfig . confIndexView . ivBrowseThreadsKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailIndex . miListOfThreads) L.handleListEvent)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asThreadsView . miListOfThreads) L.handleListEvent)
 
 eventHandlerSearchThreadsEditor :: EventHandler 'Threads 'SearchThreadsEditor
 eventHandlerSearchThreadsEditor = EventHandler
   (asConfig . confIndexView . ivSearchThreadsKeybindings)
   (\s ->
      Brick.continue
-     <=< Brick.handleEventLensed s (asMailIndex . miSearchThreadsEditor . editEditorL) E.handleEditorEvent)
+     <=< Brick.handleEventLensed s (asThreadsView . miSearchThreadsEditor . editEditorL) E.handleEditorEvent)
 
 eventHandlerViewMailManageMailTagsEditor :: EventHandler 'ViewMail 'ManageMailTagsEditor
 eventHandlerViewMailManageMailTagsEditor = EventHandler
@@ -195,8 +195,8 @@ eventHandlerManageThreadTagsEditor :: EventHandler 'Threads 'ManageThreadTagsEdi
 eventHandlerManageThreadTagsEditor =
   EventHandler
     (asConfig . confIndexView . ivManageThreadTagsKeybindings)
-    (\s e -> Brick.handleEventLensed s (asMailIndex . miThreadTagsEditor) E.handleEditorEvent e
-      >>= liftIO . runValidation (preview _Left . parseTagOps) (asMailIndex . miThreadTagsEditor)
+    (\s e -> Brick.handleEventLensed s (asThreadsView . miThreadTagsEditor) E.handleEditorEvent e
+      >>= liftIO . runValidation (preview _Left . parseTagOps) (asThreadsView . miThreadTagsEditor)
       >>= Brick.continue)
 
 eventHandlerScrollingMailView :: EventHandler 'ViewMail 'ScrollingMailView

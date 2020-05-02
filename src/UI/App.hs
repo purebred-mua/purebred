@@ -151,10 +151,10 @@ appEvent ::
 appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
 appEvent s (T.AppEvent ev) = case ev of
   NotifyNumThreads n gen -> M.continue $
-    if gen == view (asMailIndex . miListOfThreadsGeneration) s
-    then set (asMailIndex . miThreads . listLength) (Just n) s
+    if gen == view (asThreadsView . miListOfThreadsGeneration) s
+    then set (asThreadsView . miThreads . listLength) (Just n) s
     else s
-  NotifyNewMailArrived n -> M.continue (set (asMailIndex . miNewMail) n s)
+  NotifyNewMailArrived n -> M.continue (set (asThreadsView . miNewMail) n s)
   InputValidated l err -> M.continue (s & set l err . set (asAsync . aValidation) Nothing)
 appEvent s _ = M.continue s
 
@@ -167,7 +167,7 @@ initialState conf = do
   let
     searchterms = view (confNotmuch . nmSearch) conf
     mi =
-        MailIndex
+        ThreadsView
             (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
             (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
             firstGeneration

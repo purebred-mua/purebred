@@ -80,16 +80,16 @@ statusbar s =
         Just e -> renderError e
         Nothing ->
             case focusedViewWidget s of
-                SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor . editEditorL) s) s
-                ManageMailTagsEditor -> renderStatusbar (view (asMailIndex . miMailTagsEditor) s) s
-                ManageThreadTagsEditor -> renderStatusbar (view (asMailIndex . miThreadTagsEditor) s) s
+                SearchThreadsEditor -> renderStatusbar (view (asThreadsView . miSearchThreadsEditor . editEditorL) s) s
+                ManageMailTagsEditor -> renderStatusbar (view (asThreadsView . miMailTagsEditor) s) s
+                ManageThreadTagsEditor -> renderStatusbar (view (asThreadsView . miThreadTagsEditor) s) s
                 MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
                 MailAttachmentPipeToEditor -> renderStatusbar (view (asMailView . mvPipeCommand) s) s
                 ScrollingMailViewFindWordEditor -> renderStatusbar (view (asMailView . mvFindWordEditor) s) s
                 SaveToDiskPathEditor -> renderStatusbar (view (asMailView . mvSaveToDiskPath) s) s
-                ListOfThreads -> renderStatusbar (view (asMailIndex . miThreads) s) s
-                ListOfMails -> renderStatusbar (view (asMailIndex . miMails) s) s
-                ScrollingMailView -> renderStatusbar (view (asMailIndex . miMails) s) s
+                ListOfThreads -> renderStatusbar (view (asThreadsView . miThreads) s) s
+                ListOfMails -> renderStatusbar (view (asThreadsView . miMails) s) s
+                ScrollingMailView -> renderStatusbar (view (asThreadsView . miMails) s) s
                 ComposeListOfAttachments -> renderStatusbar (views (asCompose . cAttachments) lwl s) s
                 MailListOfAttachments -> renderStatusbar (views (asMailView . mvAttachments) lwl s) s
                 ListOfFiles -> renderStatusbar (view (asFileBrowser . fbEntries) s) s
@@ -129,9 +129,9 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
 renderToggled :: AppState -> Widget n
 renderToggled s =
   let currentL = case focusedViewWidget s of
-        ListOfThreads -> length $ toListOf (asMailIndex . miListOfThreads . traversed . filtered fst) s
+        ListOfThreads -> length $ toListOf (asThreadsView . miListOfThreads . traversed . filtered fst) s
         ListOfFiles -> length $ view (asFileBrowser . fbEntries . to FB.fileBrowserSelection) s
-        _ -> length $ toListOf (asMailIndex . miListOfMails . traversed . filtered fst) s
+        _ -> length $ toListOf (asThreadsView . miListOfMails . traversed . filtered fst) s
   in if currentL > 0 then str $ "Marked: " <> show currentL else emptyWidget
 
 renderMatches :: AppState -> Widget n
@@ -146,7 +146,7 @@ renderMatches s =
 
 renderNewMailIndicator :: AppState -> Widget n
 renderNewMailIndicator s =
-  let newMailCount = view (asMailIndex . miNewMail) s
+  let newMailCount = view (asThreadsView . miNewMail) s
       indicator = str $ "New: " <> show newMailCount
    in padRight (Pad 1) indicator
 

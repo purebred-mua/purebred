@@ -41,10 +41,10 @@ import Config.Main
   listStateToggledAttr, mailAuthorsAttr, mailTagAttr)
 
 renderListOfThreads :: AppState -> Widget Name
-renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asMailIndex . miListOfThreads) s
+renderListOfThreads s = L.renderList (listDrawThread s) True $ view (asThreadsView . miListOfThreads) s
 
 renderListOfMails :: AppState -> Widget Name
-renderListOfMails s = L.renderList (listDrawMail s) True $ view (asMailIndex . miListOfMails) s
+renderListOfMails s = L.renderList (listDrawMail s) True $ view (asThreadsView . miListOfMails) s
 
 notmuchConfig :: AppState -> NotmuchSettings FilePath
 notmuchConfig = view (asConfig . confNotmuch)
