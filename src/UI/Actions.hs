@@ -1623,7 +1623,7 @@ pipeCommand' cmd
 editAttachment :: (MonadState AppState m, MonadIO m, MonadMask m) => m ()
 editAttachment = selectedItemHelper (asCompose . cAttachments) $ \m ->
   case preview (headers . contentDisposition . folded . dispositionType) m of
-    Just Inline -> invokeEditor' (\newPart l -> L.listModify (const newPart) l)
+    Just Inline -> invokeEditor' (L.listModify . const)
     _           -> assignError (GenericError "Not implemented. See #182")
 
 -- | If the list is empty, insert the attachment otherwise replace the

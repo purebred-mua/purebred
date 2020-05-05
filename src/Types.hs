@@ -111,6 +111,7 @@ data ListWithLength t a = ListWithLength (L.GenericList Name t a) (Maybe Int)
 
 listList :: Lens' (ListWithLength t a) (L.GenericList Name t a)
 listList f (ListWithLength a b) = (\a' -> ListWithLength a' b) <$> f a
+{-# ANN listList ("HLint: ignore Avoid lambda using `infix`" :: String) #-}
 
 listLength :: Lens' (ListWithLength t a) (Maybe Int)
 listLength f (ListWithLength a b) = (\b' -> ListWithLength a b') <$> f b
@@ -176,6 +177,7 @@ mbParagraph f (MailBody s xs) = fmap (\xs' -> MailBody s xs') (traverse f xs)
 
 mbSource :: Lens' MailBody Source
 mbSource f (MailBody d xs) = fmap (\d' -> MailBody d' xs) (f d)
+{-# ANN mbSource ("HLint: ignore Avoid lambda using `infix`" :: String) #-}
 
 matchCount :: MailBody -> Int
 matchCount =
@@ -599,6 +601,7 @@ veName f (Tile a b) = fmap (\b' -> Tile a b') (f b)
 
 veState :: Lens' Tile ViewState
 veState f (Tile a b) = fmap (\a' -> Tile a' b) (f a)
+{-# ANN veState ("HLint: ignore Avoid lambda using `infix`" :: String) #-}
 
 type Layers = V.Vector Layer
 
@@ -850,6 +853,7 @@ data MakeProcess
 mpCommand :: Lens' MakeProcess (NonEmpty Char)
 mpCommand f (Shell x) = fmap (\x' -> Shell x') (f x)
 mpCommand f (Process x args) = fmap (\x' -> Process x' args) (f x)
+{-# ANN mpCommand ("HLint: ignore Avoid lambda using `infix`" :: String) #-}
 
 data CopiousOutput
   = CopiousOutput
