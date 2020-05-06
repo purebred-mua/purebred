@@ -14,6 +14,11 @@ let
           notmuch = self.pkgs.notmuch;
           talloc = self.pkgs.talloc;
         };
+        hlint = hsuper.callPackage ./hlint.nix {};
+        ghc-lib = hsuper.callPackage ./ghc-lib.nix {};
+        ghc-lib-parser = hsuper.callPackage ./ghc-lib-parser.nix {};
+        ghc-lib-parser-ex = hsuper.callPackage ./ghc-lib-parser-ex.nix {};
+        extra = hsuper.callPackage ./extra.nix {};
       };
     };
   };
