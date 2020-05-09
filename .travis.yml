@@ -42,11 +42,11 @@ matrix:
       addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-3.0,ghc-8.8.3], sources: *apt_sources}}
     - compiler: "ghc-8.6.5"
       language: c
-      env: NOTMUCHVER=0.28
+      env: NOTMUCHVER=0.28 CABAL_TEST_SHOW_DETAILS=-v 1
       addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.6.5], sources: *apt_sources}}
     - compiler: "ghc-8.4.4"
       language: c
-      env: NOTMUCHVER=0.28
+      env: NOTMUCHVER=0.28 CABAL_TEST_SHOW_DETAILS=-v 1
       addons: {apt: {packages: [elinks,tmux,g++,libxapian-dev,libgmime-2.6-dev,libtalloc-dev,zlib1g-dev,ghc-ppa-tools,cabal-install-2.4,ghc-8.4.4], sources: *apt_sources}}
     - compiler: "ghc-head"
       language: c
@@ -157,7 +157,8 @@ script:
 
   # build & run tests, build benchmarks
   - cabal new-build -w ${HC} ${TEST} ${BENCH} all
-  - if [ "x$TEST" = "x--enable-tests" ]; then cabal new-test -w ${HC} ${TEST} ${BENCH} all; fi
+  - CABAL_TEST_SHOW_DETAILS=${CABAL_TEST_SHOW_DETAILS:=--test-show-details=streaming}
+  - if [ "x$TEST" = "x--enable-tests" ]; then cabal new-test -w ${HC} ${TEST} ${BENCH} ${CABAL_TEST_SHOW_DETAILS} all; fi
 
   # cabal check
   - (cd purebred-* && cabal check)
