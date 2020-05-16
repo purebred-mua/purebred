@@ -63,6 +63,7 @@ import System.Process.Typed (ProcessConfig)
 import Notmuch (Tag)
 import Data.MIME
 
+import Brick.Widgets.StatefulEdit (StatefulEditor(..))
 import Error
 import Purebred.LazyVector (V)
 import Purebred.Types.IFC (Tainted)
@@ -128,7 +129,7 @@ data MailIndex = MailIndex
     { _miListOfMails  :: ListWithLength V.Vector (Toggleable NotmuchMail)
     , _miListOfThreads :: ListWithLength V (Toggleable NotmuchThread)
     , _miListOfThreadsGeneration :: Generation
-    , _miSearchThreadsEditor :: E.Editor T.Text Name
+    , _miSearchThreadsEditor :: StatefulEditor T.Text Name
     , _miMailTagsEditor :: E.Editor T.Text Name
     , _miThreadTagsEditor :: E.Editor T.Text Name
     , _miNewMail :: Int
@@ -150,7 +151,7 @@ miListOfThreadsGeneration :: Lens' MailIndex Generation
 miListOfThreadsGeneration =
   lens _miListOfThreadsGeneration (\s b -> s { _miListOfThreadsGeneration = b })
 
-miSearchThreadsEditor :: Lens' MailIndex (E.Editor T.Text Name)
+miSearchThreadsEditor :: Lens' MailIndex (StatefulEditor T.Text Name)
 miSearchThreadsEditor = lens _miSearchThreadsEditor (\m v -> m { _miSearchThreadsEditor = v})
 
 miMailTagsEditor :: Lens' MailIndex (E.Editor T.Text Name)
@@ -288,33 +289,29 @@ data ConfirmDraft
   deriving (Show)
 
 data Compose = Compose
-    { _cFrom :: E.Editor T.Text Name
-    , _cTo :: E.Editor T.Text Name
-    , _cCc :: E.Editor T.Text Name
-    , _cBcc :: E.Editor T.Text Name
-    , _cSubject :: E.Editor T.Text Name
-    , _cTemp :: T.Text
+    { _cFrom :: StatefulEditor T.Text Name
+    , _cTo :: StatefulEditor T.Text Name
+    , _cCc :: StatefulEditor T.Text Name
+    , _cBcc :: StatefulEditor T.Text Name
+    , _cSubject :: StatefulEditor T.Text Name
     , _cAttachments :: L.List Name MIMEMessage
     , _cKeepDraft :: Dialog ConfirmDraft
     }
 
-cFrom :: Lens' Compose (E.Editor T.Text Name)
+cFrom :: Lens' Compose (StatefulEditor T.Text Name)
 cFrom = lens _cFrom (\c x -> c { _cFrom = x })
 
-cTo :: Lens' Compose (E.Editor T.Text Name)
+cTo :: Lens' Compose (StatefulEditor T.Text Name)
 cTo = lens _cTo (\c x -> c { _cTo = x })
 
-cCc :: Lens' Compose (E.Editor T.Text Name)
+cCc :: Lens' Compose (StatefulEditor T.Text Name)
 cCc = lens _cCc (\c x -> c { _cCc = x })
 
-cBcc :: Lens' Compose (E.Editor T.Text Name)
+cBcc :: Lens' Compose (StatefulEditor T.Text Name)
 cBcc = lens _cBcc (\c x -> c { _cBcc = x })
 
-cSubject :: Lens' Compose (E.Editor T.Text Name)
+cSubject :: Lens' Compose (StatefulEditor T.Text Name)
 cSubject = lens _cSubject (\c x -> c { _cSubject = x })
-
-cTemp :: Lens' Compose T.Text
-cTemp = lens _cTemp (\c x -> c { _cTemp = x })
 
 cAttachments :: Lens' Compose (L.List Name MIMEMessage)
 cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
@@ -663,13 +660,13 @@ fsEntryName = let toName (Directory n) = n
 
 data FileBrowser = CreateFileBrowser
   { _fbEntries :: FB.FileBrowser Name
-  , _fbSearchPath :: E.Editor FilePath Name
+  , _fbSearchPath :: StatefulEditor FilePath Name
   }
 
 fbEntries :: Lens' FileBrowser (FB.FileBrowser Name)
 fbEntries = lens _fbEntries (\cv x -> cv { _fbEntries = x })
 
-fbSearchPath :: Lens' FileBrowser (E.Editor FilePath Name)
+fbSearchPath :: Lens' FileBrowser (StatefulEditor FilePath Name)
 fbSearchPath = lens _fbSearchPath (\c x -> c { _fbSearchPath = x})
 
 -- | State needed to be kept for keeping track of

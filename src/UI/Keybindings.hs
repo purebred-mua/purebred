@@ -71,6 +71,7 @@ import Types
 import Purebred.Tags (parseTagOps)
 import Purebred.Parsing.Text (niceEndOfInput)
 import UI.Validation (dispatchValidation)
+import Brick.Widgets.StatefulEdit (editEditorL)
 
 
 -- | Purebreds event handler. Either we can look up a function
@@ -114,30 +115,31 @@ composeFromHandler, composeToHandler, composeCcHandler, composeBccHandler, manag
      AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
 
 composeFromHandler s e =
-  Brick.handleEventLensed s (asCompose . cFrom) E.handleEditorEvent e
+  Brick.handleEventLensed s (asCompose . cFrom . editEditorL) E.handleEditorEvent e
   >>= liftIO . runValidation
-  (preview (_Left . to GenericError) . parseOnly (mailboxList <* niceEndOfInput)) (asCompose . cFrom)
+  (preview (_Left . to GenericError) . parseOnly (mailboxList <* niceEndOfInput))
+  (asCompose . cFrom . editEditorL)
   >>= Brick.continue
 
 composeToHandler s e =
-  Brick.handleEventLensed s (asCompose . cTo) E.handleEditorEvent e
+  Brick.handleEventLensed s (asCompose . cTo . editEditorL) E.handleEditorEvent e
   >>= liftIO . runValidation
   (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
-  (asCompose . cTo)
+  (asCompose . cTo . editEditorL)
   >>= Brick.continue
 
 composeCcHandler s e =
-  Brick.handleEventLensed s (asCompose . cCc) E.handleEditorEvent e
+  Brick.handleEventLensed s (asCompose . cCc . editEditorL) E.handleEditorEvent e
   >>= liftIO . runValidation
   (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
-  (asCompose . cCc)
+  (asCompose . cCc . editEditorL)
   >>= Brick.continue
 
 composeBccHandler s e =
-  Brick.handleEventLensed s (asCompose . cBcc) E.handleEditorEvent e
+  Brick.handleEventLensed s (asCompose . cBcc . editEditorL) E.handleEditorEvent e
   >>= liftIO . runValidation
   (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
-  (asCompose . cBcc)
+  (asCompose . cBcc . editEditorL)
   >>= Brick.continue
 
 manageMailTagHandler s e =
@@ -160,7 +162,9 @@ eventHandlerListOfThreads = EventHandler
 eventHandlerSearchThreadsEditor :: EventHandler 'Threads 'SearchThreadsEditor
 eventHandlerSearchThreadsEditor = EventHandler
   (asConfig . confIndexView . ivSearchThreadsKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailIndex . miSearchThreadsEditor) E.handleEditorEvent)
+  (\s ->
+     Brick.continue
+     <=< Brick.handleEventLensed s (asMailIndex . miSearchThreadsEditor . editEditorL) E.handleEditorEvent)
 
 eventHandlerViewMailManageMailTagsEditor :: EventHandler 'ViewMail 'ManageMailTagsEditor
 eventHandlerViewMailManageMailTagsEditor = EventHandler
@@ -224,7 +228,7 @@ eventHandlerThreadComposeTo = EventHandler
 eventHandlerThreadComposeSubject :: EventHandler 'Threads 'ComposeSubject
 eventHandlerThreadComposeSubject = EventHandler
   (asConfig . confIndexView . ivSubjectKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cSubject) E.handleEditorEvent)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cSubject . editEditorL) E.handleEditorEvent)
 
 eventHandlerComposeFrom :: EventHandler 'ComposeView 'ComposeFrom
 eventHandlerComposeFrom = EventHandler
@@ -249,7 +253,7 @@ eventHandlerComposeBcc = EventHandler
 eventHandlerComposeSubject :: EventHandler 'ComposeView 'ComposeSubject
 eventHandlerComposeSubject = EventHandler
   (asConfig . confComposeView . cvSubjectKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cSubject) E.handleEditorEvent)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cSubject . editEditorL) E.handleEditorEvent)
 
 eventHandlerConfirm :: EventHandler 'ComposeView 'ConfirmDialog
 eventHandlerConfirm = EventHandler
@@ -269,7 +273,9 @@ eventHandlerComposeFileBrowser = EventHandler
 eventHandlerManageFileBrowserSearchPath :: EventHandler 'FileBrowser 'ManageFileBrowserSearchPath
 eventHandlerManageFileBrowserSearchPath = EventHandler
   (asConfig . confFileBrowserView . fbSearchPathKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asFileBrowser . fbSearchPath) E.handleEditorEvent)
+  (\s ->
+     Brick.continue
+     <=< Brick.handleEventLensed s (asFileBrowser . fbSearchPath . editEditorL) E.handleEditorEvent)
 
 eventHandlerViewMailComposeTo :: EventHandler 'ViewMail 'ComposeTo
 eventHandlerViewMailComposeTo = EventHandler

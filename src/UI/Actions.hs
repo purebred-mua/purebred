@@ -140,7 +140,7 @@ import Control.Monad.Except (runExceptT, MonadError)
 import Control.Exception (IOException)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Text.Zipper
-       (insertMany, currentLine, gotoEOL, clearZipper, TextZipper)
+       (insertMany, currentLine, gotoEOL, clearZipper)
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.LocalTime (getZonedTime, zonedTimeToUTC)
 import System.Directory (doesPathExist)
@@ -172,6 +172,8 @@ import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System (tryIO)
 import Purebred.System.Process
+import Brick.Widgets.StatefulEdit
+       (StatefulEditor(..), editEditorL, revertEditorState, saveEditorState)
 
 
 {- $overview
@@ -222,19 +224,19 @@ class HasEditor (n :: Name) where
   editorL :: Proxy n -> Lens' AppState (E.Editor T.Text Name)
 
 instance HasEditor 'ComposeFrom where
-  editorL _ = asCompose . cFrom
+  editorL _ = asCompose . cFrom . editEditorL
 
 instance HasEditor 'ComposeTo where
-  editorL _ = asCompose . cTo
+  editorL _ = asCompose . cTo . editEditorL
 
 instance HasEditor 'ComposeCc where
-  editorL _ = asCompose . cCc
+  editorL _ = asCompose . cCc . editEditorL
 
 instance HasEditor 'ComposeBcc where
-  editorL _ = asCompose . cBcc
+  editorL _ = asCompose . cBcc . editEditorL
 
 instance HasEditor 'ComposeSubject where
-  editorL _ = asCompose . cSubject
+  editorL _ = asCompose . cSubject . editEditorL
 
 instance HasEditor 'ManageMailTagsEditor where
   editorL _ = asMailIndex . miMailTagsEditor
@@ -249,7 +251,7 @@ instance HasEditor 'ScrollingMailViewFindWordEditor where
   editorL _ = asMailView . mvFindWordEditor
 
 instance HasEditor 'SearchThreadsEditor where
-  editorL _ = asMailIndex . miSearchThreadsEditor
+  editorL _ = asMailIndex . miSearchThreadsEditor . editEditorL
 
 instance HasEditor 'ManageThreadTagsEditor where
   editorL _ = asMailIndex . miThreadTagsEditor
@@ -331,7 +333,7 @@ instance Completable 'SearchThreadsEditor where
 instance Completable 'ManageMailTagsEditor where
   complete _ = do
     get >>= liftIO . completeMailTags >>= put
-    modifying (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+    hide ViewMail 0 ManageMailTagsEditor
 
 instance Completable 'ComposeListOfAttachments where
   complete _ = sendMail
@@ -429,10 +431,11 @@ class Resetable (v :: ViewName) (n :: Name) where
   reset :: (MonadIO m, MonadState AppState m) => Proxy v -> Proxy n -> m ()
 
 instance Resetable 'Threads 'SearchThreadsEditor where
-  reset _ _ = pure ()
+  reset _ _ = modifying (asMailIndex . miSearchThreadsEditor) revertEditorState
 
 instance Resetable 'ViewMail 'ManageMailTagsEditor where
   reset _ _ = modifying (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
+              *> hide ViewMail 0 ManageMailTagsEditor
 
 instance Resetable 'Threads 'ManageThreadTagsEditor where
   reset _ _ = do
@@ -450,44 +453,34 @@ instance Resetable 'Threads 'ComposeTo where
 
 instance Resetable 'ComposeView 'ComposeFrom where
   reset _ _ = do
-    s <- get
-    modifying (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
+    modifying (asCompose . cFrom) revertEditorState
     hide ComposeView 1 ComposeFrom
 
 instance Resetable 'ComposeView 'ComposeTo where
   reset _ _ = do
-    s <- get
-    modifying (asCompose . cTo . E.editContentsL) (revertEditorContents s)
+    modifying (asCompose . cTo) revertEditorState
     hide ComposeView 1 ComposeTo
 
 instance Resetable 'ComposeView 'ComposeCc where
   reset _ _ = do
-    s <- get
-    modifying (asCompose . cCc . E.editContentsL) (revertEditorContents s)
+    modifying (asCompose . cCc) revertEditorState
     hide ComposeView 1 ComposeCc
 
 instance Resetable 'ComposeView 'ComposeBcc where
   reset _ _ = do
-    s <- get
-    modifying (asCompose . cBcc . E.editContentsL) (revertEditorContents s)
+    modifying (asCompose . cBcc) revertEditorState
     hide ComposeView 1 ComposeBcc
 
 instance Resetable 'ComposeView 'ComposeSubject where
   reset _ _ = do
-    s <- get
-    modifying (asCompose . cSubject . E.editContentsL) (revertEditorContents s)
+    modifying (asCompose . cSubject) revertEditorState
     hide ComposeView 1 ComposeSubject
-
-revertEditorContents :: AppState -> TextZipper T.Text -> TextZipper T.Text
-revertEditorContents s z = let saved = view (asCompose . cTemp) s
-                               replace = insertMany saved . clearZipper
-                           in replace z
 
 instance Resetable 'ComposeView 'ComposeListOfAttachments where
   reset _ _ = modify clearMailComposition
 
 instance Resetable 'FileBrowser 'ManageFileBrowserSearchPath where
-  reset _ _ = modifying (asFileBrowser . fbSearchPath . E.editContentsL) clearZipper
+  reset _ _ = modifying (asFileBrowser . fbSearchPath) revertEditorState
 
 instance Resetable 'ViewMail 'MailListOfAttachments where
   reset _ _ = hide ViewMail 0 MailListOfAttachments
@@ -518,8 +511,7 @@ instance Resetable 'ViewMail 'SaveToDiskPathEditor where
 
 instance Resetable 'ViewMail 'ComposeTo where
   reset _ _ = do
-    s <- get
-    modifying (asCompose . cTo . E.editContentsL) (revertEditorContents s)
+    modifying (asCompose . cTo) revertEditorState
     hide ViewMail 0 ComposeTo
     modify clearMailComposition
 
@@ -546,7 +538,9 @@ class Focusable (v :: ViewName) (n :: Name) where
   switchFocus :: (MonadState AppState m, MonadIO m) => Proxy v -> Proxy n -> m ()
 
 instance Focusable 'Threads 'SearchThreadsEditor where
-  switchFocus _ _ = modifying (asMailIndex . miSearchThreadsEditor) (E.applyEdit gotoEOL)
+  switchFocus _ _ = do
+    modifying (asMailIndex . miSearchThreadsEditor . editEditorL) (E.applyEdit gotoEOL)
+    modifying (asMailIndex . miSearchThreadsEditor) saveEditorState
 
 instance Focusable 'Threads 'ManageThreadTagsEditor where
   switchFocus _ _ = do
@@ -556,7 +550,7 @@ instance Focusable 'Threads 'ManageThreadTagsEditor where
 instance Focusable 'Threads 'ComposeFrom where
   switchFocus _ _ = do
     modify (toggleLastVisibleWidget ComposeFrom)
-    modifying (asCompose . cFrom) (E.applyEdit gotoEOL)
+    modifying (asCompose . cFrom . editEditorL) (E.applyEdit gotoEOL)
 
 instance Focusable 'Threads 'ComposeTo where
   switchFocus _ _ = modify (toggleLastVisibleWidget ComposeTo)
@@ -569,6 +563,7 @@ instance Focusable 'Threads 'ListOfThreads where
 
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
   switchFocus _ _ = do
+    modifying (asMailIndex . miMailTagsEditor . E.editContentsL) clearZipper
     unhide ViewMail 0 ManageMailTagsEditor
     assign (asViews . vsViews . ix ViewMail . vFocus) ManageMailTagsEditor
 
@@ -626,36 +621,31 @@ instance Focusable 'ComposeView 'ComposeListOfAttachments where
 instance Focusable 'ComposeView 'ComposeFrom where
   switchFocus _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeFrom
-    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
-    assign (asCompose . cTemp) curLine
+    modifying (asCompose . cFrom) saveEditorState
     unhide ComposeView 1 ComposeFrom
 
 instance Focusable 'ComposeView 'ComposeTo where
   switchFocus _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeTo
-    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
-    assign (asCompose . cTemp) curLine
+    modifying (asCompose . cTo) saveEditorState
     unhide ComposeView 1 ComposeTo
 
 instance Focusable 'ComposeView 'ComposeCc where
   switchFocus _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeCc
-    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
-    assign (asCompose . cTemp) curLine
+    modifying (asCompose . cCc) saveEditorState
     unhide ComposeView 1 ComposeCc
 
 instance Focusable 'ComposeView 'ComposeBcc where
   switchFocus _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeBcc
-    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
-    assign (asCompose . cTemp) curLine
+    modifying (asCompose . cBcc) saveEditorState
     unhide ComposeView 1 ComposeBcc
 
 instance Focusable 'ComposeView 'ComposeSubject where
   switchFocus _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeSubject
-    curLine <- uses (asCompose . cTo . E.editContentsL) currentLine
-    assign (asCompose . cTemp) curLine
+    modifying (asCompose . cSubject) saveEditorState
     unhide ComposeView 1 ComposeSubject
 
 instance Focusable 'ComposeView 'ConfirmDialog where
@@ -1088,7 +1078,7 @@ encapsulateMail =
           Just m -> do
             modifying (asCompose . cAttachments)
               (L.listInsert 1 (encapsulate m) . L.listInsert 0 (createTextPlainMessage mempty))
-            modifying (asCompose . cSubject . E.editContentsL)
+            modifying (asCompose . cSubject . editEditorL . E.editContentsL)
               (insertMany (getForwardedSubject m) . clearZipper)
     }
 
@@ -1110,9 +1100,9 @@ replyMail = Action
           mailboxes <- use (asConfig . confComposeView . cvIdentities)
           mbody <- use (asMailView . mvBody)
           let quoted = toQuotedMail mailboxes mbody m
-          modifying (asCompose . cTo . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
-          modifying (asCompose . cFrom . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
-          modifying (asCompose . cSubject . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
+          modifying (asCompose . cTo . editEditorL . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
+          modifying (asCompose . cFrom . editEditorL . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
+          modifying (asCompose . cSubject . editEditorL . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
           modifying (asCompose . cAttachments) (insertOrReplaceAttachment quoted)
   }
 
@@ -1208,8 +1198,6 @@ delete =
             >>= modifying (asCompose . cAttachments) . maybe id L.listRemove
     }
 
--- | Go to the parent directory.
---
 -- | Adds all selected files as attachments to the e-mail.
 --
 createAttachments :: Action 'FileBrowser 'ListOfFiles ()
@@ -1280,7 +1268,7 @@ isFileUnderCursor = maybe False (FB.fileTypeMatch [FB.RegularFile])
 --
 applySearch :: (MonadIO m, MonadState AppState m) => m ()
 applySearch = do
-  searchterms <- currentLine <$> use (asMailIndex . miSearchThreadsEditor . E.editContentsL)
+  searchterms <- currentLine <$> use (asMailIndex . miSearchThreadsEditor . editEditorL . E.editContentsL)
   nmconf <- use (asConfig . confNotmuch)
   r <- runExceptT (Notmuch.getThreads searchterms nmconf)
   case r of
@@ -1446,11 +1434,11 @@ buildMail k = do
     Just m -> do
       charsets <- use (asConfig . confCharsets)
       now <- liftIO getCurrentTime
-      to' <- uses (asCompose . cTo)
+      to' <- uses (asCompose . cTo . editEditorL)
         (either (pure []) id . AT.parseOnly AddressText.addressList . T.unlines . E.getEditContents)
-      from <- uses (asCompose . cFrom)
+      from <- uses (asCompose . cFrom . editEditorL)
         (either (pure []) id . AT.parseOnly AddressText.mailboxList . T.unlines . E.getEditContents)
-      subject <- uses (asCompose . cSubject) (T.unlines . E.getEditContents)
+      subject <- uses (asCompose . cSubject . editEditorL) (T.unlines . E.getEditContents)
       m
         & set (headerSubject charsets) (Just subject)
         & set (headerFrom charsets) from
@@ -1477,12 +1465,11 @@ sanitizeMail charsets =
 initialCompose :: [Mailbox] -> Compose
 initialCompose mailboxes =
   Compose
-    (E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
-    (E.editorText ComposeTo (Just 1) "")
-    (E.editorText ComposeCc (Just 1) "")
-    (E.editorText ComposeBcc (Just 1) "")
-    (E.editorText ComposeSubject (Just 1) "")
-    T.empty
+    (StatefulEditor mempty $ E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
+    (StatefulEditor mempty $ E.editorText ComposeTo (Just 1) "")
+    (StatefulEditor mempty $ E.editorText ComposeCc (Just 1) "")
+    (StatefulEditor mempty $ E.editorText ComposeBcc (Just 1) "")
+    (StatefulEditor mempty $ E.editorText ComposeSubject (Just 1) "")
     (L.list ComposeListOfAttachments mempty 1)
     initialDraftConfirmDialog
 
@@ -1500,12 +1487,11 @@ newComposeFromMail charsets m =
         view vector $ toMIMEMessage charsets <$> toListOf (_Just . entities) m
       orEmpty = view (non "")
    in Compose
-        (E.editorText ComposeFrom (Just 1) (orEmpty from))
-        (E.editorText ComposeTo (Just 1) (orEmpty to'))
-        (E.editorText ComposeCc (Just 1) (orEmpty cc))
-        (E.editorText ComposeBcc (Just 1) (orEmpty bcc))
-        (E.editorText ComposeSubject (Just 1) (orEmpty subject))
-        T.empty
+        (StatefulEditor mempty $ E.editorText ComposeFrom (Just 1) (orEmpty from))
+        (StatefulEditor mempty $ E.editorText ComposeTo (Just 1) (orEmpty to'))
+        (StatefulEditor mempty $ E.editorText ComposeCc (Just 1) (orEmpty cc))
+        (StatefulEditor mempty $ E.editorText ComposeBcc (Just 1) (orEmpty bcc))
+        (StatefulEditor mempty $ E.editorText ComposeSubject (Just 1) (orEmpty subject))
         (L.list ComposeListOfAttachments attachments' 1)
         initialDraftConfirmDialog
 
@@ -1642,11 +1628,13 @@ resetMatchingWords =
 fileBrowserSetWorkingDirectory ::
      (MonadState AppState m, MonadIO m) => m ()
 fileBrowserSetWorkingDirectory = do
-  modifying (asFileBrowser . fbSearchPath) (E.applyEdit gotoEOL)
-  path <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
+  modifying (asFileBrowser . fbSearchPath . editEditorL) (E.applyEdit gotoEOL)
+  path <- uses (asFileBrowser . fbSearchPath . editEditorL . E.editContentsL) currentLine
   pathExists <- liftIO $ doesPathExist path
   if pathExists
     then do
       fb <- use (asFileBrowser . fbEntries) >>= liftIO . FB.setWorkingDirectory path
+      modifying (asFileBrowser . fbSearchPath . editEditorL . E.editContentsL) (insertMany path . clearZipper)
+      modifying (asFileBrowser . fbSearchPath) saveEditorState
       assign (asFileBrowser . fbEntries) fb
     else assignError (GenericError $ path <> " does not exist")

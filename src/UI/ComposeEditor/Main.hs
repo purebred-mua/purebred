@@ -41,6 +41,7 @@ import UI.Views (focusedViewWidget)
 import UI.Draw.Main (attachmentsHeader)
 import UI.Mail.Main (renderPart)
 import Types
+import Brick.Widgets.StatefulEdit (editEditorL)
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =
@@ -74,12 +75,12 @@ makeLabel ComposeBcc = txt "Bcc:"
 makeLabel _ = txt "Subject:"
 
 widgetValue :: Name -> AppState -> T.Text
-widgetValue ComposeFrom = view (asCompose . cFrom . E.editContentsL . to currentLine)
-widgetValue ComposeTo = view (asCompose . cTo . E.editContentsL . to currentLine)
-widgetValue ComposeCc = view (asCompose . cCc . E.editContentsL . to currentLine)
-widgetValue ComposeBcc = view (asCompose . cBcc . E.editContentsL . to currentLine)
-widgetValue ComposeSubject = view (asCompose . cSubject . E.editContentsL . to currentLine)
-widgetValue _ = const T.empty
+widgetValue ComposeFrom = view (asCompose . cFrom . editEditorL . E.editContentsL . to currentLine)
+widgetValue ComposeTo = view (asCompose . cTo . editEditorL .  E.editContentsL . to currentLine)
+widgetValue ComposeCc = view (asCompose . cCc . editEditorL . E.editContentsL . to currentLine)
+widgetValue ComposeBcc = view (asCompose . cBcc . editEditorL . E.editContentsL . to currentLine)
+widgetValue ComposeSubject = view (asCompose . cSubject . editEditorL . E.editContentsL . to currentLine)
+widgetValue _ = mempty
 
 renderConfirm :: AppState -> Widget Name
 renderConfirm s = renderDialog (view (asCompose . cKeepDraft) s) $ hCenter emptyWidget
