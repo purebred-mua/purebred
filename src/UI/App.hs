@@ -52,6 +52,7 @@ import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
 import UI.Draw.Main (renderEditorWithLabel)
 import Purebred.Events (firstGeneration)
 import Types
+import Brick.Widgets.StatefulEdit (StatefulEditor(..))
 
 -- * Synopsis
 --
@@ -170,7 +171,7 @@ initialState conf = do
             (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
             (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
             firstGeneration
-            (E.editorText SearchThreadsEditor Nothing searchterms)
+            (StatefulEditor mempty $ E.editorText SearchThreadsEditor Nothing searchterms)
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
             0
@@ -197,7 +198,7 @@ initialState conf = do
     path = view (confFileBrowserView . fbHomePath) conf
     fb = CreateFileBrowser
          fb'
-         (E.editor ManageFileBrowserSearchPath Nothing path)
+         (StatefulEditor mempty $ E.editor ManageFileBrowserSearchPath Nothing path)
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
     async = Async Nothing

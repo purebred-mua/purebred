@@ -78,6 +78,7 @@ library
                      , Config.Main
                      , Storage.Notmuch
                      , Storage.ParsedMail
+                     , Brick.Widgets.StatefulEdit
                      , Purebred
   other-modules:       Paths_purebred
                      , Purebred.Types.IFC

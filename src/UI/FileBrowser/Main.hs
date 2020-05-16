@@ -24,6 +24,7 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Control.Lens.Getter (view)
 import UI.Views (focusedViewWidget)
 import Types
+import Brick.Widgets.StatefulEdit (editEditorL)
 
 renderFileBrowser :: AppState -> Widget Name
 renderFileBrowser s = FB.renderFileBrowser True $ view (asFileBrowser . fbEntries) s
@@ -32,6 +33,6 @@ renderFileBrowserSearchPathEditor :: AppState -> Widget Name
 renderFileBrowserSearchPathEditor s =
   let hasFocus = ManageFileBrowserSearchPath == focusedViewWidget s
       editorDrawContent = str . unlines
-      inputW = E.renderEditor editorDrawContent hasFocus (view (asFileBrowser . fbSearchPath) s)
+      inputW = E.renderEditor editorDrawContent hasFocus (view (asFileBrowser . fbSearchPath . editEditorL) s)
       labelW = txt "Path: "
   in labelW <+> vLimit 1 inputW

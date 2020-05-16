@@ -120,7 +120,67 @@ main = defaultMain $ testTmux pre post tests
       , testBulkActionsOnThreadsByKeybinding
       , testBulkActionsOnThreadsByInput
       , testBulkActionsOnMailsByInput
+      , testAbortedEditsResetState
       ]
+
+testAbortedEditsResetState :: PurebredTestCase
+testAbortedEditsResetState = purebredTmuxSession "aborted edits reset editor back to initial state" $
+  \step -> do
+    startApplication
+
+    step "edit search query"
+    assertEditorResetsToInitialValue
+      step
+      ":"
+      ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox")
+      ("Query: " <> buildAnsiRegex [] ["34"] [] <> "tag:inbox")
+
+    composeNewMail step
+
+    step "edit Subject: field"
+    assertEditorResetsToInitialValue
+      step
+      "s"
+      ("Subject: " <> buildAnsiRegex [] ["37"] [] <> "Draft mail subject")
+      "Subject: Draft mail subject"
+
+    step "edit BCC: field"
+    assertEditorResetsToInitialValue
+      step
+      "b"
+      ("Bcc: " <> buildAnsiRegex [] ["37"] [])
+      "Bcc:"
+
+    step "edit CC: field"
+    assertEditorResetsToInitialValue
+      step
+      "c"
+      ("Cc: " <> buildAnsiRegex [] ["37"] [])
+      "Cc:"
+
+    step "edit From: field"
+    assertEditorResetsToInitialValue
+      step
+      "f"
+      ("From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
+      "From: \"Joe Bloggs\" <joe@foo.test>"
+
+    step "edit To: field"
+    assertEditorResetsToInitialValue
+      step
+      "t"
+      ("To: " <> buildAnsiRegex [] ["37"] [] <> "user@to.test")
+      "To: user@to.test"
+
+    step "start file browser"
+    cwd <- B.pack <$> liftIO getCurrentDirectory
+    sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
+    assertEditorResetsToInitialValue
+      step
+      ":"
+      (buildAnsiRegex [] ["39"] ["49"] <> "Path: " <> buildAnsiRegex [] ["37"] ["40"] <> cwd)
+      ("Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
+
 
 testBulkActionsOnMailsByInput :: PurebredTestCase
 testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on mails by editor" $
@@ -1444,6 +1504,21 @@ findMail step query = do
   sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
   step "enter free text search"
   sendLine query (Substring "Item 1 of 1")
+
+assertEditorResetsToInitialValue ::
+     HasTmuxSession testEnv
+  => (MonadReader testEnv m, MonadState Capture m, MonadIO m) =>
+       (String -> m ()) -> String -> B.ByteString -> B.ByteString -> m ()
+assertEditorResetsToInitialValue step key focused unfocused = do
+    step "focusing editor"
+    sendKeys key (Regex $ focused <> "\\s+")
+
+    step "entering bogus characters"
+    sendKeys "asdf" (Regex $ focused <> "asdf" <> "\\s+")
+
+    step "abort and expect old editor value is reset"
+    sendKeys "Escape" (Regex $ unfocused <> "\\s+") >>= put
+    assertConditionS (Not (Substring "Failed reading"))
 
 composeNewMail ::
      HasTmuxSession testEnv

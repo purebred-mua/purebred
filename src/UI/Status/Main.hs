@@ -43,6 +43,7 @@ import Types
 import Error
 import Config.Main (statusbarAttr, statusbarErrorAttr)
 import qualified Storage.Notmuch as Notmuch
+import Brick.Widgets.StatefulEdit (editEditorL)
 
 checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()
 checkForNewMail chan dbpath query delay = do
@@ -78,7 +79,7 @@ statusbar s =
         Just e -> renderError e
         Nothing ->
             case focusedViewWidget s of
-                SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor) s) s
+                SearchThreadsEditor -> renderStatusbar (view (asMailIndex . miSearchThreadsEditor . editEditorL) s) s
                 ManageMailTagsEditor -> renderStatusbar (view (asMailIndex . miMailTagsEditor) s) s
                 ManageThreadTagsEditor -> renderStatusbar (view (asMailIndex . miThreadTagsEditor) s) s
                 MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
@@ -91,9 +92,9 @@ statusbar s =
                 ComposeListOfAttachments -> renderStatusbar (views (asCompose . cAttachments) lwl s) s
                 MailListOfAttachments -> renderStatusbar (views (asMailView . mvAttachments) lwl s) s
                 ListOfFiles -> renderStatusbar (view (asFileBrowser . fbEntries) s) s
-                ComposeTo -> renderStatusbar (view (asCompose . cTo) s) s
-                ComposeFrom -> renderStatusbar (view (asCompose . cFrom) s) s
-                ComposeSubject -> renderStatusbar (view (asCompose . cSubject) s) s
+                ComposeTo -> renderStatusbar (view (asCompose . cTo . editEditorL) s) s
+                ComposeFrom -> renderStatusbar (view (asCompose . cFrom . editEditorL) s) s
+                ComposeSubject -> renderStatusbar (view (asCompose . cSubject . editEditorL) s) s
                 _ -> withAttr statusbarAttr $ str "Purebred: " <+> fillLine
 
 class WithContext a where
