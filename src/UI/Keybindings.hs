@@ -53,6 +53,7 @@ import qualified Brick.Types as Brick
 import qualified Brick.Main as Brick
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (handleDialogEvent)
 import Graphics.Vty (Event (..))
 import Control.Lens (Getter, _Left, preview, set, to, view)
@@ -263,7 +264,7 @@ eventHandlerComposeListOfAttachments = EventHandler
 eventHandlerComposeFileBrowser :: EventHandler 'FileBrowser 'ListOfFiles
 eventHandlerComposeFileBrowser = EventHandler
   (asConfig . confFileBrowserView . fbKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asFileBrowser . fbEntries) L.handleListEvent)
+  (\s -> Brick.continue <=< Brick.handleEventLensed s (asFileBrowser . fbEntries) FB.handleFileBrowserEvent)
 
 eventHandlerManageFileBrowserSearchPath :: EventHandler 'FileBrowser 'ManageFileBrowserSearchPath
 eventHandlerManageFileBrowserSearchPath = EventHandler

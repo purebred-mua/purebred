@@ -28,6 +28,7 @@ import Brick.Widgets.Core
 import Brick.Widgets.Center (hCenter)
 import qualified Brick.Widgets.List  as L
 import qualified Brick.Widgets.Edit  as E
+import qualified Brick.Widgets.FileBrowser as FB
 import Control.Monad.Except (runExceptT)
 import Control.Monad (void)
 import Control.Lens
@@ -89,7 +90,7 @@ statusbar s =
                 ScrollingMailView -> renderStatusbar (view (asMailIndex . miMails) s) s
                 ComposeListOfAttachments -> renderStatusbar (views (asCompose . cAttachments) lwl s) s
                 MailListOfAttachments -> renderStatusbar (views (asMailView . mvAttachments) lwl s) s
-                ListOfFiles -> renderStatusbar (views (asFileBrowser . fbEntries) lwl s) s
+                ListOfFiles -> renderStatusbar (view (asFileBrowser . fbEntries) s) s
                 ComposeTo -> renderStatusbar (view (asCompose . cTo) s) s
                 ComposeFrom -> renderStatusbar (view (asCompose . cFrom) s) s
                 ComposeSubject -> renderStatusbar (view (asCompose . cSubject) s) s
@@ -103,6 +104,9 @@ instance WithContext (ListWithLength t e) where
 
 instance WithContext (E.Editor Text Name) where
   renderContext _ = str . show . cursorPosition . view E.editContentsL
+
+instance WithContext (FB.FileBrowser Name) where
+  renderContext _ _ = emptyWidget
 
 renderStatusbar :: WithContext w => w -> AppState -> Widget Name
 renderStatusbar w s = withAttr statusbarAttr $ hBox
@@ -124,6 +128,7 @@ renderToggled :: AppState -> Widget n
 renderToggled s =
   let currentL = case focusedViewWidget s of
         ListOfThreads -> length $ toListOf (asMailIndex . miListOfThreads . traversed . filtered fst) s
+        ListOfFiles -> length $ view (asFileBrowser . fbEntries . to FB.fileBrowserSelection) s
         _ -> length $ toListOf (asMailIndex . miListOfMails . traversed . filtered fst) s
   in if currentL > 0 then str $ "Marked: " <> show currentL else emptyWidget
 

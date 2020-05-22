@@ -36,6 +36,7 @@ import qualified Brick.Focus as Brick
 import Brick.Types (EventM, Next)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (Dialog)
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Lens
@@ -661,11 +662,11 @@ fsEntryName = let toName (Directory n) = n
               in to toName
 
 data FileBrowser = CreateFileBrowser
-  { _fbEntries :: L.List Name (Toggleable FileSystemEntry)
+  { _fbEntries :: FB.FileBrowser Name
   , _fbSearchPath :: E.Editor FilePath Name
   }
 
-fbEntries :: Lens' FileBrowser (L.List Name (Toggleable FileSystemEntry))
+fbEntries :: Lens' FileBrowser (FB.FileBrowser Name)
 fbEntries = lens _fbEntries (\cv x -> cv { _fbEntries = x })
 
 fbSearchPath :: Lens' FileBrowser (E.Editor FilePath Name)

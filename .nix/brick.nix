@@ -6,8 +6,8 @@
 }:
 mkDerivation {
   pname = "brick";
-  version = "0.52";
-  sha256 = "368dfdbb054fa4b14c091895f1b85742559d6c134081b1546ba3c75ab125e380";
+  version = "0.54";
+  sha256 = "1bce8104859986a3f871751de34f1876a3ece7632fe981d0cb267a1e00074281";
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
