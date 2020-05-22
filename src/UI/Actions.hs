@@ -20,7 +20,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -95,9 +94,8 @@ module UI.Actions (
   , delete
 
   -- ** Actions only used for a specific widget context
-  , enterDirectory
-  , parentDirectory
   , handleConfirm
+  , fileBrowserToggleFile
 
   -- * API
   , applySearch
@@ -110,6 +108,7 @@ import qualified Brick.Focus as Brick
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (dialog, dialogSelection, Dialog)
 import Network.Mime (defaultMimeLookup)
 import Data.Proxy
@@ -124,7 +123,6 @@ import qualified Data.Attoparsec.Text as AT (parseOnly)
 import Data.Vector.Lens (vector)
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.List (union)
-import System.FilePath (takeDirectory, (</>))
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
 import Data.Foldable (toList, traverse_)
@@ -172,7 +170,6 @@ import Purebred.Events (nextGeneration)
 import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System (tryIO)
-import Purebred.System.Directory (listDirectory')
 import Purebred.System.Process
 
 
@@ -290,11 +287,6 @@ instance HasList 'MailListOfAttachments where
   type E 'MailListOfAttachments = WireEntity
   list _ = asMailView . mvAttachments
 
-instance HasList 'ListOfFiles where
-  type T 'ListOfFiles = Vector.Vector
-  type E 'ListOfFiles = Toggleable FileSystemEntry
-  list _ = asFileBrowser . fbEntries
-
 -- | contexts which have selectable items in a list
 class (HasList (n :: Name), Traversable (T n)) =>
       HasToggleableList n
@@ -411,10 +403,10 @@ instance Completable 'ManageThreadTagsEditor where
 
 instance Completable 'ManageFileBrowserSearchPath where
   complete _ = do
-    paths <- use (asFileBrowser . fbSearchPath . E.editContentsL)
-    f <- either setError updateBrowseFileContents
-       <$> runExceptT (listDirectory' (currentLine paths))
-    modify f
+    paths <- use (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine)
+    fb <- use (asFileBrowser . fbEntries)
+    fb' <- liftIO $ FB.setWorkingDirectory paths fb
+    assign (asFileBrowser . fbEntries) fb'
 
 instance Completable 'MailAttachmentOpenWithEditor where
   complete _ = hide ViewMail 0 MailAttachmentOpenWithEditor
@@ -677,11 +669,9 @@ instance Focusable 'ComposeView 'ConfirmDialog where
 instance Focusable 'FileBrowser 'ListOfFiles where
   switchFocus _ _ = do
     path <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
-    runExceptT (listDirectory' path) >>= either
-      assignError
-      (\x -> do
-        modifying (asFileBrowser . fbSearchPath . E.editContentsL) (insertMany path . clearZipper)
-        modify (updateBrowseFileContents x))
+    fb <- use (asFileBrowser . fbEntries)
+    fb' <- liftIO $ FB.setWorkingDirectory path fb
+    assign (asFileBrowser . fbEntries) fb'
 
 instance Focusable 'FileBrowser 'ManageFileBrowserSearchPath where
   switchFocus _ _ = pure ()
@@ -1227,43 +1217,14 @@ delete =
 
 -- | Go to the parent directory.
 --
-parentDirectory :: Action 'FileBrowser 'ListOfFiles ()
-parentDirectory = Action ["go to parent directory"] $
-  uses (asFileBrowser . fbSearchPath . E.editContentsL) (takeDirectory . currentLine) >>= cd
-
-cd :: (MonadState AppState m, MonadIO m) => FilePath -> m ()
-cd fp = do
-  modifying (asFileBrowser . fbSearchPath . E.editContentsL) (insertMany fp . clearZipper)
-  fp' <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
-  runExceptT (listDirectory' fp')
-    >>= either assignError (modify . updateBrowseFileContents)
-
--- | Open a directory and set the contents in the 'AppState'.
---
-enterDirectory :: Action 'FileBrowser 'ListOfFiles ()
-enterDirectory =
-  Action
-  { _aDescription = ["enter directory"]
-  , _aAction =
-      selectedItemHelper (asFileBrowser . fbEntries) $ \(_, entry) -> do
-        -- Construct the full path to the attachment. The file browser only
-        -- lists the file names (otherwise we wouldn't have the ability to
-        -- display the full paths for deeper file hirarchies). However when
-        -- attaching the file, we need the full paths so we can find, edit and
-        -- update the attachments later.
-        curLine <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
-        case entry of
-          Directory dir -> cd (curLine </> dir)
-          _ -> pure ()
-  }
-
 -- | Adds all selected files as attachments to the e-mail.
 --
 createAttachments :: Action 'FileBrowser 'ListOfFiles ()
 createAttachments = Action ["adds selected files as attachments"] $ do
-  sel <- uses (asFileBrowser . fbEntries) L.listSelectedElement
-  when (isFileUnderCursor sel) $
+  sel <- uses (asFileBrowser . fbEntries) FB.fileBrowserCursor
+  if isFileUnderCursor sel then
     put =<< liftIO . makeAttachmentsFromSelected =<< get
+    else view aAction fileBrowserToggleFile
 
 -- | Action to deal with a choice from the confirmation dialog.
 --
@@ -1289,6 +1250,13 @@ composeAsNew = Action ["edit mail as new"] $
       )
 
 
+fileBrowserToggleFile :: Action 'FileBrowser 'ListOfFiles ()
+fileBrowserToggleFile =
+  Action ["toggle file browser file"] $ do
+    fb <- use (asFileBrowser . fbEntries)
+    fb' <- lift $ FB.maybeSelectCurrentEntry fb
+    assign (asFileBrowser . fbEntries) fb'
+
 -- Function definitions for actions
 --
 
@@ -1296,30 +1264,23 @@ composeAsNew = Action ["edit mail as new"] $
 -- browser.
 makeAttachmentsFromSelected :: AppState -> IO AppState
 makeAttachmentsFromSelected s = do
-  let toggled = view (_2 . fsEntryName) <$> toListOf (toggledItemsL (Proxy @'ListOfFiles)) s
-      selected = toListOf (list (Proxy @'ListOfFiles) . to L.listSelectedElement . _Just . _2 . _2 . fsEntryName) s
-  parts <- traverse (\x -> createAttachmentFromFile (mimeType x) (makeFullPath x)) (toggled `union` selected)
+  let toggled = view FB.fileInfoFilePathL
+                <$> view (asFileBrowser . fbEntries . to FB.fileBrowserSelection) s
+      selected = view FB.fileInfoFilePathL
+                 <$> toListOf (asFileBrowser . fbEntries . to FB.fileBrowserCursor . traversed) s
+  parts <- traverse (\x -> createAttachmentFromFile (mimeType x) x) (toggled `union` selected)
   pure $ s & over (asCompose . cAttachments) (listAppendAttachments parts)
     . over (asViews . vsFocusedView) (Brick.focusSetCurrent ComposeView)
     . set (asViews . vsViews . ix ComposeView . vFocus) ComposeListOfAttachments
   where
-    makeFullPath path = currentLine (view (asFileBrowser . fbSearchPath . E.editContentsL) s) </> path
     listAppendAttachments parts = L.listMoveTo (-1) . over L.listElementsL (<> Vector.fromList parts)
+
 
 -- | Determine if the selected directory entry is a file or not. We do
 -- not support adding entire directories to the e-mail.
 --
-isFileUnderCursor :: Maybe (a, (b, FileSystemEntry)) -> Bool
-isFileUnderCursor i = maybe False isFile (preview (_Just . _2 . _2) i)
-  where isFile (File _) = True
-        isFile _ = False
-
--- | Update the result of a file system listing in the 'AppState'
---
-updateBrowseFileContents :: [FileSystemEntry] -> AppState -> AppState
-updateBrowseFileContents contents s =
-  let contents' = view vector ((False, ) <$> contents)
-  in over (asFileBrowser . fbEntries) (L.listReplace contents' (Just 0)) s
+isFileUnderCursor :: Maybe FB.FileInfo -> Bool
+isFileUnderCursor = maybe False (FB.fileTypeMatch [FB.RegularFile])
 
 -- | Take the notmuch query given by the user and update the
 -- 'AppState' with notmuch query result.

@@ -27,6 +27,7 @@ import Brick.Widgets.Core (vBox, vLimit)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.FileBrowser as FB
 import qualified Graphics.Vty.Input.Events as Vty
 import Control.Lens ((&), set, view)
 import Control.Monad.State (execStateT)
@@ -157,7 +158,11 @@ appEvent s (T.AppEvent ev) = case ev of
 appEvent s _ = M.continue s
 
 initialState :: InternalConfiguration -> IO AppState
-initialState conf =
+initialState conf = do
+  fb' <- FB.newFileBrowser
+         FB.selectNonDirectories
+         ListOfFiles
+         (Just $ view (confFileBrowserView . fbHomePath) conf)
   let
     searchterms = view (confNotmuch . nmSearch) conf
     mi =
@@ -191,13 +196,13 @@ initialState conf =
         }
     path = view (confFileBrowserView . fbHomePath) conf
     fb = CreateFileBrowser
-         (L.list ListOfFiles mempty 1)
+         fb'
          (E.editor ManageFileBrowserSearchPath Nothing path)
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
     async = Async Nothing
     s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
-  in execStateT applySearch s
+  execStateT applySearch s
 
 -- | Application event loop.
 theApp ::

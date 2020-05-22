@@ -39,7 +39,7 @@ import System.FilePath.Posix
   )
 import Control.Monad (filterM, void, when)
 import Data.Maybe (fromMaybe, isJust)
-import Data.List (intercalate, isInfixOf, sort)
+import Data.List (intercalate, isInfixOf, sort, sortBy)
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.Text as T
@@ -941,14 +941,15 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
 
     -- To be resilient against differences in list contents between
     -- git and sdist, list the directory ourselves to work out what
-    -- the final entry should be.  Note that dirs come first in the
-    -- filebrowser widget.
-    files <- sort . fmap (T.encodeUtf8 . T.pack) <$> liftIO (
+    -- the final entry should be.  Note that dirs come first and the
+    -- files are sorted case insensitively in the filebrowser widget.
+    let caseInsensitive a b = compare (T.toLower a)  (T.toLower b)
+    files <- sortBy caseInsensitive . fmap T.pack <$> liftIO (
       getSourceDirectory >>= listDirectory
       >>= filterM (fmap isRegularFile . getFileStatus) )
     let
-      lastFile = fromMaybe "MISSING" $ preview _last files
-      secondLastFile = fromMaybe "MISSING" $ preview (_init . _last) files
+      lastFile = fromMaybe "MISSING" $ preview (_last . to T.encodeUtf8) files
+      secondLastFile = fromMaybe "MISSING" $ preview (_init . _last . to T.encodeUtf8) files
 
     startApplication
     composeNewMail step
@@ -958,7 +959,7 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
     step "jump to the end of the list"
-    sendKeys "G" (Regex $ buildAnsiRegex [] [] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> lastFile)
+    sendKeys "G" (Regex $ buildAnsiRegex [] [] ["43"] <> lastFile)
 
     step "add first selected file"
     sendKeys "Enter" (Substring lastFile)
@@ -1007,13 +1008,13 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
 
     step "jump to the end of the list"
-    sendKeys "G" (Regex $ buildAnsiRegex [] [] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> lastFile)
+    sendKeys "G" (Regex $ buildAnsiRegex [] [] ["43"] <> lastFile)
 
     step "select the file"
-    sendKeys "Space" (Regex $ buildAnsiRegex [] [] ["43"] <> T.encodeUtf8 "\\s\9745 - " <> lastFile)
+    sendKeys "Space" (Regex $ buildAnsiRegex [] [] ["43"] <> lastFile <> "*")
 
     step "move one item up"
-    sendKeys "Up" (Regex $ buildAnsiRegex [] [] ["43"] <> T.encodeUtf8 "\\s\9744 - " <> secondLastFile)
+    sendKeys "Up" (Regex $ buildAnsiRegex [] [] ["43"] <> secondLastFile)
 
     step "add selected files"
     out <- sendKeys "Enter" (Substring "Item 3 of 3")
