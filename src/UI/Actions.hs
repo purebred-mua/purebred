@@ -143,6 +143,7 @@ import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper, TextZipper)
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.LocalTime (getZonedTime, zonedTimeToUTC)
+import System.Directory (doesPathExist)
 
 import qualified Data.RFC5322.Address.Text as AddressText
   ( renderMailboxes, addressList, mailboxList )
@@ -402,11 +403,7 @@ instance Completable 'ManageThreadTagsEditor where
         modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Completable 'ManageFileBrowserSearchPath where
-  complete _ = do
-    paths <- use (asFileBrowser . fbSearchPath . E.editContentsL . to currentLine)
-    fb <- use (asFileBrowser . fbEntries)
-    fb' <- liftIO $ FB.setWorkingDirectory paths fb
-    assign (asFileBrowser . fbEntries) fb'
+  complete _ = fileBrowserSetWorkingDirectory
 
 instance Completable 'MailAttachmentOpenWithEditor where
   complete _ = hide ViewMail 0 MailAttachmentOpenWithEditor
@@ -667,11 +664,7 @@ instance Focusable 'ComposeView 'ConfirmDialog where
     unhide ComposeView 0 ConfirmDialog
 
 instance Focusable 'FileBrowser 'ListOfFiles where
-  switchFocus _ _ = do
-    path <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
-    fb <- use (asFileBrowser . fbEntries)
-    fb' <- liftIO $ FB.setWorkingDirectory path fb
-    assign (asFileBrowser . fbEntries) fb'
+  switchFocus _ _ = fileBrowserSetWorkingDirectory
 
 instance Focusable 'FileBrowser 'ManageFileBrowserSearchPath where
   switchFocus _ _ = pure ()
@@ -1645,3 +1638,15 @@ resetMatchingWords =
   over (asMailView . mvBody) removeMatchingWords
   . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
   . set (asMailView . mvScrollSteps) (Brick.focusRing [])
+
+fileBrowserSetWorkingDirectory ::
+     (MonadState AppState m, MonadIO m) => m ()
+fileBrowserSetWorkingDirectory = do
+  modifying (asFileBrowser . fbSearchPath) (E.applyEdit gotoEOL)
+  path <- uses (asFileBrowser . fbSearchPath . E.editContentsL) currentLine
+  pathExists <- liftIO $ doesPathExist path
+  if pathExists
+    then do
+      fb <- use (asFileBrowser . fbEntries) >>= liftIO . FB.setWorkingDirectory path
+      assign (asFileBrowser . fbEntries) fb
+    else assignError (GenericError $ path <> " does not exist")
