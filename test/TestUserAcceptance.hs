@@ -96,6 +96,7 @@ main = defaultMain $ testTmux pre post tests
       , testUpdatesReadState
       , testCanJumpToFirstListItem
       , testAddAttachments
+      , testFileBrowserInvalidPath
       , testFromAddressIsProperlyReset
       , testRepliesToMailSuccessfully
       , testUserCanMoveBetweenThreads
@@ -933,6 +934,24 @@ testConfig = purebredTmuxSession "test custom config" $
     -- Press Enter again to deal with case where cursor is not at
     -- column 0, which could cause target string to be split.
     sendKeys "Enter" (Substring unlikelyString)
+
+-- https://github.com/purebred-mua/purebred/issues/391
+testFileBrowserInvalidPath :: PurebredTestCase
+testFileBrowserInvalidPath = purebredTmuxSession "file browser handles invalid path input" $
+  \step -> do
+    startApplication
+    composeNewMail step
+
+    step "start file browser"
+    cwd <- B.pack <$> liftIO getCurrentDirectory
+    sendKeys "a" (Regex $ "Path:\\s" <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
+
+    step "focus search path editor"
+    sendKeys ":" (Regex $ "Path:\\s" <> buildAnsiRegex [] ["37"] ["40"] <> cwd)
+
+    step "clear input and enter invalid directory"
+    sendKeys "C-u" Unconditional
+    sendLine "asdfasdf" (Substring "asdfasdf does not exist")
 
 testAddAttachments :: PurebredTestCase
 testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
