@@ -121,7 +121,51 @@ main = defaultMain $ testTmux pre post tests
       , testBulkActionsOnThreadsByInput
       , testBulkActionsOnMailsByInput
       , testAbortedEditsResetState
+      , testReloadsThreadListAfterReply
       ]
+
+-- https://github.com/purebred-mua/purebred/issues/395
+testReloadsThreadListAfterReply :: PurebredTestCase
+testReloadsThreadListAfterReply = purebredTmuxSession "reloads list of threads" $
+  \step -> do
+    startApplication
+
+    step "focus query editor"
+    sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+
+    step "query for receiver"
+    sendLine "to:frase" (Substring "Item 1 of 2")
+
+    step "view mail"
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
+
+    step "compose as new"
+    sendKeys "e" (Substring "Testmail with whitespace in the subject")
+
+    step "navigate to latest attachment"
+    sendKeys "Down" (Substring "Item 2 of 2")
+
+    step "Remove HTML part"
+    sendKeys "D" (Not (Substring "text/html")) >>= put
+    assertSubstringS "Item 1 of 1"
+
+    step "send mail"
+    sendKeys "y" (Substring "Item 1 of 2")
+
+    step "check current first mail"
+    sendKeys "Enter" (Substring "This is a test mail for purebred") >>= put
+
+    assertSubstringS "Date: Thu, 17 Aug"
+
+    step "update list of threads"
+    sendKeys "Escape" (Substring "Item 1 of 2")
+    sendKeys ":" Unconditional
+    sendKeys "Enter" (Substring "Item 1 of 3")
+
+    step "open first mail"
+    sendKeys "Enter" (Substring "This is a test mail for purebred")
+
 
 testAbortedEditsResetState :: PurebredTestCase
 testAbortedEditsResetState = purebredTmuxSession "aborted edits reset editor back to initial state" $
