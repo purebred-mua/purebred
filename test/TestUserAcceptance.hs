@@ -172,15 +172,6 @@ testAbortedEditsResetState = purebredTmuxSession "aborted edits reset editor bac
       ("To: " <> buildAnsiRegex [] ["37"] [] <> "user@to.test")
       "To: user@to.test"
 
-    step "start file browser"
-    cwd <- B.pack <$> liftIO getCurrentDirectory
-    sendKeys "a" (Regex $ "Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
-    assertEditorResetsToInitialValue
-      step
-      ":"
-      (buildAnsiRegex [] ["39"] ["49"] <> "Path: " <> buildAnsiRegex [] ["37"] ["40"] <> cwd)
-      ("Path: " <> buildAnsiRegex [] ["34"] ["40"] <> cwd)
-
 
 testBulkActionsOnMailsByInput :: PurebredTestCase
 testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on mails by editor" $
