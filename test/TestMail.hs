@@ -23,6 +23,7 @@ import qualified Data.Text.Encoding as T
 import Control.Lens (view)
 import Data.Time.Clock (UTCTime(..), secondsToDiffTime)
 import Data.Time.Calendar (fromGregorian)
+import Control.Monad (replicateM)
 
 import Test.Tasty.HUnit ((@=?), testCase)
 import Test.Tasty (TestTree, testGroup)
@@ -69,7 +70,7 @@ testTagOpsWithReset = testCase "tag ops with reset" $ ["archive"] @=? view mailT
 instance Arbitrary Tag where
   arbitrary = do
     n <- choose (1, tagMaxLen)
-    bs <- fmap B.pack . sequenceA . replicate n $ choose (0x21, 0x7e)
+    bs <- fmap B.pack . replicateM n $ choose (0x21, 0x7e)
     maybe arbitrary{-try again-} pure (mkTag bs)
 
 instance Arbitrary NotmuchMail where
