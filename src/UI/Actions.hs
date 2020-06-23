@@ -1225,11 +1225,25 @@ composeAsNew = Action ["edit mail as new"] $
       (assignError (GenericError "No mail selected"))
       (\mail -> do
         pmail <- use (asMailView . mvMail)
-        dbpath <- use (asConfig . confNotmuch . nmDatabase)
         charsets <- use (asConfig . confCharsets)
-        runExceptT (Notmuch.mailFilepath mail dbpath >>= Notmuch.unindexFilePath dbpath)
+        runExceptT (specialCaseForDraft mail)
           >>= either assignError (const $ assign asCompose (newComposeFromMail charsets pmail))
       )
+
+-- | This is a special case workaround for draft mails used by
+-- 'composeAsNew'. If the mail we're handling is a draft mail, remove
+-- the draft on the file system, otherwise do nothing. That will
+-- result in creating a copy mail object for non-draft mails.
+--
+specialCaseForDraft ::
+     (MonadState AppState m, MonadIO m, MonadError Error m)
+  => NotmuchMail
+  -> m ()
+specialCaseForDraft mail = do
+  dbpath <- use (asConfig . confNotmuch . nmDatabase)
+  draftTag <- use (asConfig . confNotmuch . nmDraftTag)
+  when (draftTag `elem` view mailTags mail)
+    $ Notmuch.mailFilepath mail dbpath >>= Notmuch.unindexFilePath dbpath
 
 
 fileBrowserToggleFile :: Action 'FileBrowser 'ListOfFiles ()
