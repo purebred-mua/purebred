@@ -22,6 +22,7 @@ module UI.GatherHeaders.Keybindings where
 import qualified Graphics.Vty as V
 import Types
 import UI.Actions
+import qualified Brick.Types as T
 
 gatherFromKeybindings :: [Keybinding 'Threads 'ComposeFrom]
 gatherFromKeybindings =
@@ -41,5 +42,10 @@ gatherSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject]
 gatherSubjectKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
     , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey V.KEnter []) (noop `focus` invokeEditor @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey V.KEnter []) (
+        noop
+        `focus` (
+            invokeEditor Threads ListOfThreads
+            :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState))
+        )
     ]

@@ -35,6 +35,7 @@ module Purebred.System.Process
   , proc
   , shell
   , setStdin
+  , closed
   , byteStringInput
   ) where
 
