@@ -802,15 +802,31 @@ continue = Action mempty (get >>= lift . Brick.continue)
 
 -- | Suspends Purebred and invokes the configured editor.
 --
-invokeEditor :: Action v ctx (T.Next AppState)
-invokeEditor = Action ["invoke external editor"] (stateSuspendAndResume $ invokeEditor' insertOrReplaceAttachment)
+invokeEditor :: ViewName -> Name -> Action v ctx (T.Next AppState)
+invokeEditor n w =
+  Action
+    ["invoke external editor"]
+    (let updatePart t =
+           modifying
+             (asCompose . cAttachments)
+             (insertOrReplaceAttachment $ createTextPlainMessage t)
+         errormsg e =
+           GenericError $
+           "Editor exited abnormally ( " <>
+           show e <> " ). Press Esc to continue."
+      in stateSuspendAndResume $
+         runExceptT invokeEditor' >>=
+         either (\e -> assignError (errormsg e) *> switchMode' n w) updatePart)
 
 -- | Suspends Purebred to invoke a command for editing an
 -- attachment. Currently only supports re-editing the body text of an
 -- e-mail.
 --
 edit :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
-edit = Action ["edit file"] (stateSuspendAndResume editAttachment)
+edit =
+  Action
+    ["edit file"]
+    (stateSuspendAndResume (editAttachment ComposeView ComposeListOfAttachments))
 
 openAttachment :: Action 'ViewMail ctx (T.Next AppState)
 openAttachment =
@@ -913,7 +929,7 @@ focus (Action d1 f1) (Action d2 f2) =
     switchMode = do
       sink <- use (asConfig . confLogSink)
       liftIO . sink . LT.pack $
-        "chain' "
+        "focus switch: "
           <> show (viewname (Proxy @v)) <> "/" <> show (name (Proxy @ctx)) <> " -> "
           <> show (viewname (Proxy @v')) <> "/" <> show (name (Proxy @ctx'))
       onFocusSwitch (Proxy @v') (Proxy @ctx') 
@@ -1514,10 +1530,9 @@ initialDraftConfirmDialog = dialog (Just "Keep draft?") (Just (0, [("Keep", Keep
 -- contents from the temporary file, delete it and create a MIME message out of
 -- it. Set it in the Appstate.
 invokeEditor' ::
-     (MonadState AppState m, MonadIO m, MonadMask m)
-  => (MIMEMessage -> L.List Name MIMEMessage -> L.List Name MIMEMessage)
-  -> m ()
-invokeEditor' listUpdate = do
+     (MonadError Error m, MonadIO m, MonadState AppState m, MonadMask m)
+  => m T.Text
+invokeEditor' = do
   maildir <- use (asConfig . confNotmuch . nmDatabase)
   cmd <- use (asConfig . confEditor)
   maybeEntity <- preuse (asCompose . cAttachments . to L.listSelectedElement . _Just . _2 . to getTextPlainPart . _Just)
@@ -1526,9 +1541,7 @@ invokeEditor' listUpdate = do
     mkEntity = maybe (pure mempty) entityToBytes maybeEntity
     entityCmd = EntityCommand handleExitCodeTempfileContents
       (draftFileResoure maildir) (\_ fp -> proc cmd [fp]) tryReadProcessStderr
-    updatePart = modifying (asCompose . cAttachments) . listUpdate . createTextPlainMessage
-  runExceptT (mkEntity >>= runEntityCommand . entityCmd)
-    >>= either assignError updatePart
+  mkEntity >>= runEntityCommand . entityCmd
 
 -- | Write the serialised WireEntity to a temporary file. Pass the FilePath of
 -- the temporary file to the command. Do not remove the temporary file, so
@@ -1570,11 +1583,23 @@ pipeCommand' cmd
         runExceptT (mkConfig ent >>= runEntityCommand)
           >>= either assignError (const $ pure ())
 
-editAttachment :: (MonadState AppState m, MonadIO m, MonadMask m) => m ()
-editAttachment = selectedItemHelper (asCompose . cAttachments) $ \m ->
-  case preview (headers . contentDisposition . folded . dispositionType) m of
-    Just Inline -> invokeEditor' (L.listModify . const)
-    _           -> assignError (GenericError "Not implemented. See #182")
+editAttachment ::
+     (MonadState AppState m, MonadIO m, MonadMask m) => ViewName -> Name -> m ()
+editAttachment n w =
+  selectedItemHelper (asCompose . cAttachments) $ \m ->
+    case preview (headers . contentDisposition . folded . dispositionType) m of
+      Just Inline ->
+        let updatePart t =
+              modifying
+                (asCompose . cAttachments)
+                (insertOrReplaceAttachment $ createTextPlainMessage t)
+            errormsg e =
+              GenericError $
+              "Editor exited abnormally ( " <>
+              show e <> " ). Press Esc to continue."
+         in runExceptT invokeEditor' >>=
+            either (\e -> assignError (errormsg e) *> switchMode' n w) updatePart
+      _ -> assignError (GenericError "Not implemented. See #182")
 
 -- | If the list is empty, insert the attachment otherwise replace the
 -- currently selected item.
@@ -1648,3 +1673,11 @@ fileBrowserSetWorkingDirectory = do
       modifying (asFileBrowser . fbSearchPath) saveEditorState
       assign (asFileBrowser . fbEntries) fb
     else assignError (GenericError $ path <> " does not exist")
+
+switchMode' :: (MonadIO m, MonadState AppState m) => ViewName -> Name -> m ()
+switchMode' vn w = do
+  sink <- use (asConfig . confLogSink)
+  liftIO . sink . LT.pack $
+    "focus on " <> show vn <> "/" <> show w
+  modifying (asViews . vsFocusedView) (Brick.focusSetCurrent vn)
+  assign (asViews . vsViews . at vn . _Just . vFocus) w

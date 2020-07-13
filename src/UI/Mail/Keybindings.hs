@@ -22,6 +22,7 @@ module UI.Mail.Keybindings where
 import qualified Graphics.Vty as V
 import UI.Actions
 import Types
+import qualified Brick.Types as T
 
 displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 displayMailKeybindings =
@@ -53,7 +54,13 @@ displayMailKeybindings =
                                              `focus` displayMail
                                              `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `focus` continue @'Help @'ScrollingHelpView)
-    , Keybinding (V.EvKey (V.KChar 'r') []) (replyMail `focus` invokeEditor @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'r') []) (
+        replyMail
+        `focus` (
+            invokeEditor ViewMail ScrollingMailView
+            :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
+            )
+        )
     , Keybinding (V.EvKey (V.KChar 'v') []) (noop `focus` continue @'ViewMail @'MailListOfAttachments)
     , Keybinding (V.EvKey (V.KChar 'e') []) (composeAsNew `focus` continue @'ComposeView @'ComposeListOfAttachments)
     , Keybinding (V.EvKey (V.KChar '/') []) (noop `focus` continue @'ViewMail @'ScrollingMailViewFindWordEditor)
@@ -118,5 +125,10 @@ mailviewComposeToKeybindings :: [Keybinding 'ViewMail 'ComposeTo]
 mailviewComposeToKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ViewMail @'ScrollingMailView)
     , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ViewMail @'ScrollingMailView)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` invokeEditor @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey V.KEnter []) (
+        done `focus` (
+            invokeEditor ViewMail ScrollingMailView
+            :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
+            )
+        )
     ]

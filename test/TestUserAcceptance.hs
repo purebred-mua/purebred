@@ -122,7 +122,49 @@ main = defaultMain $ testTmux pre post tests
       , testBulkActionsOnMailsByInput
       , testAbortedEditsResetState
       , testReloadsThreadListAfterReply
+      , testAbortsCompositionIfEditorExits
       ]
+
+-- https://github.com/purebred-mua/purebred/issues/336
+testAbortsCompositionIfEditorExits :: PurebredTestCase
+testAbortsCompositionIfEditorExits = purebredTmuxSession "aborts composition if editor exits abnormally" $
+  \step -> do
+    setEnvVarInSession "EDITOR" "doesnotexistFoo"
+    startApplication
+    
+    step "start composition"
+    sendKeys "m" (Substring "From")
+
+    step "accept default"
+    sendKeys "Enter" (Substring "To")
+
+    step "enter to: email"
+    sendLine "user@to.test" (Substring "Subject")
+
+    step "enter subject"
+    sendLine "Draft mail subject" (Substring "Editor exited abnormally")
+
+    -- check reply
+    step "Navigate second mail"
+    sendKeys "Down" (Substring "Item 2 of 4")
+
+    step "View mail"
+    sendKeys "Enter" (Substring "HOLY PUREBRED")
+
+    step "reply to mail"
+    sendKeys "r" (Substring "Editor exited abnormally")
+
+    -- mail composition from mail view
+    step "start composition from mail view"
+    sendKeys "f" (Substring "To:")
+
+    step "accept default"
+    sendKeys "Enter" (Substring "Editor exited abnormally")
+
+    step "back to thread list"
+    sendKeys "Escape" (Substring "Item 2 of 4")
+    
+    
 
 -- https://github.com/purebred-mua/purebred/issues/395
 testReloadsThreadListAfterReply :: PurebredTestCase
