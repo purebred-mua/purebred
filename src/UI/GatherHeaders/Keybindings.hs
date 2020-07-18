@@ -25,21 +25,21 @@ import UI.Actions
 
 gatherFromKeybindings :: [Keybinding 'Threads 'ComposeFrom]
 gatherFromKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` focus @'Threads @'ComposeTo `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey V.KEnter []) (noop `focus` continue @'Threads @'ComposeTo)
     ]
 
 gatherToKeybindings :: [Keybinding 'Threads 'ComposeTo]
 gatherToKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` focus @'Threads @'ComposeSubject `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey V.KEnter []) (noop `focus` continue @'Threads @'ComposeSubject)
     ]
 
 gatherSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject]
 gatherSubjectKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'Threads @'ListOfThreads `chain` continue)
-    , Keybinding (V.EvKey V.KEnter []) (noop `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` invokeEditor)
+    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey V.KEnter []) (noop `focus` invokeEditor @'ComposeView @'ComposeListOfAttachments)
     ]
