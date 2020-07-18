@@ -56,7 +56,6 @@ module UI.Actions (
   , abort
   , noop
   , chain
-  , chain'
 
   -- ** List specific Actions
   , listUp
@@ -184,25 +183,26 @@ Actions are composible functions. They can be sequenced and used in 'Keybinding'
 
 {- $examples
 
-This keybinding registered to back space scrolls a page up and
+This keybinding registered to backspace, scrolls a page up and
 continues with the event loop:
 
 @
-'Keybinding' (EvKey KBS []) ('scrollPageUp' ``chain'`` 'continue') ]
+'Keybinding' (EvKey KBS []) ('scrollPageUp' ``chain`` 'continue')
 @
 
-This keybinding is used to change the focus to a different widget:
+This keybinding is used to change the view and focus to a different widget:
 
 @
-'Keybinding' (EvKey (KChar 'q') []) ('noop' ``chain'`` ('focus' :: Action 'Threads 'ListOfThreads 'AppState') ``chain`` 'continue'
+'Keybinding' (EvKey KEsc []) ('noop' ``focus`` 'continue' @@''Threads' @@''ListOfThreads')
 @
 -}
 
 {- $new_actions
 New 'Action's are typically added when creating a 'Keybinding'
-first. A simple Action to start off has a specific 'View' and widget
-(see 'Name'). You can access the full 'AppState' in the Action's
-function including 'IO'.
+first. Keep the 'Action' specific to the view and widget
+(e.g. 'displayMail', or 'displayThreadMails'). You can access the full
+'AppState' in the Action's function including 'IO' (see
+'createAttachments' as an example).
 -}
 
 -- | Scrollable is an abstraction over Brick's viewport scroller in
@@ -536,67 +536,67 @@ clearMailComposition s =
 -- "view" expressed with the mode in the application state.
 --
 class Focusable (v :: ViewName) (n :: Name) where
-  switchFocus :: (MonadState AppState m, MonadIO m) => Proxy v -> Proxy n -> m ()
+  onFocusSwitch :: (MonadState AppState m, MonadIO m) => Proxy v -> Proxy n -> m ()
 
 instance Focusable 'Threads 'SearchThreadsEditor where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     modifying (asThreadsView . miSearchThreadsEditor . editEditorL) (E.applyEdit gotoEOL)
     modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
 
 instance Focusable 'Threads 'ManageThreadTagsEditor where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     modifying (asThreadsView . miThreadTagsEditor . E.editContentsL) clearZipper
     modify (toggleLastVisibleWidget ManageThreadTagsEditor)
 
 instance Focusable 'Threads 'ComposeFrom where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     modify (toggleLastVisibleWidget ComposeFrom)
     modifying (asCompose . cFrom . editEditorL) (E.applyEdit gotoEOL)
 
 instance Focusable 'Threads 'ComposeTo where
-  switchFocus _ _ = modify (toggleLastVisibleWidget ComposeTo)
+  onFocusSwitch _ _ = modify (toggleLastVisibleWidget ComposeTo)
 
 instance Focusable 'Threads 'ComposeSubject where
-  switchFocus _ _ = modify (toggleLastVisibleWidget ComposeSubject)
+  onFocusSwitch _ _ = modify (toggleLastVisibleWidget ComposeSubject)
 
 instance Focusable 'Threads 'ListOfThreads where
-  switchFocus _ _ = pure ()
+  onFocusSwitch _ _ = pure ()
 
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
     unhide ViewMail 0 ManageMailTagsEditor
     assign (asViews . vsViews . ix ViewMail . vFocus) ManageMailTagsEditor
 
 instance Focusable 'ViewMail 'ScrollingMailView where
-  switchFocus _ _ = assign (asViews . vsViews . ix ViewMail . vFocus) ScrollingMailView
+  onFocusSwitch _ _ = assign (asViews . vsViews . ix ViewMail . vFocus) ScrollingMailView
 
 instance Focusable 'ViewMail 'ScrollingMailViewFindWordEditor where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     modifying (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
     assign (asViews. vsViews . ix ViewMail . vFocus) ScrollingMailViewFindWordEditor
     unhide ViewMail 0 ScrollingMailViewFindWordEditor
 
 instance Focusable 'ViewMail 'ListOfMails where
-  switchFocus _ _ = assign (asViews . vsViews . ix ViewMail . vFocus) ListOfMails
+  onFocusSwitch _ _ = assign (asViews . vsViews . ix ViewMail . vFocus) ListOfMails
 
 instance Focusable 'ViewMail 'MailListOfAttachments where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ViewMail . vFocus) MailListOfAttachments
     unhide ViewMail 0 MailListOfAttachments
 
 instance Focusable 'ViewMail 'MailAttachmentOpenWithEditor where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ViewMail . vFocus) MailAttachmentOpenWithEditor
     unhide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Focusable 'ViewMail 'MailAttachmentPipeToEditor where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ViewMail . vFocus) MailAttachmentPipeToEditor
     unhide ViewMail 0 MailAttachmentPipeToEditor
 
 instance Focusable 'ViewMail 'SaveToDiskPathEditor where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     charsets <- use (asConfig . confCharsets)
     s <- get
     let maybeFilePath = preview (asMailView . mvAttachments . to L.listSelectedElement
@@ -607,58 +607,58 @@ instance Focusable 'ViewMail 'SaveToDiskPathEditor where
     modifying (asMailView . mvSaveToDiskPath . E.editContentsL) (insertMany fname . clearZipper)
 
 instance Focusable 'ViewMail 'ComposeTo where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ViewMail . vFocus) ComposeTo
     unhide ViewMail 0 ComposeTo
 
 instance Focusable 'Help 'ScrollingHelpView where
-  switchFocus _ _ = modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
+  onFocusSwitch _ _ = modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
 
 instance Focusable 'ComposeView 'ComposeListOfAttachments where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeListOfAttachments
     modify (resetView Threads indexView)
 
 instance Focusable 'ComposeView 'ComposeFrom where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeFrom
     modifying (asCompose . cFrom) saveEditorState
     unhide ComposeView 1 ComposeFrom
 
 instance Focusable 'ComposeView 'ComposeTo where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeTo
     modifying (asCompose . cTo) saveEditorState
     unhide ComposeView 1 ComposeTo
 
 instance Focusable 'ComposeView 'ComposeCc where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeCc
     modifying (asCompose . cCc) saveEditorState
     unhide ComposeView 1 ComposeCc
 
 instance Focusable 'ComposeView 'ComposeBcc where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeBcc
     modifying (asCompose . cBcc) saveEditorState
     unhide ComposeView 1 ComposeBcc
 
 instance Focusable 'ComposeView 'ComposeSubject where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeSubject
     modifying (asCompose . cSubject) saveEditorState
     unhide ComposeView 1 ComposeSubject
 
 instance Focusable 'ComposeView 'ConfirmDialog where
-  switchFocus _ _ = do
+  onFocusSwitch _ _ = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ConfirmDialog
     unhide ComposeView 0 ConfirmDialog
 
 instance Focusable 'FileBrowser 'ListOfFiles where
-  switchFocus _ _ = fileBrowserSetWorkingDirectory
+  onFocusSwitch _ _ = fileBrowserSetWorkingDirectory
 
 instance Focusable 'FileBrowser 'ManageFileBrowserSearchPath where
-  switchFocus _ _ = pure ()
+  onFocusSwitch _ _ = pure ()
 
 
 -- | Generalisation in order to access the widget name from a phantom
@@ -895,13 +895,19 @@ chain (Action d1 f1) (Action d2 f2) = Action (d1 <> d2) (f1 *> f2)
 -- for a different view/widget. This is useful to perform actions on
 -- widget focus changes.
 --
-chain'
-    :: forall v v' ctx ctx' a b.
-       (HasName ctx, HasViewName v, HasName ctx', HasViewName v', ViewTransition v v')
-    => Action v ctx a
-    -> Action v' ctx' b
-    -> Action v ctx b
-chain' (Action d1 f1) (Action d2 f2) =
+focus ::
+     forall v v' ctx ctx' a b.
+     ( Focusable v' ctx'
+     , HasName ctx
+     , HasViewName v
+     , HasName ctx'
+     , HasViewName v'
+     , ViewTransition v v'
+     )
+  => Action v ctx a
+  -> Action v' ctx' b
+  -> Action v ctx b
+focus (Action d1 f1) (Action d2 f2) =
   Action (d1 <> d2) (f1 *> switchMode *> f2)
   where
     switchMode = do
@@ -910,6 +916,7 @@ chain' (Action d1 f1) (Action d2 f2) =
         "chain' "
           <> show (viewname (Proxy @v)) <> "/" <> show (name (Proxy @ctx)) <> " -> "
           <> show (viewname (Proxy @v')) <> "/" <> show (name (Proxy @ctx'))
+      onFocusSwitch (Proxy @v') (Proxy @ctx') 
       modify (transitionHook (Proxy @v) (Proxy @v'))
       modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy @v')))
       assign (asViews . vsViews . at (viewname (Proxy @v')) . _Just . vFocus) (name (Proxy @ctx'))
@@ -924,18 +931,6 @@ abort = Action ["cancel"] (reset (Proxy @v) (Proxy @a))
 -- These actions are used to sequence other actions together. Think of
 -- it like glue functions.
 --
-
--- | Used to switch the focus from one widget to another on the same view.
---
-focus :: forall v a. (HasViewName v, HasName a, Focusable v a) => Action v a ()
-focus = Action
-  ["switch mode to " <> T.pack (show (name (Proxy @a)))] $ do
-    sink <- use (asConfig . confLogSink)
-    liftIO . sink . LT.pack $
-      "switchFocus "
-        <> show (viewname (Proxy @v)) <> " "
-        <> show (name (Proxy @a))
-    switchFocus (Proxy @v) (Proxy @a)
 
 -- | A no-op action can
 -- be used at the start of a sequence with an immediate switch of

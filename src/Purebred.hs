@@ -28,15 +28,15 @@ import Purebred
 
 scrollKeybindings :: ('Scrollable' w) => ['Keybinding' v w]
 scrollKeybindings =
-  [ 'Keybinding' (EvKey (KChar 'j') []) ('scrollDown' ``chain`` 'continue')
-  , Keybinding (EvKey (KChar 'k') []) ('scrollUp' \`chain\` continue)
-  , Keybinding (EvKey (KChar 'd') []) ('scrollPageDown' \`chain\` continue)
-  , Keybinding (EvKey (KChar 'u') []) ('scrollPageUp' \`chain\` continue)
+  [ 'Keybinding' (EvKey (KChar 'j') []) ('scrollDown' \`chain\` 'continue')
+  , Keybinding (EvKey (KChar 'k') []) ('scrollUp' \`chain\` 'continue')
+  , Keybinding (EvKey (KChar 'd') []) ('scrollPageDown' \`chain\` 'continue')
+  , Keybinding (EvKey (KChar 'u') []) ('scrollPageUp' \`chain\` 'continue')
   ]
 
 mailViewKeybindings =
-  [ Keybinding (EvKey (KChar 'J') []) ('listDown' ``chain'`` 'displayMail' \`chain\` continue)
-  , Keybinding (EvKey (KChar 'K') []) ('listUp' \`chain'` displayMail \`chain\` continue)
+  [ Keybinding (EvKey (KChar 'J') []) ('listDown' \`focus\` 'displayMail' \`chain\` continue)
+  , Keybinding (EvKey (KChar 'K') []) ('listUp' \`focus\` displayMail \`chain\` continue)
   , Keybinding (EvKey (KChar 'G') []) ('listJumpToEnd' \`chain\` continue)
   , Keybinding (EvKey (KChar 'g') []) ('listJumpToStart' \`chain\` continue)
   ]
@@ -48,7 +48,7 @@ main = 'purebred' $ tweak 'defaultConfig' where
     . over ('confHelpView' . 'hvKeybindings') (scrollKeybindings <>)
 @
 
-The invoke the program, just run @purebred@:
+Then invoke the program by running @purebred@.
 
 = Overriding the config directory
 

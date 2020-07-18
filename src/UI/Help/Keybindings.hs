@@ -26,8 +26,8 @@ import Types
 -- | Default Keybindings
 helpKeybindings :: [Keybinding 'Help 'ScrollingHelpView]
 helpKeybindings =
-    [ Keybinding (EvKey KEsc []) (noop `chain'` focus @'Threads @'ListOfThreads `chain` continue)
-    , Keybinding (EvKey (KChar 'q') []) (noop `chain'` focus @'Threads @'ListOfThreads `chain` continue)
+    [ Keybinding (EvKey KEsc []) (noop `focus` continue @'Threads @'ListOfThreads)
+    , Keybinding (EvKey (KChar 'q') []) (noop `focus` continue @'Threads @'ListOfThreads)
     , Keybinding (EvKey KBS []) (scrollPageUp `chain` continue)
     , Keybinding (EvKey (KChar ' ') []) (scrollPageDown `chain` continue)
     , Keybinding (EvKey KBS []) (scrollPageUp `chain` continue)

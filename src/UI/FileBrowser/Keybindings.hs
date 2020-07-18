@@ -26,16 +26,16 @@ import Types
 -- | Default Keybindings
 fileBrowserKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]
 fileBrowserKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'q') []) (noop `chain'` focus @'ComposeView @'ComposeListOfAttachments `chain` continue)
-    , Keybinding (V.EvKey (V.KChar ':') []) (noop `chain'` focus @'FileBrowser @'ManageFileBrowserSearchPath `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (noop `focus` continue @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (noop `focus` continue @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar ':') []) (noop `focus` continue @'FileBrowser @'ManageFileBrowserSearchPath)
     , Keybinding (V.EvKey V.KEnter []) (createAttachments `chain` continue)
     , Keybinding (V.EvKey (V.KChar '*') []) (fileBrowserToggleFile `chain` continue)
     ]
 
 manageSearchPathKeybindings :: [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
 manageSearchPathKeybindings =
-  [ Keybinding (V.EvKey V.KEsc []) (abort `chain'` focus @'FileBrowser @'ListOfFiles `chain` continue)
-  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `chain'` focus @'FileBrowser @'ListOfFiles `chain` continue)
-  , Keybinding (V.EvKey V.KEnter []) (done `chain'` focus @'FileBrowser @'ListOfFiles `chain` continue)
+  [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'FileBrowser @'ListOfFiles)
+  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'FileBrowser @'ListOfFiles)
+  , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'FileBrowser @'ListOfFiles)
   ]

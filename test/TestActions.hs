@@ -16,11 +16,11 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module TestActions where
 
 import qualified Brick.Widgets.List as L
+import qualified Brick.Types as T
 
 import Control.Lens
 import Test.Tasty (TestTree, testGroup)
@@ -34,18 +34,7 @@ import UI.Views (swapWidget)
 
 actionTests ::
   TestTree
-actionTests =
-    testGroup
-        "action tests"
-        [ testModeDescription
-        , testSwapBottom
-        ]
-
-testModeDescription :: TestTree
-testModeDescription = testCase "mode present in the switch action"
-                      $ view aDescription a @?= ["switch mode to ManageMailTagsEditor"]
-  where
-    a = focus @'ViewMail @'ManageMailTagsEditor
+actionTests = testGroup "action tests" [testSwapBottom]
 
 testSwapBottom :: TestTree
 testSwapBottom = testCase "swaps last visible widget" $ swapWidget ListOfThreads ManageThreadTagsEditor tiles @?= expected
