@@ -43,7 +43,7 @@ let
     cabal-install
     cabal2nix
     ghcid
-    hindent
+    # hindent - currently broken
     hlint
     pkgs.notmuch
     pkgs.tmux
