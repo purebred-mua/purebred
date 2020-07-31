@@ -6,8 +6,8 @@
 }:
 mkDerivation {
   pname = "purebred-email";
-  version = "0.4.1";
-  sha256 = "e94e0696d6d92727a837519dfe1d9684bb650d54a35ef77d13175dfa40ab6d3a";
+  version = "0.4.2";
+  sha256 = "7e611e912d7fbaa482eb059481f4074a4053bcda7bbfd9fb602476cbac8b92a1";
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
