@@ -861,7 +861,7 @@ openWithCommand =
       case cmd of
         [] -> lift . Brick.continue . setError (GenericError "Empty command") =<< get
         (x:xs) -> stateSuspendAndResume $
-          openCommand' (MailcapHandler (Process (x :| xs) []) IgnoreOutput DiscardTempfile)
+          openCommand' (MailcapHandler (Process (x :| xs) []) IgnoreOutput KeepTempfile)
     }
 
 -- | Wrapper for 'Brick.suspendAndResume' that reads state from
