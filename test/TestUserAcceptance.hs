@@ -144,7 +144,8 @@ testReloadsThreadListAfterReply = purebredTmuxSession "reloads list of threads" 
     sendKeys "e" (Substring "Testmail with whitespace in the subject")
 
     step "navigate to latest attachment"
-    sendKeys "Down" (Substring "Item 2 of 2")
+    sendKeys "Down" (Substring "Item 2 of 2") >>= put
+    assertSubstringS "text/html"
 
     step "Remove HTML part"
     sendKeys "D" (Not (Substring "text/html")) >>= put
