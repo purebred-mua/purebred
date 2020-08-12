@@ -61,6 +61,7 @@ import Prelude hiding (Word)
 import Data.MIME
 
 import Error
+import UI.Notifications (makeWarning)
 import Storage.Notmuch (mailFilepath)
 import Types
 import Purebred.System (tryIO)
@@ -153,7 +154,7 @@ bodyToDisplay s textwidth charsets prefCT msg =
   case chooseEntity prefCT msg of
     Nothing ->
       throwError
-        (GenericError $ "Unable to find preferred entity with: " <> show prefCT)
+        (ParseError $ "Unable to find preferred entity with: " <> show prefCT)
     Just entity ->
       let output =
             maybe
@@ -192,7 +193,7 @@ chooseEntity preferredContentType msg =
 entityToBytes :: (MonadError Error m) => WireEntity -> m B.ByteString
 entityToBytes msg = either err pure (convert msg)
   where
-    err e = throwError $ GenericError ("Decoding error: " <> show e)
+    err e = throwError $ ParseError ("Decoding error: " <> show e)
     convert :: WireEntity -> Either EncodingError B.ByteString
     convert m = view body <$> view transferDecoded m
 

@@ -26,7 +26,6 @@ import Data.Functor (($>))
 import Brick.BChan (writeBChan)
 
 import Types
-import Error
 
 
 -- | Schedules validation by sending a PurebredEvent.
@@ -37,8 +36,8 @@ import Error
 -- find a thread id already set and a new thread is scheduled.
 --
 dispatchValidation ::
-     (a -> Maybe Error)  -- ^ validation function
-  -> Lens' AppState (Maybe Error)
+     (a -> Maybe UserMessage)  -- ^ validation function
+  -> Lens' AppState (Maybe UserMessage)
   -> a
   -> AppState
   -> IO AppState

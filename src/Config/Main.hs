@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2017-2021 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -100,6 +100,8 @@ solarizedDark =
         , (editorLabelAttr, V.brightYellow `on` V.brightBlack)
         , (editorErrorAttr, fg V.red)
         , (statusbarErrorAttr, bg V.red)
+        , (statusbarInfoAttr, bg V.green)
+        , (statusbarWarningAttr, bg V.yellow)
         , (statusbarAttr, V.black `on` V.brightYellow)
         , (headerKeyAttr, fg V.cyan)
         , (headerValueAttr, fg V.brightCyan)
@@ -149,6 +151,12 @@ statusbarAttr = "statusbar"
 
 statusbarErrorAttr :: A.AttrName
 statusbarErrorAttr = statusbarAttr <> "error"
+
+statusbarInfoAttr :: A.AttrName
+statusbarInfoAttr = statusbarAttr <> "info"
+
+statusbarWarningAttr :: A.AttrName
+statusbarWarningAttr = statusbarAttr <> "warning"
 
 editorAttr :: A.AttrName
 editorAttr = E.editAttr

@@ -33,7 +33,6 @@ data Error
   | FileReadError FilePath IOError -- ^ failed to read a file
   | FileParseError FilePath String -- ^ failed to parse a file
   | SendMailError String
-  | GenericError String
   | ProcessError String
   | ParseError String
   deriving (Show, Eq)

@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2020 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2017-2021 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -57,22 +57,21 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (handleDialogEvent)
 import Graphics.Vty (Event (..))
 import Control.Lens (Getter, _Left, preview, set, to, view)
-import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State
 import Data.Attoparsec.Text (parseOnly)
 import Data.List (find)
 import Data.Text.Zipper (currentLine)
+import qualified Data.Text as T
 import Prelude hiding (readFile, unlines)
 
 import Data.RFC5322.Address.Text (mailboxList, addressList)
 
-import Error
 import Types
 import Purebred.Tags (parseTagOps)
 import Purebred.Parsing.Text (niceEndOfInput)
 import UI.Validation (dispatchValidation)
 import Brick.Widgets.StatefulEdit (editEditorL)
-
+import UI.Notifications (makeWarning)
 
 -- | Purebreds event handler. Either we can look up a function
 -- declared for the key press or send the key press to the Brick widget
@@ -90,7 +89,7 @@ lookupKeybinding e = find (\x -> view kbEvent x == e)
 dispatch :: EventHandler v m -> AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
 dispatch (EventHandler l fallback) s ev =
   case lookupKeybinding ev (view l s) of
-    Just kb -> evalStateT (view (kbAction . aAction) kb) (set asError Nothing s)
+    Just kb -> evalStateT (view (kbAction . aAction) kb) (set asUserMessage Nothing s)
     Nothing -> fallback s ev
 
 
@@ -99,12 +98,12 @@ dispatch (EventHandler l fallback) s ev =
 --
 runValidation ::
      Monoid a
-  => (a -> Maybe Error) -- ^ validation
+  => (a -> Maybe UserMessage) -- ^ validation
   -> Getter AppState (E.Editor a n) -- ^ lens to retrieve the text used for validation
   -> AppState
   -> IO AppState
 runValidation fx l s =
-  dispatchValidation fx asError (view (l . E.editContentsL . to currentLine) s) s
+  dispatchValidation fx asUserMessage (view (l . E.editContentsL . to currentLine) s) s
 
 -- $eventhandlers
 -- Each event handler is handling a single widget in Purebreds UI
@@ -117,28 +116,28 @@ composeFromHandler, composeToHandler, composeCcHandler, composeBccHandler, manag
 composeFromHandler s e =
   Brick.handleEventLensed s (asCompose . cFrom . editEditorL) E.handleEditorEvent e
   >>= liftIO . runValidation
-  (preview (_Left . to GenericError) . parseOnly (mailboxList <* niceEndOfInput))
+  (preview (_Left . to (makeWarning ComposeFrom . T.pack)) . parseOnly (mailboxList <* niceEndOfInput))
   (asCompose . cFrom . editEditorL)
   >>= Brick.continue
 
 composeToHandler s e =
   Brick.handleEventLensed s (asCompose . cTo . editEditorL) E.handleEditorEvent e
   >>= liftIO . runValidation
-  (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
+  (preview (_Left . to (makeWarning ComposeTo . T.pack)) . parseOnly (addressList <* niceEndOfInput))
   (asCompose . cTo . editEditorL)
   >>= Brick.continue
 
 composeCcHandler s e =
   Brick.handleEventLensed s (asCompose . cCc . editEditorL) E.handleEditorEvent e
   >>= liftIO . runValidation
-  (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
+  (preview (_Left . to (makeWarning ComposeCc . T.pack)) . parseOnly (addressList <* niceEndOfInput))
   (asCompose . cCc . editEditorL)
   >>= Brick.continue
 
 composeBccHandler s e =
   Brick.handleEventLensed s (asCompose . cBcc . editEditorL) E.handleEditorEvent e
   >>= liftIO . runValidation
-  (preview (_Left . to GenericError) . parseOnly (addressList <* niceEndOfInput))
+  (preview (_Left . to (makeWarning ComposeBcc . T.pack)) . parseOnly (addressList <* niceEndOfInput))
   (asCompose . cBcc . editEditorL)
   >>= Brick.continue
 

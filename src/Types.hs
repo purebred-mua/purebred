@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2017-2021 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -32,7 +32,7 @@ module Types
   , asThreadsView
   , asMailView
   , asCompose
-  , asError
+  , asUserMessage
   , asViews
   , asFileBrowser
   , asLocalTime
@@ -255,6 +255,12 @@ module Types
   , rsFree
   , decodeLenient
   , Generation(..)
+
+  -- ** User notifications
+  , UserMessage(..)
+  , umContext
+  , umSeverity
+  , MessageSeverity(..)
   ) where
 
 import Prelude hiding (Word)
@@ -926,7 +932,7 @@ data AppState = AppState
     , _asThreadsView :: ThreadsView
     , _asMailView  :: MailView
     , _asCompose   :: Compose  -- ^ state to keep when user creates a new mail
-    , _asError     :: Maybe Error -- ^ in case of errors, show this error message
+    , _asUserMessage :: Maybe UserMessage
     , _asViews     :: ViewSettings -- ^ stores widget and focus information
     , _asFileBrowser :: FileBrowser
     , _asLocalTime :: UTCTime
@@ -945,11 +951,11 @@ asMailView = lens _asMailView (\appstate x -> appstate { _asMailView = x })
 asCompose :: Lens' AppState Compose
 asCompose = lens _asCompose (\appstate x -> appstate { _asCompose = x })
 
-asError :: Lens' AppState (Maybe Error)
-asError = lens _asError (\appstate x -> appstate { _asError = x })
+asUserMessage :: Lens' AppState (Maybe UserMessage)
+asUserMessage = lens _asUserMessage (\appstate x -> appstate { _asUserMessage = x })
 
 asViews :: Lens' AppState ViewSettings
-asViews f (AppState a b c d e g h i j) = fmap (\g' -> AppState a b c d e g' h i j) (f g)
+asViews = lens _asViews (\appstate x -> appstate { _asViews = x })
 
 asFileBrowser :: Lens' AppState FileBrowser
 asFileBrowser = lens _asFileBrowser (\as x -> as { _asFileBrowser = x })
@@ -1185,8 +1191,32 @@ newtype Generation = Generation Integer
 -- type parameter on 'AppState', which will be a noisy change.
 --
 data PurebredEvent
-  = NotifyNumThreads Int
-                     Generation
+  = NotifyNumThreads
+      Int
+      Generation
   | NotifyNewMailArrived Int
-  | InputValidated (Lens' AppState (Maybe Error))
-                   (Maybe Error)
+  | -- | Event used for real time validation. Provides the setter in
+    -- the 'AppState' to set the given 'UserMessage'.
+    InputValidated
+      (Lens' AppState (Maybe UserMessage))
+      (Maybe UserMessage)
+
+data MessageSeverity
+  = Error Error
+  | Warning T.Text
+  | Info T.Text
+  deriving (Eq, Show)
+
+-- | UI feedback shown to the user.
+-- Uses context and severity to control visibility and importance.
+data UserMessage = UserMessage
+  { _umContext:: Name
+  , _umSeverity :: MessageSeverity
+  }
+  deriving (Eq, Show)
+
+umContext :: Lens' UserMessage Name
+umContext = lens _umContext (\m x -> m { _umContext = x })
+
+umSeverity :: Lens' UserMessage MessageSeverity
+umSeverity = lens _umSeverity (\m x -> m { _umSeverity = x })

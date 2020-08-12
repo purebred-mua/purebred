@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2017-2021 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -46,7 +46,7 @@ import UI.Help.Main (renderHelp)
 import UI.Status.Main (statusbar)
 import UI.Views
        (indexView, mailView, composeView, helpView,
-        filebrowserView, focusedViewWidget, focusedViewWidgets,
+        filebrowserView, focusedViewWidget, visibleViewWidgets,
         focusedViewName)
 import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
 import UI.Draw.Main (renderEditorWithLabel)
@@ -75,7 +75,7 @@ import Brick.Widgets.StatefulEdit (StatefulEditor(..))
 -- the widget.
 --
 drawUI :: AppState -> [Widget Name]
-drawUI s = vBox . fmap (renderWidget s (focusedViewName s)) <$> focusedViewWidgets s
+drawUI s = vBox . fmap (renderWidget s (focusedViewName s)) <$> visibleViewWidgets s
 
 renderWidget :: AppState -> ViewName -> Name -> Widget Name
 renderWidget s _ ListOfThreads = renderListOfThreads s
