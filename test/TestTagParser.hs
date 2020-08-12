@@ -20,9 +20,9 @@ module TestTagParser where
 
 import Data.List (isInfixOf)
 
+import qualified Data.Text as T
 import Purebred.Tags
-import Types (TagOp(..))
-import Error
+import Types (TagOp(..), UserMessage(..), Name(..), MessageSeverity(..))
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@=?), testCase, assertBool, assertFailure)
@@ -47,9 +47,9 @@ testParseTags =
               )
             , ( "wrong order"
               , \case
-                  Left (GenericError msg) ->
+                  Left (UserMessage StatusBar (Warning msg)) ->
                     assertBool "message indicates bad char"
-                    $ "unexpected '='" `isInfixOf` msg
+                    $ "unexpected '='" `isInfixOf` T.unpack msg
                   Left e ->
                     assertFailure $ "parse failed with unexpected error: " <> show e
                   Right _ ->

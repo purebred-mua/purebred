@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2018-2019 Róman Joost
+-- Copyright (C) 2018-2021 Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -20,7 +20,7 @@ module UI.Views
   , helpView
   , filebrowserView
   , swapWidget
-  , focusedViewWidgets
+  , visibleViewWidgets
   , focusedViewWidget
   , focusedViewName
   , focusedView
@@ -39,8 +39,8 @@ import Types
 import Data.Foldable (toList)
 
 
-focusedViewWidgets :: AppState -> [[Name]]
-focusedViewWidgets s =
+visibleViewWidgets :: AppState -> [[Name]]
+visibleViewWidgets s =
   let defaultV = view (asConfig . confDefaultView) s
       focused = fromMaybe defaultV $ focusGetCurrent $ view (asViews . vsFocusedView) s
       allLayers = view (asViews . vsViews . ix focused . vLayers) s

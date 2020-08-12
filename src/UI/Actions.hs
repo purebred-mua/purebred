@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2020 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2017-2021 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -128,17 +128,15 @@ import Prelude hiding (readFile, unlines)
 import Data.Foldable (toList, traverse_)
 import Data.Functor.Identity (Identity(..))
 import Control.Lens
-       (_Just, to, at, ix, _1, _2, toListOf, traverse, traversed, has,
+       (_Just, to, at, ix, _1, _2, toListOf, traversed, has,
         filtered, set, over, preview, view, (&), firstOf, non, Traversal',
         Getting, Lens', folded, assign, modifying, preuse, use, uses
         , Ixed, Index, IxValue)
 import Control.Concurrent (forkIO)
-import Control.Monad (void)
 import Control.Monad.State
 import Control.Monad.Catch (MonadCatch, MonadMask, catch)
 import Control.Monad.Except (runExceptT, MonadError)
 import Control.Exception (IOException)
-import Control.Monad.IO.Class (liftIO, MonadIO)
 import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper)
 import Data.Time.Clock (getCurrentTime)
@@ -172,6 +170,9 @@ import Purebred.LazyVector (V)
 import Purebred.Tags (parseTagOps)
 import Purebred.System (tryIO)
 import Purebred.System.Process
+import UI.Notifications
+       (setUserMessage, makeWarning, showError, showWarning, showInfo
+       , showUserMessage)
 import Brick.Widgets.StatefulEdit
        (StatefulEditor(..), editEditorL, revertEditorState, saveEditorState)
 
@@ -345,7 +346,7 @@ instance Completable 'ComposeListOfAttachments where
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
     case getEditorTagOps (Proxy @'ManageMailTagsEditor) s of
-        Left err -> pure $ setError err s
+        Left msg -> pure $ set asUserMessage (Just msg) s
         Right ops -> flip execStateT s $ do
             modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops))
             toggledOrSelectedItemHelper
@@ -398,7 +399,7 @@ instance Completable 'ManageThreadTagsEditor where
   complete _ = do
     s <- get
     case getEditorTagOps (Proxy @'ManageThreadTagsEditor) s of
-      Left err -> assignError err
+      Left msg -> showUserMessage msg
       Right ops -> do
         toggledOrSelectedItemHelper
           (Proxy @'ListOfThreads)
@@ -812,12 +813,12 @@ invokeEditor n w =
              (asCompose . cAttachments)
              (insertOrReplaceAttachment $ createTextPlainMessage t)
          errormsg e =
-           GenericError $
+           (ProcessError $
            "Editor exited abnormally ( " <>
-           show e <> " ). Press Esc to continue."
+           show e <> " ). Press Esc to continue.")
       in stateSuspendAndResume $
          runExceptT invokeEditor' >>=
-         either (\e -> assignError (errormsg e) *> switchMode' n w) updatePart)
+         either (\e -> showError (errormsg e) *> switchMode' n w) updatePart)
 
 -- | Suspends Purebred to invoke a command for editing an
 -- attachment. Currently only supports re-editing the body text of an
@@ -860,7 +861,7 @@ openWithCommand =
     , _aAction = do
       cmd <- uses (asMailView . mvOpenCommand . E.editContentsL) (T.unpack . currentLine)
       case cmd of
-        [] -> lift . Brick.continue . setError (GenericError "Empty command") =<< get
+        [] -> lift . Brick.continue . setUserMessage (makeWarning StatusBar "Empty command") =<< get
         (x:xs) -> stateSuspendAndResume $
           openCommand' (MailcapHandler (Process (x :| xs) []) IgnoreOutput KeepTempfile)
     }
@@ -898,9 +899,10 @@ saveAttachmentToPath =
         runExceptT (writeEntityToPath filePath ent)
           >>= either
             (\e -> do
-              assignError e
+              showError e
               modifying (asMailView . mvSaveToDiskPath . E.editContentsL) clearZipper )
-            (\fp -> assignError (GenericError $ "Attachment saved to: " <> fp))
+            (\fp -> showInfo ("Attachment saved to: " <> T.pack fp)
+            )
   }
 
 -- | Chain sequences of actions to create a keybinding
@@ -994,7 +996,7 @@ scrollNextWord =
             let scrollBy = view (non 0) nextLine
             lift $ Brick.vScrollBy (makeViewportScroller (Proxy @ctx)) scrollBy
           else
-            assignError (GenericError "No match")
+            showWarning "No match"
     }
 
 -- | Removes any highlighting done by searching in the body text
@@ -1030,7 +1032,7 @@ displayThreadMails =
         dbpath <- use (asConfig . confNotmuch . nmDatabase)
         selectedItemHelper (asThreadsView . miListOfThreads) $ \(_, t) ->
           runExceptT (Notmuch.getThreadMessages dbpath (Identity t))
-            >>= either assignError (\vec -> do
+            >>= either showError (\vec -> do
               modifying (asThreadsView . miMails . listList) (L.listReplace vec Nothing)
               assign (asThreadsView . miMails . listLength) (Just (length vec)) )
     }
@@ -1087,7 +1089,7 @@ encapsulateMail =
     , _aAction = do
         mail <- use (asMailView . mvMail)
         case mail of
-          Nothing -> assignError (GenericError "No mail selected for forwarding")
+          Nothing -> showWarning "No mail selected for forwarding"
           Just m -> do
             modifying (asCompose . cAttachments)
               (L.listInsert 1 (encapsulate m) . L.listInsert 0 (createTextPlainMessage mempty))
@@ -1108,7 +1110,7 @@ replyMail = Action
       case mail of
         Nothing -> do
           modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Threads)
-          assignError (GenericError "No mail selected for replying")
+          showWarning "No mail selected for replying"
         Just m -> do
           mailboxes <- use (asConfig . confComposeView . cvIdentities)
           mbody <- use (asMailView . mvBody)
@@ -1205,7 +1207,7 @@ delete =
         len <- uses (asCompose . cAttachments . L.listElementsL) length
         if len < 2
           then
-            assignError (GenericError "You may not remove the only attachment")
+            showWarning "You may not remove the only attachment"
           else
             use (asCompose . cAttachments . L.listSelectedL)
             >>= modifying (asCompose . cAttachments) . maybe id L.listRemove
@@ -1234,12 +1236,12 @@ composeAsNew :: Action 'ViewMail 'ScrollingMailView ()
 composeAsNew = Action ["edit mail as new"] $
   preuse (asThreadsView .  miListOfMails . to L.listSelectedElement . _Just . _2 . _2)
     >>= maybe
-      (assignError (GenericError "No mail selected"))
+      (showWarning "No mail selected")
       (\mail -> do
         pmail <- use (asMailView . mvMail)
         charsets <- use (asConfig . confCharsets)
         runExceptT (specialCaseForDraft mail)
-          >>= either assignError (const $ assign asCompose (newComposeFromMail charsets pmail))
+          >>= either showError (const $ assign asCompose (newComposeFromMail charsets pmail))
       )
 
 -- | This is a special case workaround for draft mails used by
@@ -1299,7 +1301,7 @@ applySearch = do
   nmconf <- use (asConfig . confNotmuch)
   r <- runExceptT (Notmuch.getThreads searchterms nmconf)
   case r of
-    Left e -> assignError e
+    Left e -> showError e
     Right threads -> do
       liftIO (zonedTimeToUTC <$> getZonedTime) >>= assign asLocalTime
       notifyNumThreads threads
@@ -1349,12 +1351,12 @@ selectedItemHelper l f = do
   item <- use l
   case L.listSelectedElement item of
     Just (_, a) -> void $ f a
-    Nothing -> assignError (GenericError "No item selected.")
+    Nothing -> showWarning "No item selected"
 
 -- | Retrieve the given tag operations from the given editor widget
 -- and parse them.
 --
-getEditorTagOps :: HasEditor n => Proxy n -> AppState -> Either Error [TagOp]
+getEditorTagOps :: HasEditor n => Proxy n -> AppState -> Either UserMessage [TagOp]
 getEditorTagOps p s =
   let contents = (foldr (<>) "" $ E.getEditContents $ view (editorL p) s)
   in parseTagOps contents
@@ -1383,7 +1385,7 @@ updateStateWithParsedMail = do
     runExceptT (parseMail m db >>= bodyToDisplay s textwidth charsets preferredContentType)
     >>= either
       (\e -> do
-        assignError e
+        showError e
         modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Threads) )
       (\(pmail, mbody) -> do
          assign (asMailView . mvMail) (Just pmail)
@@ -1418,17 +1420,8 @@ manageMailTags ::
 manageMailTags ops ms = do
   result <- applyTagOps ops ms =<< get
   case result of
-    Left e -> assignError e
+    Left e -> showError e
     Right _ -> pure ()
-
--- | Convenience function to set an error state in the 'AppState'
---
-setError :: Error -> AppState -> AppState
-setError = set asError . Just
-
--- | Assign error into the state
-assignError :: (MonadState AppState m) => Error -> m ()
-assignError = assign asError . Just
 
 -- | Build the MIMEMessage, sanitize filepaths, serialize and send it
 --
@@ -1442,7 +1435,7 @@ sendMail = do
         fp <- createSentFilePath maildir
         tryIO $ LB.writeFile fp (B.toLazyByteString bs)
         Notmuch.indexFilePath maildir fp [sentTag] )
-      >>= either assignError (const $ pure ())
+      >>= either showError (const $ pure ())
 
 -- | Build a mail from the current @AppState@ and execute the continuation.
 buildMail :: (MonadState AppState m, MonadIO m) => (B.Builder -> m ()) -> m ()
@@ -1457,7 +1450,7 @@ buildMail k = do
     [] -> pure Nothing
 
   case mail of
-    Nothing -> assignError (GenericError "Black hole detected")
+    Nothing -> showWarning "Black hole detected. This shouldn't happen"
     Just m -> do
       charsets <- use (asConfig . confCharsets)
       now <- liftIO getCurrentTime
@@ -1480,8 +1473,8 @@ trySendAndCatch :: (MonadState AppState m, MonadIO m, MonadCatch m) => B.Builder
 trySendAndCatch m = do
   cmd <- use (asConfig . confComposeView . cvSendMailCmd)
   defMailboxes <- use (asConfig . confComposeView . cvIdentities)
-  (liftIO (cmd m) >>= either assignError pure >> assign asCompose (initialCompose defMailboxes))
-    `catch` (assignError . SendMailError . (show :: IOException -> String))
+  (liftIO (cmd m) >>= either showError pure >> assign asCompose (initialCompose defMailboxes))
+    `catch` (showError . SendMailError . (show :: IOException -> String))
 
 -- | santize the mail before we send it out
 -- Note: currently only strips away path names from files
@@ -1562,14 +1555,14 @@ openCommand' cmd = do
       in fmap con . entityToBytes
   selectedItemHelper (asMailView . mvAttachments) $ \ent ->
     runExceptT (mkConfig ent >>= runEntityCommand)
-      >>= either assignError (const $ pure ())
+      >>= either showError (const $ pure ())
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
 -- temporary file is used. If either no WireEntity exists (e.g. none selected)
 -- or it can not be serialised an error is returned.
 pipeCommand' :: (MonadIO m, MonadMask m, MonadState AppState m) => FilePath -> m ()
 pipeCommand' cmd
-  | null cmd = assignError (GenericError "Empty command")
+  | null cmd = showWarning "Empty command"
   | otherwise = do
       let
         mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m ())
@@ -1582,7 +1575,7 @@ pipeCommand' cmd
           in fmap con . entityToBytes
       selectedItemHelper (asMailView . mvAttachments) $ \ent ->
         runExceptT (mkConfig ent >>= runEntityCommand)
-          >>= either assignError (const $ pure ())
+          >>= either showError (const $ pure ())
 
 editAttachment ::
      (MonadState AppState m, MonadIO m, MonadMask m) => ViewName -> Name -> m ()
@@ -1595,12 +1588,12 @@ editAttachment n w =
                 (asCompose . cAttachments)
                 (insertOrReplaceAttachment $ createTextPlainMessage t)
             errormsg e =
-              GenericError $
+              ProcessError $
               "Editor exited abnormally ( " <>
               show e <> " ). Press Esc to continue."
          in runExceptT invokeEditor' >>=
-            either (\e -> assignError (errormsg e) *> switchMode' n w) updatePart
-      _ -> assignError (GenericError "Not implemented. See #182")
+            either (\e -> showError (errormsg e) *> switchMode' n w) updatePart
+      _ -> showWarning "Not yet implemented. See #182"
 
 -- | If the list is empty, insert the attachment otherwise replace the
 -- currently selected item.
@@ -1636,7 +1629,7 @@ manageThreadTags ops ts = do
     (Notmuch.getThreadMessages dbpath $ toListOf (traversed . _2) ts)
     >>= (\ms ->
            (get >>= applyTagOps ops ms)
-          >>= either assignError (const $ pure ()))
+          >>= either showError (const $ pure ()))
     . fromRight mempty
 
 
@@ -1645,7 +1638,7 @@ keepOrDiscardDraft = do
   r <- use (asCompose . cKeepDraft . to dialogSelection)
   case r of
     Just Keep -> keepDraft
-    _ -> assignError (GenericError "Draft discarded")
+    _ -> showInfo "Draft discarded"
   modify clearMailComposition
 
 keepDraft :: (MonadMask m, MonadState AppState m, MonadIO m) => m ()
@@ -1656,7 +1649,8 @@ keepDraft = buildMail $ \bs -> do
       fp <- createDraftFilePath maildir
       tryIO $ LB.writeFile fp (B.toLazyByteString bs)
       Notmuch.indexFilePath maildir fp [draftTag] )
-    >>= either assignError (const $ assignError (GenericError "Draft saved"))
+    >>= either showError (
+    const $ showInfo "Draft saved")
 
 resetMatchingWords :: AppState -> AppState
 resetMatchingWords =
@@ -1676,7 +1670,7 @@ fileBrowserSetWorkingDirectory = do
       modifying (asFileBrowser . fbSearchPath . editEditorL . E.editContentsL) (insertMany path . clearZipper)
       modifying (asFileBrowser . fbSearchPath) saveEditorState
       assign (asFileBrowser . fbEntries) fb
-    else assignError (GenericError $ path <> " does not exist")
+    else showWarning (T.pack $ path <> " does not exist")
 
 switchMode' :: (MonadIO m, MonadState AppState m) => ViewName -> Name -> m ()
 switchMode' vn w = do

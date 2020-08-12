@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2018 Róman Joost and Fraser Tweedale
+-- Copyright (C) 2018-2021 Róman Joost and Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -41,8 +41,7 @@ import UI.Draw.Main (fillLine)
 import UI.Utils (titleize)
 import UI.Views (focusedViewWidget, focusedViewName)
 import Types
-import Error
-import Config.Main (statusbarAttr, statusbarErrorAttr)
+import Config.Main (statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr)
 import qualified Storage.Notmuch as Notmuch
 import Brick.Widgets.StatefulEdit (editEditorL)
 
@@ -68,16 +67,15 @@ data StatusbarContext a
     | ErrorContext a
     deriving (Show)
 
-renderError :: Error -> Widget Name
-renderError = withAttr statusbarErrorAttr . hCenter . theError
-  where
-    theError (GenericError e) = strWrap e
-    theError e = strWrap (show e)
+renderUserMessage :: UserMessage -> Widget Name
+renderUserMessage (UserMessage _ (Warning t)) = withAttr statusbarWarningAttr $ hCenter $ txt t
+renderUserMessage (UserMessage _ (Info t)) = withAttr statusbarInfoAttr $ hCenter $ txt t
+renderUserMessage (UserMessage _ (Error e)) = withAttr statusbarErrorAttr $ hCenter $ strWrap (show e)
 
 statusbar :: AppState -> Widget Name
 statusbar s =
-    case view asError s of
-        Just e -> renderError e
+    case view asUserMessage s of
+        Just m -> renderUserMessage m
         Nothing ->
             case focusedViewWidget s of
                 SearchThreadsEditor -> renderStatusbar (view (asThreadsView . miSearchThreadsEditor . editEditorL) s) s

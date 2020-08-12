@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Róman Joost
+-- Copyright (C) 2017-2021 Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -31,12 +31,13 @@ import Brick.Widgets.Core
 import qualified Brick.Widgets.Edit as E
 import qualified Data.Text as T
 import Data.Proxy
-import Control.Lens (_Just, has, view)
+import Control.Lens (view)
 import Types
 import UI.Views (focusedViewWidget)
 import UI.Actions (HasName(..), HasEditor(..))
 import Config.Main
   (editorLabelAttr, editorAttr, editorFocusedAttr, statusbarAttr, editorErrorAttr)
+import UI.Notifications (hasError)
 
 -- | Fills the entire line with spaces. This can be used to draw a
 -- visual bar when an 'AttrName' with a background colour is set.
@@ -48,16 +49,15 @@ attachmentsHeader :: Widget Name
 attachmentsHeader = withAttr statusbarAttr $ hBox [ padLeft (Pad 1) (txt "-- Attachments") , vLimit 1 (fill '-')]
 
 editorDrawContent :: Bool -> [T.Text] -> Widget Name
-editorDrawContent hasError st = let widget = txt $ T.unlines st
-                                in if hasError then withAttr editorErrorAttr widget else widget
+editorDrawContent showError st = let widget = txt $ T.unlines st
+                                 in if showError then withAttr editorErrorAttr widget else widget
 
 -- | Renders editor with a label on the left restricted to one line
 renderEditorWithLabel ::
      (HasName n, HasEditor n) => Proxy n -> T.Text -> AppState -> Widget Name
 renderEditorWithLabel p label s =
   let hasFocus = name p == focusedViewWidget s
-      hasError = has (asError . _Just) s
-      inputW = E.renderEditor (editorDrawContent hasError) hasFocus (view (editorL p) s)
+      inputW = E.renderEditor (editorDrawContent (hasError s)) hasFocus (view (editorL p) s)
       labelW = withAttr editorLabelAttr $ padRight (Pad 1) $ txt label
       eAttr =
         if hasFocus

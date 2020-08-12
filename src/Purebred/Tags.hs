@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017 Fraser Tweedale and Róman Joost
+-- Copyright (C) 2017-2021 Fraser Tweedale and Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -37,11 +37,10 @@ import Control.Lens (over, _Left)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 
-import Notmuch (Tag, mkTag)
+import Notmuch (mkTag)
 
 import Types
-import Error
-
+import UI.Notifications (makeWarning)
 
 tagOp :: Parser TagOp
 tagOp =
@@ -67,8 +66,8 @@ tagOpsWithReset = do
   ops <- allTagOps
   pure $ r : ops
 
-parseTagOps :: T.Text -> Either Error [TagOp]
-parseTagOps = over _Left (GenericError . show) . parseOnly p . T.encodeUtf8
+parseTagOps :: T.Text -> Either UserMessage [TagOp]
+parseTagOps = over _Left (makeWarning StatusBar . T.pack) . parseOnly p . T.encodeUtf8
   where
   p =
     (tagOpsWithReset <|> allTagOps)

@@ -61,6 +61,7 @@ library
                      , UI.GatherHeaders.Keybindings
                      , UI.Mail.Main
                      , UI.Mail.Keybindings
+                     , UI.Notifications
                      , UI.Help.Main
                      , UI.Help.Keybindings
                      , UI.Utils

@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2019 Róman Joost
+-- Copyright (C) 2019-2021 Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -46,7 +46,7 @@ import Control.Exception (IOException)
 import Control.Monad.Catch (bracket, MonadMask)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError)
-import Control.Lens (_2, over, set, view)
+import Control.Lens (_2, over, view)
 import Data.Semigroup ((<>))
 import System.Process.Typed
 import System.IO.Temp (emptyTempFile, emptySystemTempFile)
@@ -67,6 +67,7 @@ import Error
 import Types
 import Purebred.System (tryIO, exceptionToError)
 import Purebred.Types.IFC
+import UI.Notifications (setUserMessage, makeError)
 
 
 -- | Handler to handle exit failures and possibly showing an error in the UI.
@@ -95,10 +96,7 @@ outputToText = untaint (sanitiseText . decodeLenient . LB.toStrict)
 
 -- | Handle only IOExceptions, everything else is fair game.
 handleIOException :: AppState -> IOException -> IO AppState
-handleIOException s = pure . flip setError s . exceptionToError
-
-setError :: Error -> AppState -> AppState
-setError = set asError . Just
+handleIOException s = pure . flip (setUserMessage . makeError StatusBar) s . exceptionToError
 
 -- | Try running a process given by the `FilePath` and catch an IOExceptions.
 -- This is to avoid a crashing process also take down the running Brick program.
