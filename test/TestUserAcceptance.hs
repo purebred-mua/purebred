@@ -271,10 +271,11 @@ testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on ma
     sendKeys "Enter" (Substring "Lorem ipsum dolor sit amet")
 
     step "toggle first mail"
-    sendKeys "*" (Substring "Marked: 1")
+    sendKeys "*" (Regex $ markedListItem <> "\\sWIP Refactor")
 
     step "toggle second mail"
-    sendKeys "*" (Substring "Marked: 2")
+    -- toggled *and* currently selected item
+    sendKeys "*" (Regex $ buildAnsiRegex [] [] ["34"] <> "\\sRe: WIP Refactor")
 
     step "open mail tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -307,8 +308,8 @@ testBulkActionsOnThreadsByInput = purebredTmuxSession "perform bulk labeling on 
     startApplication
 
     step "Toggle two thread items"
-    sendKeys "*" (Substring "Marked: 1")
-    sendKeys "*" (Substring "Marked: 2")
+    sendKeys "*" (Regex $ markedListItem <> "\\sTestmail with whitespace in the subject")
+    sendKeys "*" (Regex $ markedListItem <> "\\sThis is Purebred")
 
     step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -336,18 +337,16 @@ testBulkActionsOnThreadsByKeybinding =
     startApplication
 
     step "Toggle thread and list cursor moves to next list item"
-    sendKeys "*" (Substring "Marked: 1")
+    sendKeys "*" (Regex $ markedListItem <> "\\sAug'17.*whitespace in the subject\\s+\n")
       >>= assertRegex (
-        -- toggled
-        buildAnsiRegex ["7"] ["34"] ["43"] <> "\\sAug'17.*whitespace in the subject\\s+\n"
         -- current selection
-        <> buildAnsiRegex ["0"] ["34"] ["43"] <> "\\sAug'17 rjoost@url.use.*This is Purebred\\s+\n"
+        buildAnsiRegex ["0"] ["34"] ["43"] <> "\\sAug'17 rjoost@url.use.*This is Purebred\\s+\n"
         -- unselected rest
         <> buildAnsiRegex [] ["37"] ["49"] <> "\\sFeb'17.*WIP Refactor"
       )
 
     step "Toggle thread and list cursor moves to next list item"
-    sendKeys "*" (Substring "Marked: 2")
+    sendKeys "*" (Regex $ markedListItem <> "\\sThis is Purebred")
 
     step "Tag toggled list items using key binding"
     sendKeys "a" (Substring "New: 3  ]")
@@ -1802,3 +1801,8 @@ startApplication = do
   testmdir <- view envMaildir
   tmuxSendKeys InterpretKeys ("purebred --database " <> testmdir <> "\r")
   void $ waitForCondition (Substring "Purebred: Item") defaultRetries defaultBackoff
+
+-- | A list item which is toggled for a batch operation
+--
+markedListItem :: B.ByteString
+markedListItem = buildAnsiRegex ["7"] ["34"] ["43"]

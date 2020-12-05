@@ -117,7 +117,6 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
   , padLeftRight 1 (str "[")
   , renderNewMailIndicator s
   , renderMatches s
-  , renderToggled s
   , padLeft (Pad 1) (str "]")
   , fillLine
   , txt (
@@ -125,14 +124,6 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
       <> titleize (focusedViewWidget s) <> " "
       )
   ]
-
-renderToggled :: AppState -> Widget n
-renderToggled s =
-  let currentL = case focusedViewWidget s of
-        ListOfThreads -> length $ toListOf (asThreadsView . miListOfThreads . traversed . filtered fst) s
-        ListOfFiles -> length $ view (asFileBrowser . fbEntries . to FB.fileBrowserSelection) s
-        _ -> length $ toListOf (asThreadsView . miListOfMails . traversed . filtered fst) s
-  in if currentL > 0 then str $ "Marked: " <> show currentL else emptyWidget
 
 renderMatches :: AppState -> Widget n
 renderMatches s =
