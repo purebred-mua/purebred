@@ -1622,7 +1622,7 @@ getTextPlainPart = firstOf (entities . filtered f)
 
 mimeType :: FilePath -> ContentType
 mimeType x = let parsed = parseOnly parseContentType $ defaultMimeLookup (T.pack x)
-             in either (const contentTypeApplicationOctetStream) id parsed
+             in fromRight contentTypeApplicationOctetStream
 
 manageThreadTags ::
      (Traversable t, MonadIO m, MonadState AppState m)
@@ -1631,9 +1631,11 @@ manageThreadTags ::
   -> m ()
 manageThreadTags ops ts = do
   dbpath <- use (asConfig . confNotmuch . nmDatabase)
-  (either (const mempty) id <$> runExceptT (Notmuch.getThreadMessages dbpath $ toListOf (traversed . _2) ts))
-    >>= \ms -> (get >>= applyTagOps ops ms)
-    >>= either assignError (const $ pure ())
+  runExceptT (Notmuch.getThreadMessages dbpath $ toListOf (traversed . _2) ts)
+    >>= (\ms ->
+           (get >>= applyTagOps ops ms)
+           >>= either assignError (const $ pure ()))
+    . fromRight id
 
 
 keepOrDiscardDraft :: (MonadMask m, MonadIO m, MonadState AppState m) => m ()
