@@ -21,10 +21,10 @@ let
   pkgSrc =
     if isNull nixpkgs
     then
-    # nixpkgs master - 2020-07-31
+    # nixpkgs nixos-unstable - 2021-01-06
     builtins.fetchTarball {
-      url = "https://github.com/NixOS/nixpkgs/archive/b5613e78fd8431af680a00c0cdd42a0637601c3a.tar.gz";
-      sha256 = "1fn8j4r7hx3bl1amdwmw9lyccjci891igrf9pz3vgkfq1bpmqd65";
+      url = "https://github.com/NixOS/nixpkgs/archive/1a57d96edd156958b12782e8c8b6a374142a7248.tar.gz";
+      sha256 = "1qdh457apmw2yxbpi1biwl5x5ygaw158ppff4al8rx7gncgl10rd";
     }
     else
     nixpkgs;
