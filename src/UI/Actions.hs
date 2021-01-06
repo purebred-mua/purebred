@@ -111,6 +111,7 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (dialog, dialogSelection, Dialog)
 import Network.Mime (defaultMimeLookup)
 import Data.Proxy
+import Data.Either (fromRight)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.ByteString as B
@@ -1622,7 +1623,7 @@ getTextPlainPart = firstOf (entities . filtered f)
 
 mimeType :: FilePath -> ContentType
 mimeType x = let parsed = parseOnly parseContentType $ defaultMimeLookup (T.pack x)
-             in fromRight contentTypeApplicationOctetStream
+             in fromRight contentTypeApplicationOctetStream parsed
 
 manageThreadTags ::
      (Traversable t, MonadIO m, MonadState AppState m)
@@ -1631,11 +1632,12 @@ manageThreadTags ::
   -> m ()
 manageThreadTags ops ts = do
   dbpath <- use (asConfig . confNotmuch . nmDatabase)
-  runExceptT (Notmuch.getThreadMessages dbpath $ toListOf (traversed . _2) ts)
+  runExceptT
+    (Notmuch.getThreadMessages dbpath $ toListOf (traversed . _2) ts)
     >>= (\ms ->
            (get >>= applyTagOps ops ms)
-           >>= either assignError (const $ pure ()))
-    . fromRight id
+          >>= either assignError (const $ pure ()))
+    . fromRight mempty
 
 
 keepOrDiscardDraft :: (MonadMask m, MonadIO m, MonadState AppState m) => m ()
