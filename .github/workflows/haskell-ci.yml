@@ -164,6 +164,14 @@ jobs:
       - name: build
         run: |
           $CABAL v2-build $ARG_COMPILER $ARG_TESTS $ARG_BENCH all --write-ghc-environment-files=always
+      - name: install purebred (for UAT)
+        run: |
+          # Install the program (required for UAT)
+          $CABAL v2-install -w $HC exe:purebred purebred-dump-keybinding
+          # Trick the UAT into looking for configs / data in the right place
+          # (tests are executed in the unpacked sdist directory.
+          # the unpacked sdist directory. See unpack step.
+          echo "SRCDIR=${PKGDIR_purebred}" >> $GITHUB_ENV
       - name: tests
         run: |
           $CABAL v2-test $ARG_COMPILER $ARG_TESTS $ARG_BENCH all --test-show-details=direct
