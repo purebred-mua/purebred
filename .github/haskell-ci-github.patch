@@ -1,0 +1,21 @@
+commit ca0088ec54a19edc836a6cc8dadd41f86343f074 (HEAD -> ci)
+Author: Fraser Tweedale <frase@frase.id.au>
+Date:   Sun Jan 10 10:54:53 2021 +1000
+
+    ci: add install step (to create patch)
+
+diff --git a/.github/workflows/haskell-ci.yml b/.github/workflows/haskell-ci.yml
+index d7a6b3a..fabcf9a 100644
+--- a/.github/workflows/haskell-ci.yml
++++ b/.github/workflows/haskell-ci.yml
+@@ -167,2 +167,10 @@ jobs:
++      - name: install purebred (for UAT)
++        run: |
++          # Install the program (required for UAT)
++          $CABAL v2-install -w $HC exe:purebred purebred-dump-keybinding
++          # Trick the UAT into looking for configs / data in the right place
++          # (tests are executed in the unpacked sdist directory.
++          # the unpacked sdist directory. See unpack step.
++          echo "SRCDIR=${PKGDIR_purebred}" >> $GITHUB_ENV
+       - name: tests
+         run: |
