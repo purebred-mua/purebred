@@ -1,6 +1,6 @@
 # purebred
 
-[![Build Status](https://travis-ci.org/purebred-mua/purebred.svg?branch=master)](https://travis-ci.org/purebred-mua/purebred)
+![Build Status](https://github.com/purebred-mua/purebred/workflows/Haskell-CI/badge.svg?branch=master)
 
 An MUA built around [*notmuch*](https://notmuchmail.org/).
 
