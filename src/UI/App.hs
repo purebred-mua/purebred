@@ -29,7 +29,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import qualified Graphics.Vty.Input.Events as Vty
-import Control.Lens ((&), set, view)
+import Control.Lens (set, view)
 import Control.Monad.State (execStateT)
 import qualified Data.Map as Map
 import Data.Time.Clock (UTCTime(..))
@@ -155,7 +155,20 @@ appEvent s (T.AppEvent ev) = case ev of
     then set (asThreadsView . miThreads . listLength) (Just n) s
     else s
   NotifyNewMailArrived n -> M.continue (set (asThreadsView . miNewMail) n s)
-  InputValidated l err -> M.continue (s & set l err . set (asAsync . aValidation) Nothing)
+  InputValidated l err -> M.continue . ($ s) $
+    case err of
+      -- No error at all. Clear any existing errors set in the state.
+      Nothing -> set asUserMessage Nothing . set (asAsync . aValidation) Nothing
+      (Just msg) ->
+        let allVisible = concat $ visibleViewWidgets s
+            widget = view umContext msg
+         in if widget `elem` allVisible
+               -- Widget for this message is still visible, display
+               -- the message and clear the thread ID.
+              then set l err . set (asAsync . aValidation) Nothing
+               -- Widget for this message is hidden, ignore the
+               -- message, clear existing message and thread states.
+              else set asUserMessage Nothing . set (asAsync . aValidation) Nothing
 appEvent s _ = M.continue s
 
 initialState :: InternalConfiguration -> IO AppState
