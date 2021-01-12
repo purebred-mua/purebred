@@ -22,7 +22,6 @@ module UI.Validation
 
 import Control.Concurrent (forkIO, killThread, threadDelay)
 import Control.Lens (Lens', set, view)
-import Data.Functor (($>))
 import Brick.BChan (writeBChan)
 
 import Types
@@ -42,7 +41,7 @@ dispatchValidation ::
   -> AppState
   -> IO AppState
 dispatchValidation fx l a s =
-  let go = maybe schedule (killThread $> schedule) . view (asAsync . aValidation)
+  let go = maybe schedule (\t -> killThread t *> schedule) . view (asAsync . aValidation)
       chan = view (asConfig . confBChan) s
       schedule =
         forkIO (sleepMs 500 >> writeBChan chan (InputValidated l (fx a)))
