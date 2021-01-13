@@ -19,16 +19,11 @@
 
 module TestActions where
 
-import qualified Brick.Widgets.List as L
-import qualified Brick.Types as T
-
-import Control.Lens
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import qualified Data.Vector as Vector
 
 import Types
-import UI.Actions
 import UI.Views (swapWidget)
 
 
