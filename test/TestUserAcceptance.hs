@@ -592,10 +592,10 @@ testCursorPositionedEndOnReply = purebredTmuxSession "cursor positioned on EOL w
                                       <> "\"Joe Bloggs\" <joe@foo.test>, fromuser@foo.test")
 
     step "user can change to header"
-    sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "<frase@host.example>")
+    sendKeys "t" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "frase@host.example")
 
     step "append an additional from email"
-    sendKeys ", touser@foo.test\r" (Substring "To: <frase@host.example>, touser@foo.test")
+    sendKeys ", touser@foo.test\r" (Substring "To: frase@host.example, touser@foo.test")
 
     step "change subject"
     sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> ".*subject\\s+$")
@@ -1005,7 +1005,7 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     sendLine ": x" (Substring "Attachments") >>= put
 
     assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>\\s+$"
-    assertSubstringS "To: <frase@host.example>"
+    assertSubstringS "To: frase@host.example"
     assertSubstringS ("Subject: Re: " <> subject)
 
     -- https://github.com/purebred-mua/purebred/issues/379
