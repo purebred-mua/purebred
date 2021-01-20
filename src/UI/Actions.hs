@@ -128,7 +128,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
-import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as LB
 import Data.Attoparsec.ByteString.Char8 (parseOnly)
 import qualified Data.Attoparsec.Text as AT (parseOnly)
@@ -152,21 +151,13 @@ import Control.Monad.Except (runExceptT, MonadError, throwError)
 import Control.Exception (IOException)
 import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper)
-import Data.Time.Clock (getCurrentTime)
-import Data.Time.LocalTime (getZonedTime, zonedTimeToUTC)
+import Data.Time (getCurrentTime, getZonedTime)
 import System.Directory (doesPathExist)
+import System.Random (getStdRandom, uniform)
 
 import qualified Data.RFC5322.Address.Text as AddressText
   ( renderMailboxes, addressList, mailboxList )
 import Data.MIME
-       (createMultipartMixedMessage, contentTypeApplicationOctetStream,
-        createTextPlainMessage, createAttachmentFromFile, buildMessage,
-        contentDisposition, dispositionType, headers, filename,
-        parseContentType, attachments, entities, matchContentType,
-        contentType,
-        encapsulate, MIMEMessage, WireEntity, DispositionType(..),
-        ContentType(..), Mailbox(..),
-        CharsetLookup, headerDate, headerTo, headerFrom, headerSubject)
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
        ( parseMail, getTo, getFrom, getSubject, getForwardedSubject, toQuotedMail
@@ -446,10 +437,10 @@ instance Completable 'SaveToDiskPathEditor where
 instance Completable 'ScrollingMailViewFindWordEditor where
   complete _ = do
     needle <- uses (asMailView . mvFindWordEditor . E.editContentsL) currentLine
-    body <- uses (asMailView . mvBody) (findMatchingWords needle)
+    bod <- uses (asMailView . mvBody) (findMatchingWords needle)
     hide ViewMail 0 ScrollingMailViewFindWordEditor
-    assign (asMailView . mvScrollSteps) (Brick.focusRing (makeScrollSteps body))
-    assign (asMailView . mvBody) body
+    assign (asMailView . mvScrollSteps) (Brick.focusRing (makeScrollSteps bod))
+    assign (asMailView . mvBody) bod
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
@@ -1171,14 +1162,21 @@ replyMail = Action
   { _aDescription = ["reply to an e-mail"]
   , _aAction = do
       mail <- use (asMailView . mvMail)
+      charsets <- use (asConfig . confCharsets)
       case mail of
         Nothing -> do
           modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Threads)
           showWarning "No mail selected for replying"
         Just m -> do
           mailboxes <- use (asConfig . confComposeView . cvIdentities)
+          let
+            idents = case mailboxes of
+              [] -> pure $ Mailbox Nothing (AddrSpec "CHANGE.ME" (DomainDotAtom $ "YOUR" :| ["DOMAIN"]))
+              (x:xs) -> x :| xs
+            settings = defaultReplySettings idents
           mbody <- use (asMailView . mvBody)
-          let quoted = toQuotedMail mailboxes mbody m
+          let
+            quoted = toQuotedMail charsets settings mbody m
           modifying (asCompose . cTo . editEditorL . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
           modifying (asCompose . cFrom . editEditorL . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
           modifying (asCompose . cSubject . editEditorL . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
@@ -1384,7 +1382,7 @@ runSearch searchterms = do
   case r of
     Left e -> showError e
     Right threads -> do
-      liftIO (zonedTimeToUTC <$> getZonedTime) >>= assign asLocalTime
+      liftIO getCurrentTime >>= assign asLocalTime
       notifyNumThreads threads
       modifying (asThreadsView . miListOfThreads) (L.listReplace threads (Just 0))
       assign (asThreadsView . miThreads . listLength) Nothing
@@ -1525,9 +1523,8 @@ buildMail k = do
   mail <- case attachments' of
     [x] -> pure x
     x:xs -> do
-      (boundary, newBoundary) <- uses (asConfig . confBoundary) (splitAt 50)
-      assign (asConfig . confBoundary) newBoundary
-      pure $ createMultipartMixedMessage (C8.pack boundary) (x:|xs)
+      boundary <- getStdRandom uniform
+      pure $ createMultipartMixedMessage boundary (x:|xs)
     [] ->
       -- Shouldn't happen (user should be prevented from deleting the
       -- last attachment).  If it does happen, send an empty body.
@@ -1536,7 +1533,7 @@ buildMail k = do
   case mail of
     m -> do
       charsets <- use (asConfig . confCharsets)
-      now <- liftIO getCurrentTime
+      now <- liftIO getZonedTime
       to' <- uses (asCompose . cTo . editEditorL)
         (either (pure []) id . AT.parseOnly AddressText.addressList . T.unlines . E.getEditContents)
       from <- uses (asCompose . cFrom . editEditorL)
@@ -1545,7 +1542,7 @@ buildMail k = do
       let
         m' = m
           & set (headerSubject charsets) (Just subject)
-          & set (headerFrom charsets) from
+          & set (headerFrom charsets) (Single <$> from)
           & set (headerTo charsets) to'
           & set headerDate (Just now)
           & sanitizeMail charsets
@@ -1705,8 +1702,9 @@ getTextPlainPart = firstOf (entities . filtered f)
   f = matchContentType "text" (Just "plain") . view (headers . contentType)
 
 mimeType :: FilePath -> ContentType
-mimeType x = let parsed = parseOnly parseContentType $ defaultMimeLookup (T.pack x)
-             in fromRight contentTypeApplicationOctetStream parsed
+mimeType =
+  fromRight contentTypeApplicationOctetStream
+  . parseOnly parseContentType . defaultMimeLookup . T.pack
 
 manageThreadTags ::
      (Traversable t, MonadIO m, MonadState AppState m)

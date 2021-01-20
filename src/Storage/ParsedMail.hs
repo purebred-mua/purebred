@@ -239,25 +239,16 @@ mkConfig cmd =
 quoteText :: T.Text -> T.Text
 quoteText = ("> " <>)
 
--- | Creates a new instance of `MIMEMessage` with a quoted plain text part if:
--- a) the preferred content type can be extracted
--- b) the text entity can be successfully decoded
--- otherwise an empty plain text body is created
+-- | Construct a reply to the given message, quoting the body.
 toQuotedMail
-  :: [Mailbox]
-  -> MailBody
+  :: CharsetLookup
+  -> ReplySettings
+  -> MailBody   -- ^ Body of message being replied to
+  -> MIMEMessage -- ^ Message being replied to
   -> MIMEMessage
-  -> MIMEMessage
-toQuotedMail mailboxes mbody msg =
-    let contents = T.unlines $ toListOf (mbParagraph . pLine . lText . to quoteText) mbody
-        replyToAddress m =
-            firstOf (headers . header "reply-to") m
-            <|> firstOf (headers . header "from") m
-    in createTextPlainMessage contents
-                 & set (headers . at "from") (Just $ renderMailboxes mailboxes)
-                 . set (headers . at "to") (replyToAddress msg)
-                 . set (headers . at "references") (view (headers . replyHeaderReferences) msg)
-                 . set (headers . at "subject") (("Re: " <>) <$> view (headers . at "subject") msg)
+toQuotedMail charsets settings mbody msg =
+  reply charsets settings msg
+    & setTextPlainBody (T.unlines $ toListOf (mbParagraph . pLine . lText . to quoteText) mbody)
 
 -- | Convert an entity into a MIMEMessage used, for example, when
 -- re-composing a draft mail.
