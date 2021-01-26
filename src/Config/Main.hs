@@ -81,26 +81,30 @@ sendmail bin m = do
     config = setStdin (byteStringInput (B.toLazyByteString m)) $ proc bin ["-t", "-v"]
     decode = T.unpack . sanitiseText . decodeLenient . L.toStrict
 
+toggledColour :: V.Attr
+toggledColour = fg V.cyan
+
 -- | Default theme
 solarizedDark :: A.AttrMap
 solarizedDark =
     A.attrMap
         V.defAttr
         [ (listAttr, fg V.brightBlue)
-        , (listSelectedAttr, bg V.yellow)
+        , (listSelectedAttr, V.black `on` V.yellow)
         , (listNewMailAttr, fg V.white)
         , (listSelectedNewmailAttr, fg V.white)
-        , (listToggledAttr, bg V.yellow `V.withStyle` V.reverseVideo)
+        , (listToggledAttr, toggledColour)
         , (listSelectedToggledAttr, bg V.red `V.withStyle` V.reverseVideo)
         , (mailTagAttr, fg V.cyan)
-        , (mailTagToggledAttr, bg V.brightBlue)
+        , (mailTagToggledAttr, toggledColour)
         , (mailAuthorsAttr, fg V.brightBlue)
         , (mailNewmailAuthorsAttr, fg V.white)
+        , (mailSelectedAuthorsAttr, fg V.black)
         , (mailSelectedNewmailAuthorsAttr, fg V.white)
-        , (mailToggledAuthorsAttr, V.yellow `on` V.brightBlue)
-        , (E.editFocusedAttr, V.white `on` V.brightBlack)
-        , (editorAttr, V.brightBlue `on` V.brightBlack)
-        , (editorLabelAttr, V.brightYellow `on` V.brightBlack)
+        , (mailToggledAuthorsAttr, toggledColour)
+        , (E.editFocusedAttr, fg V.white)
+        , (editorAttr, fg V.brightBlue)
+        , (editorLabelAttr, fg V.brightYellow)
         , (editorErrorAttr, fg V.red)
         , (statusbarErrorAttr, bg V.red)
         , (statusbarInfoAttr, bg V.green)
