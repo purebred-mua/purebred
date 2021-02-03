@@ -81,8 +81,11 @@ library
                      , Storage.ParsedMail
                      , Brick.Widgets.StatefulEdit
                      , Purebred
+                     , Purebred.Plugin
+                     , Purebred.Version
   other-modules:       Paths_purebred
                      , Purebred.Types.IFC
+                     , Purebred.Plugin.UserAgent
   autogen-modules:     Paths_purebred
   build-depends:       base >= 4.11 && < 5
                      , stm >= 2.4

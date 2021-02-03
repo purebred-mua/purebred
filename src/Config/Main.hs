@@ -20,7 +20,6 @@ module Config.Main where
 import qualified Brick.AttrMap as A
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.Dialog as D
-import Data.Monoid ((<>))
 import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
@@ -57,6 +56,8 @@ import UI.ComposeEditor.Keybindings
 
 import Error
 import Types
+import Purebred.Plugin
+import qualified Purebred.Plugin.UserAgent
 import Purebred.System.Process
 import Purebred.Types.IFC (sanitiseText, untaint)
 import Storage.Notmuch (getDatabasePath)
@@ -317,5 +318,8 @@ defaultConfig =
       , _fbHomePath = getHomeDirectory
       }
     , _confCharsets = defaultCharsets
+    , _confPlugins =
+        [ usePlugin Purebred.Plugin.UserAgent.plugin
+        ]
     , _confExtra = ()
     }
