@@ -161,6 +161,7 @@ module Types
   , confDefaultView
   , confFileBrowserView
   , confCharsets
+  , confPlugins
   , confExtra
 
     -- ** Notmuch Configuration
@@ -280,7 +281,6 @@ import Control.Lens
 import qualified Data.Map as Map
 import Control.Monad.State
 import Control.Monad.Except (MonadError)
-import Control.Monad.Reader (MonadIO)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
@@ -302,6 +302,7 @@ import Data.MIME
 
 import Brick.Widgets.StatefulEdit (StatefulEditor(..))
 import Error
+import {-# SOURCE #-} Purebred.Plugin
 import Purebred.LazyVector (V)
 import Purebred.Types.IFC (Tainted)
 
@@ -622,6 +623,7 @@ data Configuration extra a b c = Configuration
     , _confDefaultView :: ViewName
     , _confFileBrowserView :: FileBrowserSettings c
     , _confCharsets :: CharsetLookup
+    , _confPlugins :: [PluginDict]
     , _confExtra :: extra  -- data specific to a particular "phase" of configuration
     }
     deriving (Generic, NFData)
@@ -672,6 +674,9 @@ confFileBrowserView = lens _confFileBrowserView (\conf x -> conf { _confFileBrow
 
 confCharsets :: ConfigurationLens CharsetLookup
 confCharsets = lens _confCharsets (\conf x -> conf { _confCharsets = x })
+
+confPlugins :: ConfigurationLens [PluginDict]
+confPlugins = lens _confPlugins (\conf x -> conf { _confPlugins = x })
 
 confExtra :: Lens (Configuration extra a b c) (Configuration extra' a b c) extra extra'
 confExtra = lens _confExtra (\cfg x -> cfg { _confExtra = x })

@@ -133,6 +133,7 @@ import Control.Lens
         Getting, Lens', folded, assign, modifying, preuse, use, uses
         , Ixed, Index, IxValue)
 import Control.Concurrent (forkIO)
+import Control.Monad.Reader (runReaderT)
 import Control.Monad.State
 import Control.Monad.Catch (MonadCatch, MonadMask, catch)
 import Control.Monad.Except (runExceptT, MonadError)
@@ -167,6 +168,7 @@ import UI.Views
         focusedViewWidget)
 import Purebred.Events (nextGeneration)
 import Purebred.LazyVector (V)
+import Purebred.Plugin
 import Purebred.Tags (parseTagOps)
 import Purebred.System (tryIO)
 import Purebred.System.Process
@@ -1459,14 +1461,19 @@ buildMail k = do
       from <- uses (asCompose . cFrom . editEditorL)
         (either (pure []) id . AT.parseOnly AddressText.mailboxList . T.unlines . E.getEditContents)
       subject <- uses (asCompose . cSubject . editEditorL) (T.unlines . E.getEditContents)
-      m
-        & set (headerSubject charsets) (Just subject)
-        & set (headerFrom charsets) from
-        & set (headerTo charsets) to'
-        & set headerDate (Just now)
-        & sanitizeMail charsets
-        & buildMessage
-        & k
+      let
+        m' = m
+          & set (headerSubject charsets) (Just subject)
+          & set (headerFrom charsets) from
+          & set (headerTo charsets) to'
+          & set headerDate (Just now)
+          & sanitizeMail charsets
+
+      -- run pre-send hooks
+      hooks <- uses (asConfig . confPlugins) (fmap (getPreSendHook . view preSendHook))
+      m'' <- use asConfig >>= runReaderT (foldr (>=>) pure hooks m')
+
+      k (buildMessage m'')
 
 -- | Send the mail, but catch and show an error if it happened.
 trySendAndCatch :: (MonadState AppState m, MonadIO m, MonadCatch m) => B.Builder -> m ()
