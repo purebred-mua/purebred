@@ -254,7 +254,7 @@ launch ghcOpts cfg = do
   logSink <- setupLogsink (debugFile opts)
   logSink (T.pack "Compile flags: " <> T.intercalate (T.pack " ") (T.pack <$> ghcOpts))
   logSink (T.pack "Opened log file")
-  cfg' <- processConfig (bchan, b, logSink) (pre cfg)
+  cfg' <- processConfig (InternalConfigurationFields bchan b logSink) (pre cfg)
 
   s <- initialState cfg'
   let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig

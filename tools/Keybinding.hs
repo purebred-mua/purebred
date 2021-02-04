@@ -21,7 +21,7 @@ import Types
 main :: IO ()
 main = do 
   bchan <- newBChan 32
-  cfg' <- processConfig (bchan, "asdf", dummyLogSink) defaultConfig
+  cfg' <- processConfig (InternalConfigurationFields bchan "asdf" dummyLogSink) defaultConfig
   s <- initialState cfg'
   T.putStrLn (renderHelpAsAsciidoc s cfg')
 
