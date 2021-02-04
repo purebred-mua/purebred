@@ -145,7 +145,7 @@ module Types
     -- * Configuration
   , UserConfiguration
   , InternalConfiguration
-  , InternalConfigurationFields
+  , InternalConfigurationFields(..)
   , confBChan
   , confBoundary
   , confLogSink
@@ -626,7 +626,11 @@ data Configuration extra a b c = Configuration
     }
     deriving (Generic, NFData)
 
-type InternalConfigurationFields = (BChan PurebredEvent, String, LT.Text -> IO ())
+data InternalConfigurationFields = InternalConfigurationFields
+  { _bChan :: BChan PurebredEvent
+  , _boundary :: String
+  , _logSink :: LT.Text -> IO ()
+  }
 
 -- | The configuration from the user holding IO side effects. This
 -- configuration is evaluated to 'InternalConfiguration' by evaluating
@@ -673,13 +677,13 @@ confExtra :: Lens (Configuration extra a b c) (Configuration extra' a b c) extra
 confExtra = lens _confExtra (\cfg x -> cfg { _confExtra = x })
 
 confBChan :: Lens' InternalConfiguration (BChan PurebredEvent)
-confBChan = confExtra . _1
+confBChan = confExtra . lens _bChan (\s a -> s { _bChan = a })
 
 confBoundary :: Lens' InternalConfiguration String
-confBoundary = confExtra . _2
+confBoundary = confExtra . lens _boundary (\s a -> s { _boundary = a })
 
 confLogSink :: Lens' InternalConfiguration (LT.Text -> IO ())
-confLogSink = confExtra . _3
+confLogSink = confExtra . lens _logSink (\s a -> s { _logSink = a })
 
 
 data ComposeViewSettings = ComposeViewSettings
