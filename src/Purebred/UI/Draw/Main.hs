@@ -21,6 +21,7 @@ module Purebred.UI.Draw.Main
   ( fillLine
   , renderEditorWithLabel
   , attachmentsHeader
+  , renderHaskeline
   ) where
 
 import Brick.Types (Widget)
@@ -36,6 +37,7 @@ import Purebred.UI.Actions (HasName(..), HasEditor(..))
 import Purebred.UI.Attr
   (editorLabelAttr, editorAttr, editorFocusedAttr, statusbarAttr, editorErrorAttr)
 import Purebred.UI.Notifications (hasError)
+import qualified Brick.Haskeline as HB
 
 -- | Fills the entire line with spaces. This can be used to draw a
 -- visual bar when an 'AttrName' with a background colour is set.
@@ -63,3 +65,6 @@ renderEditorWithLabel _ label s =
           then editorFocusedAttr
           else editorAttr
    in labelW <+> withAttr eAttr (vLimit 1 inputW)
+
+renderHaskeline :: T.Text -> AppState -> Widget Name
+renderHaskeline label s = txt label <+> HB.render (view (asThreadsView . miSearchThreadsEditor) s)

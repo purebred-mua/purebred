@@ -109,7 +109,7 @@ module Purebred.UI.Actions (
   , debug
 
   -- * API
-  , applySearch
+  , runSearch
   , initialCompose
   ) where
 
@@ -144,7 +144,9 @@ import Control.Lens
         filtered, set, over, preview, view, views, (&), firstOf, non, Traversal',
         Getting, Lens', folded, assign, modifying, preuse, use, uses
   )
+import GHC.Conc (atomically)
 import Control.Concurrent (forkIO)
+import Control.Concurrent.STM (writeTChan)
 import Control.Monad (unless, when, void, (>=>))
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State
@@ -188,6 +190,7 @@ import Purebred.UI.Widgets
   ( statefulEditor, editEditorL, revertEditorState, saveEditorState )
 import Purebred.Storage.AddressBook (queryAddresses)
 
+import qualified Brick.Haskeline as HB
 
 
 {- $overview
@@ -264,9 +267,6 @@ instance HasEditor 'MailAttachmentPipeToEditor where
 
 instance HasEditor 'ScrollingMailViewFindWordEditor where
   editorL = asMailView . mvFindWordEditor
-
-instance HasEditor 'SearchThreadsEditor where
-  editorL = asThreadsView . miSearchThreadsEditor . editEditorL
 
 instance HasEditor 'ManageThreadTagsEditor where
   editorL = asThreadsView . miThreadTagsEditor
@@ -367,7 +367,7 @@ instance Completable 'ComposeListOfAttachments where
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
     case getEditorTagOps @'ManageMailTagsEditor s of
-        Left msg -> pure $ set asUserMessage (Just msg) s
+        Left ms -> pure $ set asUserMessage (Just ms) s
         Right ops -> flip execStateT s $ do
             modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 (tagItem ops)))
             toggledOrSelectedItemHelper
@@ -458,7 +458,10 @@ class Resetable (v :: ViewName) (n :: Name) where
   reset :: T.EventM Name AppState ()
 
 instance Resetable 'Threads 'SearchThreadsEditor where
-  reset = modifying (asThreadsView . miSearchThreadsEditor) revertEditorState
+  reset = do
+    modifying (asThreadsView . miSearchThreadsEditor . HB.contentsL) clearZipper
+    w <- use (asThreadsView . miSearchThreadsEditor)
+    liftIO $ HB.clearLine w
 
 instance Resetable 'ViewMail 'ManageMailTagsEditor where
   reset = modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
@@ -476,6 +479,7 @@ instance Resetable 'Threads 'ComposeSubject where
   reset = modify clearMailComposition
 
 instance Resetable 'Threads 'ComposeTo where
+  reset :: T.EventM Name AppState ()
   reset = modify clearMailComposition
 
 instance Resetable 'ComposeView 'ComposeFrom where
@@ -517,7 +521,8 @@ instance Resetable 'ViewMail 'MailListOfAttachments where
 
 instance Resetable 'ViewMail 'MailAttachmentOpenWithEditor where
   reset = do
-    modifying (asMailView . mvOpenCommand . E.editContentsL) clearZipper
+    w <- use (asMailView . mvOpenCommand)
+    liftIO $ HB.clearLine w
     hide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
@@ -567,9 +572,9 @@ class Focusable (v :: ViewName) (n :: Name) where
   onFocusSwitch :: (MonadState AppState m, MonadIO m) => m ()
 
 instance Focusable 'Threads 'SearchThreadsEditor where
-  onFocusSwitch = do
-    modifying (asThreadsView . miSearchThreadsEditor . editEditorL) (E.applyEdit gotoEOL)
-    modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
+  onFocusSwitch = pure ()
+    -- modifying (asThreadsView . miSearchThreadsEditor) (E.applyEdit gotoEOL)
+    -- modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
 
 instance Focusable 'Threads 'ManageThreadTagsEditor where
   onFocusSwitch = do
@@ -1390,7 +1395,7 @@ searchRelated = Action ["search related mail"] $ do
     Nothing -> runExceptT (throwError (InvalidQueryError "No authors availabe to perform search"))
       >>= either showError (const $ pure ())
     Just searchterm -> do
-      modifying (asThreadsView . miSearchThreadsEditor . editEditorL . E.editContentsL) (insertMany searchterm . clearZipper)
+      modifying (asThreadsView . miSearchThreadsEditor . HB.contentsL) (insertMany $ T.unpack searchterm)
       runSearch searchterm
 
 
@@ -1465,8 +1470,10 @@ isFileUnderCursor = maybe False (FB.fileTypeMatch [FB.RegularFile])
 --
 applySearch :: (MonadIO m, MonadState AppState m) => m ()
 applySearch = do
-  searchterms <- currentLine <$> use (asThreadsView . miSearchThreadsEditor . editEditorL . E.editContentsL)
-  runSearch searchterms
+  s <- get
+  let w = view (asThreadsView . miSearchThreadsEditor) s
+  searchterms <- liftIO $ HB.submitLineSync w
+  runSearch (T.pack searchterms)
 
 runSearch :: (MonadIO m, MonadState AppState m) => T.Text -> m ()
 runSearch searchterms = do

@@ -16,6 +16,7 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Purebred.UI.App
   ( theApp
@@ -23,24 +24,31 @@ module Purebred.UI.App
   , initialViews
   ) where
 
-import Control.Lens (assign, use, view)
+import Control.Lens (prism, assign, use, view)
 import Control.Monad (when)
+import Control.Concurrent.STM (TMVar, readTVarIO, writeTVar, newTVarIO, tryTakeTMVar, putTMVar, newEmptyTMVarIO)
 import Control.Monad.State (get, gets, execStateT)
 import qualified Data.Map as Map
 import qualified Data.Text.Lazy as T
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
 import Data.Proxy
+import qualified Data.Text
+import Control.Monad.IO.Class (liftIO)
+import System.Console.Haskeline (InputT, getInputLineWithInitial)
+import GHC.Conc (TVar, atomically)
 
 import Brick
   ( App(..), BrickEvent(..), EventM, Widget
   , emptyWidget, showFirstCursor, vBox, vLimit
   )
-import Brick.BChan (BChan)
+import Brick.BChan (BChan, writeBChan)
 import Brick.Focus (focusRing)
+import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
+import qualified Brick.Main as M
 import qualified Graphics.Vty.Input.Events as Vty
 
 import Purebred.Storage.Server
@@ -48,7 +56,7 @@ import Purebred.Types
 import Purebred.Types.Presentation (MatchInfo(NoSearch), emptyBodyPresentation)
 import Purebred.UI.Keybindings
 import Purebred.UI.Index.Main
-import Purebred.UI.Actions (applySearch, initialCompose)
+import Purebred.UI.Actions (runSearch, initialCompose)
 import Purebred.UI.FileBrowser.Main
        (renderFileBrowser, renderFileBrowserSearchPathEditor)
 import Purebred.UI.Mail.Main (renderAttachmentsList, renderMailView)
@@ -59,8 +67,10 @@ import Purebred.UI.Views
         filebrowserView, focusedViewWidget, visibleViewWidgets,
         focusedViewName)
 import Purebred.UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
-import Purebred.UI.Draw.Main (renderEditorWithLabel)
+import Purebred.UI.Draw.Main (renderEditorWithLabel, renderHaskeline)
 import Purebred.UI.Widgets (statefulEditor)
+import qualified Brick.Haskeline as HB
+import Brick.Haskeline (submittedL, HasHaskelineEvent(..))
 
 -- * Synopsis
 --
@@ -100,7 +110,7 @@ renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor
 renderWidget s _ SaveToDiskPathEditor =
   renderEditorWithLabel (Proxy @'SaveToDiskPathEditor) "Save to file:" s
 renderWidget s _ SearchThreadsEditor =
-  renderEditorWithLabel (Proxy @'SearchThreadsEditor) "Query:" s
+  renderHaskeline "Query:" s
 renderWidget s _ ManageMailTagsEditor =
   renderEditorWithLabel (Proxy @'ManageMailTagsEditor) "Labels:" s
 renderWidget s _ ManageThreadTagsEditor =
@@ -152,6 +162,10 @@ handleViewEvent = f where
   f _ ConfirmDialog = dispatch eventHandlerConfirm
   f _ _ = dispatch nullEventHandler
 
+instance HasHaskelineEvent PurebredEvent where
+  _HaskelineEvent = prism FromHBWidget $ \case
+    FromHBWidget x -> Right x
+    e -> Left e
 
 -- | Handling of application events. These can be keys which are
 -- pressed by the user or asynchronous events send by threads.
@@ -162,25 +176,29 @@ appEvent
 appEvent (VtyEvent ev) = do
   s <- get
   handleViewEvent (focusedViewName s) (focusedViewWidget s) ev
-appEvent (AppEvent ev) = case ev of
-  NotifyNumThreads n gen -> do
-    curGen <- use (asThreadsView . miListOfThreadsGeneration)
-    when (gen == curGen) $
-      assign (asThreadsView . miThreads . listLength) (Just n)
-  NotifyNewMailArrived n -> assign (asThreadsView . miNewMail) n
-  InputValidated err -> do
-    allVisible <- gets (concat . visibleViewWidgets)
-    case err of
-      Just msg | view umContext msg `elem` allVisible -> do
-        -- Widget for this message is still visible, display
-        -- the message and clear the thread ID.
-        assign asUserMessage err
-        assign (asAsync . aValidation) Nothing
-      _ -> do
-        -- Either Nothing (no error), or widget for this message is
-        -- not visible.  Clear existing messages and thread states.
-        assign asUserMessage Nothing
-        assign (asAsync . aValidation) Nothing
+appEvent appev@(AppEvent ev) =
+  case ev of
+    FromHBWidget _ -> T.zoom (asThreadsView . miSearchThreadsEditor) (HB.handleAppEvent appev)
+    FromHaskeline _ -> pure ()
+    HaskelineDied _ -> M.halt
+    NotifyNumThreads n gen -> do
+        curGen <- use (asThreadsView . miListOfThreadsGeneration)
+        when (gen == curGen) $
+          assign (asThreadsView . miThreads . listLength) (Just n)
+    NotifyNewMailArrived n -> assign (asThreadsView . miNewMail) n
+    InputValidated err -> do
+        allVisible <- gets (concat . visibleViewWidgets)
+        case err of
+            Just msg | view umContext msg `elem` allVisible -> do
+                -- Widget for this message is still visible, display
+                -- the message and clear the thread ID.
+                assign asUserMessage err
+                assign (asAsync . aValidation) Nothing
+            _ -> do
+                -- Either Nothing (no error), or widget for this message is
+                -- not visible.  Clear existing messages and thread states.
+                assign asUserMessage Nothing
+                assign (asAsync . aValidation) Nothing
 appEvent _ = pure ()
 
 initialViews :: Map.Map ViewName View
@@ -197,12 +215,14 @@ initialState
   -> BChan PurebredEvent
   -> Purebred.Storage.Server.Server
   -> (T.Text -> IO ())
+  -> HB.Widget Name PurebredEvent
   -> IO AppState
-initialState conf chan server sink = do
+initialState conf chan server sink searchWidget = do
   fb' <- FB.newFileBrowser
          FB.selectNonDirectories
          ListOfFiles
          (Just $ view (confFileBrowserView . fbHomePath) conf)
+
   let
     searchterms = view (confNotmuch . nmSearch) conf
     mi =
@@ -210,7 +230,7 @@ initialState conf chan server sink = do
             (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
             (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
             firstGeneration
-            (statefulEditor $ E.editorText SearchThreadsEditor Nothing searchterms)
+            searchWidget
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
             0
@@ -238,7 +258,7 @@ initialState conf chan server sink = do
     epoch = UTCTime (fromGregorian 2018 07 18) 1
     async = Async Nothing
     s = AppState conf chan server sink mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
-  execStateT applySearch s
+  execStateT (runSearch searchterms) s
 
 -- | Application event loop.
 theApp ::

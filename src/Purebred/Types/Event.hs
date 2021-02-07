@@ -35,7 +35,9 @@ module Purebred.Types.Event
 
 import Control.Lens (Lens', lens)
 import qualified Data.Text as T
+import Control.Exception (SomeException)
 
+import qualified Brick.Haskeline as HB
 import Purebred.Types.Error (Error)
 import Purebred.Types.UI (Name)
 
@@ -64,6 +66,9 @@ nextGeneration (Generation n) = Generation (succ n)
 data PurebredEvent
   = NotifyNumThreads Int Generation
   | NotifyNewMailArrived Int
+  | FromHBWidget HB.ToBrick
+  | FromHaskeline T.Text
+  | HaskelineDied (Either SomeException  ())
   | InputValidated (Maybe UserMessage) -- ^ Event used for real time validation
 
 data MessageSeverity
