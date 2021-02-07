@@ -80,6 +80,7 @@ library
                      , Storage.Notmuch
                      , Storage.ParsedMail
                      , Brick.Widgets.StatefulEdit
+                     , Brick.Haskeline
                      , Purebred
                      , Purebred.Plugin
                      , Purebred.Plugin.TweakConfig
@@ -117,6 +118,8 @@ library
                      , time
                      , temporary
                      , word-wrap
+                     , haskeline >= 0.8.2.0
+                     , transformers 
 
 executable purebred
   hs-source-dirs:      app

@@ -9,6 +9,7 @@ let
         purebred-email = hsuper.callPackage ./purebred-email.nix { };
         purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
         tasty-tmux = hsuper.callPackage ./tasty-tmux.nix { };
+        haskeline = hsuper.callPackage ./haskeline.nix { };
         notmuch = hsuper.callPackage ./hs-notmuch.nix {
           notmuch = self.pkgs.notmuch;
           talloc = self.pkgs.talloc;
