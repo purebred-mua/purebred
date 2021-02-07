@@ -124,6 +124,7 @@ module Purebred.Types
   , confCharsets
   , confPlugins
   , confAddressBook
+  , confHaskeline
 
     -- ** Notmuch Configuration
   , NotmuchSettings(..)
@@ -195,6 +196,11 @@ module Purebred.Types
   , AddressBook(..)
   , addressBookSearch
 
+  -- ** HaskelineSettings
+  , HaskelineSettings(..)
+  , hsHistoryFile
+  , hsAutoAddHistory
+
   -- * Internals
   , ListWithLength(..)
   , listList
@@ -218,6 +224,11 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (Dialog)
 import Control.Lens ( Getter, Lens', lens, to )
 import Control.DeepSeq (NFData(rnf), force)
+import Control.Lens
+import Control.Concurrent.STM (TChan)
+import qualified Data.Map as Map
+import Control.Monad.State
+import Control.Monad.Except (MonadError)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
@@ -228,11 +239,14 @@ import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Vector as V
+import Data.List.NonEmpty (NonEmpty)
+import System.Exit (ExitCode(..))
+import System.Process.Typed (ProcessConfig)
 
 import Notmuch (Tag)
 import Data.MIME
 
-import Purebred.UI.Widgets (StatefulEditor)
+import qualified Brick.Haskeline as HB
 import {-# SOURCE #-} Purebred.Plugin.Internal
 import Purebred.Storage.Server
 import Purebred.Types.Error
@@ -243,6 +257,7 @@ import Purebred.Types.UI
 import Purebred.Types.String
 import Purebred.Types.Presentation
 import Purebred.Types.AddressBook
+import Purebred.UI.Widgets (StatefulEditor)
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
@@ -276,7 +291,7 @@ data ThreadsView = ThreadsView
     { _miListOfMails  :: ListWithLength V.Vector (Toggleable NotmuchMail)
     , _miListOfThreads :: ListWithLength Items (Toggleable NotmuchThread)
     , _miListOfThreadsGeneration :: Generation
-    , _miSearchThreadsEditor :: StatefulEditor T.Text Name
+    , _miSearchThreadsEditor :: HB.Widget Name PurebredEvent
     , _miMailTagsEditor :: E.Editor T.Text Name
     , _miThreadTagsEditor :: E.Editor T.Text Name
     , _miNewMail :: Int
@@ -298,7 +313,7 @@ miListOfThreadsGeneration :: Lens' ThreadsView Generation
 miListOfThreadsGeneration =
   lens _miListOfThreadsGeneration (\s b -> s { _miListOfThreadsGeneration = b })
 
-miSearchThreadsEditor :: Lens' ThreadsView (StatefulEditor T.Text Name)
+miSearchThreadsEditor :: Lens' ThreadsView (HB.Widget Name PurebredEvent)
 miSearchThreadsEditor = lens _miSearchThreadsEditor (\m v -> m { _miSearchThreadsEditor = v})
 
 miMailTagsEditor :: Lens' ThreadsView (E.Editor T.Text Name)
@@ -462,6 +477,7 @@ data Configuration = Configuration
     , _confCharsets :: CharsetLookup
     , _confPlugins :: [PluginDict]
     , _confAddressBook :: [AddressBook]
+    , _confHaskeline :: HaskelineSettings
     }
     deriving (Generic, NFData)
 
@@ -501,6 +517,20 @@ confPlugins = lens _confPlugins (\conf x -> conf { _confPlugins = x })
 confAddressBook :: Lens' Configuration [AddressBook]
 confAddressBook = lens _confAddressBook (\conf x -> conf { _confAddressBook = x })
 
+confHaskeline :: Lens' Configuration HaskelineSettings
+confHaskeline = lens _confHaskeline (\c x -> c { _confHaskeline = x })
+
+data HaskelineSettings = HaskelineSettings
+  { _hsHistoryFile :: Maybe FilePath,
+    _hsAutoAddHistory :: Bool
+  }
+    deriving (Generic, NFData)
+
+hsHistoryFile :: Lens' HaskelineSettings (Maybe FilePath)
+hsHistoryFile = lens _hsHistoryFile (\s x -> s { _hsHistoryFile = x })
+
+hsAutoAddHistory :: Lens' HaskelineSettings Bool
+hsAutoAddHistory = lens _hsAutoAddHistory (\s x -> s { _hsAutoAddHistory = x })
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
@@ -664,13 +694,12 @@ fbSearchPath = lens _fbSearchPath (\c x -> c { _fbSearchPath = x})
 
 -- | State needed to be kept for keeping track of
 -- concurrent/asynchronous actions
-newtype Async = Async
+data Async = Async
   { _aValidation :: Maybe ThreadId
   }
 
 aValidation :: Lens' Async (Maybe ThreadId)
 aValidation = lens _aValidation (\as x -> as { _aValidation = x })
-
 
 -- | The application state holding state to render widgets, error
 -- management, as well as views and more.
