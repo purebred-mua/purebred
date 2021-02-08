@@ -168,7 +168,7 @@ import UI.Views
         focusedViewWidget)
 import Purebred.Events (nextGeneration)
 import Purebred.LazyVector (V)
-import Purebred.Plugin
+import Purebred.Plugin.Internal
 import Purebred.Tags (parseTagOps)
 import Purebred.System (tryIO)
 import Purebred.System.Process
