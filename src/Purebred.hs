@@ -172,7 +172,7 @@ import Types
 import Error
 import Purebred.Plugin
 import Purebred.Plugin.Internal
-  ( configHook )
+  ( configHook, pluginBuiltIn, pluginName )
 
 -- re-exports for configuration
 import qualified Graphics.Vty
@@ -183,7 +183,7 @@ import Brick.Main (customMain)
 import Brick.Types (Next)
 import Brick.Util (on, fg, bg)
 import Brick.AttrMap (AttrName, applyAttrMappings)
-import Control.Lens ((&), _head, over, preview, set, view)
+import Control.Lens ((&), _head, over, preview, set, view, views)
 import Data.Text.Lens (packed)
 import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 
@@ -193,8 +193,8 @@ data AppConfig = AppConfig
     , debugFile :: Maybe FilePath
     }
 
-appconfig :: Parser AppConfig
-appconfig = AppConfig
+appconfig :: String -> Parser AppConfig
+appconfig verInfo = AppConfig
   <$> optional
     ( Builder.option Builder.str
       ( long "database"
@@ -216,7 +216,7 @@ appconfig = AppConfig
       <> help "Write debug information to FILE"
       )
     )
-  <* Builder.infoOption versionString
+  <* Builder.infoOption verInfo
     ( long "version"
     <> short 'v'
     <> help "Print the Purebred version and exit"
@@ -225,9 +225,19 @@ appconfig = AppConfig
 versionString :: String
 versionString = showVersion version
 
-optParser :: ParserInfo AppConfig
-optParser = info
-  (appconfig <**> helper)
+-- | Print full version info about plugins
+fullVersionInfo :: [PluginDict] -> String
+fullVersionInfo plugins = unlines $
+  [ "purebred " <> versionString
+  , ""
+  , "Configured plugins: "
+  , ""
+  ] <> (views pluginName ("- " <>) <$> filter (views pluginBuiltIn not) plugins)
+
+
+optParser :: String -> ParserInfo AppConfig
+optParser verInfo = info
+  (appconfig verInfo <**> helper)
   (fullDesc
    <> progDesc "purebred"
    <> header ("a search based, terminal mail user agent - " <> versionString))
@@ -243,7 +253,7 @@ launch ghcOpts inCfg = do
 
   -- set the user-specified database path *before* processing config,
   -- to avoid possible error in `notmuch config-get`
-  opts <- execParser optParser
+  opts <- execParser (optParser (fullVersionInfo plugins))
   let
     pre =
       maybe id (set (confNotmuch . nmDatabase) . pure) (databaseFilepath opts)
