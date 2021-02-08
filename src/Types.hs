@@ -302,7 +302,7 @@ import Data.MIME
 
 import Brick.Widgets.StatefulEdit (StatefulEditor(..))
 import Error
-import {-# SOURCE #-} Purebred.Plugin
+import {-# SOURCE #-} Purebred.Plugin.Internal
 import Purebred.LazyVector (V)
 import Purebred.Types.IFC (Tainted)
 

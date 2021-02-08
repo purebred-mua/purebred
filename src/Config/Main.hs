@@ -33,6 +33,8 @@ import Data.Maybe (fromMaybe)
 import Data.List.NonEmpty (fromList)
 import System.Exit (ExitCode(..))
 
+import Control.Lens (set)
+
 import Data.MIME (contentTypeTextPlain, defaultCharsets, matchContentType)
 
 import UI.FileBrowser.Keybindings
@@ -56,7 +58,7 @@ import UI.ComposeEditor.Keybindings
 
 import Error
 import Types
-import Purebred.Plugin
+import Purebred.Plugin.Internal
 import qualified Purebred.Plugin.UserAgent
 import Purebred.System.Process
 import Purebred.Types.IFC (sanitiseText, untaint)
@@ -318,7 +320,7 @@ defaultConfig =
       , _fbHomePath = getHomeDirectory
       }
     , _confCharsets = defaultCharsets
-    , _confPlugins =
+    , _confPlugins = set pluginBuiltIn True <$>
         [ usePlugin Purebred.Plugin.UserAgent.plugin
         ]
     , _confExtra = ()

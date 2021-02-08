@@ -110,12 +110,15 @@ To avoid this, don't use stack.  But if you insist, you can run
 
 -}
 module Purebred (
+  purebred,
+  purebredWithPlugins,
   module Types,
   module Error,
   module UI.Actions,
   module UI.Index.Keybindings,
   module UI.Mail.Keybindings,
   module Graphics.Vty.Attributes,
+  module Purebred.Plugin,
   Event(..),
   Key(..),
   Modifier(..),
@@ -138,7 +141,6 @@ module Purebred (
   Mailbox(..),
   AddrSpec(..),
   Domain(..),
-  purebred,
   sendmail) where
 
 import UI.App (theApp, initialState)
@@ -168,6 +170,9 @@ import Config.Main
     listStateSelectedAttr, listStateToggledAttr, listStateNewmailAttr)
 import Types
 import Error
+import Purebred.Plugin
+import Purebred.Plugin.Internal
+  ( configHook )
 
 -- re-exports for configuration
 import qualified Graphics.Vty
@@ -228,7 +233,13 @@ optParser = info
    <> header ("a search based, terminal mail user agent - " <> versionString))
 
 launch :: [String] -> UserConfiguration -> IO ()
-launch ghcOpts cfg = do
+launch ghcOpts inCfg = do
+  -- Run config hooks before parsing command line options,
+  -- so that CLI options can override config.
+  let
+    plugins = view confPlugins inCfg
+    hooks = getConfigHook . view configHook <$> plugins
+  cfg <- foldr (>=>) pure hooks inCfg
 
   -- set the user-specified database path *before* processing config,
   -- to avoid possible error in `notmuch config-get`
@@ -319,6 +330,13 @@ guessPackageArgs dir =
   in
     packageDb <> packageId
 
+-- | Main program entry point that allows specifying plugins.
+-- Use the 'Purebred.Plugin.TweakConfig.tweakConfig' plugin to
+-- alter the configuration.
+--
+purebredWithPlugins :: [PluginDict] -> IO ()
+purebredWithPlugins plugins =
+  purebred (over confPlugins (plugins <>) defaultConfig)
 
 purebred :: UserConfiguration -> IO ()
 purebred cfg = do
