@@ -47,7 +47,6 @@ import Control.Monad.Catch (bracket, MonadMask)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Lens (_2, over, view)
-import Data.Semigroup ((<>))
 import System.Process.Typed
 import System.IO.Temp (emptyTempFile, emptySystemTempFile)
 import System.FilePath ((</>))
