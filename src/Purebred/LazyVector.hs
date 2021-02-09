@@ -41,7 +41,6 @@ import qualified Data.List as L
 import Data.Monoid (Monoid(..))
 import Data.Ord (Ord(..))
 import Data.Semigroup (Semigroup(..))
-import Data.Traversable (Traversable)
 import Prelude ((+), (-), uncurry)
 import Text.Show (Show)
 

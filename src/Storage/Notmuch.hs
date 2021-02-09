@@ -58,8 +58,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError, ExceptT, runExceptT)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
-import Data.Traversable (traverse)
-import Data.List (union, notElem, nub, sort)
+import Data.List (union, nub, sort)
 import Data.Maybe (fromMaybe)
 import Data.Functor (($>))
 import qualified Data.Vector as Vec

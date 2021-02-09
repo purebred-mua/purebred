@@ -48,7 +48,6 @@ module UI.Keybindings (
   , eventHandlerViewMailComposeTo
   ) where
 
-import Control.Monad ((<=<))
 import qualified Brick.Types as Brick
 import qualified Brick.Main as Brick
 import qualified Brick.Widgets.Edit as E

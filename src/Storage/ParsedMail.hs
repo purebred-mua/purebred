@@ -61,7 +61,6 @@ import Prelude hiding (Word)
 import Data.MIME
 
 import Error
-import UI.Notifications (makeWarning)
 import Storage.Notmuch (mailFilepath)
 import Types
 import Purebred.System (tryIO)
