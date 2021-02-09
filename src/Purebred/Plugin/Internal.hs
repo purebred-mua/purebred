@@ -114,7 +114,7 @@ instance (forall m. CanIO m => cap m) => Hook (ConfigHook cap) where
 --
 data Plugin hooks = Plugin String Version hooks
 
--- | Convert a plugin to a `PluginDict`.
+-- | Prepare a plugin for use in the main program.
 usePlugin :: (Hook hooks) => Plugin hooks -> PluginDict
 usePlugin (Plugin name ver hook) = setHook hook $ PluginDict name ver False
   (ConfigHook pure)
