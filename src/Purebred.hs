@@ -172,7 +172,7 @@ import Types
 import Error
 import Purebred.Plugin
 import Purebred.Plugin.Internal
-  ( configHook, pluginBuiltIn, pluginName )
+  ( configHook, pluginBuiltIn, pluginName, pluginVersion )
 
 -- re-exports for configuration
 import qualified Graphics.Vty
@@ -232,7 +232,14 @@ fullVersionInfo plugins = unlines $
   , ""
   , "Configured plugins: "
   , ""
-  ] <> (views pluginName ("- " <>) <$> filter (views pluginBuiltIn not) plugins)
+  ] <> (showPlugin <$> filter (views pluginBuiltIn not) plugins)
+  where
+    showPlugin plug =
+      let
+        nam = view pluginName plug
+        ver = view pluginVersion plug
+      in
+        "- " <> nam <> " " <> showVersion ver
 
 
 optParser :: String -> ParserInfo AppConfig

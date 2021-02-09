@@ -25,6 +25,7 @@
 module Purebred.Plugin.Internal where
 
 import Control.DeepSeq
+import Data.Version
 
 import Control.Lens (Lens', lens, set)
 import Control.Monad.Reader
@@ -48,16 +49,24 @@ instance (CanReadConfig m, CanIO m, CanRWAppState m) => Unconstrained m where
 --
 data PluginDict = PluginDict
   { _pluginName :: String
+  , _pluginVersion :: Version
   , _pluginBuiltIn :: Bool
   , _configHook :: ConfigHook CanIO
   , _preSendHook :: PreSendHook Unconstrained
   }
 
 instance NFData PluginDict where
-  rnf (PluginDict name builtin _ _) = force name `seq` force builtin `seq` ()
+  rnf (PluginDict name ver builtin _ _) =
+    force name
+    `seq` force ver
+    `seq` force builtin
+    `seq` ()
 
 pluginName :: Lens' PluginDict String
 pluginName = lens _pluginName (\s a -> s { _pluginName = a })
+
+pluginVersion :: Lens' PluginDict Version
+pluginVersion = lens _pluginVersion (\s a -> s { _pluginVersion = a })
 
 pluginBuiltIn :: Lens' PluginDict Bool
 pluginBuiltIn = lens _pluginBuiltIn (\s a -> s { _pluginBuiltIn = a })
@@ -100,13 +109,13 @@ instance (forall m. CanIO m => cap m) => Hook (ConfigHook cap) where
   setHook (ConfigHook f) = set configHook (ConfigHook f)
 
 
--- | Plugin constructor.  Apply to the plugin name, and the hooks.
+-- | Plugin constructor.  Apply to the plugin name, version, and hooks.
 -- @hooks@ can be a single hook, or a nested tuple of hooks.
 --
-data Plugin hooks = Plugin String hooks
+data Plugin hooks = Plugin String Version hooks
 
 -- | Convert a plugin to a `PluginDict`.
 usePlugin :: (Hook hooks) => Plugin hooks -> PluginDict
-usePlugin (Plugin name hook) = setHook hook $ PluginDict name False
+usePlugin (Plugin name ver hook) = setHook hook $ PluginDict name ver False
   (ConfigHook pure)
   (PreSendHook pure)

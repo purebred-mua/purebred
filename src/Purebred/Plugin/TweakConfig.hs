@@ -42,16 +42,17 @@ perform I/O.
 module Purebred.Plugin.TweakConfig where
 
 import Purebred.Plugin
+import Purebred.Version (version)
 import Types (UserConfiguration)
 
 tweakConfig
   :: (UserConfiguration -> UserConfiguration)
   -> Plugin (ConfigHook Pure)
 tweakConfig hook =
-  Plugin "Purebred.Plugin.TweakConfig" (ConfigHook (pure . hook))
+  Plugin "Purebred.Plugin.TweakConfig" version (ConfigHook (pure . hook))
 
 tweakConfigWithIO
   :: (forall m. CanIO m => UserConfiguration -> m UserConfiguration)
   -> Plugin (ConfigHook CanIO)
 tweakConfigWithIO hook =
-  Plugin "Purebred.Plugin.TweakConfig (IO)" (ConfigHook hook)
+  Plugin "Purebred.Plugin.TweakConfig (IO)" version (ConfigHook hook)

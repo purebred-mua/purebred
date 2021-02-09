@@ -25,11 +25,11 @@ import Control.Lens (set, view)
 import Data.MIME (headerText)
 
 import Purebred.Plugin
-import Purebred.Version (userAgent)
+import Purebred.Version (version, userAgent)
 import Types
 
 plugin :: Plugin (PreSendHook CanReadConfig)
-plugin = Plugin "UserAgent" (PreSendHook hook)
+plugin = Plugin "UserAgent" version (PreSendHook hook)
   where
   hook msg = do
     charsets <- view confCharsets
