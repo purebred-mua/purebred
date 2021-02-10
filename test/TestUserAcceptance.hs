@@ -492,6 +492,12 @@ testSubstringMatchesAreCleared = purebredTmuxSession "substring match indicator 
     step "enter needle and show results"
     sendKeys "et\r" (Substring "1 of 20 matches")
 
+    step "begin substring search"
+    sendKeys "/" (Substring "Search for")
+
+    step "enter empty search string (reset search)"
+    sendKeys "\r" (Not (Substring "matches ]"))
+
     step "go back to threads"
     sendKeys "Escape" (Regex "New:\\s[0-9]\\s+\\]\\s+Threads")
 
