@@ -123,6 +123,7 @@ makeScrollSteps = mkScrollStep <$> itoListOf (indexing (mbParagraph . pLine . lM
 -- Note, that the matching is case sensitive.
 --
 findMatchingWords :: T.Text -> MailBody -> MailBody
+findMatchingWords     "" = removeMatchingWords
 findMatchingWords needle =
   over (mbParagraph . pLine) go
   where
