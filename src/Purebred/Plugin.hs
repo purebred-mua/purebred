@@ -48,12 +48,12 @@ import Purebred.Plugin.Internal
 {- $using
 
 To use plugins, update your @~\/.config\/purebred\/purebred.hs@ to
-use the 'Purebred.purebredWithPlugins' entry point with a list of
+use the 'Purebred.purebred' entry point with a list of
 plugins.  Apply 'usePlugin' to each plugin value to prepare it for
 use.
 
 @
-main = 'Purebred.purebredWithPlugins'
+main = 'Purebred.purebred'
   [ 'usePlugin' ('Purebred.Plugin.TweakConfig.tweakConfig' tweak)
   , 'usePlugin' Purebred.Plugin.ICU.plugin
   ]
@@ -80,7 +80,7 @@ program will not compile.  The user can decide whether to accept the
 new type (by updating the annotation), or remove the plugin.
 
 @
-main = 'Purebred.purebredWithPlugins'
+main = 'Purebred.purebred'
   [ 'usePlugin' (Purebred.Plugin.TweakConfig.tweakConfig tweak)
   , 'usePlugin' (Purebred.Plugin.ICU.plugin :: 'Plugin' ('ConfigHook' 'Pure'))
   ]

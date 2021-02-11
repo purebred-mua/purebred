@@ -29,7 +29,7 @@ tweak =
     set (confNotmuch . nmDatabase) (pure "\/home\/alice\/mail")
   . set (confNotmuch . nmNewTag) "inbox"
 
-main = purebredWithPlugins
+main = purebred
   [ usePlugin $ 'tweakConfig' tweak
   , ...
   ]

@@ -59,7 +59,10 @@ fromMail =
     ]
 
 main :: IO ()
-main = purebred $ tweak defaultConfig where
+main = purebred
+  [ usePlugin $ tweakConfig tweak
+  ]
+  where
   tweak =
     over (confIndexView . ivBrowseThreadsKeybindings) (`union` myBrowseThreadsKbs)
     . over (confMailView . mvKeybindings) (`union` myMailKeybindings)
