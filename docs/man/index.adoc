@@ -124,8 +124,11 @@ myMailKeybindings =
 
 -- Tweak the default configuration before starting Purebred
 main :: IO ()
-main = purebred $ tweak defaultConfig where
-  tweak = over (confMailView . mvKeybindings) (`union` myMailKeybindings)  -- <4>
+main = purebred
+  [ usePlugin $ tweakConfig tweak
+  ]
+  where
+  tweak = over (confMailView . mvKeybindings) (myMailKeybindings <>)  -- <4>
 
 ----
 <1> The type indicates that this list holds key bindings for the
@@ -135,10 +138,9 @@ and adding labels.
 <3> Every keybinding will have to end with a Brick event loop
 action. The `continue` action continues the event loop and therefore
 Purebred.
-<4> For the custom key bindings to take effect, register them when
-calling `purebred`. We rely heavily on the use
-of <<lens>> functions to
-overwrite the default keybindings by `union` the default list with our
+<4> Add the custom key bindings to the configuration (via the `tweakPlugin`
+plugin).  Use <<lens>> functions to prepend the custom keybindings to the
+default keybindings.
 custom list.
 
 

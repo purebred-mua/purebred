@@ -18,13 +18,30 @@
 
 = Synopsis
 
-To customise purebred configuration, create
-@~\/.config\/purebred\/purebred.hs@ and change the default config to
-your liking.  For example, the following configuration adds some
+To customise Purebred configuration (including enabling plugins),
+create @~\/.config\/purebred\/purebred.hs@.  Apply 'purebred' to the
+list of plugins.  Apply 'usePlugin' to each plugin, to prepare it
+for use.
+
+The 'tweakConfig' plugin can be used to customise the configuration
+to your liking.  For example, the following configuration adds some
 custom keybindings:
 
 @
+-- ~\/.config\/purebred\/purebred.hs
+
 import Purebred
+-- other plugin imports
+
+main :: IO ()
+main = 'purebred'
+  [ 'usePlugin' $ 'tweakConfig' tweak
+  -- , other plugins
+  ]
+
+tweak =
+    over ('confMailView' . 'mvKeybindings') (mailViewKeybindings <>)
+  . over ('confHelpView' . 'hvKeybindings') (scrollKeybindings <>)
 
 scrollKeybindings :: ('Scrollable' w) => ['Keybinding' v w]
 scrollKeybindings =
@@ -41,14 +58,10 @@ mailViewKeybindings =
   , Keybinding (EvKey (KChar 'g') []) ('listJumpToStart' \`chain\` continue)
   ]
   <> scrollKeybindings
-
-main = 'purebred' $ tweak 'defaultConfig' where
-  tweak =
-    over ('confMailView' . 'mvKeybindings') (mailViewKeybindings <>)
-    . over ('confHelpView' . 'hvKeybindings') (scrollKeybindings <>)
 @
 
-Then invoke the program by running @purebred@.
+Then execute @purebred@.  Purebred will detect changes to the custom
+configuration, recompile the custom binary, and execute it.
 
 = Overriding the config directory
 
@@ -111,7 +124,6 @@ To avoid this, don't use stack.  But if you insist, you can run
 -}
 module Purebred (
   purebred,
-  purebredWithPlugins,
   module Types,
   module Error,
   module UI.Actions,
@@ -119,6 +131,7 @@ module Purebred (
   module UI.Mail.Keybindings,
   module Graphics.Vty.Attributes,
   module Purebred.Plugin,
+  module Purebred.Plugin.TweakConfig,
   Event(..),
   Key(..),
   Modifier(..),
@@ -129,7 +142,6 @@ module Purebred (
   bg,
   applyAttrMappings,
   getDatabasePath,
-  defaultConfig,
   solarizedDark,
   mailTagAttr,
   listStateSelectedAttr,
@@ -173,6 +185,7 @@ import Error
 import Purebred.Plugin
 import Purebred.Plugin.Internal
   ( configHook, pluginBuiltIn, pluginName, pluginVersion )
+import Purebred.Plugin.TweakConfig
 
 -- re-exports for configuration
 import qualified Graphics.Vty
@@ -347,22 +360,17 @@ guessPackageArgs dir =
   in
     packageDb <> packageId
 
--- | Main program entry point that allows specifying plugins.
--- Use the 'Purebred.Plugin.TweakConfig.tweakConfig' plugin to
--- alter the configuration.
+-- | Main program entry point.  Apply to a list of plugins (use
+-- 'usePlugin' to prepare each plugin for use).
 --
-purebredWithPlugins :: [PluginDict] -> IO ()
-purebredWithPlugins plugins =
-  purebred (over confPlugins (plugins <>) defaultConfig)
-
-purebred :: UserConfiguration -> IO ()
-purebred cfg = do
+purebred :: [PluginDict] -> IO ()
+purebred plugins = do
   configDir <- lookupEnv "PUREBRED_CONFIG_DIR"
   ghcOptsEnv <- lookupEnv "GHCOPTS"
-
   libdir <- getLibDir
 
   let
+    cfg = over confPlugins (plugins <>) defaultConfig
     ghcOpts = "-threaded" : maybe [] words ghcOptsEnv <> guessPackageArgs libdir
     dyreParams = Dyre.defaultParams
       { Dyre.projectName = "purebred"
