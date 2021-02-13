@@ -43,8 +43,9 @@ let
     cabal-install
     cabal2nix
     ghcid
-    # hindent - currently broken
     hlint
+    haskell-language-server
+    hie-bios
     pkgs.notmuch
     pkgs.tmux
     pkgs.gnumake

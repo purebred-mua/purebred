@@ -13,6 +13,7 @@ module Brick.Haskeline
     handleEditorEvent,
     handleAppEvent,
     render,
+    visibleLinesL
   )
 where
 
@@ -22,7 +23,9 @@ import qualified Brick.BChan as BC
 import GHC.Conc (atomically)
 import Control.Concurrent
 import Control.Concurrent.STM (TChan, readTChan, newTChan, writeTChan)
-import Control.Lens (Lens)
+import Control.Lens (Lens, Lens', lens)
+import qualified Data.Text as T
+import qualified Data.Text.Zipper as Z hiding (textZipper)
 import qualified Graphics.Vty as V
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
@@ -50,6 +53,10 @@ data Widget n = MkWidget
     extent :: Maybe (Int, Int)
   }
 
+visibleLinesL :: Lens' (Widget n) [String]
+visibleLinesL = lens visibleLines (\w x -> w { visibleLines = x })
+
+
 configure ::
   BC.BChan e ->
   (ToBrick -> e) ->
@@ -65,11 +72,11 @@ configure toAppChan' toAppEventType' fromAppEventType' = do
         fromAppEventType = fromAppEventType'
       }
 
-initialWidget :: n -> Widget n
-initialWidget n =
+initialWidget :: n -> String -> Widget n
+initialWidget n st =
   MkWidget
     { name = n,
-      visibleLines = [],
+      visibleLines = [st],
       hiddenLines = [],
       current = ("", ""),
       extent = Nothing
@@ -127,9 +134,9 @@ handleAppEvent c w (AppEvent e) =
           }
     Nothing -> return w
 
-handleEditorEvent :: BrickEvent n e -> EventM n (Widget n)
-handleEditorEvent (VtyEvent (V.EvKey k ms)) = do
-  liftIO $ atomically $ writeTChan (fromBrickChan c) $ mkKeyEvent k
+handleEditorEvent :: TChan Event -> V.Event -> Widget n -> EventM n (Widget n)
+handleEditorEvent c (V.EvKey k ms) w = do
+  liftIO $ atomically $ writeTChan c $ mkKeyEvent k
   return w
   where
     mkKeyEvent :: V.Key -> Event

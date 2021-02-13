@@ -113,6 +113,7 @@ module Types
 
     -- ** Concurrent actions
   , aValidation
+  , aFromBrickChan
 
     -- ** Widgets
   , Name(..)
@@ -278,6 +279,7 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (Dialog)
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Lens
+import Control.Concurrent.STM (TChan)
 import qualified Data.Map as Map
 import Control.Monad.State
 import Control.Monad.Except (MonadError)
@@ -296,11 +298,13 @@ import qualified Data.CaseInsensitive as CI
 import Data.List.NonEmpty (NonEmpty)
 import System.Exit (ExitCode(..))
 import System.Process.Typed (ProcessConfig)
+import System.Console.Haskeline.Internal (Event)
 
 import Notmuch (Tag)
 import Data.MIME
 
 import Brick.Widgets.StatefulEdit (StatefulEditor(..))
+import qualified Brick.Haskeline as HB
 import Error
 import {-# SOURCE #-} Purebred.Plugin.Internal
 import Purebred.LazyVector (V)
@@ -925,13 +929,19 @@ fbSearchPath = lens _fbSearchPath (\c x -> c { _fbSearchPath = x})
 
 -- | State needed to be kept for keeping track of
 -- concurrent/asynchronous actions
-newtype Async = Async
+data Async = Async
   { _aValidation :: Maybe ThreadId
+  , _aFromBrickChan :: TChan Event
+  , _aToAppChan :: BChan Vty.Event
+  , _aToAppEventType :: HB.ToBrick -> Vty.Event
+  , _aFromAppEventType :: Vty.Event -> Maybe HB.ToBrick
   }
 
 aValidation :: Lens' Async (Maybe ThreadId)
 aValidation = lens _aValidation (\as x -> as { _aValidation = x })
 
+aFromBrickChan :: Lens' Async (TChan Event)
+aFromBrickChan = lens _aFromBrickChan (\as x -> as { _aFromBrickChan = x })
 
 -- | The application state holding state to render widgets, error
 -- management, as well as views and more.

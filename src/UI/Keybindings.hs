@@ -71,6 +71,7 @@ import Purebred.Parsing.Text (niceEndOfInput)
 import UI.Validation (dispatchValidation)
 import Brick.Widgets.StatefulEdit (editEditorL)
 import UI.Notifications (makeWarning)
+import qualified Brick.Haskeline as HB
 
 -- | Purebreds event handler. Either we can look up a function
 -- declared for the key press or send the key press to the Brick widget
