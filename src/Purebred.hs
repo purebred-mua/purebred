@@ -157,10 +157,11 @@ module Purebred (
 
 import UI.App (theApp, initialState)
 
+import Control.Concurrent (rtsSupportsBoundThreads)
 import Purebred.System.Logging (setupLogsink)
 import qualified Config.Dyre as Dyre
 import qualified Control.DeepSeq
-import Control.Monad ((>=>), void)
+import Control.Monad ((>=>), void, unless)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import qualified Data.Text.Lazy as T
@@ -335,6 +336,7 @@ genBoundary = filter isBoundaryChar . randomRs (minimum boundaryChars, maximum b
 --
 purebred :: [PluginDict] -> IO ()
 purebred plugins = do
+  unless rtsSupportsBoundThreads (error "purebred was not compiled with -threaded")
   configDir <- lookupEnv "PUREBRED_CONFIG_DIR"
   ghcOptsEnv <- maybe [] words <$> lookupEnv "GHCOPTS"
   libdir <- getLibDir
