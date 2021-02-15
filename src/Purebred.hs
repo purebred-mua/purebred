@@ -163,10 +163,8 @@ import qualified Control.DeepSeq
 import Control.Monad ((>=>), void)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
-import Data.List (elemIndex, isInfixOf, isPrefixOf)
 import qualified Data.Text.Lazy as T
 import System.Environment (lookupEnv)
-import System.FilePath (dropTrailingPathSeparator, joinPath, splitPath)
 import System.FilePath.Posix ((</>))
 import System.Random (RandomGen, getStdGen, randomRs)
 import Data.Version (showVersion)
@@ -332,46 +330,18 @@ genBoundary = filter isBoundaryChar . randomRs (minimum boundaryChars, maximum b
   where
     isBoundaryChar = (`elem` boundaryChars)
 
-
--- | Try to determine a package-related args from the libdir
---
-guessPackageArgs :: FilePath -> [String]
-guessPackageArgs dir =
-  let
-    path = dropTrailingPathSeparator <$> splitPath dir
-    reversedPath = case reverse path of
-      ("lib" : xs) -> xs  -- if component is "lib", drop it
-      xs -> xs
-    isCabalStore = [".cabal", "store"] `isInfixOf` path
-    packageId =
-      let
-        f s
-          | isCabalStore && ("purebred-" <> versionString <> "-") `isPrefixOf` s =
-              Just s -- cabal newstyle install
-          | otherwise = Nothing
-      in
-        maybe [] (\s -> ["-package-id", s]) (preview _head reversedPath >>= f)
-    packageDb
-      | isCabalStore =
-          maybe []
-            (\i -> ["-package-db", joinPath (take (i + 3) path <> ["package.db"])])
-            (elemIndex ".cabal" path)
-      | otherwise = []
-  in
-    packageDb <> packageId
-
 -- | Main program entry point.  Apply to a list of plugins (use
 -- 'usePlugin' to prepare each plugin for use).
 --
 purebred :: [PluginDict] -> IO ()
 purebred plugins = do
   configDir <- lookupEnv "PUREBRED_CONFIG_DIR"
-  ghcOptsEnv <- lookupEnv "GHCOPTS"
+  ghcOptsEnv <- maybe [] words <$> lookupEnv "GHCOPTS"
   libdir <- getLibDir
 
   let
     cfg = over confPlugins (plugins <>) defaultConfig
-    ghcOpts = "-threaded" : maybe [] words ghcOptsEnv <> guessPackageArgs libdir
+    ghcOpts = ghcOptsEnv
     dyreParams = Dyre.defaultParams
       { Dyre.projectName = "purebred"
       , Dyre.realMain = launch ghcOpts
@@ -380,6 +350,7 @@ purebred plugins = do
       -- if config dir specified, also use it as cache dir to avoid
       -- clobbering cached binaries for other configurations
       , Dyre.cacheDir = pure <$> configDir
+      , Dyre.includeDirs = [libdir]
       , Dyre.ghcOpts = ghcOpts
       }
   Dyre.wrapMain dyreParams cfg

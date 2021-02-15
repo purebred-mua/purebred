@@ -92,7 +92,7 @@ library
   build-depends:       base >= 4.11 && < 5
                      , stm >= 2.4
                      , deepseq >= 1.4.2
-                     , dyre >= 0.8.12
+                     , dyre >= 0.9.1
                      , lens
                      , brick >= 0.55
                      , text-zipper
