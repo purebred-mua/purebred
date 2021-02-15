@@ -342,11 +342,8 @@ purebred plugins = do
   let
     cfg = over confPlugins (plugins <>) defaultConfig
     ghcOpts = ghcOptsEnv
-    dyreParams = Dyre.defaultParams
-      { Dyre.projectName = "purebred"
-      , Dyre.realMain = launch ghcOpts
-      , Dyre.showError = const error
-      , Dyre.configDir = pure <$> configDir
+    dyreParams = (Dyre.newParams "purebred" (launch ghcOpts) (const error))
+      { Dyre.configDir = pure <$> configDir
       -- if config dir specified, also use it as cache dir to avoid
       -- clobbering cached binaries for other configurations
       , Dyre.cacheDir = pure <$> configDir
