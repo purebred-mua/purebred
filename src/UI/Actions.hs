@@ -111,7 +111,7 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (dialog, dialogSelection, Dialog)
 import Network.Mime (defaultMimeLookup)
 import Data.Proxy
-import Data.Either (fromRight)
+import Data.Either (fromRight, isRight)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.ByteString as B
@@ -329,7 +329,9 @@ instance
 -- text by pressing Enter.
 --
 class Completable (n :: Name) where
-  complete :: (MonadIO m, MonadMask m, MonadState AppState m) => Proxy n -> m ()
+  type CompletableResult n
+  type CompletableResult n = ()
+  complete :: (MonadIO m, MonadMask m, MonadState AppState m) => Proxy n -> m (CompletableResult n)
 
 instance Completable 'SearchThreadsEditor where
   complete _ = applySearch
@@ -341,6 +343,7 @@ instance Completable 'ManageMailTagsEditor where
     modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Completable 'ComposeListOfAttachments where
+  type CompletableResult 'ComposeListOfAttachments = Bool
   complete _ = sendMail
 
 -- | Apply all given tag operations to existing mails
@@ -942,7 +945,7 @@ focus (Action d1 f1) (Action d2 f2) =
       modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy @v')))
       assign (asViews . vsViews . at (viewname (Proxy @v')) . _Just . vFocus) (name (Proxy @ctx'))
 
-done :: forall a v. (HasViewName v, Completable a) => Action v a ()
+done :: forall a v. (HasViewName v, Completable a) => Action v a (CompletableResult a)
 done = Action ["apply"] (complete (Proxy @a))
 
 abort :: forall a v. (HasViewName v, Resetable v a) => Action v a ()
@@ -1427,33 +1430,35 @@ manageMailTags ops ms = do
 
 -- | Build the MIMEMessage, sanitize filepaths, serialize and send it
 --
-sendMail :: (MonadState AppState m, MonadCatch m, MonadIO m) => m ()
+sendMail :: (MonadState AppState m, MonadCatch m, MonadIO m) => m Bool
 sendMail = do
   maildir <- use (asConfig . confNotmuch . nmDatabase)
   sentTag <- use (asConfig . confNotmuch . nmSentTag)
   buildMail $ \bs -> do
     trySendAndCatch bs
-    runExceptT ( do
+    r <- runExceptT ( do
         fp <- createSentFilePath maildir
         tryIO $ LB.writeFile fp (B.toLazyByteString bs)
         Notmuch.indexFilePath maildir fp [sentTag] )
-      >>= either showError (const $ pure ())
+    isRight r <$ either showError pure r
 
 -- | Build a mail from the current @AppState@ and execute the continuation.
-buildMail :: (MonadState AppState m, MonadIO m) => (B.Builder -> m ()) -> m ()
+buildMail :: (MonadState AppState m, MonadIO m) => (B.Builder -> m a) -> m a
 buildMail k = do
   attachments' <- uses (asCompose . cAttachments . L.listElementsL) toList
   mail <- case attachments' of
-    [x] -> pure (Just x)
+    [x] -> pure x
     x:xs -> do
       (boundary, newBoundary) <- uses (asConfig . confBoundary) (splitAt 50)
       assign (asConfig . confBoundary) newBoundary
-      pure . Just $ createMultipartMixedMessage (C8.pack boundary) (x:|xs)
-    [] -> pure Nothing
+      pure $ createMultipartMixedMessage (C8.pack boundary) (x:|xs)
+    [] ->
+      -- Shouldn't happen (user should be prevented from deleting the
+      -- last attachment).  If it does happen, send an empty body.
+      pure $ createTextPlainMessage mempty
 
   case mail of
-    Nothing -> showWarning "Black hole detected. This shouldn't happen"
-    Just m -> do
+    m -> do
       charsets <- use (asConfig . confCharsets)
       now <- liftIO getCurrentTime
       to' <- uses (asCompose . cTo . editEditorL)
