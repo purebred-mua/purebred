@@ -102,6 +102,9 @@ module UI.Actions (
   , handleConfirm
   , fileBrowserToggleFile
 
+  -- ** Debug actions
+  , debug
+
   -- * API
   , applySearch
   , initialCompose
@@ -964,6 +967,12 @@ switchView = Action [desc] $ do
     next = show (viewname (Proxy @v')) <> "/" <> show (name (Proxy @ctx'))
     msg = "focus switch: " <> cur <> " -> " <> next
     desc = T.pack $ "focus " <> next
+
+-- | Log a debug message
+debug :: LT.Text -> Action v ctx ()
+debug msg = Action [] $ do
+  sink <- use (asConfig . confLogSink)
+  liftIO $ sink msg
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a (CompletableResult a)
 done = Action ["apply"] (complete (Proxy @a))
