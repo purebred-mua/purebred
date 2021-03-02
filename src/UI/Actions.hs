@@ -913,7 +913,7 @@ saveAttachmentToPath =
 -- | Chain sequences of actions to create a keybinding
 --
 chain :: Action v ctx a -> Action v ctx b -> Action v ctx b
-chain (Action d1 f1) (Action d2 f2) = Action (d1 <> d2) (f1 *> f2)
+chain = (*>)
 
 -- | /Special/ form of chain allowing to sequencing actions registered
 -- for a different view/widget. This is useful to perform actions on

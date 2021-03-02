@@ -984,6 +984,13 @@ data Action (v :: ViewName) (ctx :: Name) a = Action
 instance NFData (Action v ctx a) where
   rnf (Action desc (StateT f)) = Action (force desc) (StateT (force f)) `seq` ()
 
+instance Functor (Action v ctx) where
+  fmap f (Action desc go) = Action desc (fmap f go)
+
+instance Applicative (Action v ctx) where
+  pure a = Action [] (pure a)
+  Action desc1 f <*> Action desc2 a = Action (desc1 <> desc2) (f <*> a)
+
 aAction :: Getter (Action v ctx a) (StateT AppState (EventM Name) a)
 aAction = to (\(Action _ b) -> b)
 
