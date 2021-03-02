@@ -13,6 +13,8 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -52,10 +54,12 @@ module UI.Actions (
   -- ** Keybinding Actions
   -- $keybinding_actions
   , focus
+  , (!*>)
   , done
   , abort
   , noop
   , chain
+  , switchView
 
   -- ** List specific Actions
   , listUp
@@ -919,7 +923,7 @@ chain = (*>)
 -- for a different view/widget. This is useful to perform actions on
 -- widget focus changes.
 --
-focus ::
+focus, (!*>) ::
      forall v v' ctx ctx' a b.
      ( Focusable v' ctx'
      , HasName ctx
@@ -931,19 +935,33 @@ focus ::
   => Action v ctx a
   -> Action v' ctx' b
   -> Action v ctx b
-focus (Action d1 f1) (Action d2 f2) =
-  Action (d1 <> d2) (f1 *> switchMode *> f2)
+focus a1 (Action d2 f2) = a1 *> switchView @v' @ctx' *> Action d2 f2
+(!*>) = focus
+
+-- | Focus a different view/widget, as specified by type arguments.
+--
+-- > switchView @'Threads @'ListOfThreads
+--
+switchView
+  :: forall v' ctx' v ctx.
+      ( Focusable v' ctx'
+      , HasName ctx, HasName ctx'
+      , HasViewName v, HasViewName v'
+      , ViewTransition v v'
+      )
+  => Action v ctx ()
+switchView = Action [desc] $ do
+  sink <- use (asConfig . confLogSink)
+  liftIO . sink . LT.pack $ msg
+  onFocusSwitch (Proxy @v') (Proxy @ctx')
+  modify (transitionHook (Proxy @v) (Proxy @v'))
+  modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy @v')))
+  assign (asViews . vsViews . at (viewname (Proxy @v')) . _Just . vFocus) (name (Proxy @ctx'))
   where
-    switchMode = do
-      sink <- use (asConfig . confLogSink)
-      liftIO . sink . LT.pack $
-        "focus switch: "
-          <> show (viewname (Proxy @v)) <> "/" <> show (name (Proxy @ctx)) <> " -> "
-          <> show (viewname (Proxy @v')) <> "/" <> show (name (Proxy @ctx'))
-      onFocusSwitch (Proxy @v') (Proxy @ctx') 
-      modify (transitionHook (Proxy @v) (Proxy @v'))
-      modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy @v')))
-      assign (asViews . vsViews . at (viewname (Proxy @v')) . _Just . vFocus) (name (Proxy @ctx'))
+    cur = show (viewname (Proxy @v)) <> "/" <> show (name (Proxy @ctx))
+    next = show (viewname (Proxy @v')) <> "/" <> show (name (Proxy @ctx'))
+    msg = "focus switch: " <> cur <> " -> " <> next
+    desc = T.pack $ "focus " <> next
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a (CompletableResult a)
 done = Action ["apply"] (complete (Proxy @a))
