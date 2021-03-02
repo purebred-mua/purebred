@@ -86,6 +86,7 @@ main = defaultMain $ testTmux pre post tests
       , testUserCanSwitchBackToIndex
       , testUserCanAbortMailComposition
       , testSendMail
+      , testSendFailureHandling
       , testCanToggleHeaders
       , testSetsMailToRead
       , testShowsAndClearsError
@@ -1573,6 +1574,45 @@ testSendMail =
 
           step "Sent directory has a new entry"
           assertFileAmountInMaildir (mdir </> "Sent" </> "cur") 1
+
+testSendFailureHandling :: PurebredTestCase
+testSendFailureHandling =
+  purebredTmuxSession "send failure does not lose mail" $ \step -> do
+    testdir <- view effectiveDir
+    mdir <- view envMaildir
+    setEnvVarInSession "PUREBRED_SEND_FAIL" "1"
+    startApplication
+    composeNewMail step
+
+    step "send mail attempt #1 fails"
+    sendKeys "y" (Substring "PUREBRED_SEND_FAIL")
+
+    step "compose view remains active"
+    assertSubstringS "From: \"Joe Bloggs\" <joe@foo.test>"
+
+    step "Sent folder doesn't exist yet"
+    files <- liftIO $ listDirectory mdir
+    liftIO $
+      assertEqual
+      "expected no maildir directories"
+      (sort ["Drafts", ".notmuch", "notmuch-config", "new", "cur"])
+      (sort files)
+
+    step "send mail attempt #2 succeeds"
+    sendKeys "y" (Regex ("Query:\\s" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
+
+    -- check that the sent mail is indexed
+    step "focus query"
+    sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
+
+    step "delete all input"
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
+
+    step "enter sent tags"
+    sendLine "tag:sent" (Substring "Draft mail subject")
+
+    step "Sent directory has a new entry"
+    assertFileAmountInMaildir (mdir </> "Sent" </> "cur") 1
 
 findMail ::
      ( HasTmuxSession testEnv

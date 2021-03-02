@@ -25,6 +25,8 @@ import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as L
 import System.Environment (lookupEnv)
 import System.Directory (getCurrentDirectory)
+import System.IO.Unsafe
+import Data.IORef
 import Data.Maybe (fromMaybe)
 import Data.List (union)
 import Data.List.NonEmpty (NonEmpty(..))
@@ -43,13 +45,25 @@ myMailKeybindings =
                                          `chain` continue)
     ]
 
+sendFailRef :: IORef Bool
+sendFailRef = unsafePerformIO $ newIORef True
+{-# NOINLINE sendFailRef #-}
+
 writeMailtoFile :: B.Builder -> IO (Either Error ())
 writeMailtoFile m = do
-  confdir <- lookupEnv "PUREBRED_CONFIG_DIR"
-  currentdir <- getCurrentDirectory
-  let fname = fromMaybe currentdir confdir </> "sentMail"
-  L.writeFile fname (B.toLazyByteString m)
-  pure (Right ())
+  sendFail <- lookupEnv "PUREBRED_SEND_FAIL" >>= \v -> case v of
+    Just (_:_)  -> readIORef sendFailRef
+    _           -> pure False
+  if sendFail
+    then do
+      writeIORef sendFailRef False
+      pure . Left $ SendMailError "PUREBRED_SEND_FAIL"
+    else do
+      confdir <- lookupEnv "PUREBRED_CONFIG_DIR"
+      currentdir <- getCurrentDirectory
+      let fname = fromMaybe currentdir confdir </> "sentMail"
+      L.writeFile fname (B.toLazyByteString m)
+      pure (Right ())
 
 fromMail :: [Mailbox]
 fromMail =
