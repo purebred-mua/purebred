@@ -60,6 +60,8 @@ module UI.Actions (
   , noop
   , chain
   , switchView
+  , bindAction
+  , ifte
 
   -- ** List specific Actions
   , listUp
@@ -965,6 +967,26 @@ switchView = Action [desc] $ do
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a (CompletableResult a)
 done = Action ["apply"] (complete (Proxy @a))
+
+-- | Like '(>>=)', but 'Action' does not have a lawful 'Monad' instance.
+bindAction :: Action view ctx a -> (a -> Action view ctx b) -> Action view ctx b
+bindAction (Action desc go1) f = Action desc $ do
+  a <- go1
+  let Action _desc go2 = f a
+  go2
+
+-- | "If-then-else" action combinator.
+-- Updates the description with info about the choice.
+ifte
+  :: Action view ctx Bool
+  -> Action view ctx c
+  -> Action view ctx c
+  -> Action view ctx c
+ifte a@(Action aDesc _) t@(Action tDesc _) f@(Action fDesc _) =
+  updateDesc (a `bindAction` \b -> if b then t else f)
+  where
+  updateDesc (Action _ go) = Action newDesc go
+  newDesc = aDesc <> ["(" <> T.pack (show tDesc) <> " OR " <> T.pack (show fDesc) <> ")"]
 
 abort :: forall a v. (HasViewName v, Resetable v a) => Action v a ()
 abort = Action ["cancel"] (reset (Proxy @v) (Proxy @a))
