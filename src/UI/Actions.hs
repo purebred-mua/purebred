@@ -145,7 +145,7 @@ import Control.Concurrent (forkIO)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State
 import Control.Monad.Catch (MonadCatch, MonadMask, catch)
-import Control.Monad.Except (runExceptT, MonadError)
+import Control.Monad.Except (runExceptT, MonadError, throwError)
 import Control.Exception (IOException)
 import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper)
@@ -1484,8 +1484,8 @@ sendMail = do
   maildir <- use (asConfig . confNotmuch . nmDatabase)
   sentTag <- use (asConfig . confNotmuch . nmSentTag)
   buildMail $ \bs -> do
-    trySendAndCatch bs
     r <- runExceptT ( do
+        trySendAndCatch bs
         fp <- createSentFilePath maildir
         tryIO $ LB.writeFile fp (B.toLazyByteString bs)
         Notmuch.indexFilePath maildir fp [sentTag] )
@@ -1530,12 +1530,14 @@ buildMail k = do
       k (buildMessage m'')
 
 -- | Send the mail, but catch and show an error if it happened.
-trySendAndCatch :: (MonadState AppState m, MonadIO m, MonadCatch m) => B.Builder -> m ()
+trySendAndCatch
+  :: (MonadState AppState m, MonadIO m, MonadCatch m, MonadError Error m)
+  => B.Builder -> m ()
 trySendAndCatch m = do
   cmd <- use (asConfig . confComposeView . cvSendMailCmd)
   defMailboxes <- use (asConfig . confComposeView . cvIdentities)
-  (liftIO (cmd m) >>= either showError pure >> assign asCompose (initialCompose defMailboxes))
-    `catch` (showError . SendMailError . (show :: IOException -> String))
+  (liftIO (cmd m) >>= either throwError (const $ assign asCompose (initialCompose defMailboxes)))
+    `catch` (throwError . SendMailError . (show :: IOException -> String))
 
 -- | santize the mail before we send it out
 -- Note: currently only strips away path names from files
