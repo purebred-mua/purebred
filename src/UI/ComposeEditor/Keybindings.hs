@@ -87,7 +87,8 @@ listOfAttachmentsKeybindings =
     , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
     , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
     , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'y') []) (done `focus` continue @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'y') [])
+        (ifte done (switchView @'Threads @'ListOfThreads) noop *> continue)
     , Keybinding (V.EvKey (V.KChar '\t') []) (noop `focus` continue @'Threads @'ListOfThreads)
     , Keybinding (V.EvKey (V.KChar 'e') []) edit
     , Keybinding (V.EvKey (V.KChar 'D') []) (delete `chain` continue)
