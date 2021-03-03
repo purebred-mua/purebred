@@ -28,7 +28,6 @@ import System.IO.Temp
   ( createTempDirectory, getCanonicalTemporaryDirectory
   , emptySystemTempFile)
 import Data.Either (isRight)
-import Data.Foldable (traverse_)
 import Data.Functor (($>))
 import Control.Concurrent (threadDelay)
 import System.IO (hPutStr, stderr)
@@ -49,7 +48,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
 import Control.Monad.State (MonadState)
 
-import Control.Lens (Getter, Lens', _init, _last, at, preview, set, to, view)
+import Control.Lens (Lens', _init, _last, at, preview, set, to, view)
 import System.Directory
   ( copyFile, getCurrentDirectory, listDirectory, removeDirectoryRecursive
   , removeFile, doesPathExist
@@ -407,7 +406,7 @@ testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" 
     step "send mail"
     sendKeys "y" (Substring "Query")
 
-    testdir <- view effectiveDir
+    testdir <- view envConfigDir
     let fpath = testdir </> "sentMail"
 
     assertMailSuccessfullyParsed fpath
@@ -785,7 +784,7 @@ testKeepDraftMail = purebredTmuxSession "compose mail from draft" $
     step "send mail"
     sendKeys "y" (Substring "Query")
 
-    testdir <- view effectiveDir
+    testdir <- view envConfigDir
     let fpath = testdir </> "sentMail"
     contents <- liftIO $ B.readFile fpath
     let decoded = chr . fromEnum <$> B.unpack contents
@@ -969,7 +968,7 @@ testRepliesToMailSuccessfully :: PurebredTestCase
 testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfully" $
   \step -> do
     let subject = "Testmail with whitespace in the subject"
-    testdir <- view effectiveDir
+    testdir <- view envConfigDir
     startApplication
 
     step "pick first mail"
@@ -1105,7 +1104,7 @@ testFileBrowserInvalidPath = purebredTmuxSession "file browser handles invalid p
 testAddAttachments :: PurebredTestCase
 testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
   \step -> do
-    testdir <- view effectiveDir
+    testdir <- view envConfigDir
 
     -- To be resilient against differences in list contents between
     -- git and sdist, list the directory ourselves to work out what
@@ -1523,7 +1522,7 @@ testSendMail :: PurebredTestCase
 testSendMail =
   purebredTmuxSession "sending mail successfully" $
         \step -> do
-          testdir <- view effectiveDir
+          testdir <- view envConfigDir
           mdir <- view envMaildir
           startApplication
           composeNewMail step
@@ -1707,13 +1706,9 @@ assertFileAmountInMaildir maildir expected =
 -- Global test environment (shared by all test cases)
 newtype GlobalEnv = GlobalEnv FilePath
 
-globalEnvDir :: Lens' GlobalEnv FilePath
-globalEnvDir f (GlobalEnv a) = fmap GlobalEnv (f a)
-
 -- Session test environment
 data Env = Env
-  { _envGlobalEnv :: GlobalEnv
-  , _envDir :: Maybe FilePath   -- override the global config dir
+  { _envConfigDir :: FilePath
   , _envMaildir :: FilePath
   , _envSessionName :: String
   }
@@ -1721,41 +1716,32 @@ data Env = Env
 instance HasTmuxSession Env where
   tmuxSession = envSessionName
 
-globalEnv :: Lens' Env GlobalEnv
-globalEnv f (Env a b c d) = fmap (\a' -> Env a' b c d) (f a)
-
-sessionEnvDir :: Lens' Env (Maybe FilePath)
-sessionEnvDir f (Env a b c d) = fmap (\b' -> Env a b' c d) (f b)
-
--- | The effective config dir for a session
-effectiveDir :: Getter Env FilePath
-effectiveDir = to $ \env ->
-  fromMaybe (view (globalEnv . globalEnvDir) env) (view sessionEnvDir env)
+-- | Session-specific config dir
+envConfigDir :: Lens' Env FilePath
+envConfigDir f (Env a b c) = fmap (\a' -> Env a' b c) (f a)
 
 envMaildir :: Lens' Env FilePath
-envMaildir f (Env a b c d) = fmap (\c' -> Env a b c' d) (f c)
+envMaildir f (Env a b c) = fmap (\b' -> Env a b' c) (f b)
 
 envSessionName :: Lens' Env String
-envSessionName f (Env a b c d) = fmap (\d' -> Env a b c d') (f d)
+envSessionName f (Env a b c) = fmap (\c' -> Env a b c') (f c)
 {-# ANN envSessionName ("HLint: ignore Avoid lambda" :: String) #-}
 
 -- | Tear down a test session
 tearDown :: Env -> IO ()
-tearDown (Env _ dir mdir _) = do
-  traverse_ removeDirectoryRecursive dir  -- remove session config dir if exists
+tearDown (Env confdir mdir _) = do
+  removeDirectoryRecursive confdir
   removeDirectoryRecursive mdir
 
 -- | Set up a test session.
 setUp :: GlobalEnv -> TmuxSession -> IO Env
-setUp gEnv sessionName = do
+setUp (GlobalEnv globalConfigDir) sessionName = do
   maildir <- setUpTempMaildir
 
-  let
-    -- For now, we never need to override the global config dir.
-    -- But in the future, if we have tests for which we want to use
-    -- a custom config, create the dir and set to 'Just dir'
-    sessionConfDir = Nothing
-    env = Env gEnv sessionConfDir maildir sessionName
+  confdir <- mkTempDir
+  runProcess_ $ proc "sh" ["-c", "cp -a " <> globalConfigDir <> "/* " <> confdir]
+
+  let env = Env confdir maildir sessionName
 
   -- a) Make the regex less color code dependent by setting the TERM to 'ansi'.
   -- This can happen if different environments support more than 16 colours (e.g.
@@ -1763,7 +1749,7 @@ setUp gEnv sessionName = do
   runReaderT (setEnvVarInSession "TERM" "ansi") env
 
   -- set the config dir
-  runReaderT (view effectiveDir >>= setEnvVarInSession "PUREBRED_CONFIG_DIR") env
+  runReaderT (view envConfigDir >>= setEnvVarInSession "PUREBRED_CONFIG_DIR") env
 
   pure env
 
