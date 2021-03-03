@@ -33,6 +33,7 @@ import Data.Functor (($>))
 import Control.Concurrent (threadDelay)
 import System.IO (hPutStr, stderr)
 import System.Environment (lookupEnv, getEnvironment)
+import qualified System.Environment as Env
 import System.FilePath.Posix
   ( (</>)
   , getSearchPath, isAbsolute, searchPathSeparator
@@ -69,8 +70,12 @@ import Data.MIME
 type PurebredTestCase = TestCase GlobalEnv
 
 main :: IO ()
-main = defaultMain $ testTmux pre post tests
+main = do
+  Env.setEnv tastyNumThreadsEnv . fromMaybe "20" =<< lookupEnv tastyNumThreadsEnv
+  defaultMain $ testTmux pre post tests
   where
+    tastyNumThreadsEnv = "TASTY_NUM_THREADS"
+
     pre = do
       dir <- mkTempDir
       setUpPurebredConfig dir
@@ -1578,7 +1583,6 @@ testSendMail =
 testSendFailureHandling :: PurebredTestCase
 testSendFailureHandling =
   purebredTmuxSession "send failure does not lose mail" $ \step -> do
-    testdir <- view effectiveDir
     mdir <- view envMaildir
     setEnvVarInSession "PUREBRED_SEND_FAIL" "1"
     startApplication
