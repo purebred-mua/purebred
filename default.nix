@@ -45,6 +45,9 @@ let
     ghcid
     # hindent - currently broken
     hlint
+    haskell-language-server
+    ormolu
+    hie-bios
     pkgs.notmuch
     pkgs.tmux
     pkgs.gnumake
