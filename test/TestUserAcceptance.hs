@@ -128,6 +128,7 @@ main = do
       , testAbortedEditsResetState
       , testReloadsThreadListAfterReply
       , testAbortsCompositionIfEditorExits
+      , testReplyRendersNonASCIIHeadersCorrectly
       ]
 
 -- https://github.com/purebred-mua/purebred/issues/336
@@ -364,7 +365,7 @@ testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" 
   \step -> do
     startApplication
 
-    let subject = "[<frase@host.example>: Testmail with whitespace in the subject]"
+    let subject = "[frase@host.example: Testmail with whitespace in the subject]"
 
     step "view mail"
     sendKeys "Enter" (Substring "This is a test mail")
@@ -1617,6 +1618,29 @@ testSendFailureHandling =
 
     step "Sent directory has a new entry"
     assertFileAmountInMaildir (mdir </> "Sent" </> "cur") 1
+
+testReplyRendersNonASCIIHeadersCorrectly :: PurebredTestCase
+testReplyRendersNonASCIIHeadersCorrectly =
+  purebredTmuxSession "reply to msg w/ utf8 From; mailbox renders properly" $ \step -> do
+    startApplication
+    step "focus search edit"
+    sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
+
+    step "delete all input"
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
+
+    step "search for msg <1234@url>"
+    sendLine "id:1234@url" (Substring "Item 1 of 1")
+
+    step "open thread"
+    sendKeys "Enter" (Substring "Beginning of large text")
+
+    step "start replying"
+    sendKeys "r" (Substring "> Beginning of large text")
+
+    step "exit vim"
+    sendLine ": x" (Substring "Attachments") >>= put
+    assertRegexS $ T.encodeUtf8 "To: \"Róman Joost\" <roman@bromeco.de>"
 
 findMail ::
      ( HasTmuxSession testEnv
