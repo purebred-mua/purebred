@@ -136,11 +136,11 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.List (union)
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
-import Data.Foldable (toList, traverse_)
+import Data.Foldable (fold, toList, traverse_)
 import Data.Functor.Identity (Identity(..))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traversed, has,
-        filtered, set, over, preview, view, (&), firstOf, non, Traversal',
+        filtered, set, over, preview, view, views, (&), firstOf, non, Traversal',
         Getting, Lens', folded, assign, modifying, preuse, use, uses
         , Ixed, Index, IxValue)
 import Control.Concurrent (forkIO)
@@ -159,7 +159,7 @@ import qualified Data.IMF.Text as AddressText
 import Data.MIME
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
-       ( parseMail, getTo, getFrom, getSubject, getForwardedSubject, toQuotedMail
+       ( parseMail, toQuotedMail
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
        , removeMatchingWords, findMatchingWords, makeScrollSteps
        , writeEntityToPath)
@@ -1145,10 +1145,15 @@ encapsulateMail =
         case mail of
           Nothing -> showWarning "No mail selected for forwarding"
           Just m -> do
+            charsets <- use (asConfig . confCharsets)
+            let
+              origSubj = views (headerSubject charsets) fold m
+              origFrom = views (headerFrom charsets) AddressText.renderAddresses m
+              newSubj = "[" <> origFrom <> ": " <> origSubj <> "]"
             modifying (asCompose . cAttachments)
               (L.listInsert 1 (encapsulate m) . L.listInsert 0 (createTextPlainMessage mempty))
             modifying (asCompose . cSubject . editEditorL . E.editContentsL)
-              (insertMany (getForwardedSubject m) . clearZipper)
+              (insertMany newSubj . clearZipper)
     }
 
 -- | Update the 'AppState' with a quoted form of the first preferred
@@ -1176,9 +1181,11 @@ replyMail = Action
           mbody <- use (asMailView . mvBody)
           let
             quoted = toQuotedMail charsets settings mbody m
-          modifying (asCompose . cTo . editEditorL . E.editContentsL) (insertMany (getTo quoted) . clearZipper)
-          modifying (asCompose . cFrom . editEditorL . E.editContentsL) (insertMany (getFrom quoted) . clearZipper)
-          modifying (asCompose . cSubject . editEditorL . E.editContentsL) (insertMany (getSubject quoted) . clearZipper)
+            setText l t = modifying (asCompose . l . editEditorL . E.editContentsL)
+                                    (insertMany t . clearZipper)
+          setText cTo (views (headerTo charsets) AddressText.renderAddresses quoted)
+          setText cFrom (views (headerFrom charsets) AddressText.renderAddresses quoted)
+          setText cSubject (views (headerSubject charsets) fold quoted)
           modifying (asCompose . cAttachments) (insertOrReplaceAttachment quoted)
   }
 
