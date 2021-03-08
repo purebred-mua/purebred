@@ -29,10 +29,6 @@ module Storage.ParsedMail (
   , makeScrollSteps
 
   -- ** Header data
-  , getTo
-  , getSubject
-  , getForwardedSubject
-  , getFrom
   , toQuotedMail
   , takeFileName
 
@@ -53,7 +49,6 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Catch (MonadMask)
 import Data.Foldable (toList)
 import qualified Data.ByteString as B
-import qualified Data.CaseInsensitive as CI
 import qualified Data.Text as T
 import qualified System.FilePath as FP (takeFileName)
 import Prelude hiding (Word)
@@ -86,27 +81,6 @@ parseMail m dbpath = do
     >>= either (throwError . FileReadError filePath) pure
     >>= either (throwError . FileParseError filePath) pure
         . parse (message mime)
-
-getHeader :: CI.CI B.ByteString -> Message s a -> T.Text
-getHeader k =
-  maybe "header not found" decodeLenient
-  . firstOf (headers . header k)
-
-getFrom :: Message s a -> T.Text
-getFrom = getHeader "from"
-
-getSubject :: Message s a -> T.Text
-getSubject = getHeader "subject"
-
-getTo :: Message s a -> T.Text
-getTo = getHeader "to"
-
--- | Returns the subject line formatted for forwarding.
---
-getForwardedSubject ::
-     Message s a -- ^ the encapsulated mail
-  -> T.Text
-getForwardedSubject m = "[" <> getFrom m <> ": " <> getSubject m <> "]"
 
 -- | Create a list of steps to record which absolute positions
 -- brick/the terminal should scroll.
