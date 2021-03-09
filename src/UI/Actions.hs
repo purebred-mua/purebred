@@ -78,7 +78,8 @@ module UI.Actions (
   , displayThreadMails
   , toggleHeaders
   , switchComposeEditor
-  , replyMail
+  , senderReply
+  , groupReply
   , encapsulateMail
   , selectNextUnread
   , composeAsNew
@@ -1146,38 +1147,38 @@ encapsulateMail =
               (insertMany newSubj . clearZipper)
     }
 
--- | Update the 'AppState' with a quoted form of the first preferred
--- entity in order to reply to the e-mail.
 -- | Update the 'AppState' with a quoted version of the currently
 -- selected mail in order to reply to it.
 --
-replyMail :: Action 'ViewMail 'ScrollingMailView ()
-replyMail = Action
-  { _aDescription = ["reply to an e-mail"]
-  , _aAction = do
-      mail <- use (asMailView . mvMail)
-      charsets <- use (asConfig . confCharsets)
-      case mail of
-        Nothing -> do
-          modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Threads)
-          showWarning "No mail selected for replying"
-        Just m -> do
-          mailboxes <- use (asConfig . confComposeView . cvIdentities)
-          let
-            idents = case mailboxes of
-              [] -> pure $ Mailbox Nothing (AddrSpec "CHANGE.ME" (DomainDotAtom $ "YOUR" :| ["DOMAIN"]))
-              (x:xs) -> x :| xs
-            settings = defaultReplySettings idents
-          mbody <- use (asMailView . mvBody)
-          let
-            quoted = toQuotedMail charsets settings mbody m
-            setText l t = modifying (asCompose . l . editEditorL . E.editContentsL)
-                                    (insertMany t . clearZipper)
-          setText cTo (views (headerTo charsets) AddressText.renderAddresses quoted)
-          setText cFrom (views (headerFrom charsets) AddressText.renderAddresses quoted)
-          setText cSubject (views (headerSubject charsets) fold quoted)
-          modifying (asCompose . cAttachments) (insertOrReplaceAttachment quoted)
-  }
+senderReply, groupReply :: Action 'ViewMail 'ScrollingMailView ()
+senderReply = Action ["reply"] (replyWithMode ReplyToSender)
+groupReply = Action ["group-reply"] (replyWithMode ReplyToGroup)
+
+replyWithMode :: ReplyMode -> StateT AppState (T.EventM Name) ()
+replyWithMode mode = do
+  mail <- use (asMailView . mvMail)
+  charsets <- use (asConfig . confCharsets)
+  case mail of
+    Nothing -> do
+      modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Threads)
+      showWarning "No mail selected for replying"
+    Just m -> do
+      mailboxes <- use (asConfig . confComposeView . cvIdentities)
+      let
+        idents = case mailboxes of
+          [] -> pure $ Mailbox Nothing (AddrSpec "CHANGE.ME" (DomainDotAtom $ "YOUR" :| ["DOMAIN"]))
+          (x:xs) -> x :| xs
+        settings = defaultReplySettings idents & set replyMode mode
+      mbody <- use (asMailView . mvBody)
+      let
+        quoted = toQuotedMail charsets settings mbody m
+        setText l t = modifying (asCompose . l . editEditorL . E.editContentsL)
+                                (insertMany t . clearZipper)
+      setText cTo (views (headerTo charsets) AddressText.renderAddresses quoted)
+      setText cFrom (views (headerFrom charsets) AddressText.renderAddresses quoted)
+      setText cSubject (views (headerSubject charsets) fold quoted)
+      setText cCc (views (headerCC charsets) AddressText.renderAddresses quoted)
+      modifying (asCompose . cAttachments) (insertOrReplaceAttachment quoted)
 
 -- | Toggles whether we want to show all headers from an e-mail or a
 -- filtered list in the 'AppState'.
