@@ -55,7 +55,14 @@ displayMailKeybindings =
                                              `chain` continue)
     , Keybinding (V.EvKey (V.KChar '?') []) (noop `focus` continue @'Help @'ScrollingHelpView)
     , Keybinding (V.EvKey (V.KChar 'r') []) (
-        replyMail
+        senderReply
+        `focus` (
+            invokeEditor ViewMail ScrollingMailView
+            :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
+            )
+        )
+    , Keybinding (V.EvKey (V.KChar 'g') []) (
+        groupReply
         `focus` (
             invokeEditor ViewMail ScrollingMailView
             :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
