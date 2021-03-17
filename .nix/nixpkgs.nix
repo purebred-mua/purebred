@@ -8,13 +8,7 @@ let
         purebred = hsuper.callPackage ./purebred.nix { };
         purebred-email = hsuper.callPackage ./purebred-email.nix { };
         purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
-        tasty-tmux = hsuper.callPackage ./tasty-tmux.nix { };
-        notmuch = hsuper.callPackage ./hs-notmuch.nix {
-          notmuch = self.pkgs.notmuch;
-          talloc = self.pkgs.talloc;
-        };
-        brick = hsuper.callPackage ./brick.nix {};
-        vty = hsuper.callPackage ./vty.nix {};
+        dyre = hsuper.callPackage ./dyre.nix { };
       };
     };
   };
@@ -23,8 +17,8 @@ let
     then
     # nixpkgs nixos-unstable - 2021-01-06
     builtins.fetchTarball {
-      url = "https://github.com/NixOS/nixpkgs/archive/1a57d96edd156958b12782e8c8b6a374142a7248.tar.gz";
-      sha256 = "1qdh457apmw2yxbpi1biwl5x5ygaw158ppff4al8rx7gncgl10rd";
+      url = "https://github.com/NixOS/nixpkgs/archive/266dc8c3d052f549826ba246d06787a219533b8f.tar.gz";
+      sha256 = "09ydqx2lznixmw8z4cfz1j3k137mh8n3cdpygwqymknhfdjq7lg4";
     }
     else
     nixpkgs;
