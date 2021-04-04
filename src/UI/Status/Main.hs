@@ -110,7 +110,7 @@ instance WithContext (FB.FileBrowser Name) where
   renderContext _ _ = emptyWidget
 
 instance WithContext (HB.Widget Name) where
-  renderContext _ _ = str "haskeline"
+  renderContext _ = str . concat . view HB.visibleLinesL
 
 renderStatusbar :: WithContext w => w -> AppState -> Widget Name
 renderStatusbar w s = withAttr statusbarAttr $ hBox

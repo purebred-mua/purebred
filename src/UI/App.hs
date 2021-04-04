@@ -32,14 +32,14 @@ import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import qualified Graphics.Vty.Input.Events as Vty
 import Control.Lens (set, view)
-import Control.Monad.State (execStateT)
+import Control.Monad.State (execStateT, liftIO)
 import qualified Data.Map as Map
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
 import Data.Proxy
 import qualified Data.Text as T
 import Control.Concurrent (forkFinally)
-import System.Console.Haskeline (InputT, runInputTBehavior, defaultSettings, getInputLine, outputStr)
+import System.Console.Haskeline (InputT, runInputTBehavior, defaultSettings, getInputLine, outputStr, getInputChar)
 
 import UI.Keybindings
 import UI.Index.Main
@@ -155,7 +155,13 @@ appEvent ::
   -> T.BrickEvent Name PurebredEvent -- ^ event
   -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
-appEvent s (T.AppEvent ev) = case ev of
+appEvent s a@(T.AppEvent ev) = case ev of
+  FromHBWidget _ -> do
+    w <- HB.handleAppEvent
+                             (view (asAsync  . aHaskelineWidgetConfig) s)
+                             (view (asThreadsView  . miSearchThreadsEditor) s)
+                             a
+    M.continue $ set (asThreadsView  . miSearchThreadsEditor) w s
   HaskelineDied _ -> M.halt s
   NotifyNumThreads n gen -> M.continue $
     if gen == view (asThreadsView . miListOfThreadsGeneration) s
@@ -183,11 +189,13 @@ runHaskeline c = runInputTBehavior (HB.useBrick c) defaultSettings loop
    where
        loop :: InputT IO ()
        loop = do
-           minput <- getInputLine "% "
+           _ <- liftIO $ print "haskeline loop"
+           minput <- getInputChar "% "
            case minput of
-             Nothing -> return ()
+             Nothing -> liftIO $ print " no input" >> return ()
              Just input -> do
-                 outputStr input
+                 _ <- liftIO $ print $ "output " <> [input]
+                 outputStr [input]
                  loop
 
 initialState :: InternalConfiguration -> IO AppState

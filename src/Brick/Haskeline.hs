@@ -34,7 +34,6 @@ import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Control.Monad.Catch (MonadMask, MonadCatch, MonadThrow)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(MaybeT))
-import System.Console.Haskeline (InputT, runInputTBehavior, defaultSettings, getInputLine, outputStr)
 import System.Console.Haskeline.Internal (
   Event(..), Key (..), Term(..), TermOps(..), hasShift,
   simpleKey, Layout(..), LineChars, BaseKey(..), RunTerm(..),
@@ -143,6 +142,7 @@ handleAppEvent c w (AppEvent e) =
 
 handleEditorEvent :: TChan Event -> V.Event -> Widget n -> EventM n (Widget n)
 handleEditorEvent c (V.EvKey k ms) w = do
+  liftIO $ print $ show $ mkKeyEvent k
   liftIO $ atomically $ writeTChan c $ mkKeyEvent k
   return w
   where
