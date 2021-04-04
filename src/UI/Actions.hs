@@ -186,6 +186,7 @@ import UI.Notifications
        , showUserMessage)
 import Brick.Widgets.StatefulEdit
        (StatefulEditor(..), editEditorL, revertEditorState, saveEditorState)
+import qualified Brick.Haskeline as HB
 
 
 {- $overview
@@ -262,9 +263,6 @@ instance HasEditor 'MailAttachmentPipeToEditor where
 
 instance HasEditor 'ScrollingMailViewFindWordEditor where
   editorL _ = asMailView . mvFindWordEditor
-
-instance HasEditor 'SearchThreadsEditor where
-  editorL _ = asThreadsView . miSearchThreadsEditor . editEditorL
 
 instance HasEditor 'ManageThreadTagsEditor where
   editorL _ = asThreadsView . miThreadTagsEditor
@@ -448,7 +446,7 @@ class Resetable (v :: ViewName) (n :: Name) where
   reset :: (MonadIO m, MonadState AppState m) => Proxy v -> Proxy n -> m ()
 
 instance Resetable 'Threads 'SearchThreadsEditor where
-  reset _ _ = modifying (asThreadsView . miSearchThreadsEditor) revertEditorState
+  reset _ _ = assign (asThreadsView . miSearchThreadsEditor) (HB.initialWidget SearchThreadsEditor  "")
 
 instance Resetable 'ViewMail 'ManageMailTagsEditor where
   reset _ _ = modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
@@ -555,9 +553,9 @@ class Focusable (v :: ViewName) (n :: Name) where
   onFocusSwitch :: (MonadState AppState m, MonadIO m) => Proxy v -> Proxy n -> m ()
 
 instance Focusable 'Threads 'SearchThreadsEditor where
-  onFocusSwitch _ _ = do
-    modifying (asThreadsView . miSearchThreadsEditor . editEditorL) (E.applyEdit gotoEOL)
-    modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
+  onFocusSwitch _ _ = pure()
+    -- modifying (asThreadsView . miSearchThreadsEditor) (E.applyEdit gotoEOL)
+    -- modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
 
 instance Focusable 'Threads 'ManageThreadTagsEditor where
   onFocusSwitch _ _ = do
@@ -1351,7 +1349,7 @@ isFileUnderCursor = maybe False (FB.fileTypeMatch [FB.RegularFile])
 --
 applySearch :: (MonadIO m, MonadState AppState m) => m ()
 applySearch = do
-  searchterms <- currentLine <$> use (asThreadsView . miSearchThreadsEditor . editEditorL . E.editContentsL)
+  searchterms <- T.pack <$> use (asThreadsView . miSearchThreadsEditor . HB.visibleLinesL . to concat)
   nmconf <- use (asConfig . confNotmuch)
   r <- runExceptT (Notmuch.getThreads searchterms nmconf)
   case r of

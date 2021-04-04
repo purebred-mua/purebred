@@ -13,7 +13,9 @@ module Brick.Haskeline
     handleEditorEvent,
     handleAppEvent,
     render,
-    visibleLinesL
+    visibleLinesL,
+    fromBrickChan,
+    useBrick
   )
 where
 
@@ -32,18 +34,23 @@ import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Control.Monad.Catch (MonadMask, MonadCatch, MonadThrow)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(MaybeT))
+import System.Console.Haskeline (InputT, runInputTBehavior, defaultSettings, getInputLine, outputStr)
 import System.Console.Haskeline.Internal (
   Event(..), Key (..), Term(..), TermOps(..), hasShift,
   simpleKey, Layout(..), LineChars, BaseKey(..), RunTerm(..),
   CommandMonad, EvalTerm(..), setControlBits, ctrlKey,
-  metaKey, saveKeys, graphemesToString, MonadReader(..))
+  metaKey, saveKeys, graphemesToString, MonadReader(..), Behavior(..))
 
 data Config e = MkConfig
-  { fromBrickChan :: TChan Event,
+  { _fromBrickChan :: TChan Event,
     toAppChan :: BC.BChan e,
     toAppEventType :: ToBrick -> e,
     fromAppEventType :: e -> Maybe ToBrick
   }
+
+fromBrickChan :: Lens' (Config e) (TChan Event)
+fromBrickChan = lens _fromBrickChan (\as x -> as { _fromBrickChan = x })
+
 
 data Widget n = MkWidget
   { name :: n,
@@ -66,7 +73,7 @@ configure toAppChan' toAppEventType' fromAppEventType' = do
   ch <- atomically $ newTChan
   return $
     MkConfig
-      { fromBrickChan = ch,
+      { _fromBrickChan = ch,
         toAppChan = toAppChan',
         toAppEventType = toAppEventType',
         fromAppEventType = fromAppEventType'
@@ -178,19 +185,19 @@ handleEvent _ w (VtyEvent (V.EvResize _ _)) = do
 handleEvent _ w _ = return w
  -}
 
--- useBrick :: Config e -> Behavior
--- useBrick c = Behavior (brickRunTerm c)
+useBrick :: Config e -> Behavior
+useBrick c = Behavior (brickRunTerm c)
 
-brickRunTerm :: Config e -> MaybeT IO RunTerm
+brickRunTerm :: Config e -> IO RunTerm
 brickRunTerm c = do
   let tops =
         TermOps
           { getLayout = getLayout',
             withGetEvent = withGetEvent',
-            saveUnusedKeys = saveKeys (fromBrickChan c),
+            saveUnusedKeys = saveKeys (_fromBrickChan c),
             evalTerm = evalBrickTerm c,
             externalPrint =
-              atomically . writeTChan (fromBrickChan c) . ExternalPrint
+              atomically . writeTChan (_fromBrickChan c) . ExternalPrint
           }
   return $
     RunTerm
@@ -220,7 +227,7 @@ brickRunTerm c = do
       CommandMonad m =>
       (m Event -> m a) ->
       m a
-    withGetEvent' f = f $ liftIO $ atomically $ readTChan (fromBrickChan c)
+    withGetEvent' f = f $ liftIO $ atomically $ readTChan (_fromBrickChan c)
 
 newtype BrickTerm m a = MkBrickTerm {unBrickTerm :: ReaderT (ToBrick -> IO ()) m a}
   deriving

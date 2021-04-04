@@ -163,7 +163,7 @@ eventHandlerSearchThreadsEditor = EventHandler
   (asConfig . confIndexView . ivSearchThreadsKeybindings)
   (\s ->
      Brick.continue
-     <=< Brick.handleEventLensed s (asThreadsView . miSearchThreadsEditor . editEditorL) E.handleEditorEvent)
+     <=< Brick.handleEventLensed s (asThreadsView . miSearchThreadsEditor) (HB.handleEditorEvent (view (asAsync . aHaskelineWidgetConfig . HB.fromBrickChan) s)))
 
 eventHandlerViewMailManageMailTagsEditor :: EventHandler 'ViewMail 'ManageMailTagsEditor
 eventHandlerViewMailManageMailTagsEditor = EventHandler

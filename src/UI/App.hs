@@ -17,6 +17,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE LambdaCase #-}
 
 module UI.App where
 
@@ -24,6 +25,7 @@ import qualified Brick.Main as M
 import Brick.Types (Widget)
 import Brick.Focus (focusRing)
 import Brick.Widgets.Core (vBox, vLimit)
+import Brick.BChan (newBChan, writeBChan)
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -35,6 +37,9 @@ import qualified Data.Map as Map
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
 import Data.Proxy
+import qualified Data.Text as T
+import Control.Concurrent (forkFinally)
+import System.Console.Haskeline (InputT, runInputTBehavior, defaultSettings, getInputLine, outputStr)
 
 import UI.Keybindings
 import UI.Index.Main
@@ -49,10 +54,11 @@ import UI.Views
         filebrowserView, focusedViewWidget, visibleViewWidgets,
         focusedViewName)
 import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
-import UI.Draw.Main (renderEditorWithLabel)
+import UI.Draw.Main (renderEditorWithLabel, renderHaskeline)
 import Purebred.Events (firstGeneration)
 import Types
 import Brick.Widgets.StatefulEdit (StatefulEditor(..))
+import qualified Brick.Haskeline as HB
 
 -- * Synopsis
 --
@@ -92,7 +98,7 @@ renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor
 renderWidget s _ SaveToDiskPathEditor =
   renderEditorWithLabel (Proxy @'SaveToDiskPathEditor) "Save to file:" s
 renderWidget s _ SearchThreadsEditor =
-  renderEditorWithLabel (Proxy @'SearchThreadsEditor) "Query:" s
+  renderHaskeline "Query:" s
 renderWidget s _ ManageMailTagsEditor =
   renderEditorWithLabel (Proxy @'ManageMailTagsEditor) "Labels:" s
 renderWidget s _ ManageThreadTagsEditor =
@@ -150,6 +156,7 @@ appEvent ::
   -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
 appEvent s (T.AppEvent ev) = case ev of
+  HaskelineDied _ -> M.halt s
   NotifyNumThreads n gen -> M.continue $
     if gen == view (asThreadsView . miListOfThreadsGeneration) s
     then set (asThreadsView . miThreads . listLength) (Just n) s
@@ -171,12 +178,26 @@ appEvent s (T.AppEvent ev) = case ev of
               else set asUserMessage Nothing . set (asAsync . aValidation) Nothing
 appEvent s _ = M.continue s
 
+runHaskeline :: HB.Config PurebredEvent -> IO ()
+runHaskeline c = runInputTBehavior (HB.useBrick c) defaultSettings loop
+   where
+       loop :: InputT IO ()
+       loop = do
+           minput <- getInputLine "% "
+           case minput of
+             Nothing -> return ()
+             Just input -> do
+                 outputStr input
+                 loop
+
 initialState :: InternalConfiguration -> IO AppState
 initialState conf = do
   fb' <- FB.newFileBrowser
          FB.selectNonDirectories
          ListOfFiles
          (Just $ view (confFileBrowserView . fbHomePath) conf)
+  chan <- newBChan 32
+  config <- HB.configure chan FromHBWidget (\case { FromHBWidget x -> Just x; _ -> Nothing })
   let
     searchterms = view (confNotmuch . nmSearch) conf
     mi =
@@ -184,7 +205,7 @@ initialState conf = do
             (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
             (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
             firstGeneration
-            (StatefulEditor mempty $ E.editorText SearchThreadsEditor Nothing searchterms)
+            (HB.initialWidget SearchThreadsEditor (T.unpack searchterms))
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
             0
@@ -214,8 +235,9 @@ initialState conf = do
          (StatefulEditor mempty $ E.editor ManageFileBrowserSearchPath Nothing path)
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
-    async = Async Nothing
+    async = Async Nothing config
     s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
+  _ <- forkFinally (runHaskeline config) (writeBChan  chan . HaskelineDied)
   execStateT applySearch s
 
 -- | Application event loop.

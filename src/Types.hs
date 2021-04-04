@@ -113,7 +113,7 @@ module Types
 
     -- ** Concurrent actions
   , aValidation
-  , aFromBrickChan
+  , aHaskelineWidgetConfig
 
     -- ** Widgets
   , Name(..)
@@ -284,6 +284,7 @@ import qualified Data.Map as Map
 import Control.Monad.State
 import Control.Monad.Except (MonadError)
 import Control.Concurrent (ThreadId)
+import Control.Exception (SomeException)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as LB
@@ -370,7 +371,7 @@ data ThreadsView = ThreadsView
     { _miListOfMails  :: ListWithLength V.Vector (Toggleable NotmuchMail)
     , _miListOfThreads :: ListWithLength V (Toggleable NotmuchThread)
     , _miListOfThreadsGeneration :: Generation
-    , _miSearchThreadsEditor :: StatefulEditor T.Text Name
+    , _miSearchThreadsEditor :: HB.Widget Name
     , _miMailTagsEditor :: E.Editor T.Text Name
     , _miThreadTagsEditor :: E.Editor T.Text Name
     , _miNewMail :: Int
@@ -392,7 +393,7 @@ miListOfThreadsGeneration :: Lens' ThreadsView Generation
 miListOfThreadsGeneration =
   lens _miListOfThreadsGeneration (\s b -> s { _miListOfThreadsGeneration = b })
 
-miSearchThreadsEditor :: Lens' ThreadsView (StatefulEditor T.Text Name)
+miSearchThreadsEditor :: Lens' ThreadsView (HB.Widget Name)
 miSearchThreadsEditor = lens _miSearchThreadsEditor (\m v -> m { _miSearchThreadsEditor = v})
 
 miMailTagsEditor :: Lens' ThreadsView (E.Editor T.Text Name)
@@ -931,17 +932,14 @@ fbSearchPath = lens _fbSearchPath (\c x -> c { _fbSearchPath = x})
 -- concurrent/asynchronous actions
 data Async = Async
   { _aValidation :: Maybe ThreadId
-  , _aFromBrickChan :: TChan Event
-  , _aToAppChan :: BChan Vty.Event
-  , _aToAppEventType :: HB.ToBrick -> Vty.Event
-  , _aFromAppEventType :: Vty.Event -> Maybe HB.ToBrick
+  , _aHaskelineWidgetConfig :: HB.Config PurebredEvent 
   }
 
 aValidation :: Lens' Async (Maybe ThreadId)
 aValidation = lens _aValidation (\as x -> as { _aValidation = x })
 
-aFromBrickChan :: Lens' Async (TChan Event)
-aFromBrickChan = lens _aFromBrickChan (\as x -> as { _aFromBrickChan = x })
+aHaskelineWidgetConfig :: Lens' Async (HB.Config PurebredEvent)
+aHaskelineWidgetConfig = lens _aHaskelineWidgetConfig (\as x -> as { _aHaskelineWidgetConfig = x })
 
 -- | The application state holding state to render widgets, error
 -- management, as well as views and more.
@@ -1221,6 +1219,8 @@ data PurebredEvent
       Int
       Generation
   | NotifyNewMailArrived Int
+  | FromHBWidget HB.ToBrick
+  | HaskelineDied (Either SomeException  ())
   | -- | Event used for real time validation. Provides the setter in
     -- the 'AppState' to set the given 'UserMessage'.
     InputValidated

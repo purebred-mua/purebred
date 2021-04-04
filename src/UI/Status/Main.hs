@@ -44,6 +44,7 @@ import Types
 import Config.Main (statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr)
 import qualified Storage.Notmuch as Notmuch
 import Brick.Widgets.StatefulEdit (editEditorL)
+import qualified Brick.Haskeline as HB
 
 checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()
 checkForNewMail chan dbpath query delay = do
@@ -78,7 +79,7 @@ statusbar s =
         Just m -> renderUserMessage m
         Nothing ->
             case focusedViewWidget s of
-                SearchThreadsEditor -> renderStatusbar (view (asThreadsView . miSearchThreadsEditor . editEditorL) s) s
+                SearchThreadsEditor -> renderStatusbar (view (asThreadsView . miSearchThreadsEditor) s) s
                 ManageMailTagsEditor -> renderStatusbar (view (asThreadsView . miMailTagsEditor) s) s
                 ManageThreadTagsEditor -> renderStatusbar (view (asThreadsView . miThreadTagsEditor) s) s
                 MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
@@ -107,6 +108,9 @@ instance WithContext (E.Editor Text Name) where
 
 instance WithContext (FB.FileBrowser Name) where
   renderContext _ _ = emptyWidget
+
+instance WithContext (HB.Widget Name) where
+  renderContext _ _ = str "haskeline"
 
 renderStatusbar :: WithContext w => w -> AppState -> Widget Name
 renderStatusbar w s = withAttr statusbarAttr $ hBox
