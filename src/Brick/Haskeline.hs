@@ -142,7 +142,6 @@ handleAppEvent c w (AppEvent e) =
 
 handleEditorEvent :: TChan Event -> V.Event -> Widget n -> EventM n (Widget n)
 handleEditorEvent c (V.EvKey k ms) w = do
-  liftIO $ print $ show $ mkKeyEvent k
   liftIO $ atomically $ writeTChan c $ mkKeyEvent k
   return w
   where

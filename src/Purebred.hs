@@ -13,6 +13,7 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+{-# LANGUAGE LambdaCase #-}
 
 {- |
 
@@ -162,6 +163,7 @@ import Purebred.System.Logging (setupLogsink)
 import qualified Config.Dyre as Dyre
 import qualified Control.DeepSeq
 import Control.Monad ((>=>), void, unless)
+import Control.Monad.State (liftIO)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import qualified Data.Text.Lazy as T
@@ -185,12 +187,16 @@ import Purebred.Plugin
 import Purebred.Plugin.Internal
   ( configHook, pluginBuiltIn, pluginName, pluginVersion )
 import Purebred.Plugin.TweakConfig
+import qualified Brick.Haskeline as HB
+
+import Control.Concurrent (forkFinally)
+import System.Console.Haskeline (InputT, runInputTBehavior, defaultSettings, getInputLine, outputStr, getInputChar)
 
 -- re-exports for configuration
 import qualified Graphics.Vty
 import Graphics.Vty.Attributes
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
-import Brick.BChan (newBChan)
+import Brick.BChan (newBChan, writeBChan)
 import Brick.Main (customMain)
 import Brick.Types (Next)
 import Brick.Util (on, fg, bg)
@@ -296,7 +302,9 @@ launch ghcOpts inCfg = do
   logSink (T.pack "Opened log file")
   cfg' <- processConfig (InternalConfigurationFields bchan b logSink) (pre cfg)
 
-  s <- initialState cfg'
+  hbconfig <- HB.configure bchan FromHBWidget (\case { FromHBWidget x -> Just x; _ -> Nothing })
+
+  s <- initialState cfg' hbconfig
   let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
   initialVty <- buildVty
 
@@ -305,7 +313,23 @@ launch ghcOpts inCfg = do
       dbpath = view (confNotmuch . nmDatabase) cfg'
   maybe (pure ()) (rescheduleMailcheck bchan dbpath query) delay
 
+  _ <- forkFinally (runHaskeline hbconfig) (writeBChan  bchan . HaskelineDied)
+
   void $ customMain initialVty buildVty (Just bchan) (theApp s) s
+
+runHaskeline :: HB.Config PurebredEvent -> IO ()
+runHaskeline c = runInputTBehavior (HB.useBrick c) defaultSettings loop
+   where
+       loop :: InputT IO ()
+       loop = do
+           _ <- liftIO $ print "haskeline loop"
+           minput <- getInputChar "% "
+           case minput of
+             Nothing -> liftIO $ print " no input" >> return ()
+             Just input -> do
+                 _ <- liftIO $ print $ "output " <> [input]
+                 outputStr [input]
+                 loop
 
 
 -- | Fully evaluate the 'UserConfiguration', then set the extra data to

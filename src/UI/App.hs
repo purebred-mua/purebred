@@ -17,9 +17,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE LambdaCase #-}
 
 module UI.App where
+
+import System.IO (hPutStrLn, stderr)
 
 import qualified Brick.Main as M
 import Brick.Types (Widget)
@@ -155,57 +156,42 @@ appEvent ::
   -> T.BrickEvent Name PurebredEvent -- ^ event
   -> T.EventM Name (T.Next AppState)
 appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
-appEvent s a@(T.AppEvent ev) = case ev of
-  FromHBWidget _ -> do
-    w <- HB.handleAppEvent
-                             (view (asAsync  . aHaskelineWidgetConfig) s)
-                             (view (asThreadsView  . miSearchThreadsEditor) s)
-                             a
-    M.continue $ set (asThreadsView  . miSearchThreadsEditor) w s
-  HaskelineDied _ -> M.halt s
-  NotifyNumThreads n gen -> M.continue $
-    if gen == view (asThreadsView . miListOfThreadsGeneration) s
-    then set (asThreadsView . miThreads . listLength) (Just n) s
-    else s
-  NotifyNewMailArrived n -> M.continue (set (asThreadsView . miNewMail) n s)
-  InputValidated l err -> M.continue . ($ s) $
-    case err of
-      -- No error at all. Clear any existing errors set in the state.
-      Nothing -> set asUserMessage Nothing . set (asAsync . aValidation) Nothing
-      (Just msg) ->
-        let allVisible = concat $ visibleViewWidgets s
-            widget = view umContext msg
-         in if widget `elem` allVisible
-               -- Widget for this message is still visible, display
-               -- the message and clear the thread ID.
-              then set l err . set (asAsync . aValidation) Nothing
-               -- Widget for this message is hidden, ignore the
-               -- message, clear existing message and thread states.
-              else set asUserMessage Nothing . set (asAsync . aValidation) Nothing
+appEvent s a@(T.AppEvent ev) = do
+  case ev of
+    FromHBWidget _ -> do
+        w <- HB.handleAppEvent
+                                (view (asAsync  . aHaskelineWidgetConfig) s)
+                                (view (asThreadsView  . miSearchThreadsEditor) s)
+                                a
+        M.continue $ set (asThreadsView  . miSearchThreadsEditor) w s
+    HaskelineDied _ -> M.halt s
+    NotifyNumThreads n gen -> M.continue $
+        if gen == view (asThreadsView . miListOfThreadsGeneration) s
+        then set (asThreadsView . miThreads . listLength) (Just n) s
+        else s
+    NotifyNewMailArrived n -> M.continue (set (asThreadsView . miNewMail) n s)
+    InputValidated l err -> M.continue . ($ s) $
+        case err of
+        -- No error at all. Clear any existing errors set in the state.
+        Nothing -> set asUserMessage Nothing . set (asAsync . aValidation) Nothing
+        (Just msg) ->
+            let allVisible = concat $ visibleViewWidgets s
+                widget = view umContext msg
+            in if widget `elem` allVisible
+                -- Widget for this message is still visible, display
+                -- the message and clear the thread ID.
+                then set l err . set (asAsync . aValidation) Nothing
+                -- Widget for this message is hidden, ignore the
+                -- message, clear existing message and thread states.
+                else set asUserMessage Nothing . set (asAsync . aValidation) Nothing
 appEvent s _ = M.continue s
 
-runHaskeline :: HB.Config PurebredEvent -> IO ()
-runHaskeline c = runInputTBehavior (HB.useBrick c) defaultSettings loop
-   where
-       loop :: InputT IO ()
-       loop = do
-           _ <- liftIO $ print "haskeline loop"
-           minput <- getInputChar "% "
-           case minput of
-             Nothing -> liftIO $ print " no input" >> return ()
-             Just input -> do
-                 _ <- liftIO $ print $ "output " <> [input]
-                 outputStr [input]
-                 loop
-
-initialState :: InternalConfiguration -> IO AppState
-initialState conf = do
+initialState :: InternalConfiguration -> HB.Config PurebredEvent -> IO AppState
+initialState conf hbconfig = do
   fb' <- FB.newFileBrowser
          FB.selectNonDirectories
          ListOfFiles
          (Just $ view (confFileBrowserView . fbHomePath) conf)
-  chan <- newBChan 32
-  config <- HB.configure chan FromHBWidget (\case { FromHBWidget x -> Just x; _ -> Nothing })
   let
     searchterms = view (confNotmuch . nmSearch) conf
     mi =
@@ -243,9 +229,8 @@ initialState conf = do
          (StatefulEditor mempty $ E.editor ManageFileBrowserSearchPath Nothing path)
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
-    async = Async Nothing config
+    async = Async Nothing hbconfig
     s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
-  _ <- forkFinally (runHaskeline config) (writeBChan  chan . HaskelineDied)
   execStateT applySearch s
 
 -- | Application event loop.

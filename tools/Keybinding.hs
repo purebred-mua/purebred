@@ -5,6 +5,7 @@ each widget.
 
 -}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 import Brick.BChan (newBChan)
 import qualified Data.Text.IO as T
 import qualified Data.Text as T
@@ -16,13 +17,15 @@ import UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
 import UI.App (initialState)
 import Control.Lens (set, view, ifoldr, traversed, toListOf, ix)
 import Types
+import qualified Brick.Haskeline as HB
 
 
 main :: IO ()
 main = do 
   bchan <- newBChan 32
   cfg' <- processConfig (InternalConfigurationFields bchan "asdf" dummyLogSink) defaultConfig
-  s <- initialState cfg'
+  hbconfig <- HB.configure bchan FromHBWidget (\case { _ -> Nothing })
+  s <- initialState cfg' hbconfig
   T.putStrLn (renderHelpAsAsciidoc s cfg')
 
 dummyLogSink :: LT.Text -> IO ()
