@@ -140,7 +140,13 @@ handleAppEvent c w (AppEvent e) =
           }
     Nothing -> return w
 
-handleEditorEvent :: TChan Event -> V.Event -> Widget n -> EventM n (Widget n)
+handleEditorEvent :: Eq n => TChan Event -> V.Event -> Widget n -> EventM n (Widget n)
+handleEditorEvent _ (V.EvResize _ _) w = do
+  me <- lookupExtent (name w)
+  case me of
+    Just (Extent _ _ (wid, he) _) -> do
+      return $ w {extent = Just (wid, he)}
+    Nothing -> return w
 handleEditorEvent c (V.EvKey k ms) w = do
   liftIO $ atomically $ writeTChan c $ mkKeyEvent k
   return w
@@ -173,16 +179,6 @@ handleEditorEvent c (V.EvKey k ms) w = do
     addModifiers (V.MCtrl : tl) k' = addModifiers tl . ctrlKey $ k'
     addModifiers (V.MMeta : tl) k' = addModifiers tl . metaKey $ k'
     addModifiers (V.MAlt : tl) k' = addModifiers tl k'
-
-{-
-handleEvent _ w (VtyEvent (V.EvResize _ _)) = do
-  me <- lookupExtent (name w)
-  case me of
-    Just (Extent _ _ (wid, he) _) -> do
-      return $ w {extent = Just (wid, he)}
-    Nothing -> return w
-handleEvent _ w _ = return w
- -}
 
 useBrick :: Config e -> Behavior
 useBrick c = Behavior (brickRunTerm c)

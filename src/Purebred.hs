@@ -322,13 +322,11 @@ runHaskeline c = runInputTBehavior (HB.useBrick c) defaultSettings loop
    where
        loop :: InputT IO ()
        loop = do
-           _ <- liftIO $ print "haskeline loop"
-           minput <- getInputChar "% "
+           minput <- getInputLine "% "
            case minput of
-             Nothing -> liftIO $ print " no input" >> return ()
+             Nothing -> pure ()
              Just input -> do
-                 _ <- liftIO $ print $ "output " <> [input]
-                 outputStr [input]
+                 outputStr input
                  loop
 
 
