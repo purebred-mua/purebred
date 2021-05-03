@@ -128,7 +128,21 @@ main = do
       , testAbortedEditsResetState
       , testReloadsThreadListAfterReply
       , testAbortsCompositionIfEditorExits
+      , testSearchRelated
       ]
+
+testSearchRelated :: PurebredTestCase
+testSearchRelated = purebredTmuxSession "searches related" $
+  \step -> do
+    startApplication
+
+    capture >>= put
+    assertSubstringS "Item 1 of 4"
+    assertRegexS (buildAnsiRegex ["37"] ["43"] [] <> "\\sAug'17 frase@host.exa")
+
+    step "search related"
+    sendKeys "+" (Substring "Item 1 of 2") >>= put
+    assertRegexS ("Query:\\s" <> buildAnsiRegex ["34"] [] [] <> "frase@host.example")
 
 -- https://github.com/purebred-mua/purebred/issues/336
 testAbortsCompositionIfEditorExits :: PurebredTestCase

@@ -86,6 +86,7 @@ module UI.Actions (
   , openAttachment
   , setTags
   , saveAttachmentToPath
+  , searchRelated
 
   -- ** Actions for scrolling
   , scrollUp
@@ -1321,6 +1322,19 @@ fileBrowserToggleFile =
     fb' <- lift $ FB.maybeSelectCurrentEntry fb
     assign (asFileBrowser . fbEntries) fb'
 
+-- | Search related mails sent from the same authors.
+--
+searchRelated :: Action 'Threads 'ListOfThreads ()
+searchRelated = Action ["search related mail"] $ do
+  authors <- preuse (asThreadsView . miThreads . listList . to L.listSelectedElement . _Just . _2 . _2 . thAuthors . traverse)
+  case firstOf traverse authors of
+    Nothing -> runExceptT (throwError (InvalidQueryError "No authors availabe to perform search"))
+      >>= either showError (const $ pure ())
+    Just searchterm -> do
+      modifying (asThreadsView . miSearchThreadsEditor . editEditorL . E.editContentsL) (insertMany searchterm . clearZipper)
+      runSearch searchterm
+
+
 -- Function definitions for actions
 --
 
@@ -1352,6 +1366,10 @@ isFileUnderCursor = maybe False (FB.fileTypeMatch [FB.RegularFile])
 applySearch :: (MonadIO m, MonadState AppState m) => m ()
 applySearch = do
   searchterms <- currentLine <$> use (asThreadsView . miSearchThreadsEditor . editEditorL . E.editContentsL)
+  runSearch searchterms
+
+runSearch :: (MonadIO m, MonadState AppState m) => T.Text -> m ()
+runSearch searchterms = do
   nmconf <- use (asConfig . confNotmuch)
   r <- runExceptT (Notmuch.getThreads searchterms nmconf)
   case r of
@@ -1742,3 +1760,4 @@ switchMode' vn w = do
     "focus on " <> show vn <> "/" <> show w
   modifying (asViews . vsFocusedView) (Brick.focusSetCurrent vn)
   assign (asViews . vsViews . at vn . _Just . vFocus) w
+
