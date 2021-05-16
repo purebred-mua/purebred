@@ -26,7 +26,6 @@ module Purebred.System.Process
   , tmpfileResource
   , draftFileResoure
   , emptyResource
-  , toProcessConfigWithTempfile
   , runEntityCommand
   , createDraftFilePath
   , createSentFilePath
@@ -54,7 +53,6 @@ import System.Directory (removeFile, createDirectoryIfMissing)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as B
 import Data.Char (isControl, isSpace)
-import Data.Foldable (toList)
 import Data.List (intercalate)
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (formatTime, defaultTimeLocale)
@@ -165,10 +163,6 @@ draftFileResoure maildir =
     (createDraftFilePath maildir)
     (tryIO . removeFile)
     (\fp -> tryIO . B.writeFile fp)
-
-toProcessConfigWithTempfile :: MakeProcess -> FilePath -> ProcessConfig () () ()
-toProcessConfigWithTempfile (Shell cmd) fp = shell (toList cmd <> " " <> fp)
-toProcessConfigWithTempfile (Process cmd args) fp = proc (toList cmd) (args <> [fp])
 
 -- | Generates a Maildir filename
 -- see https://cr.yp.to/proto/maildir.html

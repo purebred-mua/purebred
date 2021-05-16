@@ -30,7 +30,6 @@ import Control.Monad.Except (runExceptT)
 import System.Environment (lookupEnv)
 import System.Directory (getHomeDirectory)
 import Data.Maybe (fromMaybe)
-import Data.List.NonEmpty (fromList)
 import System.Exit (ExitCode(..))
 
 import Control.Lens (set)
@@ -290,9 +289,11 @@ defaultConfig =
       , _mvToKeybindings = mailviewComposeToKeybindings
       , _mvMailcap =
           [ ( matchContentType "text" (Just "html")
-            , MailcapHandler (Shell (fromList "elinks -force-html")) CopiousOutput DiscardTempfile)
+            , MailcapHandler (\fp -> proc "elinks" ["-force-html", fp]) CopiousOutput DiscardTempfile)
+          , ( matchContentType "application" (Just "pdf")
+            , MailcapHandler (\fp -> proc "pdftotext" [fp, "-"]) CopiousOutput DiscardTempfile)
           , ( const True
-            , MailcapHandler (Process (fromList "xdg-open") []) IgnoreOutput KeepTempfile)
+            , MailcapHandler (\fp -> proc "xdg-open" [fp]) IgnoreOutput KeepTempfile)
           ]
       }
     , _confIndexView = IndexViewSettings

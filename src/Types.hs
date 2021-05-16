@@ -1132,7 +1132,7 @@ data TempfileOnExit
   deriving (Generic, NFData)
 
 data MailcapHandler = MailcapHandler
-  { _mhMakeProcess :: MakeProcess
+  { _mhMakeProcess :: FilePath -> ProcessConfig () () ()
   , _mhCopiousoutput :: CopiousOutput
   -- ^ output should be paged or made scrollable
   , _mhKeepTemp :: TempfileOnExit
@@ -1140,7 +1140,7 @@ data MailcapHandler = MailcapHandler
   -- exits immediately (e.g. Firefox)
   } deriving (Generic, NFData)
 
-mhMakeProcess :: Lens' MailcapHandler MakeProcess
+mhMakeProcess :: Lens' MailcapHandler (FilePath -> ProcessConfig () () ())
 mhMakeProcess = lens _mhMakeProcess (\h x -> h { _mhMakeProcess = x })
 
 mhCopiousoutput :: Lens' MailcapHandler CopiousOutput

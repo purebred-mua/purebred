@@ -876,8 +876,8 @@ openWithCommand =
       cmd <- uses (asMailView . mvOpenCommand . E.editContentsL) (T.unpack . currentLine)
       case cmd of
         [] -> lift . Brick.continue . setUserMessage (makeWarning StatusBar "Empty command") =<< get
-        (x:xs) -> stateSuspendAndResume $
-          openCommand' (MailcapHandler (Process (x :| xs) []) IgnoreOutput KeepTempfile)
+        cmd' -> stateSuspendAndResume $
+          openCommand' (MailcapHandler (\_ -> proc cmd' []) IgnoreOutput KeepTempfile)
     }
 
 -- | Wrapper for 'Brick.suspendAndResume' that reads state from
@@ -1613,7 +1613,7 @@ openCommand' cmd = do
       let con = EntityCommand
             handleExitCodeThrow
             (tmpfileResource (view mhKeepTemp cmd))
-            (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
+            (\_ fp -> view mhMakeProcess cmd fp)
             tryReadProcessStderr
       in fmap con . entityToBytes
   selectedItemHelper (asMailView . mvAttachments) $ \ent ->

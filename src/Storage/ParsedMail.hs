@@ -51,7 +51,6 @@ import Data.Text.Lens (packed)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Catch (MonadMask)
-import Data.Foldable (toList)
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text as T
@@ -67,7 +66,7 @@ import Purebred.System (tryIO)
 import Purebred.Types.IFC (sanitiseText)
 import Purebred.Parsing.Text (parseMailbody)
 import Purebred.System.Process
-  (runEntityCommand, tmpfileResource, toProcessConfigWithTempfile,
+  (runEntityCommand, tmpfileResource,
   tryReadProcessStdout, handleExitCodeThrow)
 
 {- $synopsis
@@ -160,10 +159,11 @@ bodyToDisplay s textwidth charsets prefCT msg =
             maybe
               (pure $ parseMailbody textwidth "Internal Viewer" $ entityToText charsets entity)
               (\handler ->
-                 parseMailbody textwidth (showHandler handler) <$>
+                 parseMailbody textwidth (showCommand handler) <$>
                  entityPiped handler entity)
               (findAutoview s entity)
-          showHandler = view (mhMakeProcess . mpCommand . to (T.pack . toList))
+          showCommand :: MailcapHandler -> T.Text
+          showCommand h = T.pack $ show $ view mhMakeProcess h mempty
        in (msg, ) <$> output
 
 
@@ -233,7 +233,7 @@ mkConfig cmd =
   EntityCommand
     handleExitCodeThrow
     (tmpfileResource (view mhKeepTemp cmd))
-    (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
+    (\_ fp -> view mhMakeProcess cmd fp)
     tryReadProcessStdout
 
 quoteText :: T.Text -> T.Text
