@@ -2,19 +2,19 @@
 
 ![Build Status](https://github.com/purebred-mua/purebred/workflows/Haskell-CI/badge.svg?branch=master)
 
-An MUA built around [*notmuch*](https://notmuchmail.org/).
+An MUA built around [_notmuch_](https://notmuchmail.org/).
 
 ## requirements
 
 - GHC >= 8.6
 - notmuch
-- a local mailer (e.g. ``sendmail``)
+- a local mailer (e.g. `sendmail`)
 
 ## Status
 
-This project is in its infancy, but please join us and help.  All
+This project is in its infancy, but please join us and help. All
 kinds of contributions (bug reports, testing, documentation, code)
-are welcome.  See [HACKING](HACKING) for more info. If you want to **jump right
+are welcome. See [HACKING](HACKING) for more info. If you want to **jump right
 in**, have a look at the [easy
 fix](https://github.com/purebred-mua/purebred/issues?q=is%3Aopen+is%3Aissue+label%3Aeasyfix)
 issues.
@@ -46,8 +46,8 @@ UX, better plug-in support, etc.
 
 ## Try it
 
-Try out purebred with the following choices. Keep in mind that *none of these* are
-*currently tested* in our CI and may be broken.
+Try out purebred with the following choices. Keep in mind that _none of these_ are
+_currently tested_ in our CI and may be broken.
 
 ### Fedora
 
@@ -73,7 +73,7 @@ $ nix-env --file default.nix --install
 ### Arch Linux
 
 We officially don't support Arch Linux, but will support any packaging
-efforts.  Please see
+efforts. Please see
 [#352](https://github.com/purebred-mua/purebred/issues/352#issuecomment-567873060)
 for links to help building Purebred.
 
@@ -83,8 +83,8 @@ Install development packages for system library dependencies
 first. They are needed to compile the Haskell notmuch
 bindings. Note that package names may vary between different distributions.
 
-* libtalloc-devel
-* notmuch-devel
+- libtalloc-devel
+- notmuch-devel
 
 Make sure you have one of our supported GHC versions and
 Cabal-install >= 2.2 installed. From a cloned checkout you then go:
