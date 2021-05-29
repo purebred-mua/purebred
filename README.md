@@ -19,7 +19,7 @@ in**, have a look at the [easy
 fix](https://github.com/purebred-mua/purebred/issues?q=is%3Aopen+is%3Aissue+label%3Aeasyfix)
 issues.
 
-![](screenshot.png)
+![](screenshot.gif)
 
 ## Roadmap
 
