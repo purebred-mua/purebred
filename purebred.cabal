@@ -43,6 +43,10 @@ source-repository head
   type: git
   location: https://github.com/purebred-mua/purebred.git
 
+flag with_lazyvector
+  description: Enables lazy loading of the thread listing (see issue #284 before enabling).
+  default: False
+
 library
   hs-source-dirs:      src
   ghc-options:         -Wall
@@ -117,6 +121,9 @@ library
                      , time
                      , temporary
                      , word-wrap
+
+  if flag(with_lazyvector)
+    cpp-options: -DLAZYVECTOR
 
 executable purebred
   hs-source-dirs:      app
