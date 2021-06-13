@@ -25,6 +25,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE CPP #-}
 
 module UI.Actions (
   -- * Overview
@@ -177,7 +178,6 @@ import UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.Events (nextGeneration)
-import Purebred.LazyVector (V)
 import Purebred.Plugin.Internal
 import Purebred.Tags (parseTagOps)
 import Purebred.System (tryIO)
@@ -187,6 +187,10 @@ import UI.Notifications
        , showUserMessage)
 import Brick.Widgets.StatefulEdit
        (StatefulEditor(..), editEditorL, revertEditorState, saveEditorState)
+#if defined LAZYVECTOR
+import Purebred.LazyVector (V)
+#endif
+
 
 
 {- $overview
@@ -280,7 +284,11 @@ class HasList (n :: Name) where
   list :: Proxy n -> Lens' AppState (L.GenericList Name (T n) (E n))
 
 instance HasList 'ListOfThreads where
+#if defined LAZYVECTOR
   type T 'ListOfThreads = V
+#else
+  type T 'ListOfThreads = Vector.Vector
+#endif
   type E 'ListOfThreads = Toggleable NotmuchThread
   list _ = asThreadsView . miListOfThreads
 
@@ -1377,7 +1385,7 @@ runSearch searchterms = do
     Right threads -> do
       liftIO (zonedTimeToUTC <$> getZonedTime) >>= assign asLocalTime
       notifyNumThreads threads
-      modifying (asThreadsView . miThreads . listList) (L.listReplace threads (Just 0))
+      modifying (asThreadsView . miListOfThreads) (L.listReplace threads (Just 0))
       assign (asThreadsView . miThreads . listLength) Nothing
 
 -- | Fork a thread to compute the length of the container and send a

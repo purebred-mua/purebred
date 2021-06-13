@@ -19,6 +19,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE CPP #-}
 
 module Storage.Notmuch (
     -- * Synopsis
@@ -50,7 +51,6 @@ module Storage.Notmuch (
 
 import Control.Monad ((<=<), (>=>), when)
 import Data.Function (on)
-import System.IO.Unsafe (unsafeInterleaveIO)
 import Data.Foldable (toList)
 import Data.Functor.Compose (Compose(..))
 
@@ -71,10 +71,14 @@ import qualified Notmuch
 
 import Error
 import Types
-import Purebred.LazyVector
 import Purebred.System.Process (readProcess, proc)
 import Purebred.System (tryIO)
 import Purebred.Types.IFC (sanitiseText, untaint)
+
+#if defined LAZYVECTOR
+import System.IO.Unsafe (unsafeInterleaveIO)
+import Purebred.LazyVector
+#endif
 
 {- $synopsis
 
@@ -223,6 +227,9 @@ countThreads query fp =
   withDatabaseReadOnly fp $
   flip Notmuch.query (Notmuch.Bare $ T.unpack query)
   >=> Notmuch.queryCountMessages
+
+
+#if defined LAZYVECTOR
 -- | creates a vector of threads from a notmuch search
 --
 getThreads
@@ -239,6 +246,19 @@ getThreads s settings =
 lazyTraverse :: (a -> IO b) -> [a] -> IO [b]
 lazyTraverse f =
   foldr (\x ys -> (:) <$> f x <*> unsafeInterleaveIO ys) (pure [])
+
+#else
+getThreads
+  :: (MonadError Error m, MonadIO m)
+  => T.Text
+  -> NotmuchSettings FilePath
+  -> m (Vec.Vector (Toggleable NotmuchThread))
+getThreads s settings =
+  withDatabaseReadOnly (view nmDatabase settings) $
+    flip Notmuch.query (Notmuch.Bare $ T.unpack s)
+    >=> Notmuch.threads
+    >=> liftIO . fmap Vec.fromList . traverse (fmap (False,) . threadToThread)
+#endif
 
 -- | Returns a vector of *all* messages belonging to the list of threads
 --
