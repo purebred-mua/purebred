@@ -20,27 +20,27 @@ module UI.Index.Main (
     renderListOfThreads
   , renderListOfMails) where
 
-import           Brick.AttrMap       (AttrName, attrName)
-import           Brick.Types         (Location (..), Padding (..), Widget)
-import           Brick.Widgets.Core  (hBox, hLimitPercent, padLeft, padRight,
-                                      putCursor, txt, vLimit, withAttr, (<+>))
-import qualified Brick.Widgets.List  as L
-import           Control.Lens.Getter (view)
-import           Data.Text           as T (Text, pack, unpack, unwords)
-import           Data.Time.Clock     (NominalDiffTime, UTCTime (..),
-                                      diffUTCTime, nominalDay)
-import           Data.Time.Format    (defaultTimeLocale, formatTime)
+import Brick.Types (Padding(..), Widget)
+import Brick.AttrMap (AttrName, attrName)
+import Brick.Types (Location(..))
+import Brick.Widgets.Core
+  (hBox, hLimitPercent, padRight, padLeft, putCursor, txt, vLimit, withAttr, (<+>))
+import qualified Brick.Widgets.List as L
+import Control.Lens.Getter (view)
+import Data.Time.Clock
+       (UTCTime(..), NominalDiffTime, nominalDay, diffUTCTime)
+import Data.Time.Format (formatTime, defaultTimeLocale)
+import Data.Text as T (Text, pack, unpack, unwords)
 
-import           Notmuch             (getTag)
+import Notmuch (getTag)
 
-import           Config.Main         (listAttr, listStateNewmailAttr,
-                                      listStateSelectedAttr,
-                                      listStateToggledAttr, mailAuthorsAttr,
-                                      mailTagAttr)
-import           Storage.Notmuch     (ManageTags, hasTag)
-import           Types
-import           UI.Draw.Main        (fillLine)
-import           UI.Views            (focusedViewWidget)
+import UI.Draw.Main (fillLine)
+import UI.Views (focusedViewWidget)
+import Storage.Notmuch (hasTag, ManageTags)
+import Types
+import Config.Main
+  (listAttr, listStateNewmailAttr, listStateSelectedAttr,
+  listStateToggledAttr, mailAuthorsAttr, mailTagAttr)
 
 renderListOfThreads :: AppState -> Widget Name
 renderListOfThreads s = L.renderList (listDrawThread s (ListOfThreads == focusedViewWidget s)) True $ view (asThreadsView . miListOfThreads) s
