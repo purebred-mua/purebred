@@ -9,6 +9,7 @@ let
         purebred-email = hsuper.callPackage ./purebred-email.nix { };
         purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
         dyre = hsuper.callPackage ./dyre.nix { };
+        brick = hsuper.callPackage ./brick.nix { };
       };
     };
   };
