@@ -1,5 +1,5 @@
-{ mkDerivation, base, case-insensitive, fetchgit, lens, purebred
-, purebred-email, stdenv, text, text-icu
+{ mkDerivation, base, case-insensitive, fetchgit, lens, lib, purebred
+, purebred-email, text, text-icu
 }:
 mkDerivation {
   pname = "purebred-icu";
@@ -15,5 +15,5 @@ mkDerivation {
   ];
   homepage = "https://github.com/purebred-mua/purebred-icu";
   description = "ICU charset support for purebred";
-  license = stdenv.lib.licenses.agpl3Plus;
+  license = lib.licenses.agpl3Plus;
 }
