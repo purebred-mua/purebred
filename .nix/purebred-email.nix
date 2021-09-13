@@ -1,6 +1,6 @@
 { mkDerivation, attoparsec, base, base64-bytestring, bytestring
-, case-insensitive, concise, deepseq, hedgehog, lens, QuickCheck
-, quickcheck-instances, semigroupoids, semigroups, stdenv
+, case-insensitive, concise, deepseq, hedgehog, lens, lib
+, QuickCheck , quickcheck-instances, semigroupoids, semigroups
 , stringsearch, tasty, tasty-golden, tasty-hedgehog, tasty-hunit
 , tasty-quickcheck, text, time
 }:
@@ -22,5 +22,5 @@ mkDerivation {
   ];
   homepage = "https://github.com/purebred-mua/purebred-email";
   description = "types and parser for email messages (including MIME)";
-  license = stdenv.lib.licenses.agpl3;
+  license = lib.licenses.agpl3;
 }
