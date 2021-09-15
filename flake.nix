@@ -23,16 +23,31 @@
       };
     };
   } // utils.lib.eachDefaultSystem (system:
-  let pkgs = import nixpkgs { inherit system; overlays = [ self.overlays.purebred ]; };
+  let
+    pkgs = import nixpkgs { inherit system; overlays = [ self.overlays.purebred ]; };
+    nativeBuildTools = with pkgs.haskellPackages; [
+      cabal-install
+      cabal2nix
+      ghcid
+      hlint
+      haskell-language-server
+      ormolu
+      hie-bios
+      pkgs.notmuch
+      pkgs.tmux
+      pkgs.gnumake
+      pkgs.asciidoctor
+      pkgs.python3Packages.pygments
+    ];
   in rec {
     packages.purebred = pkgs.haskellPackages.purebred;
     defaultPackage = packages.purebred;
 
-#    devShell = nixpkgs.haskellPackages.shellFor {
-#      withHoogle = true;
-#      packages = haskellPackages: [ haskellPackages.purebred ] ++ icuPackageDep haskellPackages;
-#      nativeBuildInputs = haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
-#    };
+    devShell = pkgs.haskellPackages.shellFor {
+      withHoogle = true;
+      packages = haskellPackages: [ haskellPackages.purebred ] ;#++ icuPackageDep haskellPackages;
+      nativeBuildInputs = defaultPackage.env.nativeBuildInputs ++ nativeBuildTools;
+    };
 
   });
 }
