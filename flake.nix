@@ -23,8 +23,8 @@
     };
 
     packages.x86_64-linux.purebred =
-      let pkgs = import nixpkgs { overlays = [ self.overlays.purebred ]; };
-      in pkgs.purebred;
+      let pkgs = import nixpkgs { system = "x86_64-linux"; overlays = [ self.overlays.purebred ]; };
+      in pkgs.haskellPackages.purebred;
     defaultPackage.x86_64-linux = self.packages.x86_64-linux.purebred;
 
 #    devShell.x86_64-linux = nixpkgs.haskellPackages.shellFor {
