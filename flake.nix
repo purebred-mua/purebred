@@ -3,9 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs }: {
+  outputs = { self, nixpkgs, utils }: {
 
     overlays = {
       purebred = final: prev: with prev.haskell.lib; {
@@ -21,17 +22,17 @@
         };
       };
     };
+  } // utils.lib.eachDefaultSystem (system:
+  let pkgs = import nixpkgs { inherit system; overlays = [ self.overlays.purebred ]; };
+  in rec {
+    packages.purebred = pkgs.haskellPackages.purebred;
+    defaultPackage = packages.purebred;
 
-    packages.x86_64-linux.purebred =
-      let pkgs = import nixpkgs { system = "x86_64-linux"; overlays = [ self.overlays.purebred ]; };
-      in pkgs.haskellPackages.purebred;
-    defaultPackage.x86_64-linux = self.packages.x86_64-linux.purebred;
-
-#    devShell.x86_64-linux = nixpkgs.haskellPackages.shellFor {
+#    devShell = nixpkgs.haskellPackages.shellFor {
 #      withHoogle = true;
 #      packages = haskellPackages: [ haskellPackages.purebred ] ++ icuPackageDep haskellPackages;
 #      nativeBuildInputs = haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
 #    };
 
-  };
+  });
 }
