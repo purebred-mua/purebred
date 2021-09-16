@@ -40,7 +40,13 @@
       pkgs.python3Packages.pygments
     ];
   in rec {
-    packages.purebred = pkgs.haskellPackages.purebred;
+    packages = {
+      purebred = pkgs.haskellPackages.purebred;
+      purebred-email = pkgs.haskellPackages.purebred-email;
+      purebred-icu = pkgs.haskellPackages.purebred-icu;
+      dyre = pkgs.haskellPackages.dyre;
+      brick = pkgs.haskellPackages.brick;
+    };
     defaultPackage = packages.purebred;
 
     devShell = pkgs.haskellPackages.shellFor {
