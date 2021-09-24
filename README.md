@@ -57,18 +57,21 @@ repository which provides easily installable RPM packages.
 
 ### Nix
 
-If you're using the nix package manager - whether on NixOS or any other Linux distribution - you can build purebred too.
-You can use `nix-build` to try out purebred without installing it:
+If you're using the nix package manager - whether on NixOS or any other Linux
+distribution - you can build purebred too. You can use try out purebred without
+installing it:
 
 ```
-$ nix-build default.nix
+$ nix build && result/bin/purebred
 ```
 
-and `nix-env` to install the application:
+and `nix profile install` to install the application:
 
 ```
-$ nix-env --file default.nix --install
+$ nix profile install .#purebred-with-packages
 ```
+
+There is also a default.nix file to be used with legacy nix.
 
 ### Arch Linux
 
