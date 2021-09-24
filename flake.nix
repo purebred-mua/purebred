@@ -39,6 +39,11 @@
       pkgs.asciidoctor
       pkgs.python3Packages.pygments
     ];
+    mkShell = with-icu: pkgs.haskellPackages.shellFor {
+      withHoogle = true;
+      packages = hp: [ hp.purebred ] ++ (if with-icu then [hp.purebred-icu] else []);
+      nativeBuildInputs = pkgs.haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
+    };
   in rec {
     packages = {
       purebred = pkgs.haskellPackages.purebred;
@@ -46,14 +51,11 @@
       purebred-icu = pkgs.haskellPackages.purebred-icu;
       dyre = pkgs.haskellPackages.dyre;
       brick = pkgs.haskellPackages.brick;
+      # shell "packages" for `nix develop .#shell-with/out-icu`
+      shell-without-icu = mkShell false;
+      shell-with-icu = mkShell true;
     };
     defaultPackage = packages.purebred;
-
-    devShell = pkgs.haskellPackages.shellFor {
-      withHoogle = true;
-      packages = haskellPackages: [ haskellPackages.purebred ] ;#++ icuPackageDep haskellPackages;
-      nativeBuildInputs = defaultPackage.env.nativeBuildInputs ++ nativeBuildTools;
-    };
-
+    devShell = packages.shell-without-icu;
   });
 }
