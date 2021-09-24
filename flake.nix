@@ -44,8 +44,29 @@
       packages = hp: [ hp.purebred ] ++ (if with-icu then [hp.purebred-icu] else []);
       nativeBuildInputs = pkgs.haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
     };
+    mkPurebredWithPackages = with-icu:
+      let
+        envPackages = self: if with-icu then [ self.purebred-icu ] else [ self.purebred ];
+        env = pkgs.haskellPackages.ghcWithPackages envPackages;
+      in pkgs.stdenv.mkDerivation {
+        name = "purebred-with-packages-${env.version}";
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        # This creates a Bash script, which sets the GHC in order for dyre to be
+        # able to build the config file.
+        buildCommand = ''
+          mkdir -p $out/bin
+          makeWrapper ${env}/bin/purebred $out/bin/purebred \
+          --set NIX_GHC "${env}/bin/ghc"
+          makeWrapper ${env}/bin/purebred-dump-keybinding $out/bin/purebred-dump-keybinding \
+          --set NIX_GHC "${env}/bin/ghc"
+        '';
+        preferLocalBuild = true;
+        allowSubstitutes = false;
+      };
   in rec {
     packages = {
+      purebred-with-packages = mkPurebredWithPackages false;
+      purebred-with-packages-icu = mkPurebredWithPackages true;
       purebred = pkgs.haskellPackages.purebred;
       purebred-email = pkgs.haskellPackages.purebred-email;
       purebred-icu = pkgs.haskellPackages.purebred-icu;
@@ -55,7 +76,7 @@
       shell-without-icu = mkShell false;
       shell-with-icu = mkShell true;
     };
-    defaultPackage = packages.purebred;
+    defaultPackage = packages.purebred-with-packages;
     devShell = packages.shell-without-icu;
   });
 }
