@@ -66,7 +66,7 @@ an application entirely written using Brick widgets only:
 
 ## Using Nix as a development environment
 
-The `nix-shell --arg with-icu true` command will give you a
+The `nix develop .#shell-with-icu` command will give you a
 development environment in which package dependencies for `purebred`
 and `purebred-icu` are installed. From there a typical compile/run
 session could look like this:
@@ -83,3 +83,5 @@ session could look like this:
 
     # run only acceptance tests containing 'user can abort'
     PATH=~/.cabal/bin:$PATH cabal --enable-nix test --show-details=streaming --test-option='-p /user can abort/' uat
+
+Legacy nix is also supported, check the `default.nix` file.
