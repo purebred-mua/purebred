@@ -33,6 +33,78 @@ communication is the key here rather than hacking away.
   tainted, indicating that it must be sanitised before use.
   (The test suite is excepted from this policy.)
 
+## How to profile
+
+Profiling Purebred is perhaps not as obvious as profiling other
+projects, because Purebred is compiling it's own configuration upon
+startup.
+
+First step is to enable profiling in cabal creating a `cabal.project` file:
+
+    $ cat cabal.project
+    packages: .
+
+    package *
+      profiling: True
+
+Note: Currently the `--enable-profiling` does not install profiling
+information in the cabal install directory. See
+[#7297](https://github.com/haskell/cabal/issues/7297) for more
+information.
+
+Build purebred and install it:
+
+    $ cabal new-install -j --installdir=$HOME/.cabal/bin/ exe:purebred
+
+Start `purebred` with additional `GHCOPTS` environment variable as
+well as runtime parameters. The `GHCOPTS` environment variable tells
+dyre to pass those parameters to `ghc` when recompiling the
+config. The `RTS` options are used to enable profiling:
+
+    $ GHCOPTS="-prof -fprof-auto" ~/.cabal/bin/purebred +RTS -p
+
+### Problems
+
+If you run into compilation errors like:
+
+        Could not load module ‘Data.MIME’
+    It is a member of the hidden package ‘purebred-email-0.4.2’.
+    You can run ‘:set -package purebred-email’ to expose it.
+    (Note: this unloads all the modules in the current scope.)
+    Use -v (or `:set -v` in ghci) to see a list of the files searched for.
+    |
+    33 | import Data.MIME (matchContentType)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    
+check your [GHC package
+environment](https://downloads.haskell.org/ghc/latest/docs/html/users_guide/packages.html?highlight=ghc%20pkg#package-environments). Most
+likely, the package is not listed and needs to be added.
+
+Also check whether files are present holding profiling
+information. The file extension should be prefixed with a `p_`. For
+example:
+
+    $ ls ~/.cabal/store/ghc-8.8.4/purebred-0.1.0.0-168d7c26ff515ebbea37fcb1e23cef711eef8e398f9fe910bec0900966231966/lib/
+    Brick/
+    Config/
+    Error.dyn_hi
+    Error.hi
+    Error.p_hi
+    libHSpurebred-0.1.0.0-168d7c26ff515ebbea37fcb1e23cef711eef8e398f9fe910bec0900966231966.a
+    libHSpurebred-0.1.0.0-168d7c26ff515ebbea37fcb1e23cef711eef8e398f9fe910bec0900966231966-ghc8.8.4.so
+    libHSpurebred-0.1.0.0-168d7c26ff515ebbea37fcb1e23cef711eef8e398f9fe910bec0900966231966_p.a
+    Paths_purebred.dyn_hi
+    Paths_purebred.hi
+    Paths_purebred.p_hi
+    Purebred/
+    Purebred.dyn_hi
+    Purebred.hi
+    Purebred.p_hi
+    Storage/
+    Types.dyn_hi
+    Types.hi
+    Types.p_hi
+    UI/
 
 ### Differences to Brick
 
