@@ -63,7 +63,7 @@ import Data.Text.Zipper (currentLine)
 import qualified Data.Text as T
 import Prelude hiding (readFile, unlines)
 
-import Data.RFC5322.Address.Text (mailboxList, addressList)
+import Data.IMF.Text (mailboxList, addressList)
 
 import Types
 import Purebred.Tags (parseTagOps)

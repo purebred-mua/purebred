@@ -155,8 +155,7 @@ import Data.Time (getCurrentTime, getZonedTime)
 import System.Directory (doesPathExist)
 import System.Random (getStdRandom, uniform)
 
-import qualified Data.RFC5322.Address.Text as AddressText
-  ( renderMailboxes, addressList, mailboxList )
+import qualified Data.IMF.Text as AddressText
 import Data.MIME
 import qualified Storage.Notmuch as Notmuch
 import Storage.ParsedMail
