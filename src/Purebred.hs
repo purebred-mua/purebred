@@ -149,7 +149,6 @@ module Purebred (
   listStateNewmailAttr,
   (</>),
   module Control.Lens,
-  genBoundary,
   Mailbox(..),
   AddrSpec(..),
   Domain(..),
@@ -167,7 +166,6 @@ import qualified Options.Applicative.Builder as Builder
 import qualified Data.Text.Lazy as T
 import System.Environment (lookupEnv)
 import System.FilePath.Posix ((</>))
-import System.Random (RandomGen, getStdGen, randomRs)
 import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
 
@@ -278,10 +276,6 @@ launch ghcOpts inCfg = do
       maybe id (set (confNotmuch . nmDatabase) . pure) (databaseFilepath opts)
       . maybe id (set (confNotmuch . nmSearch)) (view packed <$> searchOverride opts)
 
-  -- Set the boundary generator (an INFINITE [Char]) /after/ deepseq'ing :)
-  -- FIXME: seems like something that shouldn't be exposed in user config
-  b <- genBoundary <$> getStdGen
-
   -- Create a channel for sending custom events into Brick event loop.
   -- It gets set in the InternalConfiguration.
   --
@@ -294,7 +288,7 @@ launch ghcOpts inCfg = do
   logSink <- setupLogsink (debugFile opts)
   logSink (T.pack "Compile flags: " <> T.intercalate (T.pack " ") (T.pack <$> ghcOpts))
   logSink (T.pack "Opened log file")
-  cfg' <- processConfig (InternalConfigurationFields bchan b logSink) (pre cfg)
+  cfg' <- processConfig (InternalConfigurationFields bchan logSink) (pre cfg)
 
   s <- initialState cfg'
   let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
@@ -320,16 +314,6 @@ processConfig z = fmap (set confExtra z . Control.DeepSeq.force) . unIO
     (confNotmuch . nmDatabase) id
     >=> confEditor id
     >=> (confFileBrowserView . fbHomePath) id
-
-
--- RFC2046 5.1.1
-boundaryChars :: String
-boundaryChars = ['0'..'9'] <> ['a'..'z'] <> ['A'..'Z'] <> "'()+_,-./:=?"
-
-genBoundary :: RandomGen g => g -> String
-genBoundary = filter isBoundaryChar . randomRs (minimum boundaryChars, maximum boundaryChars)
-  where
-    isBoundaryChar = (`elem` boundaryChars)
 
 -- | Main program entry point.  Apply to a list of plugins (use
 -- 'usePlugin' to prepare each plugin for use).
