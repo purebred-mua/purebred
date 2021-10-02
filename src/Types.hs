@@ -148,7 +148,6 @@ module Types
   , InternalConfiguration
   , InternalConfigurationFields(..)
   , confBChan
-  , confBoundary
   , confLogSink
   , PurebredEvent(..)
   , Configuration(..)
@@ -648,7 +647,6 @@ data Configuration extra a b c = Configuration
 
 data InternalConfigurationFields = InternalConfigurationFields
   { _bChan :: BChan PurebredEvent
-  , _boundary :: String
   , _logSink :: LT.Text -> IO ()
   }
 
@@ -701,9 +699,6 @@ confExtra = lens _confExtra (\cfg x -> cfg { _confExtra = x })
 
 confBChan :: Lens' InternalConfiguration (BChan PurebredEvent)
 confBChan = confExtra . lens _bChan (\s a -> s { _bChan = a })
-
-confBoundary :: Lens' InternalConfiguration String
-confBoundary = confExtra . lens _boundary (\s a -> s { _boundary = a })
 
 confLogSink :: Lens' InternalConfiguration (LT.Text -> IO ())
 confLogSink = confExtra . lens _logSink (\s a -> s { _logSink = a })
