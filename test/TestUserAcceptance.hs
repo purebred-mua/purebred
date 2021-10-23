@@ -29,6 +29,7 @@ import System.IO.Temp
   , emptySystemTempFile)
 import Data.Either (isRight)
 import Data.Functor (($>))
+import Data.Foldable (for_)
 import Control.Concurrent (threadDelay)
 import System.IO (hPutStr, stderr)
 import System.Environment (lookupEnv, getEnvironment)
@@ -47,11 +48,12 @@ import qualified Data.Text.Encoding as T
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
 import Control.Monad.State (MonadState)
+import System.Exit (die)
 
 import Control.Lens (Lens', _init, _last, at, preview, set, to, view)
 import System.Directory
   ( copyFile, getCurrentDirectory, listDirectory, removeDirectoryRecursive
-  , removeFile, doesPathExist
+  , removeFile, doesPathExist, findExecutable
   )
 import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed
@@ -70,6 +72,9 @@ type PurebredTestCase = TestCase GlobalEnv
 
 main :: IO ()
 main = do
+  for_ ["purebred", "elinks"] $ \prog ->
+    findExecutable prog >>= maybe (die $ "missing program: " <> prog) (\_ -> pure ())
+
   Env.setEnv tastyNumThreadsEnv . fromMaybe "20" =<< lookupEnv tastyNumThreadsEnv
   defaultMain $ testTmux pre post tests
   where
