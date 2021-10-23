@@ -90,20 +90,22 @@ instance Hook () where
 
 -- | Process a message before sending.
 -- Available capabilities: __all__.
-newtype PreSendHook cap =
-  PreSendHook { getPreSendHook :: forall m. (cap m) => MIMEMessage -> m MIMEMessage }
+newtype PreSendHook cap = PreSendHook
+  ( forall m. (cap m) => MIMEMessage -> m MIMEMessage )
+
+getPreSendHook :: (cap m) => PreSendHook cap -> MIMEMessage -> m MIMEMessage
+getPreSendHook (PreSendHook f) = f
 
 instance (forall m. Unconstrained m => cap m) => Hook (PreSendHook cap) where
   setHook (PreSendHook f) = set preSendHook (PreSendHook f)
 
 -- | Process the program configuration at program initialisation.
 -- Available capabilities: __CanIO__.
-newtype ConfigHook cap =
-  ConfigHook
-    { getConfigHook
-        :: forall m. (cap m)
-        => UserConfiguration -> m UserConfiguration
-    }
+newtype ConfigHook cap = ConfigHook
+  ( forall m. (cap m) => UserConfiguration -> m UserConfiguration )
+
+getConfigHook :: (cap m) => ConfigHook cap -> UserConfiguration -> m UserConfiguration
+getConfigHook (ConfigHook f) = f
 
 instance (forall m. CanIO m => cap m) => Hook (ConfigHook cap) where
   setHook (ConfigHook f) = set configHook (ConfigHook f)

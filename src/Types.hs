@@ -1101,27 +1101,21 @@ data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
 -- temporary files). Note that extending this is perhaps not worth it and we
 -- should perhaps look at ResourceT if necessary.
 data ResourceSpec m a = ResourceSpec
-  { _rsAcquire :: (MonadIO m, MonadError Error m) =>
-                    m a
+  { _rsAcquire :: m a
  -- ^ acquire a resource (e.g. create temporary file)
-  , _rsFree :: (MonadIO m, MonadError Error m) =>
-                 a -> m ()
+  , _rsFree :: a -> m ()
  -- ^ release a resource (e.g. remove temporary file)
-  , _rsUpdate :: (MonadIO m, MonadError Error m) =>
-                   a -> B.ByteString -> m ()
+  , _rsUpdate :: a -> B.ByteString -> m ()
  -- ^ update the acquired resource with the ByteString obtained from serialising the WireEntity
   }
 
-rsAcquire :: (MonadError Error m, MonadIO m) => Lens' (ResourceSpec m a) (m a)
+rsAcquire :: Lens' (ResourceSpec m a) (m a)
 rsAcquire = lens _rsAcquire (\rs x -> rs {_rsAcquire = x})
 
-rsFree ::
-     (MonadError Error m, MonadIO m) => Lens' (ResourceSpec m a) (a -> m ())
+rsFree :: Lens' (ResourceSpec m a) (a -> m ())
 rsFree = lens _rsFree (\rs x -> rs {_rsFree = x})
 
-rsUpdate ::
-     (MonadError Error m, MonadIO m)
-  => Lens' (ResourceSpec m a) (a -> B.ByteString -> m ())
+rsUpdate :: Lens' (ResourceSpec m a) (a -> B.ByteString -> m ())
 rsUpdate = lens _rsUpdate (\rs x -> rs {_rsUpdate = x})
 
 data MakeProcess
@@ -1173,13 +1167,10 @@ mhKeepTemp = lens _mhKeepTemp (\h x -> h { _mhKeepTemp = x })
 -- resource may or may not be cleaned up after the external command
 -- exits.
 data EntityCommand m a = EntityCommand
-  { _ccAfterExit :: (MonadIO m, MonadError Error m) =>
-                      (ExitCode, Tainted LB.ByteString) -> a -> m T.Text
-  , _ccResource :: (MonadIO m, MonadError Error m) =>
-                     ResourceSpec m a
+  { _ccAfterExit :: (ExitCode, Tainted LB.ByteString) -> a -> m T.Text
+  , _ccResource :: ResourceSpec m a
   , _ccProcessConfig :: B.ByteString -> a -> ProcessConfig () () ()
-  , _ccRunProcess :: (MonadError Error m, MonadIO m) =>
-                       ProcessConfig () () () -> m ( ExitCode
+  , _ccRunProcess :: ProcessConfig () () () -> m ( ExitCode
                                                    , Tainted LB.ByteString)
   , _ccEntity :: B.ByteString
   -- ^ The decoded Entity

@@ -40,7 +40,11 @@ module Purebred.Plugin
   -- ** Hooks
   -- $hooks
   , PreSendHook(..)
+  , getPreSendHook
+
   , ConfigHook(..)
+  , getConfigHook
+
   ) where
 
 import Purebred.Plugin.Internal
