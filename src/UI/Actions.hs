@@ -121,6 +121,7 @@ import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (dialog, dialogSelection, Dialog)
 import Network.Mime (defaultMimeLookup)
+import Data.Kind (Type)
 import Data.Proxy
 import Data.Either (fromRight, isRight)
 import qualified Data.Text as T
@@ -279,7 +280,7 @@ instance HasEditor 'SaveToDiskPathEditor where
 
 -- | Contexts that have a navigable (Brick) list
 class HasList (n :: Name) where
-  type T n :: * -> *
+  type T n :: Type -> Type
   type E n
   list :: Proxy n -> Lens' AppState (L.GenericList Name (T n) (E n))
 
