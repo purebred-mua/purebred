@@ -11,7 +11,7 @@
     overlays = {
       purebred = final: prev: with prev.haskell.lib; {
         # TODO handle different compilers
-        haskellPackages = prev.haskell.packages.ghc884.override {
+        haskellPackages = prev.haskell.packages.ghc901.override {
           overrides = hself: hsuper: {
             purebred = hsuper.callPackage .nix/purebred.nix { };
             purebred-email = hsuper.callPackage .nix/purebred-email.nix { };
