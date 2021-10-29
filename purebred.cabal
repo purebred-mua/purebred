@@ -74,13 +74,13 @@ library
                      , Purebred.LazyVector
                      , Purebred.Tags
                      , Purebred.Parsing.Text
+                     , Purebred.Storage.Notmuch
+                     , Purebred.Storage.Mail
                      , Purebred.System.Process
                      , Purebred.System.Logging
                      , Purebred.System
                      , UI.FileBrowser.Main
                      , UI.FileBrowser.Keybindings
-                     , Storage.Notmuch
-                     , Storage.ParsedMail
                      , Brick.Widgets.StatefulEdit
                      , Purebred
                      , Purebred.Config

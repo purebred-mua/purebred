@@ -173,7 +173,6 @@ import UI.Index.Keybindings
 import UI.Mail.Keybindings
 import UI.Actions
 import UI.Status.Main (rescheduleMailcheck)
-import Storage.Notmuch (getDatabasePath)
 import Purebred.Config
     (defaultConfig, solarizedDark, mailTagAttr, sendmail,
     listStateSelectedAttr, listStateToggledAttr, listStateNewmailAttr)
@@ -182,6 +181,7 @@ import Purebred.Plugin
 import Purebred.Plugin.Internal
   ( configHook, pluginBuiltIn, pluginName, pluginVersion )
 import Purebred.Plugin.TweakConfig
+import Purebred.Storage.Notmuch (getDatabasePath)
 import Purebred.Types.Error
 
 -- re-exports for configuration

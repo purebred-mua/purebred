@@ -47,7 +47,7 @@ import Purebred.Config
   (headerKeyAttr, headerValueAttr, mailViewAttr, listSelectedAttr,
    listAttr, textMatchHighlightAttr, currentTextMatchHighlightAttr,
    defaultAttr, mailbodySourceAttr)
-import Storage.ParsedMail (takeFileName)
+import Purebred.Storage.Mail (takeFileName)
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.

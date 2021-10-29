@@ -34,8 +34,8 @@ import Test.QuickCheck.Instances ()
 import Notmuch (mkTag, tagMaxLen)
 
 import Types
-import Storage.Notmuch (addTags, removeTags, tagItem)
-import Storage.ParsedMail (findMatchingWords)
+import Purebred.Storage.Notmuch (addTags, removeTags, tagItem)
+import Purebred.Storage.Mail (findMatchingWords)
 
 mailTests ::
   TestTree

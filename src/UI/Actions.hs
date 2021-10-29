@@ -158,8 +158,8 @@ import System.Random (getStdRandom, uniform)
 
 import qualified Data.IMF.Text as AddressText
 import Data.MIME
-import qualified Storage.Notmuch as Notmuch
-import Storage.ParsedMail
+import qualified Purebred.Storage.Notmuch as Notmuch
+import Purebred.Storage.Mail
        ( parseMail, toQuotedMail
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
        , removeMatchingWords, findMatchingWords, makeScrollSteps
