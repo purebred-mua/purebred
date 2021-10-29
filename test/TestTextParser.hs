@@ -17,12 +17,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module TestTextParser where
 
-import Purebred.Parsing.Text
-
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit ((@=?), testCase)
 
 import Purebred.Types
+import Purebred.Types.Display
 
 textparserTests ::
   TestTree
