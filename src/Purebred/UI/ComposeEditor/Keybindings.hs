@@ -22,7 +22,7 @@ module Purebred.UI.ComposeEditor.Keybindings where
 import qualified Brick.Types as T
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions
-import Types
+import Purebred.Types
 
 
 composeSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]

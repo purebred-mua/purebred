@@ -22,7 +22,7 @@ import Data.List (isInfixOf)
 
 import qualified Data.Text as T
 import Purebred.Tags
-import Types (TagOp(..), UserMessage(..), Name(..), MessageSeverity(..))
+import Purebred.Types (TagOp(..), UserMessage(..), Name(..), MessageSeverity(..))
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@=?), testCase, assertBool, assertFailure)

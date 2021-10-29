@@ -43,7 +43,7 @@ module Purebred.Plugin.TweakConfig where
 
 import Purebred.Plugin
 import Purebred.Version (version)
-import Types (UserConfiguration)
+import Purebred.Types (UserConfiguration)
 
 tweakConfig
   :: (UserConfiguration -> UserConfiguration)

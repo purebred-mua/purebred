@@ -24,7 +24,7 @@ module Purebred.UI.Utils
 
 import Data.Text (Text, pack)
 
-import Types
+import Purebred.Types
 
 
 -- | Show a descriptive name

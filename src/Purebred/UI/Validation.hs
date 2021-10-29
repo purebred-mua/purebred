@@ -24,7 +24,7 @@ import Control.Concurrent (forkIO, killThread, threadDelay)
 import Control.Lens (Lens', set, view)
 import Brick.BChan (writeBChan)
 
-import Types
+import Purebred.Types
 
 
 -- | Schedules validation by sending a PurebredEvent.

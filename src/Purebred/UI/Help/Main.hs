@@ -34,7 +34,7 @@ import Control.Lens (view, views, ifoldr)
 import qualified Data.Map.Strict as M
 import Data.Text (Text, singleton, intercalate, pack)
 import Purebred.Config (helpTitleAttr, helpKeybindingAttr)
-import Types
+import Purebred.Types
 import Purebred.UI.Utils (titleize, Titleize)
 
 data KeybindingHelp =

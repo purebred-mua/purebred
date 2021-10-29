@@ -21,7 +21,7 @@ module Purebred.UI.FileBrowser.Keybindings where
 
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions
-import Types
+import Purebred.Types
 
 -- | Default Keybindings
 fileBrowserKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]

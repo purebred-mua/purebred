@@ -56,7 +56,7 @@ import Purebred.UI.ComposeEditor.Keybindings
         composeToKeybindings, composeSubjectKeybindings, confirmKeybindings,
         composeCcKeybindings, composeBccKeybindings)
 
-import Types
+import Purebred.Types
 import Purebred.Plugin.Internal
 import qualified Purebred.Plugin.UserAgent
 import Purebred.Storage.Notmuch (getDatabasePath)

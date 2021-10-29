@@ -39,7 +39,7 @@ import qualified Data.Text.Encoding as T
 
 import Notmuch (mkTag)
 
-import Types
+import Purebred.Types
 import Purebred.UI.Notifications (makeWarning)
 
 tagOp :: Parser TagOp

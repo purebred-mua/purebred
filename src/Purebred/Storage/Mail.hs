@@ -55,7 +55,7 @@ import Prelude hiding (Word)
 
 import Data.MIME
 
-import Types
+import Purebred.Types
 import Purebred.System (tryIO)
 import Purebred.Types.Error
 import Purebred.Types.IFC (sanitiseText)

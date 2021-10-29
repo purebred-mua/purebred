@@ -32,7 +32,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Data.Text as T
 import Data.Proxy
 import Control.Lens (view)
-import Types
+import Purebred.Types
 import Purebred.UI.Views (focusedViewWidget)
 import Purebred.UI.Actions (HasName(..), HasEditor(..))
 import Purebred.Config

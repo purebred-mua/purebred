@@ -124,14 +124,14 @@ To avoid this, don't use stack.  But if you insist, you can run
 -}
 module Purebred (
   purebred,
-  module Types,
+  module Purebred.Plugin,
+  module Purebred.Plugin.TweakConfig,
+  module Purebred.Types,
+  module Purebred.Types.Error,
   module Purebred.UI.Actions,
   module Purebred.UI.Index.Keybindings,
   module Purebred.UI.Mail.Keybindings,
   module Graphics.Vty.Attributes,
-  module Purebred.Plugin,
-  module Purebred.Plugin.TweakConfig,
-  module Purebred.Types.Error,
   Event(..),
   Key(..),
   Modifier(..),
@@ -176,7 +176,7 @@ import Purebred.UI.Status.Main (rescheduleMailcheck)
 import Purebred.Config
     (defaultConfig, solarizedDark, mailTagAttr, sendmail,
     listStateSelectedAttr, listStateToggledAttr, listStateNewmailAttr)
-import Types
+import Purebred.Types
 import Purebred.Plugin
 import Purebred.Plugin.Internal
   ( configHook, pluginBuiltIn, pluginName, pluginVersion )

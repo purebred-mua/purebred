@@ -15,7 +15,7 @@ import Control.Monad ((>=>))
 import Purebred.UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
 import Purebred.UI.App (initialState)
 import Control.Lens (set, view, ifoldr, traversed, toListOf, ix)
-import Types
+import Purebred.Types
 
 
 main :: IO ()

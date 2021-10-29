@@ -41,7 +41,7 @@ import Control.Lens (view, set, assign)
 import qualified Data.Text as T
 import Control.Monad.State
 
-import Types
+import Purebred.Types
 import Purebred.Types.Error
 
 {- $overview

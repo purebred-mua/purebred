@@ -23,7 +23,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import qualified Data.Vector as Vector
 
-import Types
+import Purebred.Types
 import Purebred.UI.Views (swapWidget)
 
 

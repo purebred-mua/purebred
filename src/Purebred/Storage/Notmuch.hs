@@ -69,7 +69,7 @@ import Control.Lens (view, over, set, firstOf, folded, Lens')
 
 import qualified Notmuch
 
-import Types
+import Purebred.Types
 import Purebred.System.Process (readProcess, proc)
 import Purebred.System (tryIO)
 import Purebred.Types.Error

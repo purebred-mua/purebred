@@ -24,7 +24,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.FileBrowser as FB
 import Control.Lens.Getter (view)
 import Purebred.UI.Views (focusedViewWidget)
-import Types
+import Purebred.Types
 import Purebred.UI.Widgets (editEditorL)
 
 renderFileBrowser :: AppState -> Widget Name

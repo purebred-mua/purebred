@@ -26,7 +26,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE CPP #-}
 
-module Types
+module Purebred.Types
   ( -- * Application state
     AppState(..)
   , asConfig

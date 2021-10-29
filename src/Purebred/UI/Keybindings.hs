@@ -65,7 +65,7 @@ import Prelude hiding (readFile, unlines)
 
 import Data.IMF.Text (mailboxList, addressList)
 
-import Types
+import Purebred.Types
 import Purebred.Tags (parseTagOps)
 import Purebred.Parsing.Text (niceEndOfInput)
 import Purebred.UI.Validation (dispatchValidation)

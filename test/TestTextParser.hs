@@ -22,7 +22,7 @@ import Purebred.Parsing.Text
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit ((@=?), testCase)
 
-import Types
+import Purebred.Types
 
 textparserTests ::
   TestTree

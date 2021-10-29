@@ -20,7 +20,7 @@
 module Purebred.UI.GatherHeaders.Keybindings where
 
 import qualified Graphics.Vty as V
-import Types
+import Purebred.Types
 import Purebred.UI.Actions
 import qualified Brick.Types as T
 

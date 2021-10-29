@@ -40,7 +40,7 @@ import Data.Text.Zipper (cursorPosition)
 import Purebred.UI.Draw.Main (fillLine)
 import Purebred.UI.Utils (titleize)
 import Purebred.UI.Views (focusedViewWidget, focusedViewName)
-import Types
+import Purebred.Types
 import Purebred.Config
   ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )
 import qualified Purebred.Storage.Notmuch as Notmuch

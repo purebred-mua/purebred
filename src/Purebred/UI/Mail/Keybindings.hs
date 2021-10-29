@@ -21,7 +21,7 @@ module Purebred.UI.Mail.Keybindings where
 
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions
-import Types
+import Purebred.Types
 import qualified Brick.Types as T
 
 displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
