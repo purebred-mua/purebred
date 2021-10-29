@@ -21,7 +21,7 @@
 -- even though Purebred exposes the functionality. Labeling threads
 -- just means labelling all mails in a thread.
 --
-module Purebred.Tags
+module Purebred.Storage.Tags
   ( parseTag
   , parseTagOps
   ) where

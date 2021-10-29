@@ -164,16 +164,16 @@ import Purebred.Storage.Mail
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
        , removeMatchingWords, findMatchingWords, makeScrollSteps
        , writeEntityToPath)
-import Purebred.Types
 import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.Events (nextGeneration)
 import Purebred.Plugin.Internal
-import Purebred.Tags (parseTagOps)
-import Purebred.Types.Error
+import Purebred.Storage.Tags (parseTagOps)
 import Purebred.System (tryIO)
 import Purebred.System.Process
+import Purebred.Types
+import Purebred.Types.Error
 import Purebred.UI.Notifications
        (setUserMessage, makeWarning, showError, showWarning, showInfo
        , showUserMessage)
