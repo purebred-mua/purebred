@@ -54,13 +54,13 @@ library
   exposed-modules:     Purebred
                      , Purebred.Events
                      , Purebred.LazyVector
-                     , Purebred.Tags
                      , Purebred.Parsing.Text
                      , Purebred.Config
                      , Purebred.Plugin
                      , Purebred.Plugin.TweakConfig
                      , Purebred.Storage.Notmuch
                      , Purebred.Storage.Mail
+                     , Purebred.Storage.Tags
                      , Purebred.System
                      , Purebred.System.Process
                      , Purebred.System.Logging
