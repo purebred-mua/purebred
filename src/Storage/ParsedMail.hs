@@ -55,10 +55,10 @@ import Prelude hiding (Word)
 
 import Data.MIME
 
-import Error
 import Storage.Notmuch (mailFilepath)
 import Types
 import Purebred.System (tryIO)
+import Purebred.Types.Error
 import Purebred.Types.IFC (sanitiseText)
 import Purebred.Parsing.Text (parseMailbody)
 import Purebred.System.Process

@@ -24,7 +24,7 @@ import Control.Exception (IOException, try)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
-import Error
+import Purebred.Types.Error
 
 -- | "Try" a computation but return a Purebred error in the exception case
 tryIO :: (MonadError Error m, MonadIO m) => IO a -> m a

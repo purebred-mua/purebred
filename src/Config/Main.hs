@@ -56,12 +56,12 @@ import UI.ComposeEditor.Keybindings
         composeToKeybindings, composeSubjectKeybindings, confirmKeybindings,
         composeCcKeybindings, composeBccKeybindings)
 
-import Error
 import Types
 import Purebred.Plugin.Internal
 import qualified Purebred.Plugin.UserAgent
 import Purebred.System.Process
 import Purebred.Types.IFC (sanitiseText, untaint)
+import Purebred.Types.Error
 import Storage.Notmuch (getDatabasePath)
 
 -- | Invoke a @sendmail(1)@-compatible program to send the email

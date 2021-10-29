@@ -42,7 +42,7 @@ import qualified Data.Text as T
 import Control.Monad.State
 
 import Types
-import Error
+import Purebred.Types.Error
 
 {- $overview
 Notifications are one-line messages shown to the user. That can be
