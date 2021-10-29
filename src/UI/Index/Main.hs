@@ -37,7 +37,7 @@ import UI.Draw.Main (fillLine)
 import UI.Views (focusedViewWidget)
 import Storage.Notmuch (hasTag, ManageTags)
 import Types
-import Config.Main
+import Purebred.Config
   (listAttr, listStateNewmailAttr, listStateSelectedAttr,
   listStateToggledAttr, mailAuthorsAttr, mailTagAttr)
 

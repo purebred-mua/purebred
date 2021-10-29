@@ -174,7 +174,7 @@ import UI.Mail.Keybindings
 import UI.Actions
 import UI.Status.Main (rescheduleMailcheck)
 import Storage.Notmuch (getDatabasePath)
-import Config.Main
+import Purebred.Config
     (defaultConfig, solarizedDark, mailTagAttr, sendmail,
     listStateSelectedAttr, listStateToggledAttr, listStateNewmailAttr)
 import Types

@@ -41,7 +41,8 @@ import UI.Draw.Main (fillLine)
 import UI.Utils (titleize)
 import UI.Views (focusedViewWidget, focusedViewName)
 import Types
-import Config.Main (statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr)
+import Purebred.Config
+  ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )
 import qualified Storage.Notmuch as Notmuch
 import Brick.Widgets.StatefulEdit (editEditorL)
 

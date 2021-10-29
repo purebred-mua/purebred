@@ -15,7 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {-# LANGUAGE OverloadedStrings #-}
 
-module Config.Main where
+module Purebred.Config where
 
 import qualified Brick.AttrMap as A
 import qualified Brick.Widgets.List as L
