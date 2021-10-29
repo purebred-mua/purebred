@@ -33,7 +33,7 @@ import Control.Monad.State
 
 import Data.MIME (MIMEMessage)
 
-import Types (AppState, InternalConfiguration, UserConfiguration)
+import Purebred.Types (AppState, InternalConfiguration, UserConfiguration)
 
 type Pure = Applicative
 type CanIO = MonadIO

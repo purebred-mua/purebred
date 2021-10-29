@@ -34,7 +34,7 @@ import Prelude hiding (splitAt)
 
 import Control.Lens
 import Brick.Focus (focusGetCurrent)
-import Types
+import Purebred.Types
 
 import Data.Foldable (toList)
 

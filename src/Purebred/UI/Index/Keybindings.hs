@@ -21,7 +21,7 @@ module Purebred.UI.Index.Keybindings where
 
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions
-import Types
+import Purebred.Types
 
 browseThreadsKeybindings :: [Keybinding 'Threads 'ListOfThreads]
 browseThreadsKeybindings =

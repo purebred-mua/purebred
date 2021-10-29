@@ -25,7 +25,7 @@ module Purebred.Events
   , nextGeneration
   ) where
 
-import Types
+import Purebred.Types
 
 firstGeneration :: Generation
 firstGeneration = Generation 0

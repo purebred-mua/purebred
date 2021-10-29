@@ -62,7 +62,7 @@ import Data.Time.Format (formatTime, defaultTimeLocale)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
-import Types
+import Purebred.Types
 import Purebred.System (tryIO, exceptionToError)
 import Purebred.Types.Error
 import Purebred.Types.IFC

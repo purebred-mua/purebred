@@ -28,7 +28,7 @@ import qualified Data.Text as T
 import Prelude hiding (Word)
 import Control.Lens
 
-import Types
+import Purebred.Types
 
 niceEndOfInput :: Parser ()
 niceEndOfInput = endOfInput <|> p

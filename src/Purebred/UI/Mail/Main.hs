@@ -40,7 +40,7 @@ import Prelude hiding (Word)
 
 import Data.MIME
 
-import Types
+import Purebred.Types
 import Purebred.UI.Draw.Main (attachmentsHeader)
 import Purebred.UI.Views (focusedViewWidget)
 import Purebred.Config

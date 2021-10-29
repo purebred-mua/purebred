@@ -164,7 +164,7 @@ import Purebred.Storage.Mail
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
        , removeMatchingWords, findMatchingWords, makeScrollSteps
        , writeEntityToPath)
-import Types
+import Purebred.Types
 import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)

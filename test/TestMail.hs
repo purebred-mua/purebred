@@ -33,7 +33,7 @@ import Test.QuickCheck.Instances ()
 
 import Notmuch (mkTag, tagMaxLen)
 
-import Types
+import Purebred.Types
 import Purebred.Storage.Notmuch (addTags, removeTags, tagItem)
 import Purebred.Storage.Mail (findMatchingWords)
 

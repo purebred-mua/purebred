@@ -21,7 +21,7 @@ module Purebred.UI.Help.Keybindings where
 
 import Graphics.Vty (Event (..), Key (..))
 import Purebred.UI.Actions
-import Types
+import Purebred.Types
 
 -- | Default Keybindings
 helpKeybindings :: [Keybinding 'Help 'ScrollingHelpView]

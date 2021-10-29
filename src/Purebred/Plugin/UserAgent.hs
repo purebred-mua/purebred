@@ -26,7 +26,7 @@ import Data.MIME (headerText)
 
 import Purebred.Plugin
 import Purebred.Version (version, userAgent)
-import Types
+import Purebred.Types
 
 plugin :: Plugin (PreSendHook CanReadConfig)
 plugin = Plugin "UserAgent" version (PreSendHook hook)
