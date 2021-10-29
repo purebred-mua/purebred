@@ -18,7 +18,7 @@
 -- Brick.Widgets.Edit. However it can be used to store it's state in
 -- order to roll it back. This is useful if newly changed editor state is
 -- to be canceled and to be rolled back to the previous state.
-module Brick.Widgets.StatefulEdit
+module Purebred.UI.Widgets
   ( StatefulEditor(..)
   , editStateL
   , editEditorL

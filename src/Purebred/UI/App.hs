@@ -52,7 +52,7 @@ import Purebred.UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderCon
 import Purebred.UI.Draw.Main (renderEditorWithLabel)
 import Purebred.Events (firstGeneration)
 import Types
-import Brick.Widgets.StatefulEdit (StatefulEditor(..))
+import Purebred.UI.Widgets (StatefulEditor(..))
 
 -- * Synopsis
 --

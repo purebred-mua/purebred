@@ -300,7 +300,7 @@ import qualified Data.Vector as V
 import Notmuch (Tag)
 import Data.MIME
 
-import Brick.Widgets.StatefulEdit (StatefulEditor(..))
+import Purebred.UI.Widgets (StatefulEditor(..))
 import {-# SOURCE #-} Purebred.Plugin.Internal
 import Purebred.Types.Error
 import Purebred.Types.IFC (Tainted)

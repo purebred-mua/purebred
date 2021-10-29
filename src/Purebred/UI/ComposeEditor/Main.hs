@@ -42,7 +42,7 @@ import Purebred.UI.Views (focusedViewWidget)
 import Purebred.UI.Draw.Main (attachmentsHeader)
 import Purebred.UI.Mail.Main (renderPart)
 import Types
-import Brick.Widgets.StatefulEdit (editEditorL)
+import Purebred.UI.Widgets (editEditorL)
 
 attachmentsEditor :: AppState -> Widget Name
 attachmentsEditor s =

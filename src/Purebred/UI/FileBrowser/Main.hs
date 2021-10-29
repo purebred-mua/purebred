@@ -25,7 +25,7 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Control.Lens.Getter (view)
 import Purebred.UI.Views (focusedViewWidget)
 import Types
-import Brick.Widgets.StatefulEdit (editEditorL)
+import Purebred.UI.Widgets (editEditorL)
 
 renderFileBrowser :: AppState -> Widget Name
 renderFileBrowser s = FB.renderFileBrowser True $ view (asFileBrowser . fbEntries) s
