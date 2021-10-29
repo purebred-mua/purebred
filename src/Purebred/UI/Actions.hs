@@ -180,7 +180,7 @@ import Purebred.UI.Notifications
 import Purebred.UI.Widgets
        (StatefulEditor(..), editEditorL, revertEditorState, saveEditorState)
 #if defined LAZYVECTOR
-import Purebred.LazyVector (V)
+import Purebred.Types.LazyVector (V)
 #endif
 
 

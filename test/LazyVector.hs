@@ -23,7 +23,7 @@ import Data.Foldable (toList)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import Purebred.LazyVector
+import Purebred.Types.LazyVector
 
 tests :: TestTree
 tests = testGroup "LazyVector tests"

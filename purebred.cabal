@@ -53,7 +53,6 @@ library
   default-language:    Haskell2010
   exposed-modules:     Purebred
                      , Purebred.Events
-                     , Purebred.LazyVector
                      , Purebred.Parsing.Text
                      , Purebred.Config
                      , Purebred.Plugin
@@ -66,6 +65,7 @@ library
                      , Purebred.System.Logging
                      , Purebred.Types
                      , Purebred.Types.Error
+                     , Purebred.Types.LazyVector
                      , Purebred.UI.Actions
                      , Purebred.UI.App
                      , Purebred.UI.ComposeEditor.Keybindings

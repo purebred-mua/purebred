@@ -77,7 +77,7 @@ import Purebred.Types.IFC (sanitiseText, untaint)
 
 #if defined LAZYVECTOR
 import System.IO.Unsafe (unsafeInterleaveIO)
-import Purebred.LazyVector
+import Purebred.Types.LazyVector
 #endif
 
 {- $synopsis
