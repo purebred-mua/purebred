@@ -16,7 +16,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module UI.Mail.Main
+module Purebred.UI.Mail.Main
   ( renderMailView
   , renderAttachmentsList
   , renderPart
@@ -41,8 +41,8 @@ import Prelude hiding (Word)
 import Data.MIME
 
 import Types
-import UI.Draw.Main (attachmentsHeader)
-import UI.Views (focusedViewWidget)
+import Purebred.UI.Draw.Main (attachmentsHeader)
+import Purebred.UI.Views (focusedViewWidget)
 import Purebred.Config
   (headerKeyAttr, headerValueAttr, mailViewAttr, listSelectedAttr,
    listAttr, textMatchHighlightAttr, currentTextMatchHighlightAttr,

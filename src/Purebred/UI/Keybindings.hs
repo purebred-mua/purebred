@@ -16,7 +16,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 
-module UI.Keybindings (
+module Purebred.UI.Keybindings (
   -- * API
   dispatch
   -- * Event Handlers
@@ -68,9 +68,9 @@ import Data.IMF.Text (mailboxList, addressList)
 import Types
 import Purebred.Tags (parseTagOps)
 import Purebred.Parsing.Text (niceEndOfInput)
-import UI.Validation (dispatchValidation)
+import Purebred.UI.Validation (dispatchValidation)
 import Brick.Widgets.StatefulEdit (editEditorL)
-import UI.Notifications (makeWarning)
+import Purebred.UI.Notifications (makeWarning)
 
 -- | Purebreds event handler. Either we can look up a function
 -- declared for the key press or send the key press to the Brick widget

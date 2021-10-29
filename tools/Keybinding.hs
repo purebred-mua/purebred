@@ -12,8 +12,8 @@ import qualified Data.Text.Lazy as LT
 import qualified Control.DeepSeq
 import Purebred.Config (defaultConfig)
 import Control.Monad ((>=>))
-import UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
-import UI.App (initialState)
+import Purebred.UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
+import Purebred.UI.App (initialState)
 import Control.Lens (set, view, ifoldr, traversed, toListOf, ix)
 import Types
 

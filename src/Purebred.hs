@@ -125,9 +125,9 @@ To avoid this, don't use stack.  But if you insist, you can run
 module Purebred (
   purebred,
   module Types,
-  module UI.Actions,
-  module UI.Index.Keybindings,
-  module UI.Mail.Keybindings,
+  module Purebred.UI.Actions,
+  module Purebred.UI.Index.Keybindings,
+  module Purebred.UI.Mail.Keybindings,
   module Graphics.Vty.Attributes,
   module Purebred.Plugin,
   module Purebred.Plugin.TweakConfig,
@@ -154,7 +154,7 @@ module Purebred (
   Domain(..),
   sendmail) where
 
-import UI.App (theApp, initialState)
+import Purebred.UI.App (theApp, initialState)
 
 import Control.Concurrent (rtsSupportsBoundThreads)
 import Purebred.System.Logging (setupLogsink)
@@ -169,10 +169,10 @@ import System.FilePath.Posix ((</>))
 import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
 
-import UI.Index.Keybindings
-import UI.Mail.Keybindings
-import UI.Actions
-import UI.Status.Main (rescheduleMailcheck)
+import Purebred.UI.Index.Keybindings
+import Purebred.UI.Mail.Keybindings
+import Purebred.UI.Actions
+import Purebred.UI.Status.Main (rescheduleMailcheck)
 import Purebred.Config
     (defaultConfig, solarizedDark, mailTagAttr, sendmail,
     listStateSelectedAttr, listStateToggledAttr, listStateNewmailAttr)

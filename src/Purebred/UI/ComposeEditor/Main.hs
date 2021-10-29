@@ -17,7 +17,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module UI.ComposeEditor.Main
+module Purebred.UI.ComposeEditor.Main
   ( attachmentsEditor
   , renderPart
   , drawHeaders
@@ -38,9 +38,9 @@ import Data.Text.Zipper (currentLine)
 
 import Data.MIME (headers)
 
-import UI.Views (focusedViewWidget)
-import UI.Draw.Main (attachmentsHeader)
-import UI.Mail.Main (renderPart)
+import Purebred.UI.Views (focusedViewWidget)
+import Purebred.UI.Draw.Main (attachmentsHeader)
+import Purebred.UI.Mail.Main (renderPart)
 import Types
 import Brick.Widgets.StatefulEdit (editEditorL)
 

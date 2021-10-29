@@ -27,7 +27,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE CPP #-}
 
-module UI.Actions (
+module Purebred.UI.Actions (
   -- * Overview
   -- $overview
 
@@ -165,7 +165,7 @@ import Purebred.Storage.Mail
        , removeMatchingWords, findMatchingWords, makeScrollSteps
        , writeEntityToPath)
 import Types
-import UI.Views
+import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.Events (nextGeneration)
@@ -174,7 +174,7 @@ import Purebred.Tags (parseTagOps)
 import Purebred.Types.Error
 import Purebred.System (tryIO)
 import Purebred.System.Process
-import UI.Notifications
+import Purebred.UI.Notifications
        (setUserMessage, makeWarning, showError, showWarning, showInfo
        , showUserMessage)
 import Brick.Widgets.StatefulEdit

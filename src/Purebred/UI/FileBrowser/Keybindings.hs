@@ -17,10 +17,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module UI.FileBrowser.Keybindings where
+module Purebred.UI.FileBrowser.Keybindings where
 
 import qualified Graphics.Vty as V
-import UI.Actions
+import Purebred.UI.Actions
 import Types
 
 -- | Default Keybindings

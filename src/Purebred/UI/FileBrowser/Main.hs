@@ -15,7 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {-# OPTIONS_HADDOCK hide #-}
 {-# LANGUAGE OverloadedStrings #-}
-module UI.FileBrowser.Main
+module Purebred.UI.FileBrowser.Main
        (renderFileBrowser, renderFileBrowserSearchPathEditor) where
 
 import Brick.Types (Widget)
@@ -23,7 +23,7 @@ import Brick.Widgets.Core (str, txt, (<+>), vLimit)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.FileBrowser as FB
 import Control.Lens.Getter (view)
-import UI.Views (focusedViewWidget)
+import Purebred.UI.Views (focusedViewWidget)
 import Types
 import Brick.Widgets.StatefulEdit (editEditorL)
 

@@ -16,7 +16,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module UI.Index.Main (
+module Purebred.UI.Index.Main (
     renderListOfThreads
   , renderListOfMails) where
 
@@ -33,8 +33,8 @@ import Data.Text as T (Text, pack, unpack, unwords)
 
 import Notmuch (getTag)
 
-import UI.Draw.Main (fillLine)
-import UI.Views (focusedViewWidget)
+import Purebred.UI.Draw.Main (fillLine)
+import Purebred.UI.Views (focusedViewWidget)
 import Purebred.Storage.Notmuch (hasTag, ManageTags)
 import Types
 import Purebred.Config
