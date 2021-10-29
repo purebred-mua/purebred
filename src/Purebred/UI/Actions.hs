@@ -177,7 +177,7 @@ import Purebred.System.Process
 import Purebred.UI.Notifications
        (setUserMessage, makeWarning, showError, showWarning, showInfo
        , showUserMessage)
-import Brick.Widgets.StatefulEdit
+import Purebred.UI.Widgets
        (StatefulEditor(..), editEditorL, revertEditorState, saveEditorState)
 #if defined LAZYVECTOR
 import Purebred.LazyVector (V)

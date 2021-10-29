@@ -44,7 +44,7 @@ import Types
 import Purebred.Config
   ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )
 import qualified Purebred.Storage.Notmuch as Notmuch
-import Brick.Widgets.StatefulEdit (editEditorL)
+import Purebred.UI.Widgets (editEditorL)
 
 checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()
 checkForNewMail chan dbpath query delay = do

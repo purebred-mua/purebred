@@ -69,7 +69,7 @@ import Types
 import Purebred.Tags (parseTagOps)
 import Purebred.Parsing.Text (niceEndOfInput)
 import Purebred.UI.Validation (dispatchValidation)
-import Brick.Widgets.StatefulEdit (editEditorL)
+import Purebred.UI.Widgets (editEditorL)
 import Purebred.UI.Notifications (makeWarning)
 
 -- | Purebreds event handler. Either we can look up a function
