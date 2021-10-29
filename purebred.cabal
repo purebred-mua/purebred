@@ -52,7 +52,6 @@ library
   ghc-options:         -Wall
   default-language:    Haskell2010
   exposed-modules:     Purebred
-                     , Purebred.Events
                      , Purebred.Parsing.Text
                      , Purebred.Config
                      , Purebred.Plugin
