@@ -66,7 +66,7 @@ import Types
 import Purebred.System (tryIO, exceptionToError)
 import Purebred.Types.Error
 import Purebred.Types.IFC
-import UI.Notifications (setUserMessage, makeError)
+import Purebred.UI.Notifications (setUserMessage, makeError)
 
 
 -- | Handler to handle exit failures and possibly showing an error in the UI.

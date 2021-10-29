@@ -17,10 +17,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module UI.Mail.Keybindings where
+module Purebred.UI.Mail.Keybindings where
 
 import qualified Graphics.Vty as V
-import UI.Actions
+import Purebred.UI.Actions
 import Types
 import qualified Brick.Types as T
 

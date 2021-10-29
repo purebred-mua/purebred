@@ -17,11 +17,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module UI.ComposeEditor.Keybindings where
+module Purebred.UI.ComposeEditor.Keybindings where
 
 import qualified Brick.Types as T
 import qualified Graphics.Vty as V
-import UI.Actions
+import Purebred.UI.Actions
 import Types
 
 

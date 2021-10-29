@@ -17,10 +17,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module UI.Index.Keybindings where
+module Purebred.UI.Index.Keybindings where
 
 import qualified Graphics.Vty as V
-import UI.Actions
+import Purebred.UI.Actions
 import Types
 
 browseThreadsKeybindings :: [Keybinding 'Threads 'ListOfThreads]

@@ -19,7 +19,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 -- | Module holding generic widgets.
-module UI.Draw.Main
+module Purebred.UI.Draw.Main
   ( fillLine
   , renderEditorWithLabel
   , attachmentsHeader
@@ -33,11 +33,11 @@ import qualified Data.Text as T
 import Data.Proxy
 import Control.Lens (view)
 import Types
-import UI.Views (focusedViewWidget)
-import UI.Actions (HasName(..), HasEditor(..))
+import Purebred.UI.Views (focusedViewWidget)
+import Purebred.UI.Actions (HasName(..), HasEditor(..))
 import Purebred.Config
   (editorLabelAttr, editorAttr, editorFocusedAttr, statusbarAttr, editorErrorAttr)
-import UI.Notifications (hasError)
+import Purebred.UI.Notifications (hasError)
 
 -- | Fills the entire line with spaces. This can be used to draw a
 -- visual bar when an 'AttrName' with a background colour is set.

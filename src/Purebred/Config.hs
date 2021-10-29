@@ -37,21 +37,21 @@ import Control.Lens (set)
 
 import Data.MIME (contentTypeTextPlain, defaultCharsets, matchContentType)
 
-import UI.FileBrowser.Keybindings
+import Purebred.UI.FileBrowser.Keybindings
        (fileBrowserKeybindings, manageSearchPathKeybindings)
-import UI.GatherHeaders.Keybindings
+import Purebred.UI.GatherHeaders.Keybindings
        (gatherFromKeybindings,
         gatherToKeybindings,
         gatherSubjectKeybindings)
-import UI.Index.Keybindings
+import Purebred.UI.Index.Keybindings
        (browseThreadsKeybindings, searchThreadsKeybindings, manageThreadTagsKeybindings)
-import UI.Mail.Keybindings
+import Purebred.UI.Mail.Keybindings
        (displayMailKeybindings, mailViewManageMailTagsKeybindings,
         mailAttachmentsKeybindings, openWithKeybindings,
         pipeToKeybindings, findWordEditorKeybindings,
         saveToDiskKeybindings, mailviewComposeToKeybindings)
-import UI.Help.Keybindings (helpKeybindings)
-import UI.ComposeEditor.Keybindings
+import Purebred.UI.Help.Keybindings (helpKeybindings)
+import Purebred.UI.ComposeEditor.Keybindings
        (listOfAttachmentsKeybindings, composeFromKeybindings,
         composeToKeybindings, composeSubjectKeybindings, confirmKeybindings,
         composeCcKeybindings, composeBccKeybindings)

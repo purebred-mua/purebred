@@ -18,7 +18,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module UI.App where
+module Purebred.UI.App where
 
 import qualified Brick.Main as M
 import Brick.Types (Widget)
@@ -36,20 +36,20 @@ import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
 import Data.Proxy
 
-import UI.Keybindings
-import UI.Index.Main
-import UI.Actions (applySearch, initialCompose)
-import UI.FileBrowser.Main
+import Purebred.UI.Keybindings
+import Purebred.UI.Index.Main
+import Purebred.UI.Actions (applySearch, initialCompose)
+import Purebred.UI.FileBrowser.Main
        (renderFileBrowser, renderFileBrowserSearchPathEditor)
-import UI.Mail.Main (renderAttachmentsList, renderMailView)
-import UI.Help.Main (renderHelp)
-import UI.Status.Main (statusbar)
-import UI.Views
+import Purebred.UI.Mail.Main (renderAttachmentsList, renderMailView)
+import Purebred.UI.Help.Main (renderHelp)
+import Purebred.UI.Status.Main (statusbar)
+import Purebred.UI.Views
        (indexView, mailView, composeView, helpView,
         filebrowserView, focusedViewWidget, visibleViewWidgets,
         focusedViewName)
-import UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
-import UI.Draw.Main (renderEditorWithLabel)
+import Purebred.UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
+import Purebred.UI.Draw.Main (renderEditorWithLabel)
 import Purebred.Events (firstGeneration)
 import Types
 import Brick.Widgets.StatefulEdit (StatefulEditor(..))
@@ -65,7 +65,7 @@ import Brick.Widgets.StatefulEdit (StatefulEditor(..))
 -- Purebred uses Brick widgets, but in order to make Purebred
 -- configurable, we've made changes to how we use Brick. The single
 -- difference to Brick is found on how we process keys (see
--- 'UI.Keybindings'). Brick handles keys directly in the
+-- 'Purebred.UI.Keybindings'). Brick handles keys directly in the
 -- widget. Purebred instead looks up keybindings first. If nothing
 -- matches, the key is forwarded to the widget.
 

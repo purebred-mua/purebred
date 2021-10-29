@@ -16,7 +16,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 {- | Module providing asynchronous validation for input from widgets -} 
-module UI.Validation
+module Purebred.UI.Validation
   ( dispatchValidation
   ) where
 

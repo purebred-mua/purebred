@@ -17,7 +17,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Utility functions for UI
-module UI.Utils
+module Purebred.UI.Utils
   ( titleize
   , Titleize
   ) where

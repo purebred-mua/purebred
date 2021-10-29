@@ -24,7 +24,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import qualified Data.Vector as Vector
 
 import Types
-import UI.Views (swapWidget)
+import Purebred.UI.Views (swapWidget)
 
 
 actionTests ::

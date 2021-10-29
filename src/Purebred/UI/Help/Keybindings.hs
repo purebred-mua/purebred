@@ -17,10 +17,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module UI.Help.Keybindings where
+module Purebred.UI.Help.Keybindings where
 
 import Graphics.Vty (Event (..), Key (..))
-import UI.Actions
+import Purebred.UI.Actions
 import Types
 
 -- | Default Keybindings

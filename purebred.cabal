@@ -51,42 +51,42 @@ library
   hs-source-dirs:      src
   ghc-options:         -Wall
   default-language:    Haskell2010
-  exposed-modules:     UI.App
+  exposed-modules:     Brick.Widgets.StatefulEdit
                      , Types
-                     , UI.Keybindings
-                     , UI.Actions
-                     , UI.Draw.Main
-                     , UI.Index.Keybindings
-                     , UI.Index.Main
-                     , UI.Status.Main
-                     , UI.ComposeEditor.Main
-                     , UI.ComposeEditor.Keybindings
-                     , UI.GatherHeaders.Keybindings
-                     , UI.Mail.Main
-                     , UI.Mail.Keybindings
-                     , UI.Notifications
-                     , UI.Help.Main
-                     , UI.Help.Keybindings
-                     , UI.Utils
-                     , UI.Views
-                     , UI.Validation
                      , Purebred.Events
                      , Purebred.LazyVector
                      , Purebred.Tags
                      , Purebred.Parsing.Text
-                     , Purebred.Storage.Notmuch
-                     , Purebred.Storage.Mail
-                     , Purebred.System.Process
-                     , Purebred.System.Logging
-                     , Purebred.System
-                     , UI.FileBrowser.Main
-                     , UI.FileBrowser.Keybindings
-                     , Brick.Widgets.StatefulEdit
                      , Purebred
                      , Purebred.Config
-                     , Purebred.Types.Error
                      , Purebred.Plugin
                      , Purebred.Plugin.TweakConfig
+                     , Purebred.Storage.Notmuch
+                     , Purebred.Storage.Mail
+                     , Purebred.System
+                     , Purebred.System.Process
+                     , Purebred.System.Logging
+                     , Purebred.Types.Error
+                     , Purebred.UI.Actions
+                     , Purebred.UI.App
+                     , Purebred.UI.ComposeEditor.Keybindings
+                     , Purebred.UI.ComposeEditor.Main
+                     , Purebred.UI.Draw.Main
+                     , Purebred.UI.FileBrowser.Keybindings
+                     , Purebred.UI.FileBrowser.Main
+                     , Purebred.UI.GatherHeaders.Keybindings
+                     , Purebred.UI.Help.Keybindings
+                     , Purebred.UI.Help.Main
+                     , Purebred.UI.Index.Keybindings
+                     , Purebred.UI.Index.Main
+                     , Purebred.UI.Keybindings
+                     , Purebred.UI.Mail.Keybindings
+                     , Purebred.UI.Mail.Main
+                     , Purebred.UI.Notifications
+                     , Purebred.UI.Status.Main
+                     , Purebred.UI.Utils
+                     , Purebred.UI.Validation
+                     , Purebred.UI.Views
                      , Purebred.Version
   other-modules:       Paths_purebred
                      , Purebred.Types.IFC

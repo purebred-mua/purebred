@@ -15,7 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {-# OPTIONS_HADDOCK hide #-}
 {-# LANGUAGE OverloadedStrings #-}
-module UI.Help.Main
+module Purebred.UI.Help.Main
   ( renderHelp
   , createKeybindingIndex
   , HelpIndex
@@ -35,7 +35,7 @@ import qualified Data.Map.Strict as M
 import Data.Text (Text, singleton, intercalate, pack)
 import Purebred.Config (helpTitleAttr, helpKeybindingAttr)
 import Types
-import UI.Utils (titleize, Titleize)
+import Purebred.UI.Utils (titleize, Titleize)
 
 data KeybindingHelp =
   KeybindingHelp

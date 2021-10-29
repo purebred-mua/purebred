@@ -18,7 +18,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module UI.Status.Main where
+module Purebred.UI.Status.Main where
 
 import Brick.BChan (BChan, writeBChan)
 import Brick.Types (Widget, Padding(..))
@@ -37,9 +37,9 @@ import Control.Concurrent (forkIO, threadDelay)
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
 
-import UI.Draw.Main (fillLine)
-import UI.Utils (titleize)
-import UI.Views (focusedViewWidget, focusedViewName)
+import Purebred.UI.Draw.Main (fillLine)
+import Purebred.UI.Utils (titleize)
+import Purebred.UI.Views (focusedViewWidget, focusedViewName)
 import Types
 import Purebred.Config
   ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )

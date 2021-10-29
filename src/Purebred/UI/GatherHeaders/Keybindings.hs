@@ -17,11 +17,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module UI.GatherHeaders.Keybindings where
+module Purebred.UI.GatherHeaders.Keybindings where
 
 import qualified Graphics.Vty as V
 import Types
-import UI.Actions
+import Purebred.UI.Actions
 import qualified Brick.Types as T
 
 gatherFromKeybindings :: [Keybinding 'Threads 'ComposeFrom]
