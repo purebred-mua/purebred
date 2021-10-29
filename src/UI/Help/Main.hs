@@ -33,7 +33,7 @@ import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Control.Lens (view, views, ifoldr)
 import qualified Data.Map.Strict as M
 import Data.Text (Text, singleton, intercalate, pack)
-import Config.Main (helpTitleAttr, helpKeybindingAttr)
+import Purebred.Config (helpTitleAttr, helpKeybindingAttr)
 import Types
 import UI.Utils (titleize, Titleize)
 

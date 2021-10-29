@@ -43,7 +43,7 @@ import Data.MIME
 import Types
 import UI.Draw.Main (attachmentsHeader)
 import UI.Views (focusedViewWidget)
-import Config.Main
+import Purebred.Config
   (headerKeyAttr, headerValueAttr, mailViewAttr, listSelectedAttr,
    listAttr, textMatchHighlightAttr, currentTextMatchHighlightAttr,
    defaultAttr, mailbodySourceAttr)

@@ -35,7 +35,7 @@ import Control.Lens (view)
 import Types
 import UI.Views (focusedViewWidget)
 import UI.Actions (HasName(..), HasEditor(..))
-import Config.Main
+import Purebred.Config
   (editorLabelAttr, editorAttr, editorFocusedAttr, statusbarAttr, editorErrorAttr)
 import UI.Notifications (hasError)
 

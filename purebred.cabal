@@ -79,11 +79,11 @@ library
                      , Purebred.System
                      , UI.FileBrowser.Main
                      , UI.FileBrowser.Keybindings
-                     , Config.Main
                      , Storage.Notmuch
                      , Storage.ParsedMail
                      , Brick.Widgets.StatefulEdit
                      , Purebred
+                     , Purebred.Config
                      , Purebred.Types.Error
                      , Purebred.Plugin
                      , Purebred.Plugin.TweakConfig

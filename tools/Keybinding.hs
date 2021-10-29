@@ -10,7 +10,7 @@ import qualified Data.Text.IO as T
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Control.DeepSeq
-import Config.Main (defaultConfig)
+import Purebred.Config (defaultConfig)
 import Control.Monad ((>=>))
 import UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
 import UI.App (initialState)
