@@ -24,7 +24,7 @@
 Lazy vectors.
 
 -}
-module Purebred.LazyVector
+module Purebred.Types.LazyVector
   ( V
   , fromList
   , fromChunks

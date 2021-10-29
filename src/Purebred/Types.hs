@@ -306,7 +306,7 @@ import Purebred.Types.Error
 import Purebred.Types.IFC (Tainted)
 
 #if defined LAZYVECTOR
-import Purebred.LazyVector (V)
+import Purebred.Types.LazyVector (V)
 #endif
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
