@@ -24,11 +24,8 @@ Types and functions for preparing messages for display.
 -}
 module Purebred.Types.Display
   ( parseMailbody
-  , niceEndOfInput
   ) where
 
-import Control.Applicative ((<|>))
-import qualified Data.Attoparsec.Internal.Types as AT
 import Data.Attoparsec.Text
 import Text.Wrap (defaultWrapSettings, wrapTextToLines)
 import qualified Data.Text as T
@@ -36,18 +33,8 @@ import Prelude hiding (Word)
 import Control.Lens
 
 import Purebred.Types
+import Purebred.Types.Parser.Text
 
-niceEndOfInput :: Parser ()
-niceEndOfInput = endOfInput <|> p
-  where
-  p = do
-    c <- peekChar'
-    off <- offset
-    fail $ "unexpected " <> show c <> " at offset " <> show off
-
--- | Get the current position of the parser
-offset :: AT.Parser i Int
-offset = AT.Parser $ \t pos more _lose suc -> suc t pos more (AT.fromPos pos)
 
 parseMailbody ::
      Int -- ^ text width

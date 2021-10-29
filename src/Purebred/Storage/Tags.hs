@@ -27,10 +27,8 @@ module Purebred.Storage.Tags
   ) where
 
 import Control.Applicative ((<|>), optional)
-import qualified Data.Attoparsec.Internal.Types as AT
 import Data.Attoparsec.ByteString.Char8
-  ( Parser, parseOnly, isSpace, space, char, sepBy
-  , skipMany1, takeWhile1, endOfInput, peekChar' )
+  ( Parser, parseOnly, isSpace, char, sepBy, takeWhile1 )
 import qualified Data.ByteString as B
 import Data.Functor (($>))
 import Control.Lens (over, _Left)
@@ -40,6 +38,7 @@ import qualified Data.Text.Encoding as T
 import Notmuch (mkTag)
 
 import Purebred.Types
+import Purebred.Types.Parser.ByteString (niceEndOfInput, skipSpaces)
 import Purebred.UI.Notifications (makeWarning)
 
 tagOp :: Parser TagOp
@@ -51,10 +50,6 @@ tagOp =
 
 resetOp :: Parser TagOp
 resetOp = char '=' $> ResetTags
-
--- | skip whitespace.  fails on no whitespace
-skipSpaces :: Parser ()
-skipSpaces = skipMany1 space
 
 allTagOps :: Parser [TagOp]
 allTagOps = tagOp `sepBy` skipSpaces
@@ -79,18 +74,3 @@ parseTag s = maybe
   (fail $ "not a valid tag: " <> show s)
   pure
   (mkTag s)
-
--- | Assert end of input has been reached,
--- or fail with a message that includes the
--- problematic character and the offset.
-niceEndOfInput :: Parser ()
-niceEndOfInput = endOfInput <|> p
-  where
-  p = do
-    c <- peekChar'
-    off <- offset
-    fail $ "unexpected " <> show c <> " at offset " <> show off
-
--- | Get the current position of the parser
-offset :: AT.Parser i Int
-offset = AT.Parser $ \t pos more _lose suc -> suc t pos more (AT.fromPos pos)
