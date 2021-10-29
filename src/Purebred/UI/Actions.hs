@@ -167,7 +167,6 @@ import Purebred.Storage.Mail
 import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
-import Purebred.Events (nextGeneration)
 import Purebred.Plugin.Internal
 import Purebred.Storage.Tags (parseTagOps)
 import Purebred.System (tryIO)

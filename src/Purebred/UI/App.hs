@@ -50,7 +50,6 @@ import Purebred.UI.Views
         focusedViewName)
 import Purebred.UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
 import Purebred.UI.Draw.Main (renderEditorWithLabel)
-import Purebred.Events (firstGeneration)
 import Purebred.Types
 import Purebred.UI.Widgets (StatefulEditor(..))
 

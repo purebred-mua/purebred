@@ -256,6 +256,8 @@ module Purebred.Types
   , rsFree
   , decodeLenient
   , Generation(..)
+  , firstGeneration
+  , nextGeneration
 
   -- ** User notifications
   , UserMessage(..)
@@ -1204,6 +1206,12 @@ ccRunProcess = lens _ccRunProcess (\cc x -> cc {_ccRunProcess = x})
 --
 newtype Generation = Generation Integer
   deriving (Eq, Ord)
+
+firstGeneration :: Generation
+firstGeneration = Generation 0
+
+nextGeneration :: Generation -> Generation
+nextGeneration (Generation n) = Generation (succ n)
 
 -- | Purebred event type.  In the future we can abstract this over
 -- a custom event type to allow plugins to define their own events.
