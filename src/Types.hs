@@ -301,8 +301,8 @@ import Notmuch (Tag)
 import Data.MIME
 
 import Brick.Widgets.StatefulEdit (StatefulEditor(..))
-import Error
 import {-# SOURCE #-} Purebred.Plugin.Internal
+import Purebred.Types.Error
 import Purebred.Types.IFC (Tainted)
 
 #if defined LAZYVECTOR

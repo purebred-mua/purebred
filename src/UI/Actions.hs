@@ -165,13 +165,13 @@ import Storage.ParsedMail
        , removeMatchingWords, findMatchingWords, makeScrollSteps
        , writeEntityToPath)
 import Types
-import Error
 import UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.Events (nextGeneration)
 import Purebred.Plugin.Internal
 import Purebred.Tags (parseTagOps)
+import Purebred.Types.Error
 import Purebred.System (tryIO)
 import Purebred.System.Process
 import UI.Notifications

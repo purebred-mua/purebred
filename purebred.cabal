@@ -52,7 +52,6 @@ library
   ghc-options:         -Wall
   default-language:    Haskell2010
   exposed-modules:     UI.App
-                     , Error
                      , Types
                      , UI.Keybindings
                      , UI.Actions
@@ -85,6 +84,7 @@ library
                      , Storage.ParsedMail
                      , Brick.Widgets.StatefulEdit
                      , Purebred
+                     , Purebred.Types.Error
                      , Purebred.Plugin
                      , Purebred.Plugin.TweakConfig
                      , Purebred.Version

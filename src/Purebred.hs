@@ -125,13 +125,13 @@ To avoid this, don't use stack.  But if you insist, you can run
 module Purebred (
   purebred,
   module Types,
-  module Error,
   module UI.Actions,
   module UI.Index.Keybindings,
   module UI.Mail.Keybindings,
   module Graphics.Vty.Attributes,
   module Purebred.Plugin,
   module Purebred.Plugin.TweakConfig,
+  module Purebred.Types.Error,
   Event(..),
   Key(..),
   Modifier(..),
@@ -178,11 +178,11 @@ import Config.Main
     (defaultConfig, solarizedDark, mailTagAttr, sendmail,
     listStateSelectedAttr, listStateToggledAttr, listStateNewmailAttr)
 import Types
-import Error
 import Purebred.Plugin
 import Purebred.Plugin.Internal
   ( configHook, pluginBuiltIn, pluginName, pluginVersion )
 import Purebred.Plugin.TweakConfig
+import Purebred.Types.Error
 
 -- re-exports for configuration
 import qualified Graphics.Vty
