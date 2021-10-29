@@ -17,7 +17,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module Storage.ParsedMail (
+module Purebred.Storage.Mail (
   -- * Synopsis
   -- $synopsis
 
@@ -55,12 +55,12 @@ import Prelude hiding (Word)
 
 import Data.MIME
 
-import Storage.Notmuch (mailFilepath)
 import Types
 import Purebred.System (tryIO)
 import Purebred.Types.Error
 import Purebred.Types.IFC (sanitiseText)
 import Purebred.Parsing.Text (parseMailbody)
+import Purebred.Storage.Notmuch (mailFilepath)
 import Purebred.System.Process
   (runEntityCommand, tmpfileResource, toProcessConfigWithTempfile,
   tryReadProcessStdout, handleExitCodeThrow)

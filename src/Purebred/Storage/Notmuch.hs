@@ -21,7 +21,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE CPP #-}
 
-module Storage.Notmuch (
+module Purebred.Storage.Notmuch (
     -- * Synopsis
     -- $synopsis
 

@@ -43,7 +43,7 @@ import UI.Views (focusedViewWidget, focusedViewName)
 import Types
 import Purebred.Config
   ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )
-import qualified Storage.Notmuch as Notmuch
+import qualified Purebred.Storage.Notmuch as Notmuch
 import Brick.Widgets.StatefulEdit (editEditorL)
 
 checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()

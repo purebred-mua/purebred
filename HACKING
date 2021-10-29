@@ -85,11 +85,6 @@ information. The file extension should be prefixed with a `p_`. For
 example:
 
     $ ls ~/.cabal/store/ghc-8.8.4/purebred-0.1.0.0-168d7c26ff515ebbea37fcb1e23cef711eef8e398f9fe910bec0900966231966/lib/
-    Brick/
-    Config/
-    Error.dyn_hi
-    Error.hi
-    Error.p_hi
     libHSpurebred-0.1.0.0-168d7c26ff515ebbea37fcb1e23cef711eef8e398f9fe910bec0900966231966.a
     libHSpurebred-0.1.0.0-168d7c26ff515ebbea37fcb1e23cef711eef8e398f9fe910bec0900966231966-ghc8.8.4.so
     libHSpurebred-0.1.0.0-168d7c26ff515ebbea37fcb1e23cef711eef8e398f9fe910bec0900966231966_p.a
@@ -100,11 +95,6 @@ example:
     Purebred.dyn_hi
     Purebred.hi
     Purebred.p_hi
-    Storage/
-    Types.dyn_hi
-    Types.hi
-    Types.p_hi
-    UI/
 
 ### Differences to Brick
 
