@@ -13,9 +13,16 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
---
+
+
 {-# LANGUAGE OverloadedStrings #-}
-module Purebred.Parsing.Text
+
+{- |
+
+Types and functions for preparing messages for display.
+
+-}
+module Purebred.Types.Display
   ( parseMailbody
   , niceEndOfInput
   ) where

@@ -65,9 +65,9 @@ import Prelude hiding (readFile, unlines)
 
 import Data.IMF.Text (mailboxList, addressList)
 
-import Purebred.Parsing.Text (niceEndOfInput)
 import Purebred.Storage.Tags (parseTagOps)
 import Purebred.Types
+import Purebred.Types.Display (niceEndOfInput)  -- TODO move niceEndOfInput somewhere else
 import Purebred.UI.Validation (dispatchValidation)
 import Purebred.UI.Widgets (editEditorL)
 import Purebred.UI.Notifications (makeWarning)
