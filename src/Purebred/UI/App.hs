@@ -51,7 +51,7 @@ import Purebred.UI.Views
 import Purebred.UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
 import Purebred.UI.Draw.Main (renderEditorWithLabel)
 import Purebred.Types
-import Purebred.UI.Widgets (StatefulEditor(..))
+import Purebred.UI.Widgets (statefulEditor)
 
 -- * Synopsis
 --
@@ -183,7 +183,7 @@ initialState conf = do
             (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
             (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
             firstGeneration
-            (StatefulEditor mempty $ E.editorText SearchThreadsEditor Nothing searchterms)
+            (statefulEditor $ E.editorText SearchThreadsEditor Nothing searchterms)
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
             0
@@ -210,7 +210,7 @@ initialState conf = do
     path = view (confFileBrowserView . fbHomePath) conf
     fb = CreateFileBrowser
          fb'
-         (StatefulEditor mempty $ E.editor ManageFileBrowserSearchPath Nothing path)
+         (statefulEditor $ E.editor ManageFileBrowserSearchPath Nothing path)
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
     async = Async Nothing

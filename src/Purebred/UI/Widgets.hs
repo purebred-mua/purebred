@@ -23,30 +23,24 @@ rolled back to the previous state.
 
 -}
 module Purebred.UI.Widgets
-  ( StatefulEditor(..)
-  , editStateL
+  ( StatefulEditor
+  , statefulEditor
   , editEditorL
   , saveEditorState
   , revertEditorState
   ) where
 
-import Control.Lens (Lens', lens, view, set, to, over)
-import Data.Text.Zipper (currentLine, insertMany, clearZipper)
-import Brick.Widgets.Edit (Editor(..), editContentsL)
+import Control.Lens (Lens', lens)
+import Brick.Widgets.Edit (Editor)
 
 data StatefulEditor t n =
   StatefulEditor
-    { _editState :: t
+    { _editState :: Editor t n
     , _editEditor :: Editor t n
     }
 
-
--- | Access to the editors state.
--- Note: Do not rely on accessing the editor contents using this
--- lens. Always access the editor contents directly by accessing the
--- editor itself using 'editEditorL'.
-editStateL :: Lens' (StatefulEditor t n) t
-editStateL = lens _editState (\e v -> e { _editState = v})
+statefulEditor :: Editor t n -> StatefulEditor t n
+statefulEditor ed = StatefulEditor ed ed
 
 -- | Access to the underlying Brick Edit widget. 
 editEditorL :: Lens' (StatefulEditor t n) (Editor t n)
@@ -54,13 +48,9 @@ editEditorL = lens _editEditor (\e v -> e { _editEditor = v})
 
 -- | Save the editor state to potentially revert the editor back to it
 -- later.
-saveEditorState :: Monoid t => StatefulEditor t n -> StatefulEditor t n
-saveEditorState editor =
-  let contents = view (editEditorL . editContentsL . to currentLine) editor
-   in set editStateL contents editor
+saveEditorState :: StatefulEditor t n -> StatefulEditor t n
+saveEditorState (StatefulEditor _saved cur) = StatefulEditor cur cur
 
 -- | Revert the editor back to it's previously saved contents.
-revertEditorState :: Monoid t => StatefulEditor t n -> StatefulEditor t n
-revertEditorState editor =
-  let saved = view editStateL editor
-   in over (editEditorL . editContentsL) (insertMany saved . clearZipper) editor
+revertEditorState :: StatefulEditor t n -> StatefulEditor t n
+revertEditorState (StatefulEditor saved _cur)  = StatefulEditor saved saved
