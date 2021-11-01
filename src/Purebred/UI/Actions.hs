@@ -177,7 +177,7 @@ import Purebred.UI.Notifications
        (setUserMessage, makeWarning, showError, showWarning, showInfo
        , showUserMessage)
 import Purebred.UI.Widgets
-       (StatefulEditor(..), editEditorL, revertEditorState, saveEditorState)
+  ( statefulEditor, editEditorL, revertEditorState, saveEditorState )
 #if defined LAZYVECTOR
 import Purebred.Types.LazyVector (V)
 #endif
@@ -1578,11 +1578,11 @@ sanitizeMail charsets =
 initialCompose :: [Mailbox] -> Compose
 initialCompose mailboxes =
   Compose
-    (StatefulEditor mempty $ E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
-    (StatefulEditor mempty $ E.editorText ComposeTo (Just 1) "")
-    (StatefulEditor mempty $ E.editorText ComposeCc (Just 1) "")
-    (StatefulEditor mempty $ E.editorText ComposeBcc (Just 1) "")
-    (StatefulEditor mempty $ E.editorText ComposeSubject (Just 1) "")
+    (statefulEditor $ E.editorText ComposeFrom (Just 1) (AddressText.renderMailboxes mailboxes))
+    (statefulEditor $ E.editorText ComposeTo (Just 1) "")
+    (statefulEditor $ E.editorText ComposeCc (Just 1) "")
+    (statefulEditor $ E.editorText ComposeBcc (Just 1) "")
+    (statefulEditor $ E.editorText ComposeSubject (Just 1) "")
     (L.list ComposeListOfAttachments mempty 1)
     initialDraftConfirmDialog
 
@@ -1600,11 +1600,11 @@ newComposeFromMail charsets m =
         view vector $ toMIMEMessage charsets <$> toListOf (_Just . entities) m
       orEmpty = view (non "")
    in Compose
-        (StatefulEditor mempty $ E.editorText ComposeFrom (Just 1) (orEmpty from))
-        (StatefulEditor mempty $ E.editorText ComposeTo (Just 1) (orEmpty to'))
-        (StatefulEditor mempty $ E.editorText ComposeCc (Just 1) (orEmpty cc))
-        (StatefulEditor mempty $ E.editorText ComposeBcc (Just 1) (orEmpty bcc))
-        (StatefulEditor mempty $ E.editorText ComposeSubject (Just 1) (orEmpty subject))
+        (statefulEditor $ E.editorText ComposeFrom (Just 1) (orEmpty from))
+        (statefulEditor $ E.editorText ComposeTo (Just 1) (orEmpty to'))
+        (statefulEditor $ E.editorText ComposeCc (Just 1) (orEmpty cc))
+        (statefulEditor $ E.editorText ComposeBcc (Just 1) (orEmpty bcc))
+        (statefulEditor $ E.editorText ComposeSubject (Just 1) (orEmpty subject))
         (L.list ComposeListOfAttachments attachments' 1)
         initialDraftConfirmDialog
 
