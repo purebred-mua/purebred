@@ -13,7 +13,9 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 {-# LANGUAGE FlexibleContexts #-}
+
 module Purebred.UI.Notifications (
   -- * Overview
   -- $overview
@@ -34,8 +36,7 @@ module Purebred.UI.Notifications (
   , showWarning
   , showInfo
   , showUserMessage
-  )
-where
+  ) where
 
 import Control.Lens (view, set, assign)
 import qualified Data.Text as T
@@ -45,12 +46,14 @@ import Purebred.Types
 import Purebred.Types.Error
 
 {- $overview
+
 Notifications are one-line messages shown to the user. That can be
 Errors, Warnings or simply acknowledgement of actions.
 
 Note: If you want to make the 'UserMessage' visible between views in
 the UI, use a context which is always displayed. At this point
 'StatusBar' serves this purpose well.
+
 -}
 
 setUserMessage :: UserMessage -> AppState -> AppState
