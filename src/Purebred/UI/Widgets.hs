@@ -14,10 +14,14 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
--- | This module provides a text editor widget like
--- Brick.Widgets.Edit. However it can be used to store it's state in
--- order to roll it back. This is useful if newly changed editor state is
--- to be canceled and to be rolled back to the previous state.
+{- |
+
+This module provides a text editor widget like @Brick.Widgets.Edit@.
+However it can be used to store it's state in order to roll it back.
+This is useful if newly changed editor state is to be canceled and
+rolled back to the previous state.
+
+-}
 module Purebred.UI.Widgets
   ( StatefulEditor(..)
   , editStateL

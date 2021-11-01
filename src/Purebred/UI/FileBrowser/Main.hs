@@ -13,10 +13,14 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 {-# OPTIONS_HADDOCK hide #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 module Purebred.UI.FileBrowser.Main
-       (renderFileBrowser, renderFileBrowserSearchPathEditor) where
+  ( renderFileBrowser
+  , renderFileBrowserSearchPathEditor
+  ) where
 
 import Brick.Types (Widget)
 import Brick.Widgets.Core (str, txt, (<+>), vLimit)

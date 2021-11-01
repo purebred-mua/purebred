@@ -13,13 +13,17 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
---
+
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+
 {-
+
 Example configuration, currently used for testing which demonstrates various
 ways to overwrite the configuration.
+
 -}
+
 import Purebred
 import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as L

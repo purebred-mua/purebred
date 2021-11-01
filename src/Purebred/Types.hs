@@ -14,10 +14,6 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
--- | This module provides core types and lens functions to customize
--- Purebred.
---
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -26,6 +22,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE CPP #-}
 
+{- |
+
+Core types and optics for Purebred.
+
+-}
 module Purebred.Types
   ( -- * Application state
     AppState(..)
