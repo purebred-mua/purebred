@@ -1226,9 +1226,7 @@ data PurebredEvent
   | NotifyNewMailArrived Int
   | -- | Event used for real time validation. Provides the setter in
     -- the 'AppState' to set the given 'UserMessage'.
-    InputValidated
-      (Lens' AppState (Maybe UserMessage))
-      (Maybe UserMessage)
+    InputValidated (Maybe UserMessage)
 
 data MessageSeverity
   = Error Error

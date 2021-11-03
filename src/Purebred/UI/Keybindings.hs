@@ -103,7 +103,7 @@ runValidation ::
   -> AppState
   -> IO AppState
 runValidation fx l s =
-  dispatchValidation fx asUserMessage (view (l . E.editContentsL . to currentLine) s) s
+  dispatchValidation fx (view (l . E.editContentsL . to currentLine) s) s
 
 -- $eventhandlers
 -- Each event handler is handling a single widget in Purebreds UI

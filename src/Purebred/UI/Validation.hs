@@ -37,15 +37,14 @@ import Purebred.Types
 --
 dispatchValidation ::
      (a -> Maybe UserMessage)  -- ^ validation function
-  -> Lens' AppState (Maybe UserMessage)
   -> a
   -> AppState
   -> IO AppState
-dispatchValidation fx l a s =
+dispatchValidation fx a s =
   let go = maybe schedule (\t -> killThread t *> schedule) . view (asAsync . aValidation)
       chan = view (asConfig . confBChan) s
       schedule =
-        forkIO (sleepMs 500 >> writeBChan chan (InputValidated l (fx a)))
+        forkIO (sleepMs 500 >> writeBChan chan (InputValidated (fx a)))
    in do tid <- go s
          pure $ set (asAsync . aValidation) (Just tid) s
 
