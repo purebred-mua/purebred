@@ -22,7 +22,7 @@ module Purebred.UI.Validation
   ) where
 
 import Control.Concurrent (forkIO, killThread, threadDelay)
-import Control.Lens (Lens', set, view)
+import Control.Lens (set, view)
 import Brick.BChan (writeBChan)
 
 import Purebred.Types

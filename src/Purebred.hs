@@ -126,6 +126,7 @@ module Purebred (
   purebred,
   module Purebred.Plugin,
   module Purebred.Plugin.TweakConfig,
+  module Purebred.Storage.Tags,
   module Purebred.Types,
   module Purebred.Types.Error,
   module Purebred.UI.Actions,
@@ -182,6 +183,7 @@ import Purebred.Plugin.Internal
   ( configHook, pluginBuiltIn, pluginName, pluginVersion )
 import Purebred.Plugin.TweakConfig
 import Purebred.Storage.Notmuch (getDatabasePath)
+import Purebred.Storage.Tags (TagOp(..))
 import Purebred.Types.Error
 
 -- re-exports for configuration

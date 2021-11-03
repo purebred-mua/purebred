@@ -14,13 +14,12 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE CPP #-}
 
 {- |
 
@@ -76,7 +75,6 @@ module Purebred.Types
   , mvPipeCommand
   , mvFindWordEditor
   , mvScrollSteps
-  , Toggleable
   , MailBody(..)
   , mbParagraph
   , mbSource
@@ -117,24 +115,7 @@ module Purebred.Types
   , aValidation
 
     -- ** Widgets
-  , Name(..)
   , HeadersState(..)
-
-    -- ** View implementation
-  , ViewSettings(..)
-  , vsViews
-  , vsFocusedView
-  , ViewName(..)
-  , View(..)
-  , ViewState(..)
-  , vFocus
-  , vLayers
-  , Layer(..)
-  , Layers
-  , layeriso
-  , Tile(..)
-  , veName
-  , veState
 
     -- ** Keybindings
   , Keybinding(..)
@@ -150,7 +131,6 @@ module Purebred.Types
   , InternalConfigurationFields(..)
   , confBChan
   , confLogSink
-  , PurebredEvent(..)
   , Configuration(..)
   , confTheme
   , confNotmuch
@@ -176,7 +156,6 @@ module Purebred.Types
   , nmHasNewMailCheckDelay
   , Delay(..)
   , Tag
-  , TagOp(..)
 
   -- ** Mail Viewer
   , MailViewSettings(..)
@@ -186,16 +165,6 @@ module Purebred.Types
   , mvPreferredContentType
   , mvHeadersState
   , mvMailcap
-  , MailcapHandler(..)
-  , mhMakeProcess
-  , mhCopiousoutput
-  , mhKeepTemp
-  , MakeProcess(..)
-  , mpCommand
-  , CopiousOutput(..)
-  , isCopiousOutput
-  , hasCopiousoutput
-  , TempfileOnExit(..)
 
   -- *** Mail Viewer Keybindings
   , mvKeybindings
@@ -245,26 +214,11 @@ module Purebred.Types
   , ListWithLength(..)
   , listList
   , listLength
-  , EntityCommand(..)
-  , ccResource
-  , ccRunProcess
-  , ccAfterExit
-  , ccEntity
-  , ccProcessConfig
-  , ResourceSpec(..)
-  , rsAcquire
-  , rsUpdate
-  , rsFree
   , decodeLenient
-  , Generation(..)
-  , firstGeneration
-  , nextGeneration
 
-  -- ** User notifications
-  , UserMessage(..)
-  , umContext
-  , umSeverity
-  , MessageSeverity(..)
+  , module Purebred.Types.Event
+  , module Purebred.Types.Mailcap
+  , module Purebred.Types.UI
   ) where
 
 import Prelude hiding (Word)
@@ -279,15 +233,14 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (Dialog)
-import Control.DeepSeq (NFData(rnf), force)
 import Control.Lens
-import qualified Data.Map as Map
+  ( Getter, Lens, Lens', Traversal', _1, _3
+  , foldrOf, lens, notNullOf, to, view )
+import Control.DeepSeq (NFData(rnf), force)
 import Control.Monad.State
-import Control.Monad.Except (MonadError)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
-import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Encoding as T
@@ -295,9 +248,6 @@ import qualified Data.Text.Encoding.Error as T
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
-import Data.List.NonEmpty (NonEmpty)
-import System.Exit (ExitCode(..))
-import System.Process.Typed (ProcessConfig)
 import qualified Data.Vector as V
 
 import Notmuch (Tag)
@@ -306,7 +256,9 @@ import Data.MIME
 import Purebred.UI.Widgets (StatefulEditor)
 import {-# SOURCE #-} Purebred.Plugin.Internal
 import Purebred.Types.Error
-import Purebred.Types.IFC (Tainted)
+import Purebred.Types.Event
+import Purebred.Types.Mailcap
+import Purebred.Types.UI
 
 #if defined LAZYVECTOR
 import Purebred.Types.LazyVector (V)
@@ -314,34 +266,6 @@ import Purebred.Types.LazyVector (V)
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
--- | Widget identifiers. Each rendered widget has one unique
--- identifier in Purebred's UI.
---
-data Name =
-    ComposeBcc
-    | ComposeCc
-    | ComposeFrom
-    | ComposeHeaders
-    | ComposeListOfAttachments
-    | ComposeSubject
-    | ComposeTo
-    | ConfirmDialog
-    | ListOfFiles
-    | ListOfMails
-    | ListOfThreads
-    | MailAttachmentOpenWithEditor
-    | MailAttachmentPipeToEditor
-    | MailListOfAttachments
-    | ManageFileBrowserSearchPath
-    | ManageMailTagsEditor
-    | ManageThreadTagsEditor
-    | SaveToDiskPathEditor
-    | SearchThreadsEditor
-    | ScrollingHelpView
-    | ScrollingMailView
-    | ScrollingMailViewFindWordEditor
-    | StatusBar
-    deriving (Eq,Show,Ord)
 
 -- | A brick list, with a field that optionally contains its length.
 --
@@ -841,83 +765,6 @@ mvSaveToDiskKeybindings = lens _mvSaveToDiskKeybindings (\s x -> s { _mvSaveToDi
 mvToKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'ComposeTo]
 mvToKeybindings = lens _mvToKeybindings (\s x -> s { _mvToKeybindings = x })
 
-hasCopiousoutput :: Traversal' [(ContentType -> Bool, MailcapHandler)] (ContentType -> Bool, MailcapHandler)
-hasCopiousoutput = traversed . filtered (view (_2 . mhCopiousoutput . to isCopiousOutput))
-
-data ViewName
-    = Threads
-    | Mails
-    | ViewMail
-    | ComposeView
-    | Help
-    | FileBrowser
-    deriving (Eq, Ord, Show, Generic, NFData)
-
-data ViewState
-  = Hidden
-  | Visible
-  deriving (Show, Eq)
-
--- A view element is a name for a widget with a given view state
-data Tile =
-  Tile ViewState
-       Name
-  deriving (Show, Eq)
-
-veName :: Lens' Tile Name
-veName f (Tile a b) = fmap (\b' -> Tile a b') (f b)
-
-veState :: Lens' Tile ViewState
-veState f (Tile a b) = fmap (\a' -> Tile a' b) (f a)
-{-# ANN veState ("HLint: ignore Avoid lambda using `infix`" :: String) #-}
-
-type Layers = V.Vector Layer
-
-data View = View
-    { _vFocus :: Name
-    , _vLayers :: Layers
-    }
-
-vLayers :: Lens' View Layers
-vLayers = lens _vLayers (\settings x -> settings { _vLayers = x })
-
-vFocus :: Lens' View Name
-vFocus = lens _vFocus (\settings x -> settings { _vFocus = x})
-
--- A layer is a view element with a list of widgets and their view
--- state
-newtype Layer =
-  Layer (V.Vector Tile)
-  deriving (Eq, Show)
-
-type instance Index Layer = Name
-type instance IxValue Layer = Tile
-
-instance Ixed Layer where
-  ix = tile
-
-layeriso :: Iso' Layer (V.Vector Tile)
-layeriso = iso (\(Layer xs) -> xs) Layer
-
-tile :: Name -> Traversal' Layer Tile
-tile k = layeriso . traversed . filtered (\x -> k == view veName x)
-
-data ViewSettings = ViewSettings
-    { _vsViews :: Map.Map ViewName View
-    , _vsFocusedView :: Brick.FocusRing ViewName
-    }
-
-vsViews :: Lens' ViewSettings (Map.Map ViewName View)
-vsViews = lens _vsViews (\settings x -> settings { _vsViews = x })
-
-vsFocusedView :: Lens' ViewSettings (Brick.FocusRing ViewName)
-vsFocusedView = lens _vsFocusedView (\settings x -> settings { _vsFocusedView = x})
-
--- | An item carrying it's selected state.
--- Used in order to mark list items.
---
-type Toggleable a = (Bool, a)
-
 data FileSystemEntry
     = Directory String
     | File String
@@ -1090,160 +937,3 @@ thId = lens _thId (\m t -> m { _thId = t })
 -- | Utility for safe conversion from bytestring to text
 decodeLenient :: B.ByteString -> T.Text
 decodeLenient = T.decodeUtf8With T.lenientDecode
-
--- | Tag operations
-data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
-  deriving (Show, Eq)
-
--- | A bracket-style type for creating and releasing acquired resources (e.g.
--- temporary files). Note that extending this is perhaps not worth it and we
--- should perhaps look at ResourceT if necessary.
-data ResourceSpec m a = ResourceSpec
-  { _rsAcquire :: m a
- -- ^ acquire a resource (e.g. create temporary file)
-  , _rsFree :: a -> m ()
- -- ^ release a resource (e.g. remove temporary file)
-  , _rsUpdate :: a -> B.ByteString -> m ()
- -- ^ update the acquired resource with the ByteString obtained from serialising the WireEntity
-  }
-
-rsAcquire :: Lens' (ResourceSpec m a) (m a)
-rsAcquire = lens _rsAcquire (\rs x -> rs {_rsAcquire = x})
-
-rsFree :: Lens' (ResourceSpec m a) (a -> m ())
-rsFree = lens _rsFree (\rs x -> rs {_rsFree = x})
-
-rsUpdate :: Lens' (ResourceSpec m a) (a -> B.ByteString -> m ())
-rsUpdate = lens _rsUpdate (\rs x -> rs {_rsUpdate = x})
-
-data MakeProcess
-  = Shell (NonEmpty Char)
-  | Process (NonEmpty Char)
-            [String]
-  deriving (Generic, NFData)
-
-mpCommand :: Lens' MakeProcess (NonEmpty Char)
-mpCommand f (Shell x) = fmap (\x' -> Shell x') (f x)
-mpCommand f (Process x args) = fmap (\x' -> Process x' args) (f x)
-{-# ANN mpCommand ("HLint: ignore Avoid lambda using `infix`" :: String) #-}
-
-data CopiousOutput
-  = CopiousOutput
-  | IgnoreOutput
-  deriving (Generic, NFData)
-
-isCopiousOutput :: CopiousOutput -> Bool
-isCopiousOutput CopiousOutput = True
-isCopiousOutput _ = False
-
-data TempfileOnExit
-  = KeepTempfile
-  | DiscardTempfile
-  deriving (Generic, NFData)
-
-data MailcapHandler = MailcapHandler
-  { _mhMakeProcess :: MakeProcess
-  , _mhCopiousoutput :: CopiousOutput
-  -- ^ output should be paged or made scrollable
-  , _mhKeepTemp :: TempfileOnExit
-  -- ^ Keep the temporary file if application spawns child and parent
-  -- exits immediately (e.g. Firefox)
-  } deriving (Generic, NFData)
-
-mhMakeProcess :: Lens' MailcapHandler MakeProcess
-mhMakeProcess = lens _mhMakeProcess (\h x -> h { _mhMakeProcess = x })
-
-mhCopiousoutput :: Lens' MailcapHandler CopiousOutput
-mhCopiousoutput = lens _mhCopiousoutput (\h x -> h { _mhCopiousoutput = x })
-
-mhKeepTemp :: Lens' MailcapHandler TempfileOnExit
-mhKeepTemp = lens _mhKeepTemp (\h x -> h { _mhKeepTemp = x })
-
-
--- | Command configuration which is bound to an acquired resource
--- (e.g. a tempfile) filtered through an external command. The
--- resource may or may not be cleaned up after the external command
--- exits.
-data EntityCommand m a = EntityCommand
-  { _ccAfterExit :: (ExitCode, Tainted LB.ByteString) -> a -> m T.Text
-  , _ccResource :: ResourceSpec m a
-  , _ccProcessConfig :: B.ByteString -> a -> ProcessConfig () () ()
-  , _ccRunProcess :: ProcessConfig () () () -> m ( ExitCode
-                                                   , Tainted LB.ByteString)
-  , _ccEntity :: B.ByteString
-  -- ^ The decoded Entity
-  }
-
-ccAfterExit ::
-     (MonadIO m, MonadError Error m)
-  => Lens' (EntityCommand m a) ((ExitCode, Tainted LB.ByteString) -> a -> m T.Text)
-ccAfterExit = lens _ccAfterExit (\cc x -> cc {_ccAfterExit = x})
-
-ccEntity :: Lens' (EntityCommand m a) B.ByteString
-ccEntity = lens _ccEntity (\cc x -> cc {_ccEntity = x})
-
-ccProcessConfig ::
-     Lens' (EntityCommand m a) (B.ByteString -> a -> ProcessConfig () () ())
-ccProcessConfig = lens _ccProcessConfig (\cc x -> cc {_ccProcessConfig = x})
-
-ccResource ::
-     (MonadIO m, MonadError Error m)
-  => Lens' (EntityCommand m a) (ResourceSpec m a)
-ccResource = lens _ccResource (\cc x -> cc {_ccResource = x})
-
-ccRunProcess ::
-     (MonadError Error m, MonadIO m)
-  => Lens' (EntityCommand m a) (ProcessConfig () () () -> m ( ExitCode
-                                                            , Tainted LB.ByteString))
-ccRunProcess = lens _ccRunProcess (\cc x -> cc {_ccRunProcess = x})
-
--- | A serial number that can be used to match (or ignore as
--- irrelevant) asynchronous events to current application state.
---
--- Use the 'Eq' and 'Ord' instances to compare generations.  The
--- constructor is hidden; use 'firstGeneration' as the first
--- generation, and use 'nextGeneration' to monotonically increment
--- it.
---
-newtype Generation = Generation Integer
-  deriving (Eq, Ord)
-
-firstGeneration :: Generation
-firstGeneration = Generation 0
-
-nextGeneration :: Generation -> Generation
-nextGeneration (Generation n) = Generation (succ n)
-
--- | Purebred event type.  In the future we can abstract this over
--- a custom event type to allow plugins to define their own events.
--- But I've YAGNI'd it for now because it will require an event
--- type parameter on 'AppState', which will be a noisy change.
---
-data PurebredEvent
-  = NotifyNumThreads
-      Int
-      Generation
-  | NotifyNewMailArrived Int
-  | -- | Event used for real time validation. Provides the setter in
-    -- the 'AppState' to set the given 'UserMessage'.
-    InputValidated (Maybe UserMessage)
-
-data MessageSeverity
-  = Error Error
-  | Warning T.Text
-  | Info T.Text
-  deriving (Eq, Show)
-
--- | UI feedback shown to the user.
--- Uses context and severity to control visibility and importance.
-data UserMessage = UserMessage
-  { _umContext:: Name
-  , _umSeverity :: MessageSeverity
-  }
-  deriving (Eq, Show)
-
-umContext :: Lens' UserMessage Name
-umContext = lens _umContext (\m x -> m { _umContext = x })
-
-umSeverity :: Lens' UserMessage MessageSeverity
-umSeverity = lens _umSeverity (\m x -> m { _umSeverity = x })
