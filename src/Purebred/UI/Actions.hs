@@ -168,7 +168,7 @@ import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.Plugin.Internal
-import Purebred.Storage.Tags (parseTagOps)
+import Purebred.Storage.Tags (TagOp(AddTag, RemoveTag), parseTagOps)
 import Purebred.System (tryIO)
 import Purebred.System.Process
 import Purebred.Types

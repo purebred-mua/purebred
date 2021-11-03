@@ -64,9 +64,12 @@ library
                      , Purebred.Types
                      , Purebred.Types.Display
                      , Purebred.Types.Error
+                     , Purebred.Types.Event
                      , Purebred.Types.LazyVector
+                     , Purebred.Types.Mailcap
                      , Purebred.Types.Parser.ByteString
                      , Purebred.Types.Parser.Text
+                     , Purebred.Types.UI
                      , Purebred.UI.Actions
                      , Purebred.UI.App
                      , Purebred.UI.ComposeEditor.Keybindings

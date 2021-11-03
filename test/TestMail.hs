@@ -37,6 +37,7 @@ import Notmuch (mkTag, tagMaxLen)
 import Purebred.Types
 import Purebred.Storage.Notmuch (addTags, removeTags, tagItem)
 import Purebred.Storage.Mail (findMatchingWords)
+import Purebred.Storage.Tags (TagOp(..))
 
 mailTests ::
   TestTree

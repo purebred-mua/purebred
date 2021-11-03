@@ -22,7 +22,8 @@
 -- just means labelling all mails in a thread.
 --
 module Purebred.Storage.Tags
-  ( parseTag
+  ( TagOp(..)
+  , parseTag
   , parseTagOps
   ) where
 
@@ -40,6 +41,10 @@ import Notmuch (mkTag)
 import Purebred.Types
 import Purebred.Types.Parser.ByteString (niceEndOfInput, skipSpaces)
 import Purebred.UI.Notifications (makeWarning)
+
+-- | Tag operations
+data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
+  deriving (Eq, Show)
 
 tagOp :: Parser TagOp
 tagOp =
