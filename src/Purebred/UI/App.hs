@@ -154,7 +154,7 @@ appEvent s (T.AppEvent ev) = case ev of
     then set (asThreadsView . miThreads . listLength) (Just n) s
     else s
   NotifyNewMailArrived n -> M.continue (set (asThreadsView . miNewMail) n s)
-  InputValidated l err -> M.continue . ($ s) $
+  InputValidated err -> M.continue . ($ s) $
     case err of
       -- No error at all. Clear any existing errors set in the state.
       Nothing -> set asUserMessage Nothing . set (asAsync . aValidation) Nothing
@@ -164,7 +164,7 @@ appEvent s (T.AppEvent ev) = case ev of
          in if widget `elem` allVisible
                -- Widget for this message is still visible, display
                -- the message and clear the thread ID.
-              then set l err . set (asAsync . aValidation) Nothing
+              then set asUserMessage err . set (asAsync . aValidation) Nothing
                -- Widget for this message is hidden, ignore the
                -- message, clear existing message and thread states.
               else set asUserMessage Nothing . set (asAsync . aValidation) Nothing
