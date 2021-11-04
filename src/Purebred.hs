@@ -154,7 +154,7 @@ module Purebred (
   Domain(..),
   sendmail) where
 
-import Purebred.UI.App (theApp, initialState)
+import Purebred.UI.App (theApp, initialState, initialViews)
 
 import Control.Concurrent (rtsSupportsBoundThreads)
 import Purebred.System.Logging (setupLogsink)
@@ -163,12 +163,14 @@ import qualified Control.DeepSeq
 import Control.Monad ((>=>), void, unless)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
-import qualified Data.Text.Lazy as T
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import System.Environment (lookupEnv)
 import System.FilePath.Posix ((</>))
 import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
 
+import Purebred.UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
 import Purebred.UI.Index.Keybindings
 import Purebred.UI.Mail.Keybindings
 import Purebred.UI.Actions
@@ -193,7 +195,7 @@ import Brick.Main (customMain)
 import Brick.Types (Next)
 import Brick.Util (on, fg, bg)
 import Brick.AttrMap (AttrName, applyAttrMappings)
-import Control.Lens ((&), _head, over, preview, set, view, views)
+import Control.Lens ((&), _head, ifoldMap, ix, over, preview, set, toListOf, view, views)
 import Data.Text.Lens (packed)
 import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))
 
@@ -203,8 +205,8 @@ data AppConfig = AppConfig
     , debugFile :: Maybe FilePath
     }
 
-appconfig :: String -> Parser AppConfig
-appconfig verInfo = AppConfig
+appconfig :: String -> KeybindingsAsciiDoc -> Parser AppConfig
+appconfig verInfo (KeybindingsAsciiDoc kbInfo) = AppConfig
   <$> optional
     ( Builder.option Builder.str
       ( long "database"
@@ -231,6 +233,10 @@ appconfig verInfo = AppConfig
     <> short 'v'
     <> help "Print the Purebred version and exit"
     )
+  <* Builder.infoOption kbInfo
+    ( long "dump-keybindings"
+    <> help "Print keybindings (AsciiDoc format) and exit"
+    )
 
 versionString :: String
 versionString = showVersion version
@@ -252,9 +258,9 @@ fullVersionInfo plugins = unlines $
         "- " <> nam <> " " <> showVersion ver
 
 
-optParser :: String -> ParserInfo AppConfig
-optParser verInfo = info
-  (appconfig verInfo <**> helper)
+optParser :: String -> KeybindingsAsciiDoc -> ParserInfo AppConfig
+optParser verInfo kbInfo = info
+  (appconfig verInfo kbInfo <**> helper)
   (fullDesc
    <> progDesc "purebred"
    <> header ("a search based, terminal mail user agent - " <> versionString))
@@ -270,7 +276,7 @@ launch ghcOpts inCfg = do
 
   -- set the user-specified database path *before* processing config,
   -- to avoid possible error in `notmuch config-get`
-  opts <- execParser (optParser (fullVersionInfo plugins))
+  opts <- execParser (optParser (fullVersionInfo plugins) (dumpKeybindings cfg))
   let
     pre =
       maybe id (set (confNotmuch . nmDatabase) . pure) (databaseFilepath opts)
@@ -286,8 +292,8 @@ launch ghcOpts inCfg = do
 
   -- Create log sink.
   logSink <- setupLogsink (debugFile opts)
-  logSink (T.pack "Compile flags: " <> T.intercalate (T.pack " ") (T.pack <$> ghcOpts))
-  logSink (T.pack "Opened log file")
+  logSink (LT.pack "Compile flags: " <> LT.intercalate (LT.pack " ") (LT.pack <$> ghcOpts))
+  logSink (LT.pack "Opened log file")
   cfg' <- processConfig (InternalConfigurationFields bchan logSink) (pre cfg)
 
   s <- initialState cfg'
@@ -337,3 +343,51 @@ purebred plugins = do
       , Dyre.ghcOpts = ghcOpts
       }
   Dyre.wrapMain dyreParams cfg
+
+
+-----------------------
+-- Dump keybindings ---
+-----------------------
+
+newtype KeybindingsAsciiDoc = KeybindingsAsciiDoc String
+
+-- | Render all defined key bindings as an asciidoc compatible table
+--
+dumpKeybindings :: Configuration extra a b c -> KeybindingsAsciiDoc
+dumpKeybindings cfg =
+  KeybindingsAsciiDoc
+  $ ifoldMap (renderKeybinding (createKeybindingIndex cfg)) initialViews
+
+-- Cheap way to weed out any widgets not receiving keyboard events and
+-- not having event handlers registered.
+receivesInput :: Name -> Bool
+receivesInput StatusBar = False
+receivesInput ListOfMails = False
+receivesInput ComposeHeaders = False
+receivesInput _ = True
+
+renderKeybinding :: HelpIndex -> ViewName -> View -> String
+renderKeybinding index vn v =
+  unlines
+    [ "=== " <> show vn
+    , foldMap
+        ( \nam -> if receivesInput nam then renderKbGroupAsText index nam else mempty )
+        ( toListOf (vLayers . traverse . layeriso . traverse . veName) v )
+    ]
+
+renderKbGroupAsText :: HelpIndex -> Name -> String
+renderKbGroupAsText index nam =
+  unlines
+    [ "==== " <> show nam
+    , "|==="
+    , "|Shortcut |Purpose |Raw Keycode"
+    , foldMap renderKeybindingText (toListOf (ix nam . traverse) index)
+    , "|===" ]
+
+renderKeybindingText :: KeybindingHelp -> String
+renderKeybindingText (KeybindingHelp keys actions raw) =
+  unlines
+    [ "|kbd:[" <> T.unpack keys <> "]"
+    , "|" <> T.unpack actions
+    , "|`" <> raw <> "`"
+    ]

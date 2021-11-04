@@ -12,7 +12,7 @@ index d7a6b3a..fabcf9a 100644
 +      - name: install purebred (for UAT)
 +        run: |
 +          # Install the program (required for UAT)
-+          $CABAL v2-install -w $HC exe:purebred purebred-dump-keybinding
++          $CABAL v2-install -w $HC exe:purebred
 +          # Trick the UAT into looking for configs / data in the right place
 +          # (tests are executed in the unpacked sdist directory.
 +          # the unpacked sdist directory. See unpack step.

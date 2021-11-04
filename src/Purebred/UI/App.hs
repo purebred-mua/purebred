@@ -170,6 +170,15 @@ appEvent s (T.AppEvent ev) = case ev of
               else set asUserMessage Nothing . set (asAsync . aValidation) Nothing
 appEvent s _ = M.continue s
 
+initialViews :: Map.Map ViewName View
+initialViews = Map.fromList
+  [ (Threads, indexView)
+  , (ViewMail, mailView)
+  , (Help, helpView)
+  , (ComposeView, composeView)
+  , (FileBrowser, filebrowserView)
+  ]
+
 initialState :: InternalConfiguration -> IO AppState
 initialState conf = do
   fb' <- FB.newFileBrowser
@@ -199,12 +208,7 @@ initialState conf = do
            (focusRing [])
     viewsettings =
         ViewSettings
-        { _vsViews = Map.fromList
-              [ (Threads, indexView)
-              , (ViewMail, mailView)
-              , (Help, helpView)
-              , (ComposeView, composeView)
-              , (FileBrowser, filebrowserView)]
+        { _vsViews = initialViews
         , _vsFocusedView = focusRing [Threads, Mails, ViewMail, Help, ComposeView, FileBrowser]
         }
     path = view (confFileBrowserView . fbHomePath) conf
