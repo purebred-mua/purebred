@@ -8,7 +8,7 @@ clean:
 	rm -f index.html keybindings.adoc
 
 keybindings.adoc:
-	purebred-dump-keybinding > keybindings.adoc
+	purebred --dump-keybindings > keybindings.adoc
 
 index.html: index.adoc keybindings.adoc
 	${ASCIIDOCTOR} index.adoc

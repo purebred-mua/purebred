@@ -49,7 +49,7 @@ type HelpIndex = M.Map Name [KeybindingHelp]
 
 -- | Build a map between widget and it's configured key bindings
 --
-createKeybindingIndex :: InternalConfiguration -> HelpIndex
+createKeybindingIndex :: Configuration extra a b c -> HelpIndex
 createKeybindingIndex cfg = M.fromList
   [ (ListOfThreads, views (confIndexView . ivBrowseThreadsKeybindings) kbGroup cfg)
   , (ComposeSubject, views (confComposeView . cvSubjectKeybindings) kbGroup cfg)

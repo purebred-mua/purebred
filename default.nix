@@ -70,8 +70,6 @@ in
           mkdir -p $out/bin
           makeWrapper ${env}/bin/purebred $out/bin/purebred \
           --set NIX_GHC "${env}/bin/ghc"
-          makeWrapper ${env}/bin/purebred-dump-keybinding $out/bin/purebred-dump-keybinding \
-          --set NIX_GHC "${env}/bin/ghc"
         '';
         preferLocalBuild = true;
         allowSubstitutes = false;

@@ -187,7 +187,7 @@ jobs:
       - name: install purebred (for UAT)
         run: |
           # Install the program (required for UAT)
-          $CABAL v2-install -w $HC exe:purebred purebred-dump-keybinding
+          $CABAL v2-install -w $HC exe:purebred
           # Trick the UAT into looking for configs / data in the right place
           # (tests are executed in the unpacked sdist directory.
           # the unpacked sdist directory. See unpack step.
@@ -198,7 +198,6 @@ jobs:
       - name: hlint
         run: |
           if [ $((HCNUMVER >= 90000)) -ne 0 ] ; then (cd ${PKGDIR_purebred} && hlint src) ; fi
-          if [ $((HCNUMVER >= 90000)) -ne 0 ] ; then (cd ${PKGDIR_purebred} && hlint tools) ; fi
           if [ $((HCNUMVER >= 90000)) -ne 0 ] ; then (cd ${PKGDIR_purebred} && hlint app) ; fi
       - name: cabal check
         run: |
