@@ -42,7 +42,7 @@ dispatchValidation ::
   -> IO AppState
 dispatchValidation fx a s =
   let go = maybe schedule (\t -> killThread t *> schedule) . view (asAsync . aValidation)
-      chan = view (asConfig . confBChan) s
+      chan = view bChan s
       schedule =
         forkIO (sleepMs 500 >> writeBChan chan (InputValidated (fx a)))
    in do tid <- go s

@@ -208,16 +208,17 @@ messageToMail m = do
       <*> Notmuch.messageId m
 
 -- | Returns the notmuch database path by executing 'notmuch config
--- get database.path' in a separate process
+-- get database.path' in a separate process.  If the process terminates
+-- abnormally, returns an empty string.
 --
 getDatabasePath :: IO FilePath
 getDatabasePath = do
   let cmd = "notmuch"
   let args = ["config", "get", "database.path"]
-  (exitc, stdout, err) <- readProcess $ proc cmd args
-  case exitc of
-    ExitFailure _ -> error (untaint decode err)
-    ExitSuccess -> pure (filter (/= '\n') (untaint decode stdout))
+  (exitc, stdout, _err) <- readProcess $ proc cmd args
+  pure $ case exitc of
+    ExitFailure _ -> ""
+    ExitSuccess -> filter (/= '\n') (untaint decode stdout)
   where
       decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
@@ -236,7 +237,7 @@ countThreads query fp =
 getThreads
   :: (MonadError Error m, MonadIO m)
   => T.Text
-  -> NotmuchSettings FilePath
+  -> NotmuchSettings
   -> m (V (Toggleable NotmuchThread))
 getThreads s settings =
   withDatabaseReadOnly (view nmDatabase settings) $
@@ -252,7 +253,7 @@ lazyTraverse f =
 getThreads
   :: (MonadError Error m, MonadIO m)
   => T.Text
-  -> NotmuchSettings FilePath
+  -> NotmuchSettings
   -> m (Vec.Vector (Toggleable NotmuchThread))
 getThreads s settings =
   withDatabaseReadOnly (view nmDatabase settings) $

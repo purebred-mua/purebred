@@ -24,6 +24,7 @@ ways to overwrite the configuration.
 
 -}
 
+import Control.Monad.IO.Class (liftIO)
 import Purebred
 import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as L
@@ -77,15 +78,18 @@ fromMail =
     ]
 
 main :: IO ()
-main = purebred
-  [ usePlugin $ tweakConfig tweak
-  ]
+main =
+  purebred
+    [ usePlugin $ tweakConfig tweak
+    , usePlugin $ tweakConfigWithIO $ \conf -> do
+        cwd <- liftIO getCurrentDirectory
+        pure $ set (confFileBrowserView . fbHomePath) cwd conf
+    ]
   where
   tweak =
     over (confIndexView . ivBrowseThreadsKeybindings) (`union` myBrowseThreadsKbs)
     . over (confMailView . mvKeybindings) (`union` myMailKeybindings)
     . set (confComposeView . cvSendMailCmd) writeMailtoFile
-    . set (confFileBrowserView . fbHomePath) getCurrentDirectory
     . set (confComposeView . cvIdentities) fromMail
     . over confTheme (applyAttrMappings myColoredTags)
 

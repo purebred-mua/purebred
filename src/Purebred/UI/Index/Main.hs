@@ -48,7 +48,7 @@ renderListOfThreads s = L.renderList (listDrawThread s (ListOfThreads == focused
 renderListOfMails :: AppState -> Widget Name
 renderListOfMails s = L.renderList (listDrawMail s) True $ view (asThreadsView . miListOfMails) s
 
-notmuchConfig :: AppState -> NotmuchSettings FilePath
+notmuchConfig :: AppState -> NotmuchSettings
 notmuchConfig = view (asConfig . confNotmuch)
 
 isNewMail :: ManageTags a => a -> AppState -> Bool

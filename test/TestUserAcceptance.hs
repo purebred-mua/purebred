@@ -50,7 +50,7 @@ import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
 import Control.Monad.State (MonadState)
 import System.Exit (die)
 
-import Control.Lens (Lens', _init, _last, at, preview, set, to, view)
+import Control.Lens (Lens', _init, _last, at, lens, preview, set, to, view)
 import System.Directory
   ( copyFile, getCurrentDirectory, listDirectory, removeDirectoryRecursive
   , removeFile, doesPathExist, findExecutable
@@ -638,9 +638,9 @@ testShowsNewMail = purebredTmuxSession "shows newly delivered mail" $
     step "shows new mails"
     sendKeys "Down" (Substring "New: 4")
 
-    mdir <- view envMaildir
+    notmuchcfg <- view envNotmuchConfig
 
-    let notmuchcfg = mdir </> "notmuch-config"
+    let
         m = set (headers . at "subject") (Just "new mail notification") $ createTextPlainMessage "Hello there"
         rendered = toLazyByteString (buildMessage m)
         config = setStdin (byteStringInput rendered) $ proc "notmuch"
@@ -1780,6 +1780,7 @@ newtype GlobalEnv = GlobalEnv FilePath
 data Env = Env
   { _envConfigDir :: FilePath
   , _envMaildir :: FilePath
+  , _envNotmuchConfig :: FilePath
   , _envSessionName :: String
   }
 
@@ -1788,18 +1789,20 @@ instance HasTmuxSession Env where
 
 -- | Session-specific config dir
 envConfigDir :: Lens' Env FilePath
-envConfigDir f (Env a b c) = fmap (\a' -> Env a' b c) (f a)
+envConfigDir = lens _envConfigDir (\s b -> s { _envConfigDir = b })
 
 envMaildir :: Lens' Env FilePath
-envMaildir f (Env a b c) = fmap (\b' -> Env a b' c) (f b)
+envMaildir = lens _envMaildir (\s b -> s { _envMaildir = b })
+
+envNotmuchConfig :: Lens' Env FilePath
+envNotmuchConfig = lens _envNotmuchConfig (\s b -> s { _envNotmuchConfig = b })
 
 envSessionName :: Lens' Env String
-envSessionName f (Env a b c) = fmap (\c' -> Env a b c') (f c)
-{-# ANN envSessionName ("HLint: ignore Avoid lambda" :: String) #-}
+envSessionName = lens _envSessionName (\s b -> s { _envSessionName = b })
 
 -- | Tear down a test session
 tearDown :: Env -> IO ()
-tearDown (Env confdir mdir _) = do
+tearDown (Env confdir mdir _ _) = do
   removeDirectoryRecursive confdir
   removeDirectoryRecursive mdir
 
@@ -1807,21 +1810,23 @@ tearDown (Env confdir mdir _) = do
 setUp :: GlobalEnv -> TmuxSession -> IO Env
 setUp (GlobalEnv globalConfigDir) sessionName = do
   maildir <- setUpTempMaildir
+  nmCfg <- setUpNotmuchCfg maildir
+  setUpNotmuch nmCfg
 
   confdir <- mkTempDir
   runProcess_ $ proc "sh" ["-c", "cp -a " <> globalConfigDir <> "/* " <> confdir]
 
-  let env = Env confdir maildir sessionName
+  flip runReaderT sessionName $ do
+    -- a) Make the regex less color code dependent by setting the TERM to 'ansi'.
+    -- This can happen if different environments support more than 16 colours (e.g.
+    -- background values > 37), while our CI environment only supports 16 colours.
+    setEnvVarInSession "TERM" "ansi"
 
-  -- a) Make the regex less color code dependent by setting the TERM to 'ansi'.
-  -- This can happen if different environments support more than 16 colours (e.g.
-  -- background values > 37), while our CI environment only supports 16 colours.
-  runReaderT (setEnvVarInSession "TERM" "ansi") env
+    -- set the config dir
+    setEnvVarInSession "PUREBRED_CONFIG_DIR" confdir
+    setEnvVarInSession "NOTMUCH_CONFIG" nmCfg
 
-  -- set the config dir
-  runReaderT (view envConfigDir >>= setEnvVarInSession "PUREBRED_CONFIG_DIR") env
-
-  pure env
+  pure $ Env confdir maildir nmCfg sessionName
 
 precompileConfig :: FilePath -> IO ()
 precompileConfig testdir = do
@@ -1874,7 +1879,6 @@ setUpTempMaildir = do
     , "-execdir", "sh", "-c", "mv {} $(echo {} | sed s/_2,/:2,/)", ";"
     ]
 
-  setUpNotmuchCfg mdir >>= setUpNotmuch
   pure mdir
 
 -- | run notmuch to create the notmuch database
@@ -1882,7 +1886,10 @@ setUpTempMaildir = do
 setUpNotmuch :: FilePath -> IO ()
 setUpNotmuch notmuchcfg = void $ readProcess_ $ proc "notmuch" ["--config=" <> notmuchcfg, "new" ]
 
--- | Write a minimal notmuch config pointing to the database.
+-- | Write a minimal notmuch config pointing to the given maildir.
+-- Returns the path to the notmuch configuration file (which is
+-- created under the given maildir directory).
+--
 setUpNotmuchCfg :: FilePath -> IO FilePath
 setUpNotmuchCfg dir = do
   let cfgData = "[database]\npath=" <> dir <> "\n"
@@ -1904,8 +1911,7 @@ startApplication :: (MonadReader Env m, MonadIO m) => m ()
 startApplication = do
   srcdir <- liftIO getSourceDirectory
   tmuxSendKeys LiteralKeys ("cd " <> srcdir <> "\r")
-  testmdir <- view envMaildir
-  tmuxSendKeys InterpretKeys ("purebred --database " <> testmdir <> "\r")
+  tmuxSendKeys InterpretKeys ("purebred\r")
   void $ waitForCondition (Substring "Purebred: Item") defaultRetries defaultBackoff
 
 -- | A list item which is toggled for a batch operation
