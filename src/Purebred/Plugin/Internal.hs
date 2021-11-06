@@ -33,12 +33,12 @@ import Control.Monad.State
 
 import Data.MIME (MIMEMessage)
 
-import Purebred.Types (AppState, InternalConfiguration, UserConfiguration)
+import Purebred.Types (AppState, Configuration)
 
 type Pure = Applicative
 type CanIO = MonadIO
 type CanRWAppState = MonadState AppState
-type CanReadConfig = MonadReader InternalConfiguration
+type CanReadConfig = MonadReader Configuration
 
 class (CanReadConfig m, CanIO m, CanRWAppState m) => Unconstrained m where
 instance (CanReadConfig m, CanIO m, CanRWAppState m) => Unconstrained m where
@@ -102,9 +102,9 @@ instance (forall m. Unconstrained m => cap m) => Hook (PreSendHook cap) where
 -- | Process the program configuration at program initialisation.
 -- Available capabilities: __CanIO__.
 newtype ConfigHook cap = ConfigHook
-  ( forall m. (cap m) => UserConfiguration -> m UserConfiguration )
+  ( forall m. (cap m) => Configuration -> m Configuration )
 
-getConfigHook :: (cap m) => ConfigHook cap -> UserConfiguration -> m UserConfiguration
+getConfigHook :: (cap m) => ConfigHook cap -> Configuration -> m Configuration
 getConfigHook (ConfigHook f) = f
 
 instance (forall m. CanIO m => cap m) => Hook (ConfigHook cap) where

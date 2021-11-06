@@ -956,7 +956,7 @@ switchView
       )
   => Action v ctx ()
 switchView = Action [desc] $ do
-  sink <- use (asConfig . confLogSink)
+  sink <- use logSink
   liftIO . sink . LT.pack $ msg
   onFocusSwitch (Proxy @v') (Proxy @ctx')
   modify (transitionHook (Proxy @v) (Proxy @v'))
@@ -971,7 +971,7 @@ switchView = Action [desc] $ do
 -- | Log a debug message
 debug :: LT.Text -> Action v ctx ()
 debug msg = Action [] $ do
-  sink <- use (asConfig . confLogSink)
+  sink <- use logSink
   liftIO $ sink msg
 
 done :: forall a v. (HasViewName v, Completable a) => Action v a (CompletableResult a)
@@ -1400,7 +1400,7 @@ runSearch searchterms = do
 notifyNumThreads :: (MonadState AppState m, MonadIO m, Foldable t) => t a -> m ()
 notifyNumThreads l = do
   nextGen <- uses (asThreadsView . miListOfThreadsGeneration) nextGeneration
-  chan <- use (asConfig . confBChan)
+  chan <- use bChan
   void . liftIO . forkIO $
     let len = length l
     in len `seq` writeBChan chan (NotifyNumThreads len nextGen)
@@ -1768,7 +1768,7 @@ fileBrowserSetWorkingDirectory = do
 
 switchMode' :: (MonadIO m, MonadState AppState m) => ViewName -> Name -> m ()
 switchMode' vn w = do
-  sink <- use (asConfig . confLogSink)
+  sink <- use logSink
   liftIO . sink . LT.pack $
     "focus on " <> show vn <> "/" <> show w
   modifying (asViews . vsFocusedView) (Brick.focusSetCurrent vn)

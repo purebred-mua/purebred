@@ -30,6 +30,8 @@ module Purebred.Types
   ( -- * Application state
     AppState(..)
   , asConfig
+  , bChan
+  , logSink
   , asThreadsView
   , asMailView
   , asCompose
@@ -127,10 +129,6 @@ module Purebred.Types
 
     -- * Configuration
   , UserConfiguration
-  , InternalConfiguration
-  , InternalConfigurationFields(..)
-  , confBChan
-  , confLogSink
   , Configuration(..)
   , confTheme
   , confNotmuch
@@ -143,7 +141,6 @@ module Purebred.Types
   , confFileBrowserView
   , confCharsets
   , confPlugins
-  , confExtra
 
     -- ** Notmuch Configuration
   , NotmuchSettings(..)
@@ -234,7 +231,7 @@ import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (Dialog)
 import Control.Lens
-  ( Getter, Lens, Lens', Traversal', _1, _3
+  ( Getter, Lens', Traversal', _1, _3
   , foldrOf, lens, notNullOf, to, view )
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Monad.State
@@ -500,10 +497,10 @@ cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
 cKeepDraft :: Lens' Compose (Dialog ConfirmDraft)
 cKeepDraft = lens _cKeepDraft (\c x -> c { _cKeepDraft = x })
 
-data NotmuchSettings a =
+data NotmuchSettings =
   NotmuchSettings
     { _nmSearch :: T.Text -- ^ The default query used on startup.
-    , _nmDatabase :: a -- ^ The 'FilePath' to the database.
+    , _nmDatabase :: FilePath -- ^ The 'FilePath' to the database.
     , _nmNewTag :: Tag -- ^ The 'Tag' indicating a new mail or thread.
     , _nmDraftTag :: Tag -- ^ The 'Tag' to attach mails during composition when saved as drafts.
     , _nmSentTag :: Tag -- ^ The 'Tag' to attach to mails once successfully sent.
@@ -514,41 +511,41 @@ data NotmuchSettings a =
     }
   deriving (Generic, NFData)
 
-nmSearch :: Lens' (NotmuchSettings a) T.Text
+nmSearch :: Lens' NotmuchSettings T.Text
 nmSearch = lens _nmSearch (\nm x -> nm { _nmSearch = x })
 
-nmDatabase :: Lens (NotmuchSettings a) (NotmuchSettings b) a b
+nmDatabase :: Lens' NotmuchSettings FilePath
 nmDatabase = lens _nmDatabase (\nm x -> nm { _nmDatabase = x })
 
-nmNewTag :: Lens' (NotmuchSettings a) Tag
+nmNewTag :: Lens' NotmuchSettings Tag
 nmNewTag = lens _nmNewTag (\nm x -> nm { _nmNewTag = x })
 
-nmDraftTag :: Lens' (NotmuchSettings a) Tag
+nmDraftTag :: Lens' NotmuchSettings Tag
 nmDraftTag = lens _nmDraftTag (\nm x -> nm { _nmDraftTag = x })
 
-nmSentTag :: Lens' (NotmuchSettings a) Tag
+nmSentTag :: Lens' NotmuchSettings Tag
 nmSentTag = lens _nmSentTag (\nm x -> nm { _nmSentTag = x })
 
-nmHasNewMailSearch :: Lens' (NotmuchSettings a) T.Text
+nmHasNewMailSearch :: Lens' NotmuchSettings T.Text
 nmHasNewMailSearch = lens _nmHasNewMailSearch (\nm x -> nm { _nmHasNewMailSearch = x })
 
-nmHasNewMailCheckDelay :: Lens' (NotmuchSettings a) (Maybe Delay)
+nmHasNewMailCheckDelay :: Lens' NotmuchSettings (Maybe Delay)
 nmHasNewMailCheckDelay = lens _nmHasNewMailCheckDelay (\nm x -> nm { _nmHasNewMailCheckDelay = x })
 
-data FileBrowserSettings a = FileBrowserSettings
+data FileBrowserSettings = FileBrowserSettings
   { _fbKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]
   , _fbSearchPathKeybindings :: [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
-  , _fbHomePath :: a
+  , _fbHomePath :: FilePath
   }
   deriving (Generic, NFData)
 
-fbKeybindings :: Lens' (FileBrowserSettings a) [Keybinding 'FileBrowser 'ListOfFiles]
+fbKeybindings :: Lens' FileBrowserSettings [Keybinding 'FileBrowser 'ListOfFiles]
 fbKeybindings = lens _fbKeybindings (\cv x -> cv { _fbKeybindings = x })
 
-fbSearchPathKeybindings :: Lens' (FileBrowserSettings a) [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
+fbSearchPathKeybindings :: Lens' FileBrowserSettings [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
 fbSearchPathKeybindings = lens _fbSearchPathKeybindings (\cv x -> cv { _fbSearchPathKeybindings = x})
 
-fbHomePath :: Lens (FileBrowserSettings a) (FileBrowserSettings a') a a'
+fbHomePath :: Lens' FileBrowserSettings FilePath
 fbHomePath = lens _fbHomePath (\s a -> s { _fbHomePath = a })
 
 data Delay
@@ -556,79 +553,55 @@ data Delay
   | Minutes Int
   deriving (Generic, NFData)
 
-data Configuration extra a b c = Configuration
+type UserConfiguration = Configuration
+
+data Configuration = Configuration
     { _confTheme :: AttrMap
-    , _confNotmuch :: NotmuchSettings a
-    , _confEditor :: b
+    , _confNotmuch :: NotmuchSettings
+    , _confEditor :: FilePath
     , _confMailView :: MailViewSettings
     , _confIndexView :: IndexViewSettings
     , _confComposeView :: ComposeViewSettings
     , _confHelpView :: HelpViewSettings
     , _confDefaultView :: ViewName
-    , _confFileBrowserView :: FileBrowserSettings c
+    , _confFileBrowserView :: FileBrowserSettings
     , _confCharsets :: CharsetLookup
     , _confPlugins :: [PluginDict]
-    , _confExtra :: extra  -- data specific to a particular "phase" of configuration
     }
     deriving (Generic, NFData)
 
-data InternalConfigurationFields = InternalConfigurationFields
-  { _bChan :: BChan PurebredEvent
-  , _logSink :: LT.Text -> IO ()
-  }
-
--- | The configuration from the user holding IO side effects. This
--- configuration is evaluated to 'InternalConfiguration' by evaluating
--- all the IO side effects during start up. See 'Purebred'
---
-type UserConfiguration = Configuration () (IO FilePath) (IO String) (IO FilePath)
-
--- | Purebred's configuration with all IO actions evaluated to pure form.
-type InternalConfiguration = Configuration InternalConfigurationFields FilePath String FilePath
-
-type ConfigurationLens v = forall z a b c. Lens' (Configuration z a b c) v
-
-confTheme :: ConfigurationLens AttrMap
+confTheme :: Lens' Configuration AttrMap
 confTheme = lens _confTheme (\c x -> c { _confTheme = x })
 
-confEditor :: Lens (Configuration z a b c) (Configuration z a b' c) b b'
+confEditor :: Lens' Configuration FilePath
 confEditor = lens _confEditor (\conf x -> conf { _confEditor = x })
 
-confNotmuch :: Lens (Configuration z a b c) (Configuration z a' b c) (NotmuchSettings a) (NotmuchSettings a')
+confNotmuch :: Lens' Configuration NotmuchSettings
 confNotmuch = lens _confNotmuch (\conf x -> conf { _confNotmuch = x })
 
-confMailView :: ConfigurationLens MailViewSettings
+confMailView :: Lens' Configuration MailViewSettings
 confMailView = lens _confMailView (\conf x -> conf { _confMailView = x })
 
-confIndexView :: ConfigurationLens IndexViewSettings
+confIndexView :: Lens' Configuration IndexViewSettings
 confIndexView = lens _confIndexView (\conf x -> conf { _confIndexView = x })
 
-confComposeView :: ConfigurationLens ComposeViewSettings
+confComposeView :: Lens' Configuration ComposeViewSettings
 confComposeView = lens _confComposeView (\conf x -> conf { _confComposeView = x})
 
-confHelpView :: ConfigurationLens HelpViewSettings
+confHelpView :: Lens' Configuration HelpViewSettings
 confHelpView = lens _confHelpView (\conf x -> conf { _confHelpView = x })
 
-confDefaultView :: ConfigurationLens ViewName
+confDefaultView :: Lens' Configuration ViewName
 confDefaultView = lens _confDefaultView (\conf x -> conf { _confDefaultView = x })
 
-confFileBrowserView :: Lens (Configuration z a b c) (Configuration z a b c') (FileBrowserSettings c) (FileBrowserSettings c')
+confFileBrowserView :: Lens' Configuration FileBrowserSettings
 confFileBrowserView = lens _confFileBrowserView (\conf x -> conf { _confFileBrowserView = x })
 
-confCharsets :: ConfigurationLens CharsetLookup
+confCharsets :: Lens' Configuration CharsetLookup
 confCharsets = lens _confCharsets (\conf x -> conf { _confCharsets = x })
 
-confPlugins :: ConfigurationLens [PluginDict]
+confPlugins :: Lens' Configuration [PluginDict]
 confPlugins = lens _confPlugins (\conf x -> conf { _confPlugins = x })
-
-confExtra :: Lens (Configuration extra a b c) (Configuration extra' a b c) extra extra'
-confExtra = lens _confExtra (\cfg x -> cfg { _confExtra = x })
-
-confBChan :: Lens' InternalConfiguration (BChan PurebredEvent)
-confBChan = confExtra . lens _bChan (\s a -> s { _bChan = a })
-
-confLogSink :: Lens' InternalConfiguration (LT.Text -> IO ())
-confLogSink = confExtra . lens _logSink (\s a -> s { _logSink = a })
 
 
 data ComposeViewSettings = ComposeViewSettings
@@ -800,7 +773,9 @@ aValidation = lens _aValidation (\as x -> as { _aValidation = x })
 -- management, as well as views and more.
 --
 data AppState = AppState
-    { _asConfig :: InternalConfiguration
+    { _asConfig :: Configuration
+    , _bChan :: BChan PurebredEvent
+    , _logSink :: LT.Text -> IO ()
     , _asThreadsView :: ThreadsView
     , _asMailView  :: MailView
     , _asCompose   :: Compose  -- ^ state to keep when user creates a new mail
@@ -811,8 +786,14 @@ data AppState = AppState
     , _asAsync :: Async
     }
 
-asConfig :: Lens' AppState InternalConfiguration
+asConfig :: Lens' AppState Configuration
 asConfig = lens _asConfig (\appstate x -> appstate { _asConfig = x })
+
+bChan :: Lens' AppState (BChan PurebredEvent)
+bChan = lens _bChan (\s a -> s { _bChan = a })
+
+logSink :: Lens' AppState (LT.Text -> IO ())
+logSink = lens _logSink (\s a -> s { _logSink = a })
 
 asThreadsView :: Lens' AppState ThreadsView
 asThreadsView = lens _asThreadsView (\appstate x -> appstate { _asThreadsView = x })

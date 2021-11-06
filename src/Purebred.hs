@@ -276,16 +276,14 @@ launch ghcOpts inCfg = do
     hooks = getConfigHook . view configHook <$> plugins
   cfg <- foldr (>=>) pure hooks inCfg
 
-  -- set the user-specified database path *before* processing config,
-  -- to avoid possible error in `notmuch config-get`
+  -- Now apply CLI overrides
   opts <- execParser (optParser (fullVersionInfo plugins) (dumpKeybindings cfg))
   let
-    pre =
-      maybe id (set (confNotmuch . nmDatabase) . pure) (databaseFilepath opts)
+    cfg' = Control.DeepSeq.force $ cfg
+      & maybe id (set (confNotmuch . nmDatabase)) (databaseFilepath opts)
       . maybe id (set (confNotmuch . nmSearch)) (view packed <$> searchOverride opts)
 
   -- Create a channel for sending custom events into Brick event loop.
-  -- It gets set in the InternalConfiguration.
   --
   -- There are max 32 elems in chan.  If full, writing will block.  I have
   -- no idea if 32 is a good number or not.
@@ -293,12 +291,11 @@ launch ghcOpts inCfg = do
   bchan <- newBChan 32
 
   -- Create log sink.
-  logSink <- setupLogsink (debugFile opts)
-  logSink (LT.pack "Compile flags: " <> LT.intercalate (LT.pack " ") (LT.pack <$> ghcOpts))
-  logSink (LT.pack "Opened log file")
-  cfg' <- processConfig (InternalConfigurationFields bchan logSink) (pre cfg)
+  sink <- setupLogsink (debugFile opts)
+  sink (LT.pack "Compile flags: " <> LT.intercalate (LT.pack " ") (LT.pack <$> ghcOpts))
+  sink (LT.pack "Opened log file")
 
-  s <- initialState cfg'
+  s <- initialState cfg' bchan sink
   let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
   initialVty <- buildVty
 
@@ -310,19 +307,6 @@ launch ghcOpts inCfg = do
   void $ customMain initialVty buildVty (Just bchan) (theApp s) s
 
 
--- | Fully evaluate the 'UserConfiguration', then set the extra data to
--- turn it into an 'InternalConfiguration'.
-processConfig
-  :: InternalConfigurationFields
-  -> UserConfiguration
-  -> IO InternalConfiguration
-processConfig z = fmap (set confExtra z . Control.DeepSeq.force) . unIO
-  where
-  unIO =
-    (confNotmuch . nmDatabase) id
-    >=> confEditor id
-    >=> (confFileBrowserView . fbHomePath) id
-
 -- | Main program entry point.  Apply to a list of plugins (use
 -- 'usePlugin' to prepare each plugin for use).
 --
@@ -333,8 +317,9 @@ purebred plugins = do
   ghcOptsEnv <- maybe [] words <$> lookupEnv "GHCOPTS"
   libdir <- getLibDir
 
+  cfg <- over confPlugins (plugins <>) <$> defaultConfig
+
   let
-    cfg = over confPlugins (plugins <>) defaultConfig
     ghcOpts = ghcOptsEnv
     dyreParams = (Dyre.newParams "purebred" (launch ghcOpts) (const error))
       { Dyre.configDir = pure <$> configDir
@@ -355,7 +340,7 @@ newtype KeybindingsAsciiDoc = KeybindingsAsciiDoc String
 
 -- | Render all defined key bindings as an asciidoc compatible table
 --
-dumpKeybindings :: Configuration extra a b c -> KeybindingsAsciiDoc
+dumpKeybindings :: Configuration -> KeybindingsAsciiDoc
 dumpKeybindings cfg =
   KeybindingsAsciiDoc
   $ ifoldMap (renderKeybinding (createKeybindingIndex cfg)) initialViews

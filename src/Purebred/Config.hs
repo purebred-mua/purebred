@@ -18,23 +18,25 @@
 
 module Purebred.Config where
 
+import Control.Applicative ((<|>), liftA2)
+import Data.List.NonEmpty (fromList)
+import Data.Maybe (fromMaybe)
+import System.Environment (lookupEnv)
+import System.Exit (ExitCode(..))
+
+import Control.Lens (set)
+import Control.Monad.Except (runExceptT)
+import qualified Data.ByteString.Builder as B
+import qualified Data.ByteString.Lazy as L
+import qualified Data.Text as T
+import System.Directory (getHomeDirectory)
+
 import qualified Brick.AttrMap as A
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.Dialog as D
 import Brick.Util (fg, on, bg)
 import qualified Brick.Widgets.Edit as E
 import qualified Graphics.Vty as V
-import qualified Data.ByteString.Builder as B
-import qualified Data.ByteString.Lazy as L
-import qualified Data.Text as T
-import Control.Monad.Except (runExceptT)
-import System.Environment (lookupEnv)
-import System.Directory (getHomeDirectory)
-import Data.Maybe (fromMaybe)
-import Data.List.NonEmpty (fromList)
-import System.Exit (ExitCode(..))
-
-import Control.Lens (set)
 
 import Data.MIME (contentTypeTextPlain, defaultCharsets, matchContentType)
 
@@ -262,20 +264,36 @@ mailbodySourceAttr = mailbodyAttr <> "source"
 
 -- | The default configuration used in Purebred.
 --
-defaultConfig :: UserConfiguration
-defaultConfig =
+-- Returns a default configuration, with some properties dependent on the
+-- execution environment:
+--
+-- * Editor taken from @VISUAL@ or @EDITOR@ environment variable, falling
+--   back to @"vi"@ if neither is defined.
+--
+-- * Notmuch database path determined by executing
+--   @notmuch config get database.path@.
+--
+-- * Home directory for file browser taken from
+--   'System.Directory.getHomeDirectory'.
+--
+defaultConfig :: IO UserConfiguration
+defaultConfig = do
+  dbPath <- getDatabasePath
+  editor <- fromMaybe "vi" <$> liftA2 (<|>) (lookupEnv "VISUAL") (lookupEnv "EDITOR")
+  homeDir <- getHomeDirectory
+  pure $
     Configuration
     { _confTheme = solarizedDark
     , _confNotmuch = NotmuchSettings
       { _nmSearch = "tag:inbox"
-      , _nmDatabase = getDatabasePath
+      , _nmDatabase = dbPath
       , _nmNewTag = "unread"
       , _nmDraftTag = "draft"
       , _nmSentTag = "sent"
       , _nmHasNewMailSearch = "tag:inbox and tag:unread"
       , _nmHasNewMailCheckDelay = Just (Seconds 3)
       }
-    , _confEditor = fromMaybe "vi" <$> lookupEnv "EDITOR"
+    , _confEditor = editor
     , _confMailView = MailViewSettings
       { _mvIndexRows = 10
       , _mvTextWidth = 82
@@ -322,11 +340,10 @@ defaultConfig =
     , _confFileBrowserView = FileBrowserSettings
       { _fbKeybindings = fileBrowserKeybindings
       , _fbSearchPathKeybindings = manageSearchPathKeybindings
-      , _fbHomePath = getHomeDirectory
+      , _fbHomePath = homeDir
       }
     , _confCharsets = defaultCharsets
     , _confPlugins = set pluginBuiltIn True <$>
         [ usePlugin Purebred.Plugin.UserAgent.plugin
         ]
-    , _confExtra = ()
     }

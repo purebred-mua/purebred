@@ -21,10 +21,11 @@
 module Purebred.UI.App where
 
 import qualified Brick.Main as M
+import Brick.BChan (BChan)
 import Brick.Types (Widget)
 import Brick.Focus (focusRing)
 import Brick.Widgets.Core (vBox, vLimit)
-import qualified Brick.Types as T
+import qualified Brick.Types as Brick
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
@@ -32,6 +33,7 @@ import qualified Graphics.Vty.Input.Events as Vty
 import Control.Lens (set, view)
 import Control.Monad.State (execStateT)
 import qualified Data.Map as Map
+import qualified Data.Text.Lazy as T
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
 import Data.Proxy
@@ -111,7 +113,7 @@ renderWidget s _ ConfirmDialog = renderConfirm s
 
 -- | Main event handler
 --
-handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> T.EventM Name (T.Next AppState)
+handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> Brick.EventM Name (Brick.Next AppState)
 handleViewEvent = f where
   f ComposeView ComposeFrom = dispatch eventHandlerComposeFrom
   f ComposeView ComposeSubject = dispatch eventHandlerComposeSubject
@@ -145,10 +147,10 @@ handleViewEvent = f where
 --
 appEvent ::
      AppState
-  -> T.BrickEvent Name PurebredEvent -- ^ event
-  -> T.EventM Name (T.Next AppState)
-appEvent s (T.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
-appEvent s (T.AppEvent ev) = case ev of
+  -> Brick.BrickEvent Name PurebredEvent -- ^ event
+  -> Brick.EventM Name (Brick.Next AppState)
+appEvent s (Brick.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
+appEvent s (Brick.AppEvent ev) = case ev of
   NotifyNumThreads n gen -> M.continue $
     if gen == view (asThreadsView . miListOfThreadsGeneration) s
     then set (asThreadsView . miThreads . listLength) (Just n) s
@@ -179,8 +181,8 @@ initialViews = Map.fromList
   , (FileBrowser, filebrowserView)
   ]
 
-initialState :: InternalConfiguration -> IO AppState
-initialState conf = do
+initialState :: Configuration -> BChan PurebredEvent -> (T.Text -> IO ()) -> IO AppState
+initialState conf chan sink = do
   fb' <- FB.newFileBrowser
          FB.selectNonDirectories
          ListOfFiles
@@ -218,7 +220,7 @@ initialState conf = do
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
     async = Async Nothing
-    s = AppState conf mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
+    s = AppState conf chan sink mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
   execStateT applySearch s
 
 -- | Application event loop.
