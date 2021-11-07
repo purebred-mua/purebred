@@ -14,7 +14,6 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -254,12 +253,9 @@ import Purebred.UI.Widgets (StatefulEditor)
 import {-# SOURCE #-} Purebred.Plugin.Internal
 import Purebred.Types.Error
 import Purebred.Types.Event
+import Purebred.Types.Items
 import Purebred.Types.Mailcap
 import Purebred.Types.UI
-
-#if defined LAZYVECTOR
-import Purebred.Types.LazyVector (V)
-#endif
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
@@ -291,11 +287,7 @@ listLength f (ListWithLength a b) = (\b' -> ListWithLength a b') <$> f b
 --
 data ThreadsView = ThreadsView
     { _miListOfMails  :: ListWithLength V.Vector (Toggleable NotmuchMail)
-#if defined LAZYVECTOR
-    , _miListOfThreads :: ListWithLength V (Toggleable NotmuchThread)
-#else
-    , _miListOfThreads :: ListWithLength V.Vector (Toggleable NotmuchThread)
-#endif
+    , _miListOfThreads :: ListWithLength Items (Toggleable NotmuchThread)
     , _miListOfThreadsGeneration :: Generation
     , _miSearchThreadsEditor :: StatefulEditor T.Text Name
     , _miMailTagsEditor :: E.Editor T.Text Name
@@ -306,24 +298,14 @@ data ThreadsView = ThreadsView
 miMails :: Lens' ThreadsView (ListWithLength V.Vector (Toggleable NotmuchMail))
 miMails = lens _miListOfMails (\m v -> m { _miListOfMails = v })
 
-#if defined LAZYVECTOR
-miThreads :: Lens' ThreadsView (ListWithLength V (Toggleable NotmuchThread))
+miThreads :: Lens' ThreadsView (ListWithLength Items (Toggleable NotmuchThread))
 miThreads = lens _miListOfThreads (\m v -> m { _miListOfThreads = v})
-#else
-miThreads :: Lens' ThreadsView (ListWithLength V.Vector (Toggleable NotmuchThread))
-miThreads = lens _miListOfThreads (\m v -> m { _miListOfThreads = v})
-#endif
 
 miListOfMails :: Lens' ThreadsView (L.GenericList Name V.Vector (Toggleable NotmuchMail))
 miListOfMails = miMails . listList
 
-#if defined LAZYVECTOR
-miListOfThreads :: Lens' ThreadsView (L.GenericList Name V (Toggleable NotmuchThread))
+miListOfThreads :: Lens' ThreadsView (L.GenericList Name Items (Toggleable NotmuchThread))
 miListOfThreads = miThreads . listList
-#else
-miListOfThreads :: Lens' ThreadsView (L.GenericList Name V.Vector (Toggleable NotmuchThread))
-miListOfThreads = miThreads . listList
-#endif
 
 miListOfThreadsGeneration :: Lens' ThreadsView Generation
 miListOfThreadsGeneration =

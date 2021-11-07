@@ -25,7 +25,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE CPP #-}
 
 module Purebred.UI.Actions (
   -- * Overview
@@ -173,14 +172,12 @@ import Purebred.System (tryIO)
 import Purebred.System.Process
 import Purebred.Types
 import Purebred.Types.Error
+import Purebred.Types.Items
 import Purebred.UI.Notifications
        (setUserMessage, makeWarning, showError, showWarning, showInfo
        , showUserMessage)
 import Purebred.UI.Widgets
   ( statefulEditor, editEditorL, revertEditorState, saveEditorState )
-#if defined LAZYVECTOR
-import Purebred.Types.LazyVector (V)
-#endif
 
 
 
@@ -275,11 +272,7 @@ class HasList (n :: Name) where
   list :: Proxy n -> Lens' AppState (L.GenericList Name (T n) (E n))
 
 instance HasList 'ListOfThreads where
-#if defined LAZYVECTOR
-  type T 'ListOfThreads = V
-#else
-  type T 'ListOfThreads = Vector.Vector
-#endif
+  type T 'ListOfThreads = Items
   type E 'ListOfThreads = Toggleable NotmuchThread
   list _ = asThreadsView . miListOfThreads
 
