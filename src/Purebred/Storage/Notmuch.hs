@@ -19,7 +19,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE CPP #-}
 
 module Purebred.Storage.Notmuch (
     -- * Synopsis
@@ -53,6 +52,7 @@ import Control.Monad ((<=<), (>=>), when)
 import Data.Function (on)
 import Data.Foldable (toList)
 import Data.Functor.Compose (Compose(..))
+import System.IO.Unsafe (unsafeInterleaveIO)
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError, ExceptT, runExceptT)
@@ -75,11 +75,7 @@ import Purebred.System.Process (readProcess, proc)
 import Purebred.System (tryIO)
 import Purebred.Types.Error
 import Purebred.Types.IFC (sanitiseText, untaint)
-
-#if defined LAZYVECTOR
-import System.IO.Unsafe (unsafeInterleaveIO)
-import Purebred.Types.LazyVector
-#endif
+import Purebred.Types.Items
 
 {- $synopsis
 
@@ -231,36 +227,25 @@ countThreads query fp =
   >=> Notmuch.queryCountMessages
 
 
-#if defined LAZYVECTOR
 -- | creates a vector of threads from a notmuch search
 --
 getThreads
   :: (MonadError Error m, MonadIO m)
   => T.Text
   -> NotmuchSettings
-  -> m (V (Toggleable NotmuchThread))
+  -> m (Items (Toggleable NotmuchThread))
 getThreads s settings =
   withDatabaseReadOnly (view nmDatabase settings) $
     flip Notmuch.query (Notmuch.Bare $ T.unpack s)
     >=> Notmuch.threads
+    -- note: we use lazyTraverse and "chunked" construction, but
+    -- whether it will actually be lazy depends on the variant of
+    -- 'Items' in use.  For a Vector, it is strict and non-chunked.
     >=> liftIO . fmap (fromList 128) . lazyTraverse (fmap (False,) . threadToThread)
 
 lazyTraverse :: (a -> IO b) -> [a] -> IO [b]
 lazyTraverse f =
   foldr (\x ys -> (:) <$> f x <*> unsafeInterleaveIO ys) (pure [])
-
-#else
-getThreads
-  :: (MonadError Error m, MonadIO m)
-  => T.Text
-  -> NotmuchSettings
-  -> m (Vec.Vector (Toggleable NotmuchThread))
-getThreads s settings =
-  withDatabaseReadOnly (view nmDatabase settings) $
-    flip Notmuch.query (Notmuch.Bare $ T.unpack s)
-    >=> Notmuch.threads
-    >=> liftIO . fmap Vec.fromList . traverse (fmap (False,) . threadToThread)
-#endif
 
 -- | Returns a vector of *all* messages belonging to the list of threads
 --
