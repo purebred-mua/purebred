@@ -101,10 +101,10 @@ findMatchingWords     "" = removeMatchingWords
 findMatchingWords needle =
   over (mbParagraph . pLine) go
   where
+    lengthNeedle = T.length needle
     go :: Line -> Line
     go line =
-      let lengthNeedle = T.length needle
-          lineNumber = view lNumber line
+      let lineNumber = view lNumber line
           allMatches =
             (\(h, _) -> Match (T.length h) lengthNeedle lineNumber) <$>
             T.breakOnAll needle (view lText line)
