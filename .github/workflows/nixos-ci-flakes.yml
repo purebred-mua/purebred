@@ -1,0 +1,24 @@
+name: NixOS Build (Flakes - build only)
+on:
+  - push
+  - pull_request
+jobs:
+  linux:
+    name: Nix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Local cache
+        uses: actions/cache@v2
+        with:
+          path: /nix/store
+          key: "{{ runner.os }}-Nixpkgs-integration-test"
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v15
+        with:
+          nix_path: "nixpkgs=channel:nixos-unstable"
+
+      - run: nix build
+      - run: nix flake check
