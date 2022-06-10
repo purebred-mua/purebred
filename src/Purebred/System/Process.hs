@@ -42,7 +42,6 @@ module Purebred.System.Process
 
 import Data.Bifunctor (bimap)
 import Data.Functor (($>))
-import System.Exit (ExitCode(..))
 import Control.Exception (IOException)
 import Control.Monad.Catch (bracket, MonadMask)
 import Control.Monad.IO.Class (MonadIO, liftIO)

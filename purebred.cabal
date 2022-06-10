@@ -109,7 +109,7 @@ library
                      , vector >= 0.12.0.0
                      , notmuch >= 0.3 && < 0.4
                      , text
-                     , typed-process >= 0.2.1.0
+                     , typed-process >= 0.2.8.0
                      , directory >= 1.2.5.0
                      , bytestring
                      , time >= 1.8
