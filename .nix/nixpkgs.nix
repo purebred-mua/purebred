@@ -1,7 +1,7 @@
 { compiler ? null, nixpkgs ? null}:
 
 let
-  compilerVersion = if isNull compiler then "ghc884" else compiler;
+  compilerVersion = if isNull compiler then "ghc901" else compiler;
   haskellPackagesOverlay = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
@@ -10,6 +10,7 @@ let
         purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
         dyre = hsuper.callPackage ./dyre.nix { };
         brick = hsuper.callPackage ./brick.nix { };
+        typed-process = hsuper.callPackage ./typed-process.nix { };
       };
     };
   };

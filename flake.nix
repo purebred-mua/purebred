@@ -18,6 +18,7 @@
             purebred-icu = hsuper.callPackage .nix/purebred-icu.nix { };
             dyre = hsuper.callPackage .nix/dyre.nix { };
             brick = hsuper.callPackage .nix/brick.nix { };
+            typed-process = hsuper.callPackage .nix/typed-process.nix { };
           };
         };
       };
@@ -45,22 +46,22 @@
       nativeBuildInputs = pkgs.haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
     };
     mkPurebredWithPackages = with-icu:
-      let
-        envPackages = self: if with-icu then [ self.purebred-icu ] else [ self.purebred ];
-        env = pkgs.haskellPackages.ghcWithPackages envPackages;
-      in pkgs.stdenv.mkDerivation {
-        name = "purebred-with-packages-${env.version}";
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        # This creates a Bash script, which sets the GHC in order for dyre to be
-        # able to build the config file.
-        buildCommand = ''
-          mkdir -p $out/bin
-          makeWrapper ${env}/bin/purebred $out/bin/purebred \
-          --set NIX_GHC "${env}/bin/ghc"
-        '';
-        preferLocalBuild = true;
-        allowSubstitutes = false;
-      };
+    let
+      envPackages = self: if with-icu then [ self.purebred-icu ] else [ self.purebred ];
+      env = pkgs.haskellPackages.ghcWithPackages envPackages;
+    in pkgs.stdenv.mkDerivation {
+      name = "purebred-with-packages-${env.version}";
+      nativeBuildInputs = [ pkgs.makeWrapper ];
+      # This creates a Bash script, which sets the GHC in order for dyre to be
+      # able to build the config file.
+      buildCommand = ''
+        mkdir -p $out/bin
+        makeWrapper ${env}/bin/purebred $out/bin/purebred \
+        --set NIX_GHC "${env}/bin/ghc"
+      '';
+      preferLocalBuild = true;
+      allowSubstitutes = false;
+    };
   in rec {
     packages = {
       purebred-with-packages = mkPurebredWithPackages false;
