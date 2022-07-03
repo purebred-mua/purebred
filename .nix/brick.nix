@@ -6,8 +6,8 @@
 }:
 mkDerivation {
   pname = "brick";
-  version = "0.70.1";
-  sha256 = "e4d214bc6cad3207299b9b273a886dbff011d75f82b2afd4a7f31a4a0d8821a2";
+  version = "0.73";
+  sha256 = "741c8d0717f0ab5addd5d3acc88cb36d645a0c73907bde509b2fd9d9bc02039c";
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
@@ -17,7 +17,7 @@ mkDerivation {
     unix vector vty word-wrap
   ];
   testHaskellDepends = [
-    base containers microlens QuickCheck vector
+    base containers microlens QuickCheck vector vty
   ];
   homepage = "https://github.com/jtdaugherty/brick/";
   description = "A declarative terminal user interface library";
