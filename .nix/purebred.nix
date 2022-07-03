@@ -1,34 +1,32 @@
 { mkDerivation, attoparsec, base, brick, bytestring
-  , case-insensitive, containers, deepseq, directory, dyre
-  , exceptions, filepath, ini, lens, lib, mime-types, mtl, notmuch
-  , optparse-applicative, purebred-email, quickcheck-instances
-  , random, regex-posix, stm, tasty, tasty-hunit
-  , tasty-quickcheck, temporary, text, text-zipper, time
-  , typed-process, vector, vty
-  , Cabal, tasty-tmux
+, case-insensitive, containers, deepseq, directory, dyre
+, exceptions, filepath, lens, lib, mime-types, mtl, notmuch
+, optparse-applicative, purebred-email, quickcheck-instances
+, random, stm, tasty, tasty-hunit, tasty-quickcheck, tasty-tmux
+, temporary, text, text-zipper, time, typed-process, unix, vector
+, vty, word-wrap
 }:
 mkDerivation {
   pname = "purebred";
   version = "0.1.0.0";
-  src = ../.;
+  src = ./..;
   isLibrary = true;
   isExecutable = true;
-  setupHaskellDepends = [ Cabal ];
   libraryHaskellDepends = [
     attoparsec base brick bytestring case-insensitive containers
     deepseq directory dyre exceptions filepath lens mime-types mtl
-    notmuch optparse-applicative purebred-email random temporary text
-    text-zipper time typed-process vector vty
+    notmuch optparse-applicative purebred-email random stm temporary
+    text text-zipper time typed-process vector vty word-wrap
   ];
-  testTarget = "unit";
   executableHaskellDepends = [ base ];
+  testTarget = "unit";
   testHaskellDepends = [
-    base brick bytestring directory filepath ini lens mtl notmuch
-    purebred-email quickcheck-instances regex-posix stm tasty
-    tasty-hunit tasty-quickcheck temporary text time typed-process
-    vector tasty-tmux
+    attoparsec base brick bytestring directory filepath lens mtl
+    notmuch purebred-email quickcheck-instances tasty tasty-hunit
+    tasty-quickcheck tasty-tmux temporary text time typed-process unix
+    vector
   ];
-  homepage = "https://github.com/githubuser/purebred#readme";
+  homepage = "https://github.com/purebred-mua/purebred#readme";
   description = "An mail user agent built around notmuch";
-  license = lib.licenses.agpl3;
+  license = lib.licenses.agpl3Plus;
 }
