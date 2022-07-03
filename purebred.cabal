@@ -92,6 +92,8 @@ library
                      , Purebred.UI.Views
                      , Purebred.UI.Widgets
                      , Purebred.Version
+                     , Purebred.Brick.Markup
+                     , Data.Text.Markup
   other-modules:       Paths_purebred
                      , Purebred.Types.IFC
                      , Purebred.Types.Items
@@ -103,7 +105,7 @@ library
                      , deepseq >= 1.4.2
                      , dyre >= 0.9.1
                      , lens
-                     , brick >= 0.64 && < 0.68
+                     , brick >= 0.68 && < 0.72
                      , text-zipper
                      , vty
                      , vector >= 0.12.0.0

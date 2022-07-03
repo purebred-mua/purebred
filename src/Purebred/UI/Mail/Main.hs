@@ -30,7 +30,6 @@ import qualified Brick.Widgets.List as L
 import Brick.Widgets.Core
   (padTop, padBottom, txt, txtWrap, viewport, (<+>), (<=>), withAttr,
    vBox, hBox, padLeftRight, padRight)
-import Brick.Markup (markup, (@?))
 import Brick.Focus (focusGetCurrent)
 import Data.Text.Markup (Markup, markupSet)
 
@@ -41,6 +40,7 @@ import Prelude hiding (Word)
 
 import Data.MIME
 
+import Purebred.Brick.Markup (markup, (@?))
 import Purebred.Types
 import Purebred.UI.Draw.Main (attachmentsHeader)
 import Purebred.UI.Views (focusedViewWidget)
