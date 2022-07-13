@@ -1,6 +1,19 @@
 { compiler ? null, nixpkgs ? null}:
 
 let
+  compilerVersion = if isNull compiler then "ghc901" else compiler;
+  haskellPackagesOverlay = self: super: with super.haskell.lib; {
+    haskellPackages = super.haskell.packages.${compilerVersion}.override {
+      overrides = hself: hsuper: {
+        purebred = hsuper.callPackage ./purebred.nix { };
+        purebred-email = hsuper.callPackage ./purebred-email.nix { };
+        purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
+        dyre = hsuper.callPackage ./dyre.nix { };
+        brick = hsuper.callPackage ./brick.nix { };
+        typed-process = hsuper.callPackage ./typed-process.nix { };
+      };
+    };
+  };
   lock = builtins.fromJSON (builtins.readFile ../flake.lock);
   pkgSrc =
     if isNull nixpkgs
@@ -12,6 +25,5 @@ let
     }
     else
     nixpkgs;
-    haskellPackagesOverlay = import ./overlays.nix;
 in
-import pkgSrc { overlays = haskellPackagesOverlay; }
+import pkgSrc { overlays = [ haskellPackagesOverlay ]; }

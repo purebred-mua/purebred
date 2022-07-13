@@ -31,6 +31,47 @@
 #
 # $ nix-shell default.nix
 #
-{ compiler ? null, nixpkgs ? null, with-icu ? false }@args:
+{ compiler ? null, nixpkgs ? null, with-icu ? false }:
 
-(import .nix/nixpkgs.nix args).purebred-with-packages
+with (import .nix/nixpkgs.nix { inherit compiler nixpkgs; });
+
+let
+  envPackages = self: if with-icu then [ self.purebred-icu ] else [ self.purebred ];
+  icuPackageDep = hp: if with-icu then [ hp.purebred-icu ] else [];
+  env = haskellPackages.ghcWithPackages envPackages;
+  nativeBuildTools = with pkgs.haskellPackages; [
+    cabal-install
+    cabal2nix
+    ghcid
+    hlint
+    haskell-language-server
+    ormolu
+    hie-bios
+    pkgs.notmuch
+    pkgs.tmux
+    pkgs.gnumake
+    pkgs.asciidoctor
+    pkgs.python3Packages.pygments
+  ];
+in
+    if pkgs.lib.inNixShell
+    then haskellPackages.shellFor {
+      withHoogle = true;
+      packages = haskellPackages: [ haskellPackages.purebred ] ++ icuPackageDep haskellPackages;
+      nativeBuildInputs = haskellPackages.purebred.env.nativeBuildInputs ++ nativeBuildTools;
+    }
+    else {
+      purebred = pkgs.stdenv.mkDerivation {
+        name = "purebred-with-packages-${env.version}";
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        # This creates a Bash script, which sets the GHC in order for dyre to be
+        # able to build the config file.
+        buildCommand = ''
+          mkdir -p $out/bin
+          makeWrapper ${env}/bin/purebred $out/bin/purebred \
+          --set NIX_GHC "${env}/bin/ghc"
+        '';
+        preferLocalBuild = true;
+        allowSubstitutes = false;
+      };
+    }
