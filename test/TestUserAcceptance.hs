@@ -145,11 +145,11 @@ testSearchRelated = purebredTmuxSession "searches related" $
 
     capture >>= put
     assertSubstringS "Item 1 of 4"
-    assertRegexS (buildAnsiRegex ["37"] ["43"] [] <> "\\sAug'17 frase@host.exa")
+    assertRegexS (buildAnsiRegex ["37"] ["43"] [] <> "[[:space:]]Aug'17 frase@host.exa")
 
     step "search related"
     sendKeys "+" (Substring "Item 1 of 2") >>= put
-    assertRegexS ("Query:\\s" <> buildAnsiRegex ["34"] [] [] <> "frase@host.example")
+    assertRegexS ("Query:[[:space:]]" <> buildAnsiRegex ["34"] [] [] <> "frase@host.example")
 
 -- https://github.com/purebred-mua/purebred/issues/336
 testAbortsCompositionIfEditorExits :: PurebredTestCase
@@ -200,7 +200,7 @@ testReloadsThreadListAfterReply = purebredTmuxSession "reloads list of threads" 
 
     step "focus query editor"
     sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
-    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+"))
 
     step "query for receiver"
     sendLine "to:frase" (Substring "Item 1 of 2")
@@ -297,11 +297,11 @@ testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on ma
     sendKeys "Enter" (Substring "Lorem ipsum dolor sit amet")
 
     step "toggle first mail"
-    sendKeys "*" (Regex $ selectedListItem <> "\\sFeb'17.*WIP Refactor")
+    sendKeys "*" (Regex $ selectedListItem <> "[[:space:]]Feb'17.*WIP Refactor")
 
     step "toggle second mail"
     -- toggled *and* currently selected item
-    sendKeys "*" (Regex $ buildAnsiRegex [] [] ["43"] <> "\\sFeb'17.*Re: WIP Refactor")
+    sendKeys "*" (Regex $ buildAnsiRegex [] [] ["43"] <> "[[:space:]]Feb'17.*Re: WIP Refactor")
 
     step "open mail tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -315,10 +315,10 @@ testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on ma
       Regex (
           "testTag"
           -- first list item starting with the tag
-          <> buildAnsiRegex [] ["34"] [] <> "\\s+WIP Refactor\\s+\n"
+          <> buildAnsiRegex [] ["34"] [] <> "[[:space:]]+WIP Refactor[[:space:]]+\n"
           -- next mail/list item
-          <> buildAnsiRegex [] ["37"] ["43"] <> "\\s+Feb'17.*testTag"
-          <> buildAnsiRegex [] ["37"] [] <> "\\s+Re: WIP Refactor"
+          <> buildAnsiRegex [] ["37"] ["43"] <> "[[:space:]]+Feb'17.*testTag"
+          <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+Re: WIP Refactor"
           )
       ) >>= put
 
@@ -334,9 +334,9 @@ testBulkActionsOnThreadsByInput = purebredTmuxSession "perform bulk labeling on 
     startApplication
 
     step "Toggle two thread items"
-    sendKeys "*" (Regex $ toggledListItem <> "\\sAug.*Testmail with whitespace in the subject")
+    sendKeys "*" (Regex $ toggledListItem <> "[[:space:]]Aug.*Testmail with whitespace in the subject")
     -- The previous line has the same colour, so start colour matching from the first line
-    sendKeys "*" (Regex $ toggledListItem <> "\\sAug.*in the subject.*\\s\\sAug.*This is Purebred")
+    sendKeys "*" (Regex $ toggledListItem <> "[[:space:]]Aug.*in the subject.*[[:space:]][[:space:]]Aug.*This is Purebred")
 
     step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -350,9 +350,9 @@ testBulkActionsOnThreadsByInput = purebredTmuxSession "perform bulk labeling on 
       Regex (
           "testTag"
           <> buildAnsiRegex [] ["37"] []
-          <> "\\s+Testmail with whitespace in the subject\\s*\n"
-          <> buildAnsiRegex [] ["34"] [] <> "\\s+Aug'17.*testTag"
-          <> buildAnsiRegex [] ["34"] [] <> "\\s+This is Purebred\\s+\n"
+          <> "[[:space:]]+Testmail with whitespace in the subject[[:space:]]*\n"
+          <> buildAnsiRegex [] ["34"] [] <> "[[:space:]]+Aug'17.*testTag"
+          <> buildAnsiRegex [] ["34"] [] <> "[[:space:]]+This is Purebred[[:space:]]+\n"
           )
       )
     
@@ -364,21 +364,21 @@ testBulkActionsOnThreadsByKeybinding =
     startApplication
 
     step "Toggle thread and list cursor moves to next list item"
-    sendKeys "*" (Regex $ toggledListItem <> "\\sAug'17.*whitespace in the subject\\s+\n")
+    sendKeys "*" (Regex $ toggledListItem <> "[[:space:]]Aug'17.*whitespace in the subject[[:space:]]+\n")
       >>= assertRegex (
         -- current selection
-        buildAnsiRegex [] ["30"] ["43"] <> "\\sAug'17 rjoost@url.use.*This is Purebred\\s+\n"
+        buildAnsiRegex [] ["30"] ["43"] <> "[[:space:]]Aug'17 rjoost@url.use.*This is Purebred[[:space:]]+\n"
         -- unselected rest
-        <> newListItem <> "\\sFeb'17.*WIP Refactor"
+        <> newListItem <> "[[:space:]]Feb'17.*WIP Refactor"
       )
 
     step "Toggle thread and list cursor moves to next list item"
-    sendKeys "*" (Regex $ selectedListItem <> "\\sFeb'17.*WIP Refactor")
+    sendKeys "*" (Regex $ selectedListItem <> "[[:space:]]Feb'17.*WIP Refactor")
 
     step "Tag toggled list items using key binding"
     sendKeys "a" (Substring "New: 3  ]")
       -- untoggled
-      >>= assertRegex (buildAnsiRegex [] ["37"] [] <> "\\sAug'17.*whitespace in the subject\\s+\n")
+      >>= assertRegex (buildAnsiRegex [] ["37"] [] <> "[[:space:]]Aug'17.*whitespace in the subject[[:space:]]+\n")
 
 testForwardsMailSuccessfully :: PurebredTestCase
 testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" $
@@ -391,7 +391,7 @@ testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" 
     sendKeys "Enter" (Substring "This is a test mail")
 
     step "Start forwarding composition"
-    sendKeys "f" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "\\s+$")
+    sendKeys "f" (Regex $ "To: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+$")
 
     step "enter receipient address"
     sendLine "to_user@foo.test" (Substring "~")
@@ -412,12 +412,12 @@ testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" 
     sendKeys "cc_user@foo.test\r" (Substring "Cc: cc_user@foo.test")
 
     step "start editing bcc"
-    sendKeys "b" (Regex $ "Bcc: " <> buildAnsiRegex [] ["37"] [] <> "\\s+$")
+    sendKeys "b" (Regex $ "Bcc: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+$")
 
     step "add bcc email"
     sendKeys "bcc_user@foo.test\r" (Substring "Bcc: bcc_user@foo.test") >>= put
 
-    assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>\\s+$"
+    assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>[[:space:]]+$"
     assertSubstringS "To: to_user@foo.test"
     assertSubstringS "Cc: cc_user@foo.test"
     assertSubstringS "Bcc: bcc_user@foo.test"
@@ -466,7 +466,7 @@ testSavesEntitySuccessfully = purebredTmuxSession "saves entity to disk successf
     sendLine bogusSavePath (Regex "(open|with)BinaryFile: does not exist")
 
     step "show save to disk editor (again)"
-    sendKeys "s" (Regex $ "Save to file:\\s+" <> buildAnsiRegex [] ["37"] [] <> "\\s+")
+    sendKeys "s" (Regex $ "Save to file:[[:space:]]+" <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+")
 
     step "enter (correct) path"
     sendLine tmpfile (Substring "Attachment saved")
@@ -491,7 +491,7 @@ testAutoview = purebredTmuxSession "automatically copies output for display" $
     sendKeys "Enter" (Substring "This is a HTML mail for purebred in which the HTML part contains")
 
     step "use as reply"
-    sendKeys "r" (Regex ">\\s+This is a HTML mail for purebred")
+    sendKeys "r" (Regex ">[[:space:]]+This is a HTML mail for purebred")
 
 
 testSubstringMatchesAreCleared :: PurebredTestCase
@@ -501,11 +501,11 @@ testSubstringMatchesAreCleared = purebredTmuxSession "substring match indicator 
 
     step "No match indicator is shown"
     snapshot
-    assertRegexS "New:\\s[0-9]\\s+\\]\\s+Threads"
+    assertRegexS "New:[[:space:]][0-9][[:space:]]+\\][[:space:]]+Threads"
 
     step "search for Lorem mail"
     sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
-    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+"))
 
     step "enter free text search"
     sendLine "Lorem ipsum" (Substring "Item 1 of 1")
@@ -526,7 +526,7 @@ testSubstringMatchesAreCleared = purebredTmuxSession "substring match indicator 
     sendKeys "\r" (Not (Substring "matches ]"))
 
     step "go back to threads"
-    sendKeys "Escape" (Regex "New:\\s[0-9]\\s+\\]\\s+Threads")
+    sendKeys "Escape" (Regex "New:[[:space:]][0-9][[:space:]]+\\][[:space:]]+Threads")
 
 
 testSubstringSearchInMailBody :: PurebredTestCase
@@ -536,7 +536,7 @@ testSubstringSearchInMailBody = purebredTmuxSession "search for substrings in ma
 
     step "search for Lorem mail"
     sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
-    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+"))
 
     step "enter free text search"
     sendLine "Lorem ipsum" (Substring "Item 1 of 1")
@@ -562,8 +562,8 @@ testSubstringSearchInMailBody = purebredTmuxSession "search for substrings in ma
                          <> buildAnsiRegex [] ["39"] ["49"] <> "ur"))
 
     step "focus search input editor again"
-    sendKeys "/" (Regex (buildAnsiRegex [] ["33"] [] <> "Search for:\\s"
-                         <> buildAnsiRegex [] ["37"] [] <> "\\s+$"))
+    sendKeys "/" (Regex (buildAnsiRegex [] ["33"] [] <> "Search for:[[:space:]]"
+                         <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+$"))
 
     step "search for different needle"
     sendKeys "Lorem\r" (Regex ("\""
@@ -600,7 +600,7 @@ testCursorPositionedEndOnReply = purebredTmuxSession "cursor positioned on EOL w
     sendKeys ", touser@foo.test\r" (Substring "To: frase@host.example, touser@foo.test")
 
     step "change subject"
-    sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> ".*subject\\s+$")
+    sendKeys "s" (Regex $ "Subject: " <> buildAnsiRegex [] ["37"] [] <> ".*subject[[:space:]]+$")
 
     step "enter subject"
     sendKeys " appended\r" (Substring "Subject: Re: Testmail with whitespace in the subject appended")
@@ -625,7 +625,7 @@ testConfirmDialogResets = purebredTmuxSession "confirm dialog resets state" $
     composeNewMail step
 
     step "abort composition"
-    sendKeys "q" (Regex (buildAnsiRegex [] ["30"] ["42"] <> "\\s+Keep" ))
+    sendKeys "q" (Regex (buildAnsiRegex [] ["30"] ["42"] <> "[[:space:]]+Keep" ))
 
 
 -- Note: The most time in this test is spend on waiting. The default
@@ -726,7 +726,7 @@ testShowsInvalidCompositionInput = purebredTmuxSession "shows errors when compos
     sendKeys ": x\r" (Substring "text/plain")
 
     step "focus from field"
-    sendKeys "f" (Regex $ "From:\\s"
+    sendKeys "f" (Regex $ "From:[[:space:]]"
                   <> buildAnsiRegex [] ["37"] []
                   <> "\"Joe Bloggs\" <joe@foo.test>")
 
@@ -737,7 +737,7 @@ testShowsInvalidCompositionInput = purebredTmuxSession "shows errors when compos
     sendKeys "C-g" (Substring "ComposeView-Attachments")
 
     step "focus to field"
-    sendKeys "t" (Regex $ "To:\\s" <> buildAnsiRegex [] ["37"] [])
+    sendKeys "t" (Regex $ "To:[[:space:]]" <> buildAnsiRegex [] ["37"] [])
 
     step "trigger error"
     sendKeys "," (Substring "Failed reading")
@@ -785,7 +785,7 @@ testKeepDraftMail = purebredTmuxSession "compose mail from draft" $
 
     step "search for draft"
     sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
-    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+"))
 
     step "enter new tag"
     sendLine "tag:draft" (Substring "Item 1 of 1")
@@ -842,7 +842,7 @@ testEditingMailHeaders = purebredTmuxSession "user can edit mail headers" $
     step "user can change from header"
     sendKeys "f" (Regex $ "From: " <> buildAnsiRegex [] ["37"] [] <> "\"Joe Bloggs\" <joe@foo.test>")
 
-    let lastLineIsStatusLine = Regex "Purebred:.*ComposeView-Attachments\\s+$^$"
+    let lastLineIsStatusLine = Regex "Purebred:.*ComposeView-Attachments[[:space:]]+$^$"
     step "append an email"
     sendLine ", testuser@foo.test" lastLineIsStatusLine
       >>= assertSubstring "From: \"Joe Bloggs\" <joe@foo.test>, testuser@foo.test"
@@ -967,7 +967,7 @@ testUserCanMoveBetweenThreads = purebredTmuxSession "user can navigate between t
     -- assert that the first mail is really the one we're later navigating back
     -- to
     snapshot
-    assertRegexS (buildAnsiRegex [] ["37"] ["43"] <> "\\sAug'17.*Testmail with whitespace")
+    assertRegexS (buildAnsiRegex [] ["37"] ["43"] <> "[[:space:]]Aug'17.*Testmail with whitespace")
 
     step "View Mail"
     sendKeys "Enter" (Substring "This is a test mail for purebred")
@@ -998,9 +998,9 @@ testRepliesToMailSuccessfully = purebredTmuxSession "replies to mail successfull
     step "exit vim"
     sendLine ": x" (Substring "Attachments") >>= put
 
-    assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>\\s+$"
+    assertRegexS "From: \"Joe Bloggs\" <joe@foo.test>[[:space:]]+$"
     assertSubstringS "To: frase@host.example"
-    assertRegexS "Cc:\\s*$"  -- Cc should be empty
+    assertRegexS "Cc:[[:space:]]*$"  -- Cc should be empty
     assertSubstringS ("Subject: Re: " <> subject)
 
     -- https://github.com/purebred-mua/purebred/issues/379
@@ -1064,16 +1064,16 @@ testUpdatesReadState = purebredTmuxSession "updates read state for mail and thre
     sendKeys "Down" (Substring "2 of 2")
 
     step "go back to thread list which is now read"
-    sendKeys "q" (Regex (buildAnsiRegex [] ["30"] ["43"] <> T.encodeUtf8 " Feb'17\\sRóman\\sJoost\\s+\\(2\\)"))
+    sendKeys "q" (Regex (buildAnsiRegex [] ["30"] ["43"] <> T.encodeUtf8 " Feb'17[[:space:]]Róman[[:space:]]Joost[[:space:]]+\\(2\\)"))
 
     step "set one mail to unread"
     sendKeys "Enter" (Substring "Beginning of large text")
     sendKeys "t" (Regex (buildAnsiRegex [] ["37"] []
-                           <> "\\sRe: WIP Refactor\\s+"
+                           <> "[[:space:]]Re: WIP Refactor[[:space:]]+"
                            <> buildAnsiRegex [] ["34"] ["49"]))
 
     step "returning to thread list shows entire thread as unread"
-    sendKeys "q" (Regex (buildAnsiRegex [] ["37"] [] <> "\\sWIP Refactor\\s"))
+    sendKeys "q" (Regex (buildAnsiRegex [] ["37"] [] <> "[[:space:]]WIP Refactor[[:space:]]"))
 
 testConfig :: PurebredTestCase
 testConfig = purebredTmuxSession "test custom config" $
@@ -1107,10 +1107,10 @@ testFileBrowserInvalidPath = purebredTmuxSession "file browser handles invalid p
 
     step "start file browser"
     cwd <- B.pack <$> liftIO getCurrentDirectory
-    sendKeys "a" (Regex $ "Path:\\s" <> buildAnsiRegex [] ["34"] [] <> cwd)
+    sendKeys "a" (Regex $ "Path:[[:space:]]" <> buildAnsiRegex [] ["34"] [] <> cwd)
 
     step "focus search path editor"
-    sendKeys ":" (Regex $ "Path:\\s" <> buildAnsiRegex [] ["37"] [] <> cwd)
+    sendKeys ":" (Regex $ "Path:[[:space:]]" <> buildAnsiRegex [] ["37"] [] <> cwd)
 
     step "clear input and enter invalid directory"
     sendKeys "C-u" Unconditional
@@ -1178,7 +1178,7 @@ testAddAttachments = purebredTmuxSession "use file browser to add attachments" $
     -- try removing attachments
     step "select the attachment"
     sendKeys "Down" (Substring "Item 2 of 2") >>= put
-    assertRegexS (buildAnsiRegex [] ["43"] [] <> "\\sA\\s" <> lastFile)
+    assertRegexS (buildAnsiRegex [] ["43"] [] <> "[[:space:]]A[[:space:]]" <> lastFile)
 
     step "remove the attachment"
     sendKeys "D" (Not (Substring lastFile)) >>= put
@@ -1229,7 +1229,7 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
     step "enter new tag"
     sendLine "+inbox +foo +bar" (Regex ("foo"
                              <> buildAnsiRegex [] ["30"] []
-                             <> "\\s"
+                             <> "[[:space:]]"
                              <> buildAnsiRegex [] ["36"] []
                              <> "bar"))
       >>= assertSubstring "This is a test mail"
@@ -1254,7 +1254,7 @@ testManageTagsOnMails = purebredTmuxSession "manage tags on mails" $
     step "cancel tagging and expect old UI"
     -- instead of asserting the absence of the tagging editor, we assert the
     -- last visible "item" in the UI followed by whitespace.
-    sendKeys "Escape" (Regex "This is a test mail for purebred\\s+$")
+    sendKeys "Escape" (Regex "This is a test mail for purebred[[:space:]]+$")
 
 testManageTagsOnThreads :: PurebredTestCase
 testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
@@ -1289,7 +1289,7 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     step "thread tags shows new tags"
     sendKeys "Escape" (Regex ("archive"
                               <> buildAnsiRegex [] ["30"] []
-                              <> "\\s"
+                              <> "[[:space:]]"
                               <> buildAnsiRegex [] ["36"] []
                               <> "replied"))
 
@@ -1302,9 +1302,9 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     -- already tagged with "thread" so the additional adding won't do anything
     sendLine "+thread" (Regex ("archive"
                              <> buildAnsiRegex [] ["30"] []
-                             <> "\\s"
+                             <> "[[:space:]]"
                              <> buildAnsiRegex [] ["36"] [] <> "replied" <> buildAnsiRegex [] ["30"] []
-                             <> "\\s"
+                             <> "[[:space:]]"
                              <> buildAnsiRegex [] ["36"] [] <> "thread"))
 
     step "show thread mails"
@@ -1313,11 +1313,11 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     step "second mail shows old tag"
     sendKeys "Escape" (Regex ("replied"
                               <> buildAnsiRegex [] ["30"] []
-                              <> "\\s"
+                              <> "[[:space:]]"
                               <> buildAnsiRegex [] ["36"] []
                               <> "thread"
                               <> buildAnsiRegex [] ["30"] []
-                              <> "\\sWIP Refactor"))
+                              <> "[[:space:]]WIP Refactor"))
 
     step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -1331,7 +1331,7 @@ testHelp = purebredTmuxSession "help view" $
     startApplication
 
     step "shows Keybindings"
-    sendKeys "?" (Regex "Escape>\\s+cancel")
+    sendKeys "?" (Regex "Escape>[[:space:]]+cancel")
 
     sendKeys "Escape" (Substring "Purebred")
 
@@ -1422,7 +1422,7 @@ testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
     sendKeys "Space" (Substring "Sed ut perspiciatis")
 
     step "go to previous mail with reset scroll state"
-    sendKeys "k" (Regex "Subject:\\s.*WIP Refactor")
+    sendKeys "k" (Regex "Subject:[[:space:]].*WIP Refactor")
 
 testUserCanManipulateNMQuery :: PurebredTestCase
 testUserCanManipulateNMQuery =
@@ -1509,13 +1509,13 @@ testUserCanAbortMailComposition =
 
             step "start composition again"
             sendKeys "m" (Substring "From")
-            sendKeys "Enter" (Regex ("To:\\s" <> buildAnsiRegex [] ["37"] []))
+            sendKeys "Enter" (Regex ("To:[[:space:]]" <> buildAnsiRegex [] ["37"] []))
 
             step "enter to: email"
-            sendKeys "new@second.test\r" (Regex ("Subject:\\s" <> buildAnsiRegex [] ["37"] []))
+            sendKeys "new@second.test\r" (Regex ("Subject:[[:space:]]" <> buildAnsiRegex [] ["37"] []))
 
             step "enter subject"
-            sendKeys "test subject\r" (Regex "~\\s+")
+            sendKeys "test subject\r" (Regex "~[[:space:]]+")
 
             step "enter mail body"
             sendKeys "iThis is my second mail" Unconditional
@@ -1530,7 +1530,7 @@ testUserCanAbortMailComposition =
             assertSubstringS "Subject: test subject"
 
             step "edit body"
-            sendKeys "e" (Regex "This is my second mail\\s+")
+            sendKeys "e" (Regex "This is my second mail[[:space:]]+")
 
 
 testSendMail :: PurebredTestCase
@@ -1552,7 +1552,7 @@ testSendMail =
           sendKeys "Escape" (Substring "body")
 
           step "exit vim"
-          sendKeys ": x\r" (Regex ("text/plain; charset=us-ascii\\s" <> buildAnsiRegex [] ["34"] ["49"] <> "\\s+"))
+          sendKeys ": x\r" (Regex ("text/plain; charset=us-ascii[[:space:]]" <> buildAnsiRegex [] ["34"] ["49"] <> "[[:space:]]+"))
 
           -- pre-check before we sent:
           --   * Drafts is empty before sending
@@ -1570,7 +1570,7 @@ testSendMail =
             (sort files)
 
           step "send mail and go back to threads"
-          sendKeys "y" (Regex ("Query:\\s" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
+          sendKeys "y" (Regex ("Query:[[:space:]]" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
 
           -- check that the sent mail can be parsed without errors
           step "parse mail with purebred-email"
@@ -1617,7 +1617,7 @@ testSendFailureHandling =
       (sort files)
 
     step "send mail attempt #2 succeeds"
-    sendKeys "y" (Regex ("Query:\\s" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
+    sendKeys "y" (Regex ("Query:[[:space:]]" <> buildAnsiRegex [] ["34"] [] <> "tag:inbox"))
 
     -- check that the sent mail is indexed
     step "focus query"
@@ -1691,7 +1691,7 @@ findMail ::
 findMail step query = do
   step ("search for mail with query: " <> query)
   sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
-  sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "\\s+"))
+  sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+"))
   step "enter free text search"
   sendLine query (Substring "Item 1 of 1")
 
@@ -1701,13 +1701,13 @@ assertEditorResetsToInitialValue ::
        (String -> m ()) -> String -> B.ByteString -> B.ByteString -> m ()
 assertEditorResetsToInitialValue step key focused unfocused = do
     step "focusing editor"
-    sendKeys key (Regex $ focused <> "\\s+")
+    sendKeys key (Regex $ focused <> "[[:space:]]+")
 
     step "entering bogus characters"
-    sendKeys "asdf" (Regex $ focused <> "asdf" <> "\\s+")
+    sendKeys "asdf" (Regex $ focused <> "asdf" <> "[[:space:]]+")
 
     step "abort and expect old editor value is reset"
-    sendKeys "Escape" (Regex $ unfocused <> "\\s+") >>= put
+    sendKeys "Escape" (Regex $ unfocused <> "[[:space:]]+") >>= put
     assertConditionS (Not (Substring "Failed reading"))
 
 composeNewMail ::
