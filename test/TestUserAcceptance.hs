@@ -463,7 +463,7 @@ testSavesEntitySuccessfully = purebredTmuxSession "saves entity to disk successf
     sendKeys "s" (Substring "Save to file")
 
     step "enter (wrong) path"
-    sendLine bogusSavePath (Substring "openBinaryFile: does not exist")
+    sendLine bogusSavePath (Regex "(open|with)BinaryFile: does not exist")
 
     step "show save to disk editor (again)"
     sendKeys "s" (Regex $ "Save to file:\\s+" <> buildAnsiRegex [] ["37"] [] <> "\\s+")
@@ -1356,7 +1356,7 @@ testShowsAndClearsError = purebredTmuxSession "shows and clears error" $
 
     step "shows error message"
     sendKeys "Enter" (Substring "FileReadError")
-      >>= assertRegex "open(Binary)?File:.*does not exist"
+      >>= assertRegex "(open|with)(Binary)?File:.*does not exist"
 
     step "error is cleared with next registered keybinding"
     sendKeys "Up" (Substring "Purebred: Item 1 of 4")
