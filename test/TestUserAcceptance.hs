@@ -905,11 +905,7 @@ testPipeEntitiesSuccessfully = purebredTmuxSession "pipe entities successfully" 
     sendKeys "|" (Substring "Pipe to")
 
     step "use less"
-    sendLine "less" (Regex ("This is a test mail for purebred"
-                             <> buildAnsiRegex [] ["37"] []
-                             <> "\\s+"
-                             <> buildAnsiRegex ["7"] ["39"] []
-                             <> "\\(END\\)"))
+    sendLine "less" (Regex "This is a test mail for purebred(.|[[:space:]])*\\(END\\)")
 
 testOpenEntitiesSuccessfully :: PurebredTestCase
 testOpenEntitiesSuccessfully = purebredTmuxSession "open entities successfully" $
@@ -925,11 +921,7 @@ testOpenEntitiesSuccessfully = purebredTmuxSession "open entities successfully" 
 
     step "open one entity"
     sendKeys "o" (Substring "Open With")
-    sendLine "less" (Regex ("This is a test mail for purebred"
-                            <> buildAnsiRegex [] ["37"] []
-                            <> "\\s+"
-                            <> buildAnsiRegex ["7"] ["39"] []
-                            <> ".*purebred.*END"))
+    sendLine "less" (Regex "This is a test mail for purebred(.|[[:space:]])*purebred[[:alnum:]-]+ \\(END\\)")
 
 testOpenCommandDoesNotKillPurebred :: PurebredTestCase
 testOpenCommandDoesNotKillPurebred = purebredTmuxSession "open attachment does not kill purebred" $
@@ -1817,10 +1809,15 @@ setUp (GlobalEnv globalConfigDir) sessionName = do
   runProcess_ $ proc "sh" ["-c", "cp -a " <> globalConfigDir <> "/* " <> confdir]
 
   flip runReaderT sessionName $ do
-    -- a) Make the regex less color code dependent by setting the TERM to 'ansi'.
+    -- a) Make the regex less color code dependent by setting the TERM to 'screen'.
     -- This can happen if different environments support more than 16 colours (e.g.
     -- background values > 37), while our CI environment only supports 16 colours.
-    setEnvVarInSession "TERM" "ansi"
+    --
+    -- Previously we used value "ansi".  But we changed this because
+    -- "ansi" can have different capabilities on different platforms,
+    -- including missing ones.  On the other hand, "screen" triggers
+    -- special handling within vty.
+    setEnvVarInSession "TERM" "screen"
 
     -- set the config dir
     setEnvVarInSession "PUREBRED_CONFIG_DIR" confdir
