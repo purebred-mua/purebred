@@ -281,7 +281,7 @@ launch ghcOpts inCfg = do
   let
     cfg' = Control.DeepSeq.force $ cfg
       & maybe id (set (confNotmuch . nmDatabase)) (databaseFilepath opts)
-      . maybe id (set (confNotmuch . nmSearch)) (view packed <$> searchOverride opts)
+      . maybe id (set (confNotmuch . nmSearch) . view packed) (searchOverride opts)
 
   -- Create a channel for sending custom events into Brick event loop.
   --
