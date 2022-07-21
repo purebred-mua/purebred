@@ -1854,7 +1854,7 @@ setUpTempMaildir :: IO FilePath
 setUpTempMaildir = do
   basedir <- mkTempDir
   cwd <- getSourceDirectory
-  runProcess_ $ proc "cp" ["-r", cwd <> "/test/data/Maildir/", basedir]
+  runProcess_ $ proc "cp" ["-R", cwd <> "/test/data/Maildir", basedir]
   let mdir = basedir </> "Maildir"
 
   -- Rename files with maildir flags ; these had to be renamed (':' replaced
