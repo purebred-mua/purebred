@@ -59,7 +59,7 @@ import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed
   (byteStringInput, proc, readProcess_, runProcess_, setEnv, setStdin)
 import Test.Tasty (defaultMain)
-import Test.Tasty.HUnit (assertBool, assertEqual)
+import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure)
 import Test.Tasty.Tmux
 
 import Data.MIME
@@ -1752,18 +1752,23 @@ assertMailSuccessfullyParsed fp = do
   let result = parseMail contents
   liftIO $ assertBool "expected successful MIMEMessage" (isRight result)
 
+-- | Check number of files in dir matches expectation.
+--
+-- To allow for lag in filesystem change visibility, we initially
+-- wait 62.5ms, and retry up to 3 times, doubling the delay each
+-- time, for a total delay of ~937.5 ms.
+--
 assertFileAmountInMaildir :: (MonadIO m) => FilePath -> Int -> m ()
-assertFileAmountInMaildir maildir expected =
-  let errmsg fs = "expecting " <> show expected <> " file(s), dir contents: " <> show fs
-   in liftIO $ do
-    -- Wait a bit so we can be sure that the IO operation has
-    -- completed. If we don't wait here, the UI has most likely
-    -- repainted quicker than the deletion of the file ending in
-    -- flakyness. The test will most likely pass quicker on faster IO
-    -- machines than in our CI.
-    threadDelay 200000  -- 0.2 seconds
-    files <- listDirectory maildir
-    assertEqual (errmsg files) expected (length files)
+assertFileAmountInMaildir dir expected = liftIO (go (3 :: Int) 62500)
+  where
+  errmsg fs = "expecting " <> show expected <> " file(s), dir contents: " <> show fs
+  go n d = do
+    threadDelay d
+    files <- listDirectory dir
+    case length files of
+      l | l == expected -> pure ()
+      _ | n > 0         -> go (n - 1) (d * 2)
+      _                 -> assertFailure (errmsg files)
 
 -- Global test environment (shared by all test cases)
 newtype GlobalEnv = GlobalEnv FilePath
