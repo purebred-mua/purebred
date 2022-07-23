@@ -18,7 +18,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TupleSections #-}
 
 module Purebred.Storage.Notmuch (
     -- * Synopsis
@@ -233,7 +232,7 @@ getThreads
   :: (MonadError Error m, MonadIO m)
   => T.Text
   -> NotmuchSettings
-  -> m (Items (Toggleable NotmuchThread))
+  -> m (Items NotmuchThread)
 getThreads s settings =
   withDatabaseReadOnly (view nmDatabase settings) $
     flip Notmuch.query (Notmuch.Bare $ T.unpack s)
@@ -241,7 +240,7 @@ getThreads s settings =
     -- note: we use lazyTraverse and "chunked" construction, but
     -- whether it will actually be lazy depends on the variant of
     -- 'Items' in use.  For a Vector, it is strict and non-chunked.
-    >=> liftIO . fmap (fromList 128) . lazyTraverse (fmap (False,) . threadToThread)
+    >=> liftIO . fmap (fromList 128) . lazyTraverse threadToThread
 
 lazyTraverse :: (a -> IO b) -> [a] -> IO [b]
 lazyTraverse f =
@@ -253,7 +252,7 @@ getThreadMessages
   :: (MonadError Error m, MonadIO m, Traversable t)
   => FilePath
   -> t NotmuchThread
-  -> m (Vec.Vector (Toggleable NotmuchMail))
+  -> m (Vec.Vector NotmuchMail)
 getThreadMessages fp ts = withDatabaseReadOnly fp go
   where
     go db = do
@@ -261,7 +260,7 @@ getThreadMessages fp ts = withDatabaseReadOnly fp go
         Data.Functor.Compose.Compose  -- 'collapse' nested 't ([] a)'
         <$> traverse (Notmuch.messages <=< getThread db . view thId) ts
       mails <- traverse (liftIO . messageToMail) msgs
-      pure . Vec.fromList . toList $ fmap (False,) mails
+      pure . Vec.fromList . toList $ mails
 
 
 -- | retrieve a given thread from the notmuch database by it's id
