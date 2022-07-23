@@ -22,6 +22,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -358,7 +359,7 @@ completeMailTags s =
             modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops))
             toggledOrSelectedItemHelper
               (Proxy @'ScrollingMailView)
-              (manageMailTags ops)
+              (manageMailTags ops . fmap snd)
               (over _2 (Notmuch.tagItem ops))
             modify (toggleLastVisibleWidget ManageMailTagsEditor)
 
@@ -1080,8 +1081,9 @@ displayThreadMails =
         selectedItemHelper (asThreadsView . miListOfThreads) $ \(_, t) ->
           runExceptT (Notmuch.getThreadMessages dbpath (Identity t))
             >>= either showError (\vec -> do
-              modifying (asThreadsView . miMails . listList) (L.listReplace vec Nothing)
-              assign (asThreadsView . miMails . listLength) (Just (length vec)) )
+              let vec' = fmap (False,) vec
+              modifying (asThreadsView . miMails . listList) (L.listReplace vec' Nothing)
+              assign (asThreadsView . miMails . listLength) (Just (length vec')) )
     }
 
 setUnread :: Action 'ViewMail 'ScrollingMailView ()
@@ -1207,7 +1209,7 @@ setTags ops =
           ScrollingMailView ->
             toggledOrSelectedItemHelper
               (Proxy @'ScrollingMailView)
-              (manageMailTags ops)
+              (manageMailTags ops . fmap snd)
               (over _2 (Notmuch.tagItem ops))
           ListOfThreads ->
             toggledOrSelectedItemHelper
@@ -1383,7 +1385,7 @@ runSearch searchterms = do
     Right threads -> do
       liftIO getCurrentTime >>= assign asLocalTime
       notifyNumThreads threads
-      modifying (asThreadsView . miListOfThreads) (L.listReplace threads (Just 0))
+      modifying (asThreadsView . miListOfThreads) (L.listReplace (fmap (False,) threads) (Just 0))
       assign (asThreadsView . miThreads . listLength) Nothing
 
 -- | Fork a thread to compute the length of the container and send a
@@ -1444,13 +1446,12 @@ getEditorTagOps p s =
 applyTagOps
   :: (Traversable t, MonadIO m)
   => [TagOp]
-  -> t (Toggleable NotmuchMail)
+  -> t NotmuchMail
   -> AppState
   -> m (Either Error (t NotmuchMail))
 applyTagOps ops mails s =
   let dbpath = view (asConfig . confNotmuch . nmDatabase) s
-      ms = snd <$> mails
-  in runExceptT (Notmuch.messageTagModify dbpath ops ms)
+  in runExceptT (Notmuch.messageTagModify dbpath ops mails)
 
 updateStateWithParsedMail :: (MonadIO m, MonadMask m, MonadState AppState m) => m ()
 updateStateWithParsedMail = do
@@ -1486,14 +1487,14 @@ updateReadState con = do
   op <- con <$> use (asConfig . confNotmuch . nmNewTag)
   toggledOrSelectedItemHelper
     (Proxy @'ScrollingMailView)
-    (manageMailTags [op])
+    (manageMailTags [op] . fmap snd)
     (over _2 (Notmuch.tagItem [op]))
   modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem [op]))
 
 manageMailTags ::
      (Traversable t, MonadIO m, MonadState AppState m)
   => [TagOp]
-  -> t (Toggleable NotmuchMail)
+  -> t NotmuchMail
   -> m ()
 manageMailTags ops ms = do
   result <- applyTagOps ops ms =<< get
