@@ -61,7 +61,7 @@ import Purebred.System (tryIO)
 import Purebred.Types.Display (parseMailbody)
 import Purebred.Types.Error
 import Purebred.Types.IFC (sanitiseText)
-import Purebred.Storage.Notmuch (mailFilepath)
+import Purebred.Storage.Client (Server, mailFilepath)
 import Purebred.System.Process
   (runEntityCommand, tmpfileResource, toProcessConfigWithTempfile,
   tryReadProcessStdout, handleExitCodeThrow)
@@ -75,9 +75,9 @@ parts.
 
 parseMail
   :: (MonadError Error m, MonadIO m)
-  => NotmuchMail -> FilePath -> m MIMEMessage
-parseMail m dbpath = do
-  filePath <- mailFilepath m dbpath
+  => NotmuchMail -> Server -> m MIMEMessage
+parseMail m server = do
+  filePath <- mailFilepath m server
   liftIO (try (B.readFile filePath))
     >>= either (throwError . FileReadError filePath) pure
     >>= either (throwError . FileParseError filePath) pure

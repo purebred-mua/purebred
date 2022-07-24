@@ -44,21 +44,21 @@ import Purebred.UI.Views (focusedViewWidget, focusedViewName)
 import Purebred.Types
 import Purebred.Config
   ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )
-import qualified Purebred.Storage.Notmuch as Notmuch
+import Purebred.Storage.Client (Server, countMessages)
 import Purebred.UI.Widgets (editEditorL)
 
-checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()
-checkForNewMail chan dbpath query delay = do
-  r <- runExceptT (Notmuch.countMessages query dbpath)
+checkForNewMail :: BChan PurebredEvent -> Server -> Text -> Delay -> IO ()
+checkForNewMail chan server query delay = do
+  r <- runExceptT (countMessages query server)
   case r of
     Left _ -> pure ()
-    Right n -> notify n *> rescheduleMailcheck chan dbpath query delay
+    Right n -> notify n *> rescheduleMailcheck chan server query delay
   where
     notify = writeBChan chan . NotifyNewMailArrived
 
-rescheduleMailcheck :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()
-rescheduleMailcheck chan dbpath query delay =
-  void $ forkIO (threadDelay (toMilisecond delay) *> checkForNewMail chan dbpath query delay)
+rescheduleMailcheck :: BChan PurebredEvent -> Server -> Text -> Delay -> IO ()
+rescheduleMailcheck chan server query delay =
+  void $ forkIO (threadDelay (toMilisecond delay) *> checkForNewMail chan server query delay)
     where
       toMilisecond (Seconds x) = x * 1000000
       toMilisecond (Minutes x) = x * 60 * 1000000

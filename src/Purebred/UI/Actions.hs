@@ -155,7 +155,7 @@ import System.Random (getStdRandom, uniform)
 
 import qualified Data.IMF.Text as AddressText
 import Data.MIME
-import qualified Purebred.Storage.Notmuch as Notmuch
+import qualified Purebred.Storage.Client
 import Purebred.Storage.Mail
        ( parseMail, toQuotedMail
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
@@ -1062,9 +1062,9 @@ displayThreadMails =
     , _aAction = do
         -- Update the Application state with all mails found for the
         -- currently selected thread.
-        dbpath <- use (asConfig . confNotmuch . nmDatabase)
+        server <- use storageServer
         selectedItemHelper (asThreadsView . miListOfThreads) $ \(_, t) ->
-          runExceptT (Notmuch.getThreadMessages dbpath (Identity t))
+          runExceptT (Purebred.Storage.Client.getThreadMessages (Identity t) server)
             >>= either showError (\vec -> do
               let vec' = fmap (False,) vec
               modifying (asThreadsView . miMails . listList) (L.listReplace vec' Nothing)
@@ -1301,10 +1301,11 @@ specialCaseForDraft ::
   => NotmuchMail
   -> m ()
 specialCaseForDraft mail = do
-  dbpath <- use (asConfig . confNotmuch . nmDatabase)
+  server <- use storageServer
   draftTag <- use (asConfig . confNotmuch . nmDraftTag)
   when (draftTag `elem` view mailTags mail)
-    $ Notmuch.mailFilepath mail dbpath >>= Notmuch.unindexFilePath dbpath
+    $ Purebred.Storage.Client.mailFilepath mail server
+      >>= flip Purebred.Storage.Client.unindexFilePath server
 
 
 fileBrowserToggleFile :: Action 'FileBrowser 'ListOfFiles ()
@@ -1360,8 +1361,8 @@ applySearch = do
 
 runSearch :: (MonadIO m, MonadState AppState m) => T.Text -> m ()
 runSearch searchterms = do
-  nmconf <- use (asConfig . confNotmuch)
-  r <- runExceptT (Notmuch.getThreads searchterms nmconf)
+  server <- use storageServer
+  r <- runExceptT (Purebred.Storage.Client.getThreads searchterms server)
   case r of
     Left e -> showError e
     Right threads -> do
@@ -1425,24 +1426,23 @@ getEditorTagOps s =
 -- | Apply given tag operations on all mails
 --
 applyTagOps
-  :: (Traversable t, MonadIO m)
+  :: (Traversable t, MonadIO m, MonadState AppState m)
   => [TagOp]
   -> t NotmuchMail
-  -> AppState
   -> m (Either Error (t NotmuchMail))
-applyTagOps ops mails s =
-  let dbpath = view (asConfig . confNotmuch . nmDatabase) s
-  in runExceptT (Notmuch.messageTagModify dbpath ops mails)
+applyTagOps ops mails = do
+  server <- use storageServer
+  runExceptT (Purebred.Storage.Client.messageTagModify ops mails server)
 
 updateStateWithParsedMail :: (MonadIO m, MonadMask m, MonadState AppState m) => m ()
 updateStateWithParsedMail = do
-  db <- use (asConfig . confNotmuch . nmDatabase)
+  server <- use storageServer
   charsets <- use (asConfig . confCharsets)
   textwidth <- use (asConfig . confMailView . mvTextWidth)
   preferredContentType <- use (asConfig . confMailView . mvPreferredContentType)
   s <- get
   selectedItemHelper (asThreadsView . miListOfMails) $ \(_, m) ->
-    runExceptT (parseMail m db >>= bodyToDisplay s textwidth charsets preferredContentType)
+    runExceptT (parseMail m server >>= bodyToDisplay s textwidth charsets preferredContentType)
     >>= either
       (\e -> do
         showError e
@@ -1478,7 +1478,7 @@ manageMailTags ::
   -> t NotmuchMail
   -> m ()
 manageMailTags ops ms = do
-  result <- applyTagOps ops ms =<< get
+  result <- applyTagOps ops ms
   case result of
     Left e -> showError e
     Right _ -> pure ()
@@ -1487,6 +1487,7 @@ manageMailTags ops ms = do
 --
 sendMail :: (MonadState AppState m, MonadCatch m, MonadIO m) => m Bool
 sendMail = do
+  server <- use storageServer
   maildir <- use (asConfig . confNotmuch . nmDatabase)
   sentTag <- use (asConfig . confNotmuch . nmSentTag)
   buildMail $ \bs -> do
@@ -1494,7 +1495,7 @@ sendMail = do
         trySendAndCatch bs
         fp <- createSentFilePath maildir
         tryIO $ LB.writeFile fp (B.toLazyByteString bs)
-        Notmuch.indexFilePath maildir fp [sentTag] )
+        Purebred.Storage.Client.indexFilePath fp [sentTag] server )
     isRight r <$ either showError pure r
 
 -- | Build a mail from the current @AppState@ and execute the continuation.
@@ -1693,14 +1694,12 @@ manageThreadTags ::
   -> t NotmuchThread
   -> m ()
 manageThreadTags ops ts = do
-  dbpath <- use (asConfig . confNotmuch . nmDatabase)
+  server <- use storageServer
   runExceptT
-    (Notmuch.getThreadMessages dbpath $ toList ts)
-    >>= (\ms ->
-           (get >>= applyTagOps ops ms)
-          >>= either showError (const $ pure ()))
-    . fromRight mempty
-
+    ( Purebred.Storage.Client.getThreadMessages ts server
+      >>= applyTagOps ops
+    )
+    >>= either showError (const $ pure ())
 
 keepOrDiscardDraft :: (MonadMask m, MonadIO m, MonadState AppState m) => m ()
 keepOrDiscardDraft = do
@@ -1712,12 +1711,13 @@ keepOrDiscardDraft = do
 
 keepDraft :: (MonadMask m, MonadState AppState m, MonadIO m) => m ()
 keepDraft = buildMail $ \bs -> do
+  server <- use storageServer
   maildir <- use (asConfig . confNotmuch . nmDatabase)
   draftTag <- use (asConfig . confNotmuch . nmDraftTag)
   runExceptT ( do
       fp <- createDraftFilePath maildir
       tryIO $ LB.writeFile fp (B.toLazyByteString bs)
-      Notmuch.indexFilePath maildir fp [draftTag] )
+      Purebred.Storage.Client.indexFilePath fp [draftTag] server )
     >>= either showError (
     const $ showInfo "Draft saved")
 
