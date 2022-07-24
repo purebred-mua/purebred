@@ -170,6 +170,7 @@ import System.Environment (lookupEnv)
 import System.FilePath.Posix ((</>))
 import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
+import System.Exit (die)
 
 import Purebred.UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
 import Purebred.UI.Index.Keybindings
@@ -184,6 +185,7 @@ import Purebred.Plugin
 import Purebred.Plugin.Internal
   ( configHook, pluginBuiltIn, pluginName, pluginVersion )
 import Purebred.Plugin.TweakConfig
+import Purebred.Storage.Server
 import Purebred.Storage.Tags (TagOp(..))
 import Purebred.Types.Error
 
@@ -288,19 +290,26 @@ launch ghcOpts inCfg = do
   --
   bchan <- newBChan 32
 
+  -- Start storage server
+  let dbpath = view (confNotmuch . nmDatabase) cfg'
+  startServerResult <- Purebred.Storage.Server.startServer dbpath
+  server <- either
+    (\e -> die $ "Failed to start storage server: " <> show e)
+    pure
+    startServerResult
+
   -- Create log sink.
   sink <- setupLogsink (debugFile opts)
   sink (LT.pack "Compile flags: " <> LT.intercalate (LT.pack " ") (LT.pack <$> ghcOpts))
   sink (LT.pack "Opened log file")
 
-  s <- initialState cfg' bchan sink
+  s <- initialState cfg' bchan server sink
   let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
   initialVty <- buildVty
 
   let query = view (confNotmuch . nmHasNewMailSearch) cfg'
       delay = view (confNotmuch . nmHasNewMailCheckDelay) cfg'
-      dbpath = view (confNotmuch . nmDatabase) cfg'
-  maybe (pure ()) (rescheduleMailcheck bchan dbpath query) delay
+  maybe (pure ()) (rescheduleMailcheck bchan server query) delay
 
   void $ customMain initialVty buildVty (Just bchan) (theApp s) s
 

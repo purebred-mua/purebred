@@ -30,6 +30,7 @@ module Purebred.Types
     AppState(..)
   , asConfig
   , bChan
+  , storageServer
   , logSink
   , asThreadsView
   , asMailView
@@ -250,6 +251,7 @@ import Data.MIME
 
 import Purebred.UI.Widgets (StatefulEditor)
 import {-# SOURCE #-} Purebred.Plugin.Internal
+import Purebred.Storage.Server
 import Purebred.Types.Error
 import Purebred.Types.Event
 import Purebred.Types.Items
@@ -756,6 +758,7 @@ aValidation = lens _aValidation (\as x -> as { _aValidation = x })
 data AppState = AppState
     { _asConfig :: Configuration
     , _bChan :: BChan PurebredEvent
+    , _storageServer :: Purebred.Storage.Server.Server
     , _logSink :: LT.Text -> IO ()
     , _asThreadsView :: ThreadsView
     , _asMailView  :: MailView
@@ -772,6 +775,9 @@ asConfig = lens _asConfig (\appstate x -> appstate { _asConfig = x })
 
 bChan :: Lens' AppState (BChan PurebredEvent)
 bChan = lens _bChan (\s a -> s { _bChan = a })
+
+storageServer :: Lens' AppState Purebred.Storage.Server.Server
+storageServer = lens _storageServer (\s a -> s { _storageServer = a })
 
 logSink :: Lens' AppState (LT.Text -> IO ())
 logSink = lens _logSink (\s a -> s { _logSink = a })

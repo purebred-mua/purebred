@@ -39,6 +39,7 @@ import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
 import Data.Proxy
 
+import Purebred.Storage.Server
 import Purebred.UI.Keybindings
 import Purebred.UI.Index.Main
 import Purebred.UI.Actions (applySearch, initialCompose)
@@ -182,8 +183,13 @@ initialViews = Map.fromList
   , (FileBrowser, filebrowserView)
   ]
 
-initialState :: Configuration -> BChan PurebredEvent -> (T.Text -> IO ()) -> IO AppState
-initialState conf chan sink = do
+initialState
+  :: Configuration
+  -> BChan PurebredEvent
+  -> Purebred.Storage.Server.Server
+  -> (T.Text -> IO ())
+  -> IO AppState
+initialState conf chan server sink = do
   fb' <- FB.newFileBrowser
          FB.selectNonDirectories
          ListOfFiles
@@ -221,7 +227,7 @@ initialState conf chan sink = do
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
     async = Async Nothing
-    s = AppState conf chan sink mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
+    s = AppState conf chan server sink mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
   execStateT applySearch s
 
 -- | Application event loop.

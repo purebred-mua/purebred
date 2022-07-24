@@ -55,7 +55,6 @@ library
                      , Purebred.Config
                      , Purebred.Plugin
                      , Purebred.Plugin.TweakConfig
-                     , Purebred.Storage.Notmuch
                      , Purebred.Storage.Mail
                      , Purebred.Storage.Tags
                      , Purebred.System
@@ -95,6 +94,8 @@ library
                      , Purebred.Brick.Markup
                      , Data.Text.Markup
   other-modules:       Paths_purebred
+                     , Purebred.Storage.Client
+                     , Purebred.Storage.Server
                      , Purebred.Types.IFC
                      , Purebred.Types.Items
                      , Purebred.Plugin.Internal
@@ -102,6 +103,7 @@ library
   autogen-modules:     Paths_purebred
   build-depends:       base >= 4.13 && < 5
                      , stm >= 2.4
+                     , stm-delay >= 0.1
                      , deepseq >= 1.4.2
                      , dyre >= 0.9.1
                      , lens
