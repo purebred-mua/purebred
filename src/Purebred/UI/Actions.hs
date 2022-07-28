@@ -137,13 +137,13 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.List (union)
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
-import Data.Foldable (fold, toList, traverse_)
+import Data.Foldable (fold, toList)
 import Data.Functor.Identity (Identity(..))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traversed, has,
         filtered, set, over, preview, view, views, (&), firstOf, non, Traversal',
         Getting, Lens', folded, assign, modifying, preuse, use, uses
-        , Ixed, Index, IxValue)
+  )
 import Control.Concurrent (forkIO)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State
@@ -301,29 +301,55 @@ instance HasList 'MailListOfAttachments where
 class (HasList (n :: Name), Traversable (T n)) =>
       HasToggleableList n
   where
-  untoggleE :: Proxy n -> E n -> E n
-  toggleE :: Proxy n -> E n -> E n
-  isToggledE :: Proxy n -> E n -> Bool
+
+  type Inner n
+  toggleState :: Proxy n -> Lens' (E n) Bool
+  inner :: Proxy n -> Lens' (E n) (Inner n)
+
   untoggleAll :: (MonadState AppState m) => Proxy n -> m ()
-  untoggleAll proxy = modifying (list proxy . traversed) (untoggleE proxy)
-  toggle :: Proxy n -> Int -> StateT AppState (T.EventM Name) ()
+  untoggleAll proxy = assign (list proxy . traversed . toggleState proxy) False
+
+  toggle :: Proxy n -> StateT AppState (T.EventM Name) ()
+
   -- | Traversal of selected items.  NOT a valid Traversal unless
   -- selected state is preserved
   toggledItemsL :: Proxy n -> Traversal' AppState (E n)
-  toggledItemsL proxy = list proxy . traversed . filtered (isToggledE proxy)
+  toggledItemsL proxy = list proxy . traversed . filtered (view (toggleState proxy))
+
+type family Snd a
+type instance Snd (a, b) = b
 
 instance
   ( HasList n
   , Traversable (T n)
   , E n ~ (Bool, a)
-  , Index (T n (Bool, a)) ~ Int
-  , IxValue (T n (Bool, a)) ~ (Bool, a)
-  , Ixed (T n (Bool, a))
+  , L.Splittable (T n)
+  , Semigroup (T n (Bool, a))
   ) => HasToggleableList n where
-  untoggleE _ = set _1 False
-  toggleE _ = over _1 not
-  isToggledE _ = fst
-  toggle proxy i = modifying (list proxy . L.listElementsL . ix i) (toggleE proxy)
+  type Inner n = Snd (E n)
+  toggleState _ = _1
+  inner _ = _2
+  toggle proxy = modifying (list proxy . listSelectedElementL . toggleState proxy) not
+
+-- | Traversal of selected element (if any)
+--
+-- This has been merged in Brick master and we can switch
+-- to the version exported by Brick, after it sees release.
+--
+listSelectedElementL
+  :: (L.Splittable t, Traversable t, Semigroup (t e))
+  => Traversal' (L.GenericList n t e) e
+listSelectedElementL f l =
+  case view L.listSelectedL l of
+    Nothing -> pure l
+    Just i -> L.listElementsL go l
+      where
+      go l' =
+        let
+          (left, rest) = L.splitAt i l'
+          -- middle contains the target element (if any)
+          (middle, right) = L.splitAt 1 rest
+        in fmap (\m -> left <> m <> right) (traverse f middle)
 
 -- | A function which is run at the end of a chained sequence of actions.
 --
@@ -1240,14 +1266,13 @@ selectNextUnread = Action
       modifying (asThreadsView . miListOfMails) (f . L.listFindBy (p . view _2))
   }
 
--- | Selects a list item. Currently only used in the file browser to
--- select a file for attaching.
+-- | Toggles or untoggles the selected item.
 --
 toggleListItem :: forall v ctx. HasToggleableList ctx => Action v ctx ()
 toggleListItem =
     Action
     { _aDescription = ["toggle selected state of a list item"]
-    , _aAction = use (list (Proxy @ctx) . L.listSelectedL) >>= traverse_ (toggle (Proxy @ctx))
+    , _aAction = toggle (Proxy @ctx)
     }
 
 untoggleListItems :: forall v ctx. HasToggleableList ctx => Action v ctx ()
