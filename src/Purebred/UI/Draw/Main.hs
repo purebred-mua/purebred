@@ -15,10 +15,8 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Module holding generic widgets.
 module Purebred.UI.Draw.Main
@@ -55,11 +53,12 @@ editorDrawContent showError st = let widget = txt $ T.unlines st
                                  in if showError then withAttr editorErrorAttr widget else widget
 
 -- | Renders editor with a label on the left restricted to one line
-renderEditorWithLabel ::
-     (HasName n, HasEditor n) => Proxy n -> T.Text -> AppState -> Widget Name
-renderEditorWithLabel p label s =
-  let hasFocus = name p == focusedViewWidget s
-      inputW = E.renderEditor (editorDrawContent (hasError s)) hasFocus (view (editorL p) s)
+renderEditorWithLabel
+  :: forall n. (HasName n, HasEditor n)
+  => Proxy n -> T.Text -> AppState -> Widget Name
+renderEditorWithLabel _ label s =
+  let hasFocus = name @n == focusedViewWidget s
+      inputW = E.renderEditor (editorDrawContent (hasError s)) hasFocus (view (editorL @n) s)
       labelW = withAttr editorLabelAttr $ padRight (Pad 1) $ txt label
       eAttr =
         if hasFocus
