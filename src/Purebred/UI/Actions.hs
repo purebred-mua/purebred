@@ -304,14 +304,14 @@ class (HasList (n :: Name), Traversable (T n)) =>
   toggleState :: Lens' (E n) Bool
   inner :: Lens' (E n) (Inner n)
 
-  untoggleAll :: (MonadState AppState m) => m ()
-  untoggleAll = assign (list @n . traversed . toggleState @n) False
-
   toggle :: StateT AppState (T.EventM Name) ()
 
-  -- | Traversal of selected items.
-  toggledItemsL :: Traversal' AppState (Inner n)
-  toggledItemsL = list @n . traversed . filtered (view (toggleState @n)) . inner @n
+untoggleAll :: forall n m. (HasToggleableList n, MonadState AppState m) => m ()
+untoggleAll = assign (list @n . traversed . toggleState @n) False
+
+-- | Traversal of selected items.
+toggledItemsL :: forall n. (HasToggleableList n) => Traversal' AppState (Inner n)
+toggledItemsL = list @n . traversed . filtered (view (toggleState @n)) . inner @n
 
 type family Snd a
 type instance Snd (a, b) = b
