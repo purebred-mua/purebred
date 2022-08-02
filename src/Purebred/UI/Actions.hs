@@ -15,7 +15,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -123,7 +122,6 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (dialog, dialogSelection, Dialog)
 import Network.Mime (defaultMimeLookup)
 import Data.Kind (Type)
-import Data.Proxy
 import Data.Either (fromRight, isRight)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -216,86 +214,86 @@ first. Keep the 'Action' specific to the view and widget
 -- order to support viewing larger amounts of text.
 --
 class Scrollable (n :: Name) where
-  makeViewportScroller :: Proxy n -> Brick.ViewportScroll Name
+  makeViewportScroller :: Brick.ViewportScroll Name
 
 instance Scrollable 'ScrollingMailView where
-  makeViewportScroller _ = Brick.viewportScroll ScrollingMailView
+  makeViewportScroller = Brick.viewportScroll ScrollingMailView
 
 instance Scrollable 'ScrollingHelpView where
-  makeViewportScroller _ = Brick.viewportScroll ScrollingHelpView
+  makeViewportScroller = Brick.viewportScroll ScrollingHelpView
 
 -- | Abstraction to access editors (via it's lens) in the current
 -- context with a proxy type.
 --
 class HasEditor (n :: Name) where
-  editorL :: Proxy n -> Lens' AppState (E.Editor T.Text Name)
+  editorL :: Lens' AppState (E.Editor T.Text Name)
 
 instance HasEditor 'ComposeFrom where
-  editorL _ = asCompose . cFrom . editEditorL
+  editorL = asCompose . cFrom . editEditorL
 
 instance HasEditor 'ComposeTo where
-  editorL _ = asCompose . cTo . editEditorL
+  editorL = asCompose . cTo . editEditorL
 
 instance HasEditor 'ComposeCc where
-  editorL _ = asCompose . cCc . editEditorL
+  editorL = asCompose . cCc . editEditorL
 
 instance HasEditor 'ComposeBcc where
-  editorL _ = asCompose . cBcc . editEditorL
+  editorL = asCompose . cBcc . editEditorL
 
 instance HasEditor 'ComposeSubject where
-  editorL _ = asCompose . cSubject . editEditorL
+  editorL = asCompose . cSubject . editEditorL
 
 instance HasEditor 'ManageMailTagsEditor where
-  editorL _ = asThreadsView . miMailTagsEditor
+  editorL = asThreadsView . miMailTagsEditor
 
 instance HasEditor 'MailAttachmentOpenWithEditor where
-  editorL _ = asMailView . mvOpenCommand
+  editorL = asMailView . mvOpenCommand
 
 instance HasEditor 'MailAttachmentPipeToEditor where
-  editorL _ = asMailView . mvPipeCommand
+  editorL = asMailView . mvPipeCommand
 
 instance HasEditor 'ScrollingMailViewFindWordEditor where
-  editorL _ = asMailView . mvFindWordEditor
+  editorL = asMailView . mvFindWordEditor
 
 instance HasEditor 'SearchThreadsEditor where
-  editorL _ = asThreadsView . miSearchThreadsEditor . editEditorL
+  editorL = asThreadsView . miSearchThreadsEditor . editEditorL
 
 instance HasEditor 'ManageThreadTagsEditor where
-  editorL _ = asThreadsView . miThreadTagsEditor
+  editorL = asThreadsView . miThreadTagsEditor
 
 instance HasEditor 'SaveToDiskPathEditor where
-  editorL _ = asMailView . mvSaveToDiskPath
+  editorL = asMailView . mvSaveToDiskPath
 
 -- | Contexts that have a navigable (Brick) list
 class HasList (n :: Name) where
   type T n :: Type -> Type
   type E n
-  list :: Proxy n -> Lens' AppState (L.GenericList Name (T n) (E n))
+  list :: Lens' AppState (L.GenericList Name (T n) (E n))
 
 instance HasList 'ListOfThreads where
   type T 'ListOfThreads = Items
   type E 'ListOfThreads = Toggleable NotmuchThread
-  list _ = asThreadsView . miListOfThreads
+  list = asThreadsView . miListOfThreads
 
 instance HasList 'ListOfMails where
   type T 'ListOfMails = Vector.Vector
   type E 'ListOfMails = Toggleable NotmuchMail
-  list _ = asThreadsView . miListOfMails
+  list = asThreadsView . miListOfMails
 
 instance HasList 'ScrollingMailView where
   type T 'ScrollingMailView = Vector.Vector
   type E 'ScrollingMailView = Toggleable NotmuchMail
-  list _ = asThreadsView . miListOfMails
+  list = asThreadsView . miListOfMails
 
 instance HasList 'ComposeListOfAttachments where
   type T 'ComposeListOfAttachments = Vector.Vector
   type E 'ComposeListOfAttachments = MIMEMessage
-  list _ = asCompose . cAttachments
+  list = asCompose . cAttachments
 
 instance HasList 'MailListOfAttachments where
   type T 'MailListOfAttachments = Vector.Vector
   type E 'MailListOfAttachments = WireEntity
-  list _ = asMailView . mvAttachments
+  list = asMailView . mvAttachments
 
 -- | contexts which have selectable items in a list
 class (HasList (n :: Name), Traversable (T n)) =>
@@ -303,17 +301,17 @@ class (HasList (n :: Name), Traversable (T n)) =>
   where
 
   type Inner n
-  toggleState :: Proxy n -> Lens' (E n) Bool
-  inner :: Proxy n -> Lens' (E n) (Inner n)
+  toggleState :: Lens' (E n) Bool
+  inner :: Lens' (E n) (Inner n)
 
-  untoggleAll :: (MonadState AppState m) => Proxy n -> m ()
-  untoggleAll proxy = assign (list proxy . traversed . toggleState proxy) False
+  untoggleAll :: (MonadState AppState m) => m ()
+  untoggleAll = assign (list @n . traversed . toggleState @n) False
 
-  toggle :: Proxy n -> StateT AppState (T.EventM Name) ()
+  toggle :: StateT AppState (T.EventM Name) ()
 
   -- | Traversal of selected items.
-  toggledItemsL :: Proxy n -> Traversal' AppState (Inner n)
-  toggledItemsL proxy = list proxy . traversed . filtered (view (toggleState proxy)) . inner proxy
+  toggledItemsL :: Traversal' AppState (Inner n)
+  toggledItemsL = list @n . traversed . filtered (view (toggleState @n)) . inner @n
 
 type family Snd a
 type instance Snd (a, b) = b
@@ -326,9 +324,9 @@ instance
   , Semigroup (T n (Bool, a))
   ) => HasToggleableList n where
   type Inner n = Snd (E n)
-  toggleState _ = _1
-  inner _ = _2
-  toggle proxy = modifying (list proxy . listSelectedElementL . toggleState proxy) not
+  toggleState = _1
+  inner = _2
+  toggle = modifying (list @n . listSelectedElementL . toggleState @n) not
 
 -- | Traversal of selected element (if any)
 --
@@ -359,31 +357,31 @@ listSelectedElementL f l =
 class Completable (n :: Name) where
   type CompletableResult n
   type CompletableResult n = ()
-  complete :: (MonadIO m, MonadMask m, MonadState AppState m) => Proxy n -> m (CompletableResult n)
+  complete :: (MonadIO m, MonadMask m, MonadState AppState m) => m (CompletableResult n)
 
 instance Completable 'SearchThreadsEditor where
-  complete _ = applySearch
+  complete = applySearch
 
 instance Completable 'ManageMailTagsEditor where
-  complete _ = do
+  complete = do
     get >>= liftIO . completeMailTags >>= put
     hide ViewMail 0 ManageMailTagsEditor
     modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
 
 instance Completable 'ComposeListOfAttachments where
   type CompletableResult 'ComposeListOfAttachments = Bool
-  complete _ = sendMail
+  complete = sendMail
 
 -- | Apply all given tag operations to existing mails
 --
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
-    case getEditorTagOps (Proxy @'ManageMailTagsEditor) s of
+    case getEditorTagOps @'ManageMailTagsEditor s of
         Left msg -> pure $ set asUserMessage (Just msg) s
         Right ops -> flip execStateT s $ do
             modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops))
             toggledOrSelectedItemHelper
-              (Proxy @'ScrollingMailView)
+              @'ScrollingMailView
               (manageMailTags ops)
               (Notmuch.tagItem ops)
             modify (toggleLastVisibleWidget ManageMailTagsEditor)
@@ -397,28 +395,28 @@ setViewState v n i m =
   assign (asViews . vsViews . ix n . vLayers . ix i . ix m . veState) v
 
 instance Completable 'ComposeTo where
-  complete _ = do
+  complete = do
     hide ComposeView 1 ComposeTo
     hide ViewMail 0 ComposeTo
 
 instance Completable 'ComposeCc where
-  complete _ = do
+  complete = do
     hide ComposeView 1 ComposeCc
     hide ViewMail 0 ComposeCc
 
 instance Completable 'ComposeBcc where
-  complete _ = do
+  complete = do
     hide ComposeView 1 ComposeBcc
     hide ViewMail 0 ComposeBcc
 
 instance Completable 'ComposeFrom where
-  complete _ = hide ComposeView 1 ComposeFrom
+  complete = hide ComposeView 1 ComposeFrom
 
 instance Completable 'ComposeSubject where
-  complete _ = hide ComposeView 1 ComposeSubject
+  complete = hide ComposeView 1 ComposeSubject
 
 instance Completable 'ConfirmDialog where
-  complete _ = hide ComposeView 0 ConfirmDialog
+  complete = hide ComposeView 0 ConfirmDialog
 
 -- | Applying tag operations on threads
 -- Note: notmuch does not support adding tags to threads themselves, instead we'll
@@ -429,31 +427,31 @@ instance Completable 'ConfirmDialog where
 -- don't show up in the UI.
 --
 instance Completable 'ManageThreadTagsEditor where
-  complete _ = do
+  complete = do
     s <- get
-    case getEditorTagOps (Proxy @'ManageThreadTagsEditor) s of
+    case getEditorTagOps @'ManageThreadTagsEditor s of
       Left msg -> showUserMessage msg
       Right ops -> do
         toggledOrSelectedItemHelper
-          (Proxy @'ListOfThreads)
+          @'ListOfThreads
           (manageThreadTags ops)
           (Notmuch.tagItem ops)
         modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Completable 'ManageFileBrowserSearchPath where
-  complete _ = fileBrowserSetWorkingDirectory
+  complete = fileBrowserSetWorkingDirectory
 
 instance Completable 'MailAttachmentOpenWithEditor where
-  complete _ = hide ViewMail 0 MailAttachmentOpenWithEditor
+  complete = hide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Completable 'MailAttachmentPipeToEditor where
-  complete _ = hide ViewMail 0 MailAttachmentPipeToEditor
+  complete = hide ViewMail 0 MailAttachmentPipeToEditor
 
 instance Completable 'SaveToDiskPathEditor where
-  complete _ = hide ViewMail 0 SaveToDiskPathEditor
+  complete = hide ViewMail 0 SaveToDiskPathEditor
 
 instance Completable 'ScrollingMailViewFindWordEditor where
-  complete _ = do
+  complete = do
     needle <- uses (asMailView . mvFindWordEditor . E.editContentsL) currentLine
     bod <- uses (asMailView . mvBody) (findMatchingWords needle)
     hide ViewMail 0 ScrollingMailViewFindWordEditor
@@ -464,89 +462,89 @@ instance Completable 'ScrollingMailViewFindWordEditor where
 -- initial state or throw away composed, but not yet sent mails.
 --
 class Resetable (v :: ViewName) (n :: Name) where
-  reset :: (MonadIO m, MonadState AppState m) => Proxy v -> Proxy n -> m ()
+  reset :: (MonadIO m, MonadState AppState m) => m ()
 
 instance Resetable 'Threads 'SearchThreadsEditor where
-  reset _ _ = modifying (asThreadsView . miSearchThreadsEditor) revertEditorState
+  reset = modifying (asThreadsView . miSearchThreadsEditor) revertEditorState
 
 instance Resetable 'ViewMail 'ManageMailTagsEditor where
-  reset _ _ = modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
+  reset = modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
               *> hide ViewMail 0 ManageMailTagsEditor
 
 instance Resetable 'Threads 'ManageThreadTagsEditor where
-  reset _ _ = do
+  reset = do
     modifying (asThreadsView . miThreadTagsEditor . E.editContentsL) clearZipper
     modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Resetable 'Threads 'ComposeFrom where
-  reset _ _ = modify clearMailComposition
+  reset = modify clearMailComposition
 
 instance Resetable 'Threads 'ComposeSubject where
-  reset _ _ = modify clearMailComposition
+  reset = modify clearMailComposition
 
 instance Resetable 'Threads 'ComposeTo where
-  reset _ _ = modify clearMailComposition
+  reset = modify clearMailComposition
 
 instance Resetable 'ComposeView 'ComposeFrom where
-  reset _ _ = do
+  reset = do
     modifying (asCompose . cFrom) revertEditorState
     hide ComposeView 1 ComposeFrom
 
 instance Resetable 'ComposeView 'ComposeTo where
-  reset _ _ = do
+  reset = do
     modifying (asCompose . cTo) revertEditorState
     hide ComposeView 1 ComposeTo
 
 instance Resetable 'ComposeView 'ComposeCc where
-  reset _ _ = do
+  reset = do
     modifying (asCompose . cCc) revertEditorState
     hide ComposeView 1 ComposeCc
 
 instance Resetable 'ComposeView 'ComposeBcc where
-  reset _ _ = do
+  reset = do
     modifying (asCompose . cBcc) revertEditorState
     hide ComposeView 1 ComposeBcc
 
 instance Resetable 'ComposeView 'ComposeSubject where
-  reset _ _ = do
+  reset = do
     modifying (asCompose . cSubject) revertEditorState
     hide ComposeView 1 ComposeSubject
 
 instance Resetable 'ComposeView 'ComposeListOfAttachments where
-  reset _ _ = modify clearMailComposition
+  reset = modify clearMailComposition
 
 instance Resetable 'FileBrowser 'ManageFileBrowserSearchPath where
-  reset _ _ = modifying (asFileBrowser . fbSearchPath) revertEditorState
+  reset = modifying (asFileBrowser . fbSearchPath) revertEditorState
 
 instance Resetable 'ViewMail 'MailListOfAttachments where
-  reset _ _ = hide ViewMail 0 MailListOfAttachments
+  reset = hide ViewMail 0 MailListOfAttachments
 
 instance Resetable 'ViewMail 'MailAttachmentOpenWithEditor where
-  reset _ _ = do
+  reset = do
     modifying (asMailView . mvOpenCommand . E.editContentsL) clearZipper
     hide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
-  reset _ _ = do
+  reset = do
     modifying (asMailView . mvPipeCommand . E.editContentsL) clearZipper
     hide ViewMail 0 MailAttachmentPipeToEditor
 
 instance Resetable 'ViewMail 'ScrollingMailViewFindWordEditor where
-  reset _ _ = do
+  reset = do
     modifying (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
     hide ViewMail 0 ScrollingMailViewFindWordEditor
     modify resetMatchingWords
 
 instance Resetable 'ViewMail 'ScrollingMailView where
-  reset _ _ = modify resetMatchingWords
+  reset = modify resetMatchingWords
 
 instance Resetable 'ViewMail 'SaveToDiskPathEditor where
-  reset _ _ = do
+  reset = do
     modifying (asMailView . mvSaveToDiskPath . E.editContentsL) clearZipper
     hide ViewMail 0 SaveToDiskPathEditor
 
 instance Resetable 'ViewMail 'ComposeTo where
-  reset _ _ = do
+  reset = do
     modifying (asCompose . cTo) revertEditorState
     hide ViewMail 0 ComposeTo
     modify clearMailComposition
@@ -571,67 +569,67 @@ clearMailComposition s =
 -- "view" expressed with the mode in the application state.
 --
 class Focusable (v :: ViewName) (n :: Name) where
-  onFocusSwitch :: (MonadState AppState m, MonadIO m) => Proxy v -> Proxy n -> m ()
+  onFocusSwitch :: (MonadState AppState m, MonadIO m) => m ()
 
 instance Focusable 'Threads 'SearchThreadsEditor where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     modifying (asThreadsView . miSearchThreadsEditor . editEditorL) (E.applyEdit gotoEOL)
     modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
 
 instance Focusable 'Threads 'ManageThreadTagsEditor where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     modifying (asThreadsView . miThreadTagsEditor . E.editContentsL) clearZipper
     modify (toggleLastVisibleWidget ManageThreadTagsEditor)
 
 instance Focusable 'Threads 'ComposeFrom where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     modify (toggleLastVisibleWidget ComposeFrom)
     modifying (asCompose . cFrom . editEditorL) (E.applyEdit gotoEOL)
 
 instance Focusable 'Threads 'ComposeTo where
-  onFocusSwitch _ _ = modify (toggleLastVisibleWidget ComposeTo)
+  onFocusSwitch = modify (toggleLastVisibleWidget ComposeTo)
 
 instance Focusable 'Threads 'ComposeSubject where
-  onFocusSwitch _ _ = modify (toggleLastVisibleWidget ComposeSubject)
+  onFocusSwitch = modify (toggleLastVisibleWidget ComposeSubject)
 
 instance Focusable 'Threads 'ListOfThreads where
-  onFocusSwitch _ _ = pure ()
+  onFocusSwitch = pure ()
 
 instance Focusable 'ViewMail 'ManageMailTagsEditor where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
     unhide ViewMail 0 ManageMailTagsEditor
     assign (asViews . vsViews . ix ViewMail . vFocus) ManageMailTagsEditor
 
 instance Focusable 'ViewMail 'ScrollingMailView where
-  onFocusSwitch _ _ = assign (asViews . vsViews . ix ViewMail . vFocus) ScrollingMailView
+  onFocusSwitch = assign (asViews . vsViews . ix ViewMail . vFocus) ScrollingMailView
 
 instance Focusable 'ViewMail 'ScrollingMailViewFindWordEditor where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     modifying (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
     assign (asViews. vsViews . ix ViewMail . vFocus) ScrollingMailViewFindWordEditor
     unhide ViewMail 0 ScrollingMailViewFindWordEditor
 
 instance Focusable 'ViewMail 'ListOfMails where
-  onFocusSwitch _ _ = assign (asViews . vsViews . ix ViewMail . vFocus) ListOfMails
+  onFocusSwitch = assign (asViews . vsViews . ix ViewMail . vFocus) ListOfMails
 
 instance Focusable 'ViewMail 'MailListOfAttachments where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ViewMail . vFocus) MailListOfAttachments
     unhide ViewMail 0 MailListOfAttachments
 
 instance Focusable 'ViewMail 'MailAttachmentOpenWithEditor where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ViewMail . vFocus) MailAttachmentOpenWithEditor
     unhide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Focusable 'ViewMail 'MailAttachmentPipeToEditor where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ViewMail . vFocus) MailAttachmentPipeToEditor
     unhide ViewMail 0 MailAttachmentPipeToEditor
 
 instance Focusable 'ViewMail 'SaveToDiskPathEditor where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     charsets <- use (asConfig . confCharsets)
     s <- get
     let maybeFilePath = preview (asMailView . mvAttachments . to L.listSelectedElement
@@ -642,135 +640,135 @@ instance Focusable 'ViewMail 'SaveToDiskPathEditor where
     modifying (asMailView . mvSaveToDiskPath . E.editContentsL) (insertMany fname . clearZipper)
 
 instance Focusable 'ViewMail 'ComposeTo where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ViewMail . vFocus) ComposeTo
     unhide ViewMail 0 ComposeTo
 
 instance Focusable 'Help 'ScrollingHelpView where
-  onFocusSwitch _ _ = modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
+  onFocusSwitch = modifying (asViews . vsFocusedView) (Brick.focusSetCurrent Help)
 
 instance Focusable 'ComposeView 'ComposeListOfAttachments where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeListOfAttachments
     modify (resetView Threads indexView)
 
 instance Focusable 'ComposeView 'ComposeFrom where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeFrom
     modifying (asCompose . cFrom) saveEditorState
     unhide ComposeView 1 ComposeFrom
 
 instance Focusable 'ComposeView 'ComposeTo where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeTo
     modifying (asCompose . cTo) saveEditorState
     unhide ComposeView 1 ComposeTo
 
 instance Focusable 'ComposeView 'ComposeCc where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeCc
     modifying (asCompose . cCc) saveEditorState
     unhide ComposeView 1 ComposeCc
 
 instance Focusable 'ComposeView 'ComposeBcc where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeBcc
     modifying (asCompose . cBcc) saveEditorState
     unhide ComposeView 1 ComposeBcc
 
 instance Focusable 'ComposeView 'ComposeSubject where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ComposeSubject
     modifying (asCompose . cSubject) saveEditorState
     unhide ComposeView 1 ComposeSubject
 
 instance Focusable 'ComposeView 'ConfirmDialog where
-  onFocusSwitch _ _ = do
+  onFocusSwitch = do
     assign (asViews . vsViews . ix ComposeView . vFocus) ConfirmDialog
     unhide ComposeView 0 ConfirmDialog
 
 instance Focusable 'FileBrowser 'ListOfFiles where
-  onFocusSwitch _ _ = fileBrowserSetWorkingDirectory
+  onFocusSwitch = fileBrowserSetWorkingDirectory
 
 instance Focusable 'FileBrowser 'ManageFileBrowserSearchPath where
-  onFocusSwitch _ _ = pure ()
+  onFocusSwitch = pure ()
 
 
 -- | Generalisation in order to access the widget name from a phantom
 -- type
 --
 class HasName (a :: Name) where
-  name :: Proxy a -> Name
+  name :: Name
 
 instance HasName 'ListOfMails where
-  name _ = ListOfMails
+  name = ListOfMails
 
 instance HasName 'SearchThreadsEditor where
-  name _ = SearchThreadsEditor
+  name = SearchThreadsEditor
 
 instance HasName 'ScrollingMailView where
-  name _ = ScrollingMailView
+  name = ScrollingMailView
 
 instance HasName 'ScrollingMailViewFindWordEditor where
-  name _ = ScrollingMailViewFindWordEditor
+  name = ScrollingMailViewFindWordEditor
 
 instance HasName 'ManageMailTagsEditor where
-  name _ = ManageMailTagsEditor
+  name = ManageMailTagsEditor
 
 instance HasName 'ListOfThreads where
-  name _ = ListOfThreads
+  name = ListOfThreads
 
 instance HasName 'ScrollingHelpView where
-  name _ = ScrollingHelpView
+  name = ScrollingHelpView
 
 instance HasName 'ComposeFrom where
-  name _ = ComposeFrom
+  name = ComposeFrom
 
 instance HasName 'ComposeTo where
-  name _ = ComposeTo
+  name = ComposeTo
 
 instance HasName 'ComposeCc where
-  name _ = ComposeCc
+  name = ComposeCc
 
 instance HasName 'ComposeBcc where
-  name _ = ComposeBcc
+  name = ComposeBcc
 
 instance HasName 'ComposeSubject where
-  name _ = ComposeSubject
+  name = ComposeSubject
 
 instance HasName 'ManageThreadTagsEditor where
-  name _ = ManageThreadTagsEditor
+  name = ManageThreadTagsEditor
 
 instance HasName 'ComposeListOfAttachments where
-  name _ = ComposeListOfAttachments
+  name = ComposeListOfAttachments
 
 instance HasName 'ListOfFiles where
-  name _ = ListOfFiles
+  name = ListOfFiles
 
 instance HasName 'ManageFileBrowserSearchPath where
-  name _ = ManageFileBrowserSearchPath
+  name = ManageFileBrowserSearchPath
 
 instance HasName 'MailListOfAttachments where
-  name _ = MailListOfAttachments
+  name = MailListOfAttachments
 
 instance HasName 'MailAttachmentOpenWithEditor where
-  name _ = MailAttachmentOpenWithEditor
+  name = MailAttachmentOpenWithEditor
 
 instance HasName 'MailAttachmentPipeToEditor where
-  name _ = MailAttachmentPipeToEditor
+  name = MailAttachmentPipeToEditor
 
 instance HasName 'ConfirmDialog where
-  name _ = ConfirmDialog
+  name = ConfirmDialog
 
 instance HasName 'SaveToDiskPathEditor where
-  name _ = SaveToDiskPathEditor
+  name = SaveToDiskPathEditor
 
 -- | Allow to switch from the current active view to a different
 -- view. Instances are view transitions we only permit.
 --
 class ViewTransition (v :: ViewName) (v' :: ViewName) where
-  transitionHook :: Proxy v -> Proxy v' -> AppState -> AppState
-  transitionHook _ _ = id
+  transitionHook :: AppState -> AppState
+  transitionHook = id
 
 instance ViewTransition v v where
 
@@ -785,7 +783,7 @@ instance ViewTransition 'ComposeView 'Threads where
 instance ViewTransition 'ComposeView 'FileBrowser where
 
 instance ViewTransition 'Threads 'ViewMail where
-  transitionHook _ _ = set (asViews . vsViews . ix ViewMail) mailView
+  transitionHook = set (asViews . vsViews . ix ViewMail) mailView
 
 instance ViewTransition 'ViewMail 'ComposeView where
 
@@ -798,22 +796,22 @@ instance ViewTransition 'ViewMail 'Threads where
 -- is useful when switching views.
 --
 class HasViewName (a :: ViewName) where
-  viewname :: Proxy a -> ViewName
+  viewname :: ViewName
 
 instance HasViewName 'Threads where
-  viewname _ = Threads
+  viewname = Threads
 
 instance HasViewName 'ViewMail where
-  viewname _ = ViewMail
+  viewname = ViewMail
 
 instance HasViewName 'Help where
-  viewname _ = Help
+  viewname = Help
 
 instance HasViewName 'ComposeView where
-  viewname _ = ComposeView
+  viewname = ComposeView
 
 instance HasViewName 'FileBrowser where
-  viewname _ = FileBrowser
+  viewname = FileBrowser
 
 
 -- $brick_actions
@@ -977,13 +975,13 @@ switchView
 switchView = Action [desc] $ do
   sink <- use logSink
   liftIO . sink . LT.pack $ msg
-  onFocusSwitch (Proxy @v') (Proxy @ctx')
-  modify (transitionHook (Proxy @v) (Proxy @v'))
-  modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname (Proxy @v')))
-  assign (asViews . vsViews . at (viewname (Proxy @v')) . _Just . vFocus) (name (Proxy @ctx'))
+  onFocusSwitch @v' @ctx'
+  modify (transitionHook @v @v')
+  modifying (asViews . vsFocusedView) (Brick.focusSetCurrent (viewname @v'))
+  assign (asViews . vsViews . at (viewname @v') . _Just . vFocus) (name @ctx')
   where
-    cur = show (viewname (Proxy @v)) <> "/" <> show (name (Proxy @ctx))
-    next = show (viewname (Proxy @v')) <> "/" <> show (name (Proxy @ctx'))
+    cur = show (viewname @v) <> "/" <> show (name @ctx)
+    next = show (viewname @v') <> "/" <> show (name @ctx')
     msg = "focus switch: " <> cur <> " -> " <> next
     desc = T.pack $ "focus " <> next
 
@@ -993,8 +991,8 @@ debug msg = Action [] $ do
   sink <- use logSink
   liftIO $ sink msg
 
-done :: forall a v. (HasViewName v, Completable a) => Action v a (CompletableResult a)
-done = Action ["apply"] (complete (Proxy @a))
+done :: forall a v. (Completable a) => Action v a (CompletableResult a)
+done = Action ["apply"] (complete @a)
 
 -- | Like '(>>=)', but 'Action' does not have a lawful 'Monad' instance.
 bindAction :: Action view ctx a -> (a -> Action view ctx b) -> Action view ctx b
@@ -1017,7 +1015,7 @@ ifte a@(Action aDesc _) t@(Action tDesc _) f@(Action fDesc _) =
   newDesc = aDesc <> ["(" <> T.pack (show tDesc) <> " OR " <> T.pack (show fDesc) <> ")"]
 
 abort :: forall a v. (HasViewName v, Resetable v a) => Action v a ()
-abort = Action ["cancel"] (reset (Proxy @v) (Proxy @a))
+abort = Action ["cancel"] (reset @v @a)
 
 -- $keybinding_actions
 -- These actions are used to sequence other actions together. Think of
@@ -1034,25 +1032,25 @@ noop = Action mempty (pure ())
 scrollUp :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollUp = Action
   { _aDescription = ["scroll up"]
-  , _aAction = lift (Brick.vScrollBy (makeViewportScroller (Proxy @ctx)) (-1))
+  , _aAction = lift (Brick.vScrollBy (makeViewportScroller @ctx) (-1))
   }
 
 scrollDown :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollDown = Action
   { _aDescription = ["scroll down"]
-  , _aAction = lift (Brick.vScrollBy (makeViewportScroller (Proxy @ctx)) 1)
+  , _aAction = lift (Brick.vScrollBy (makeViewportScroller @ctx) 1)
   }
 
 scrollPageUp :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPageUp = Action
   { _aDescription = ["page up"]
-  , _aAction = lift (Brick.vScrollPage (makeViewportScroller (Proxy @ctx)) T.Up)
+  , _aAction = lift (Brick.vScrollPage (makeViewportScroller @ctx) T.Up)
   }
 
 scrollPageDown :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPageDown = Action
   { _aDescription = ["page down"]
-  , _aAction = lift (Brick.vScrollPage (makeViewportScroller (Proxy @ctx)) T.Down)
+  , _aAction = lift (Brick.vScrollPage (makeViewportScroller @ctx) T.Down)
   }
 
 scrollNextWord :: forall ctx v. (Scrollable ctx) => Action v ctx ()
@@ -1060,14 +1058,14 @@ scrollNextWord =
   Action
     { _aDescription = ["find next word in mail body"]
     , _aAction = do
-        lift $ Brick.vScrollToBeginning (makeViewportScroller (Proxy @ctx))
+        lift $ Brick.vScrollToBeginning (makeViewportScroller @ctx)
         b <- gets (has (asMailView . mvScrollSteps))
         if b
           then do
             modifying (asMailView . mvScrollSteps) Brick.focusNext
             nextLine <- preuse (asMailView . mvScrollSteps . to Brick.focusGetCurrent . _Just . _1)
             let scrollBy = view (non 0) nextLine
-            lift $ Brick.vScrollBy (makeViewportScroller (Proxy @ctx)) scrollBy
+            lift $ Brick.vScrollBy (makeViewportScroller @ctx) scrollBy
           else
             showWarning "No match"
     }
@@ -1086,7 +1084,7 @@ displayMail =
     Action
     { _aDescription = ["display an e-mail"]
     , _aAction = do
-        lift $ Brick.vScrollToBeginning (makeViewportScroller (Proxy @'ScrollingMailView))
+        lift $ Brick.vScrollToBeginning (makeViewportScroller @'ScrollingMailView)
         updateStateWithParsedMail
         updateReadState RemoveTag
     }
@@ -1121,22 +1119,22 @@ setUnread =
 listUp
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
   => Action v ctx ()
-listUp = Action ["list up"] (modifying (list (Proxy @ctx)) L.listMoveUp)
+listUp = Action ["list up"] (modifying (list @ctx) L.listMoveUp)
 
 listDown
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
   => Action v ctx ()
-listDown = Action ["list down"] (modifying (list (Proxy @ctx)) L.listMoveDown)
+listDown = Action ["list down"] (modifying (list @ctx) L.listMoveDown)
 
 listJumpToStart
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
   => Action v ctx ()
-listJumpToStart = Action ["list top"] (modifying (list (Proxy @ctx)) (L.listMoveTo 0))
+listJumpToStart = Action ["list top"] (modifying (list @ctx) (L.listMoveTo 0))
 
 listJumpToEnd
   :: forall v ctx.  (HasList ctx, Foldable (T ctx), L.Splittable (T ctx))
   => Action v ctx ()
-listJumpToEnd = Action ["list bottom"] (modifying (list (Proxy @ctx)) (L.listMoveTo (-1)))
+listJumpToEnd = Action ["list bottom"] (modifying (list @ctx) (L.listMoveTo (-1)))
 
 -- | Action used to either start a composition of a new mail or switch
 -- the view to the composition editor if we've already been editing a new
@@ -1233,12 +1231,12 @@ setTags ops =
         case w of
           ScrollingMailView ->
             toggledOrSelectedItemHelper
-              (Proxy @'ScrollingMailView)
+              @'ScrollingMailView
               (manageMailTags ops)
               (Notmuch.tagItem ops)
           ListOfThreads ->
             toggledOrSelectedItemHelper
-              (Proxy @'ListOfThreads)
+              @'ListOfThreads
               (manageThreadTags ops)
               (Notmuch.tagItem ops)
           _ -> error "setTags called on widget without a registered handler"
@@ -1271,14 +1269,14 @@ toggleListItem :: forall v ctx. HasToggleableList ctx => Action v ctx ()
 toggleListItem =
     Action
     { _aDescription = ["toggle selected state of a list item"]
-    , _aAction = toggle (Proxy @ctx)
+    , _aAction = toggle @ctx
     }
 
 untoggleListItems :: forall v ctx. HasToggleableList ctx => Action v ctx ()
 untoggleListItems =
     Action
     { _aDescription = ["untoggle all selected list items"]
-    , _aAction = untoggleAll (Proxy @ctx)
+    , _aAction = untoggleAll @ctx
     }
 
 -- | Delete an attachment from a mail currently being composed.
@@ -1427,19 +1425,18 @@ notifyNumThreads l = do
 
 -- | Operate over either toggled or a single selected list item
 --
-toggledOrSelectedItemHelper ::
+toggledOrSelectedItemHelper
+  :: forall n m b.
      (HasToggleableList n, L.Splittable (T n), Semigroup (T n (E n)), MonadState AppState m)
-  => Proxy n
-  -> ([Inner n] -> m b)
+  => ([Inner n] -> m b)
   -> (Inner n -> Inner n)
   -> m ()
-toggledOrSelectedItemHelper proxy fx updateFx = do
-  toggled <- gets (toListOf (toggledItemsL proxy))
-  selected <-
-    gets (toListOf (list proxy . listSelectedElementL . inner proxy))
+toggledOrSelectedItemHelper fx updateFx = do
+  toggled   <- gets (toListOf (toggledItemsL @n))
+  selected  <- gets (toListOf (list @n . listSelectedElementL . inner @n))
   if null toggled
-    then fx selected >> modifying (list proxy . listSelectedElementL . inner proxy) updateFx
-    else fx toggled >> modifying (toggledItemsL proxy) updateFx
+    then fx selected >> modifying (list @n . listSelectedElementL . inner @n) updateFx
+    else fx toggled >> modifying (toggledItemsL @n) updateFx
   pure ()
 
 -- | Helper function to either show an error if no list item is
@@ -1460,9 +1457,9 @@ selectedItemHelper l f = do
 -- | Retrieve the given tag operations from the given editor widget
 -- and parse them.
 --
-getEditorTagOps :: HasEditor n => Proxy n -> AppState -> Either UserMessage [TagOp]
-getEditorTagOps p s =
-  let contents = (foldr (<>) "" $ E.getEditContents $ view (editorL p) s)
+getEditorTagOps :: forall n. (HasEditor n) => AppState -> Either UserMessage [TagOp]
+getEditorTagOps s =
+  let contents = (foldr (<>) "" $ E.getEditContents $ view (editorL @n) s)
   in parseTagOps contents
 
 -- | Apply given tag operations on all mails
@@ -1510,7 +1507,7 @@ updateReadState con = do
   -- always garantee an updated tag list. See #249
   op <- con <$> use (asConfig . confNotmuch . nmNewTag)
   toggledOrSelectedItemHelper
-    (Proxy @'ScrollingMailView)
+    @'ScrollingMailView
     (manageMailTags [op])
     (Notmuch.tagItem [op])
   modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem [op]))
