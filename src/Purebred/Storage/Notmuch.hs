@@ -27,7 +27,7 @@ module Purebred.Storage.Notmuch (
     -- ** Threads
     getThreads
   , getThreadMessages
-  , countThreads
+  , countMessages
 
     -- ** Messages
   , messageTagModify
@@ -217,10 +217,10 @@ getDatabasePath = do
   where
       decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
--- | Return the number of threads for the given query
-countThreads ::
+-- | Return the number of messages for the given query
+countMessages ::
      (MonadError Error m, MonadIO m) => T.Text -> FilePath -> m Int
-countThreads query fp =
+countMessages query fp =
   withDatabaseReadOnly fp $
   flip Notmuch.query (Notmuch.Bare $ T.unpack query)
   >=> Notmuch.queryCountMessages
