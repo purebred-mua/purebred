@@ -49,7 +49,7 @@ import Purebred.UI.Widgets (editEditorL)
 
 checkForNewMail :: BChan PurebredEvent -> FilePath -> Text -> Delay -> IO ()
 checkForNewMail chan dbpath query delay = do
-  r <- runExceptT (Notmuch.countThreads query dbpath)
+  r <- runExceptT (Notmuch.countMessages query dbpath)
   case r of
     Left _ -> pure ()
     Right n -> notify n *> rescheduleMailcheck chan dbpath query delay
