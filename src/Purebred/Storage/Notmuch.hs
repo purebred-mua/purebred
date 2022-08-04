@@ -36,7 +36,6 @@ module Purebred.Storage.Notmuch (
   , unindexFilePath
 
     -- ** Database
-  , getDatabasePath
   , withDatabase
   ) where
 
@@ -49,12 +48,10 @@ import System.IO.Unsafe (unsafeInterleaveIO)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError, ExceptT, runExceptT)
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as LB
 import Data.List (nub, sort)
 import Data.Maybe (fromMaybe)
 import Data.Functor (($>))
 import qualified Data.Vector as Vec
-import System.Exit (ExitCode(..))
 import qualified System.Directory as Directory (removeFile)
 import qualified Data.Text as T
 import Control.Lens (view, firstOf, folded)
@@ -63,10 +60,8 @@ import qualified Notmuch
 
 import Purebred.Types
 import Purebred.Storage.Tags
-import Purebred.System.Process (readProcess, proc)
 import Purebred.System (tryIO)
 import Purebred.Types.Error
-import Purebred.Types.IFC (sanitiseText, untaint)
 import Purebred.Types.Items
 
 {- $synopsis
@@ -163,21 +158,6 @@ messageToMail m = do
       <*> Notmuch.messageDate m
       <*> pure tgs
       <*> Notmuch.messageId m
-
--- | Returns the notmuch database path by executing 'notmuch config
--- get database.path' in a separate process.  If the process terminates
--- abnormally, returns an empty string.
---
-getDatabasePath :: IO FilePath
-getDatabasePath = do
-  let cmd = "notmuch"
-  let args = ["config", "get", "database.path"]
-  (exitc, stdout, _err) <- readProcess $ proc cmd args
-  pure $ case exitc of
-    ExitFailure _ -> ""
-    ExitSuccess -> filter (/= '\n') (untaint decode stdout)
-  where
-      decode = T.unpack . sanitiseText . decodeLenient . LB.toStrict
 
 -- | Return the number of messages for the given query
 countMessages ::
