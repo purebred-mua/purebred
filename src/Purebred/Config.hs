@@ -62,7 +62,6 @@ import Purebred.UI.ComposeEditor.Keybindings
 import Purebred.Types
 import Purebred.Plugin.Internal
 import qualified Purebred.Plugin.UserAgent
-import Purebred.Storage.Notmuch (getDatabasePath)
 import Purebred.System.Process
 import Purebred.Types.IFC (sanitiseText, untaint)
 import Purebred.Types.Error
@@ -259,6 +258,21 @@ mailbodyAttr = "mailbody"
 mailbodySourceAttr :: A.AttrName
 mailbodySourceAttr = mailbodyAttr <> "source"
 
+
+-- | Returns the notmuch database path by executing 'notmuch config
+-- get database.path' in a separate process.  If the process terminates
+-- abnormally, returns an empty string.
+--
+getDatabasePath :: IO FilePath
+getDatabasePath = do
+  let cmd = "notmuch"
+  let args = ["config", "get", "database.path"]
+  (exitc, stdout, _err) <- readProcess $ proc cmd args
+  pure $ case exitc of
+    ExitFailure _ -> ""
+    ExitSuccess -> filter (/= '\n') (untaint decode stdout)
+  where
+      decode = T.unpack . sanitiseText . decodeLenient . L.toStrict
 
 -- * Purebred's Configuration
 
