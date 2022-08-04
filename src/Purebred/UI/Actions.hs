@@ -166,7 +166,7 @@ import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.Plugin.Internal
-import Purebred.Storage.Tags (TagOp(AddTag, RemoveTag), parseTagOps)
+import Purebred.Storage.Tags (TagOp(AddTag, RemoveTag), hasTag, parseTagOps, tagItem)
 import Purebred.System (tryIO)
 import Purebred.System.Process
 import Purebred.Types
@@ -379,11 +379,11 @@ completeMailTags s =
     case getEditorTagOps @'ManageMailTagsEditor s of
         Left msg -> pure $ set asUserMessage (Just msg) s
         Right ops -> flip execStateT s $ do
-            modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem ops))
+            modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 (tagItem ops)))
             toggledOrSelectedItemHelper
               @'ScrollingMailView
               (manageMailTags ops)
-              (Notmuch.tagItem ops)
+              (tagItem ops)
             modify (toggleLastVisibleWidget ManageMailTagsEditor)
 
 hide, unhide :: (MonadState AppState m) => ViewName -> Int -> Name -> m ()
@@ -435,7 +435,7 @@ instance Completable 'ManageThreadTagsEditor where
         toggledOrSelectedItemHelper
           @'ListOfThreads
           (manageThreadTags ops)
-          (Notmuch.tagItem ops)
+          (tagItem ops)
         modify (toggleLastVisibleWidget SearchThreadsEditor)
 
 instance Completable 'ManageFileBrowserSearchPath where
@@ -1233,12 +1233,12 @@ setTags ops =
             toggledOrSelectedItemHelper
               @'ScrollingMailView
               (manageMailTags ops)
-              (Notmuch.tagItem ops)
+              (tagItem ops)
           ListOfThreads ->
             toggledOrSelectedItemHelper
               @'ListOfThreads
               (manageThreadTags ops)
-              (Notmuch.tagItem ops)
+              (tagItem ops)
           _ -> error "setTags called on widget without a registered handler"
 
     }
@@ -1256,7 +1256,7 @@ selectNextUnread = Action
   { _aDescription = ["select next unread"]
   , _aAction = do
       -- find by unread tag...
-      p <- uses (asConfig . confNotmuch . nmNewTag) Notmuch.hasTag
+      p <- uses (asConfig . confNotmuch . nmNewTag) hasTag
       -- but if there is no resulting selection, move to the
       -- last element in the list
       let f l = maybe (L.listMoveTo (-1) l) (const l) (view L.listSelectedL l)
@@ -1509,8 +1509,8 @@ updateReadState con = do
   toggledOrSelectedItemHelper
     @'ScrollingMailView
     (manageMailTags [op])
-    (Notmuch.tagItem [op])
-  modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ Notmuch.tagItem [op]))
+    (tagItem [op])
+  modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ tagItem [op]))
 
 manageMailTags ::
      (Traversable t, MonadIO m, MonadState AppState m)

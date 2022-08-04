@@ -35,13 +35,6 @@ module Purebred.Storage.Notmuch (
   , indexFilePath
   , unindexFilePath
 
-    -- ** Tagging (Labels)
-  , ManageTags(..)
-  , hasTag
-  , tagItem
-  , addTags
-  , removeTags
-
     -- ** Database
   , getDatabasePath
   , withDatabase
@@ -57,14 +50,14 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError, ExceptT, runExceptT)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
-import Data.List (union, nub, sort)
+import Data.List (nub, sort)
 import Data.Maybe (fromMaybe)
 import Data.Functor (($>))
 import qualified Data.Vector as Vec
 import System.Exit (ExitCode(..))
 import qualified System.Directory as Directory (removeFile)
 import qualified Data.Text as T
-import Control.Lens (view, over, set, firstOf, folded, Lens')
+import Control.Lens (view, firstOf, folded)
 
 import qualified Notmuch
 
@@ -109,39 +102,8 @@ applyTags ops db = traverse $ \m -> do
     (tagsToMessage (view mailTags m') (view mailId m') db)
   pure m'
 
--- | Tag either a 'NotmuchMail' or a 'NotmuchThread'
---
-tagItem :: ManageTags a => [TagOp] -> a -> a
-tagItem ops mail = foldl (flip applyTagOp) mail ops
-
 haveTagsChanged :: NotmuchMail -> NotmuchMail -> Bool
 haveTagsChanged = (/=) `on` (sort . nub . view mailTags)
-
-applyTagOp :: (ManageTags a) => TagOp -> a -> a
-applyTagOp (AddTag t) = addTags [t]
-applyTagOp (RemoveTag t) = removeTags [t]
-applyTagOp ResetTags = setTags []
-
-class ManageTags a  where
-    tags :: Lens' a [Tag]
-
-setTags :: (ManageTags a) => [Tag] -> a -> a
-setTags = set tags
-
-addTags :: (ManageTags a) => [Tag] -> a -> a
-addTags tgs = over tags (`union` tgs)
-
-removeTags :: (ManageTags a) => [Tag] -> a -> a
-removeTags tgs = over tags (filter (`notElem` tgs))
-
-hasTag :: (ManageTags a) => Tag -> a -> Bool
-hasTag t x = t `elem` view tags x
-
-instance ManageTags NotmuchMail where
-  tags = mailTags
-
-instance ManageTags NotmuchThread where
-  tags = thTags
 
 -- | A helper function for opening and performing work on a database.
 -- The database is not explicitly closed (GC will take care of that).

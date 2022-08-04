@@ -36,7 +36,7 @@ import Notmuch (getTag)
 
 import Purebred.UI.Draw.Main (fillLine)
 import Purebred.UI.Views (focusedViewWidget)
-import Purebred.Storage.Notmuch (hasTag, ManageTags)
+import Purebred.Storage.Tags (hasTag, ManageTags)
 import Purebred.Types
 import Purebred.Config
   (listAttr, listStateNewmailAttr, listStateSelectedAttr,
