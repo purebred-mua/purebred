@@ -22,9 +22,20 @@
 -- just means labelling all mails in a thread.
 --
 module Purebred.Storage.Tags
-  ( TagOp(..)
-  , parseTag
+  (
+  -- * Constructing tags
+    parseTag
+
+  -- * Tag operations
+  , TagOp(..)
   , parseTagOps
+
+  -- * Managing an item's tags
+  , ManageTags(..)
+  , hasTag
+  , tagItem
+  , addTags
+  , removeTags
   ) where
 
 import Control.Applicative ((<|>), optional)
@@ -32,7 +43,8 @@ import Data.Attoparsec.ByteString.Char8
   ( Parser, parseOnly, isSpace, char, sepBy, takeWhile1 )
 import qualified Data.ByteString as B
 import Data.Functor (($>))
-import Control.Lens (over, _Left)
+import Data.List (union)
+import Control.Lens (Lens', over, set, view, _Left)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 
@@ -79,3 +91,36 @@ parseTag s = maybe
   (fail $ "not a valid tag: " <> show s)
   pure
   (mkTag s)
+
+-- | Tag either a 'NotmuchMail' or a 'NotmuchThread'
+--
+-- Tag operations are applied left to right.
+--
+tagItem :: ManageTags a => [TagOp] -> a -> a
+tagItem ops mail = foldl (flip applyTagOp) mail ops
+
+applyTagOp :: (ManageTags a) => TagOp -> a -> a
+applyTagOp (AddTag t) = addTags [t]
+applyTagOp (RemoveTag t) = removeTags [t]
+applyTagOp ResetTags = setTags []
+
+class ManageTags a  where
+    tags :: Lens' a [Tag]
+
+setTags :: (ManageTags a) => [Tag] -> a -> a
+setTags = set tags
+
+addTags :: (ManageTags a) => [Tag] -> a -> a
+addTags tgs = over tags (`union` tgs)
+
+removeTags :: (ManageTags a) => [Tag] -> a -> a
+removeTags tgs = over tags (filter (`notElem` tgs))
+
+hasTag :: (ManageTags a) => Tag -> a -> Bool
+hasTag t x = t `elem` view tags x
+
+instance ManageTags NotmuchMail where
+  tags = mailTags
+
+instance ManageTags NotmuchThread where
+  tags = thTags
