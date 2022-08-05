@@ -30,7 +30,7 @@
       shell-without-icu = pkgs.make-purebred-shell false;
       shell-with-icu = pkgs.make-purebred-shell true;
     };
-    defaultPackage = packages.purebred-with-packages;
+    defaultPackage = packages.purebred-with-packages-icu;
     devShell = packages.shell-without-icu;
   });
 }
