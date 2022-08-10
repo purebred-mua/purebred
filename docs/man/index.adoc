@@ -118,8 +118,7 @@ import Purebred
 
 myMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]    -- <1>
 myMailKeybindings =
-    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"]  -- <2>
-                                         `chain` continue)  -- <3>
+    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"])  -- <2>
     ]
 
 -- Tweak the default configuration before starting Purebred
@@ -128,17 +127,14 @@ main = purebred
   [ usePlugin $ tweakConfig tweak
   ]
   where
-  tweak = over (confMailView . mvKeybindings) (myMailKeybindings <>)  -- <4>
+  tweak = over (confMailView . mvKeybindings) (myMailKeybindings <>)  -- <3>
 
 ----
 <1> The type indicates that this list holds key bindings for the
 `ViewMail` view and the `ScrollingMailView` widget.
 <2> The keybinding starts by calling the `setTags` action, removing
 and adding labels.
-<3> Every keybinding will have to end with a Brick event loop
-action. The `continue` action continues the event loop and therefore
-Purebred.
-<4> Add the custom key bindings to the configuration (via the `tweakPlugin`
+<3> Add the custom key bindings to the configuration (via the `tweakPlugin`
 plugin).  Use <<lens>> functions to prepend the custom keybindings to the
 default keybindings.
 custom list.

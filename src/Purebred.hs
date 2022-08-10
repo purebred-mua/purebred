@@ -45,17 +45,17 @@ tweak =
 
 scrollKeybindings :: ('Scrollable' w) => ['Keybinding' v w]
 scrollKeybindings =
-  [ 'Keybinding' (EvKey (KChar 'j') []) ('scrollDown' \`chain\` 'continue')
-  , Keybinding (EvKey (KChar 'k') []) ('scrollUp' \`chain\` 'continue')
-  , Keybinding (EvKey (KChar 'd') []) ('scrollPageDown' \`chain\` 'continue')
-  , Keybinding (EvKey (KChar 'u') []) ('scrollPageUp' \`chain\` 'continue')
+  [ 'Keybinding' (EvKey (KChar 'j') []) 'scrollDown'
+  , Keybinding (EvKey (KChar 'k') []) 'scrollUp'
+  , Keybinding (EvKey (KChar 'd') []) 'scrollPageDown'
+  , Keybinding (EvKey (KChar 'u') []) 'scrollPageUp'
   ]
 
 mailViewKeybindings =
-  [ Keybinding (EvKey (KChar 'J') []) ('listDown' \`focus\` 'displayMail' \`chain\` continue)
-  , Keybinding (EvKey (KChar 'K') []) ('listUp' \`focus\` displayMail \`chain\` continue)
-  , Keybinding (EvKey (KChar 'G') []) ('listJumpToEnd' \`chain\` continue)
-  , Keybinding (EvKey (KChar 'g') []) ('listJumpToStart' \`chain\` continue)
+  [ Keybinding (EvKey (KChar 'J') []) ('listDown' !*> 'displayMail')
+  , Keybinding (EvKey (KChar 'K') []) ('listUp' !*> displayMail)
+  , Keybinding (EvKey (KChar 'G') []) 'listJumpToEnd'
+  , Keybinding (EvKey (KChar 'g') []) 'listJumpToStart'
   ]
   <> scrollKeybindings
 @

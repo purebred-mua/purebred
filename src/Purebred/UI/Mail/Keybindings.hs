@@ -25,34 +25,36 @@ import Purebred.Types
 
 displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 displayMailKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey (V.KChar 'q') []) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey V.KBS []) (scrollPageUp `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '*') []) (toggleListItem `chain` listDown `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 't') []) (setUnread `chain` continue)
-    , Keybinding (V.EvKey (V.KChar ' ') []) (scrollPageDown `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'h') []) (toggleHeaders `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '`') []) (noop `focus` continue @'ViewMail @'ManageMailTagsEditor)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey V.KBS []) scrollPageUp
+    , Keybinding (V.EvKey (V.KChar '*') []) (toggleListItem *> listDown)
+    , Keybinding (V.EvKey (V.KChar 't') []) setUnread
+    , Keybinding (V.EvKey (V.KChar ' ') []) scrollPageDown
+    , Keybinding (V.EvKey (V.KChar 'h') []) toggleHeaders
+    , Keybinding (V.EvKey (V.KChar '`') []) (switchView @'ViewMail @'ManageMailTagsEditor)
 
-    , Keybinding (V.EvKey V.KUp []) (
-        noop `focus` listUp @'ViewMail @'ListOfMails `focus` displayMail `chain` continue)
-    , Keybinding (V.EvKey V.KDown []) (
-        noop `focus` listDown @'ViewMail @'ListOfMails `focus` displayMail `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `focus` displayMail `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'J') []) (noop
-                                             `focus` listDown @'Threads @'ListOfThreads
-                                             `focus` displayThreadMails
-                                             `focus` selectNextUnread
-                                             `focus` displayMail
-                                             `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `focus` displayMail `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'K') []) (noop
-                                             `focus` listUp @'Threads @'ListOfThreads
-                                             `focus` displayThreadMails
-                                             `focus` selectNextUnread
-                                             `focus` displayMail
-                                             `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '?') []) (noop `focus` continue @'Help @'ScrollingHelpView)
+    , Keybinding (V.EvKey V.KUp [])
+        (switchView @'ViewMail @'ListOfMails *> listUp *> displayMail)
+    , Keybinding (V.EvKey V.KDown [])
+        (switchView @'ViewMail @'ListOfMails *> listDown *> displayMail)
+    , Keybinding (V.EvKey (V.KChar 'j') []) (listDown !*> displayMail)
+    , Keybinding (V.EvKey (V.KChar 'k') []) (listUp !*> displayMail)
+    , Keybinding (V.EvKey (V.KChar 'J') [])
+        ( noop
+          !*> listDown @'Threads @'ListOfThreads
+          !*> displayThreadMails
+          !*> selectNextUnread
+          !*> displayMail
+        )
+    , Keybinding (V.EvKey (V.KChar 'K') [])
+        ( noop
+          !*> listUp @'Threads @'ListOfThreads
+          !*> displayThreadMails
+          !*> selectNextUnread
+          !*> displayMail
+        )
+    , Keybinding (V.EvKey (V.KChar '?') []) (switchView @'Help @'ScrollingHelpView)
     , Keybinding (V.EvKey (V.KChar 'r') []) (
         senderReply
         `focus` (
@@ -66,70 +68,80 @@ displayMailKeybindings =
             invokeEditor ViewMail ScrollingMailView :: Action 'ComposeView 'ComposeListOfAttachments ()
             )
         )
-    , Keybinding (V.EvKey (V.KChar 'v') []) (noop `focus` continue @'ViewMail @'MailListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'e') []) (composeAsNew `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar '/') []) (noop `focus` continue @'ViewMail @'ScrollingMailViewFindWordEditor)
-    , Keybinding (V.EvKey (V.KChar 'n') []) (scrollNextWord `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'f') []) (noop
-                                             `chain` encapsulateMail
-                                             `focus` continue @'ViewMail @'ComposeTo)
-    , Keybinding (V.EvKey V.KEnter []) (removeHighlights `chain` continue)
+    , Keybinding (V.EvKey (V.KChar 'v') [])
+        (switchView @'ViewMail @'MailListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'e') [])
+        (composeAsNew *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar '/') [])
+        (switchView @'ViewMail @'ScrollingMailViewFindWordEditor)
+    , Keybinding (V.EvKey (V.KChar 'n') [])
+        scrollNextWord
+    , Keybinding (V.EvKey (V.KChar 'f') [])
+        (encapsulateMail *> switchView @'ViewMail @'ComposeTo)
+    , Keybinding (V.EvKey V.KEnter [])
+        removeHighlights
     ]
 
 findWordEditorKeybindings :: [Keybinding 'ViewMail 'ScrollingMailViewFindWordEditor]
 findWordEditorKeybindings =
-  [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ViewMail @'ScrollingMailView)
-  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ViewMail @'ScrollingMailView)
-  , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'ViewMail @'ScrollingMailView)
+  [ Keybinding (V.EvKey V.KEsc [])
+      (abort *> switchView @'ViewMail @'ScrollingMailView)
+  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl])
+      (abort *> switchView @'ViewMail @'ScrollingMailView)
+  , Keybinding (V.EvKey V.KEnter [])
+      (done *> switchView @'ViewMail @'ScrollingMailView)
   ]
 
 
 mailAttachmentsKeybindings :: [Keybinding 'ViewMail 'MailListOfAttachments]
 mailAttachmentsKeybindings =
-    [ Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'q') []) (abort `focus` continue @'ViewMail @'ScrollingMailView)
+    [ Keybinding (V.EvKey (V.KChar 'j') []) listDown
+    , Keybinding (V.EvKey (V.KChar 'k') []) listUp
+    , Keybinding (V.EvKey (V.KChar 'q') []) (abort *> switchView @'ViewMail @'ScrollingMailView)
     , Keybinding (V.EvKey V.KEnter []) openAttachment
-    , Keybinding (V.EvKey (V.KChar 'o') []) (noop `focus` continue @'ViewMail @'MailAttachmentOpenWithEditor)
-    , Keybinding (V.EvKey (V.KChar '|') []) (noop `focus` continue @'ViewMail @'MailAttachmentPipeToEditor)
-    , Keybinding (V.EvKey (V.KChar 's') []) (noop `focus` continue @'ViewMail @'SaveToDiskPathEditor)
+    , Keybinding (V.EvKey (V.KChar 'o') []) (switchView @'ViewMail @'MailAttachmentOpenWithEditor)
+    , Keybinding (V.EvKey (V.KChar '|') []) (switchView @'ViewMail @'MailAttachmentPipeToEditor)
+    , Keybinding (V.EvKey (V.KChar 's') []) (switchView @'ViewMail @'SaveToDiskPathEditor)
     ]
 
 openWithKeybindings :: [Keybinding 'ViewMail 'MailAttachmentOpenWithEditor]
 openWithKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ViewMail @'MailListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ViewMail @'MailListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar '\t') []) (abort `focus` continue @'ViewMail @'MailAttachmentPipeToEditor)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'ViewMail @'MailListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'ViewMail @'MailListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar '\t') []) (abort *> switchView @'ViewMail @'MailAttachmentPipeToEditor)
     , Keybinding (V.EvKey V.KEnter []) (done `focus` openWithCommand)
     ]
 
 pipeToKeybindings :: [Keybinding 'ViewMail 'MailAttachmentPipeToEditor]
 pipeToKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ViewMail @'MailListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ViewMail @'MailListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar '\t') []) (abort `focus` continue @'ViewMail @'MailAttachmentOpenWithEditor)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'ViewMail @'MailListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'ViewMail @'MailListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar '\t') []) (abort *> switchView @'ViewMail @'MailAttachmentOpenWithEditor)
     , Keybinding (V.EvKey V.KEnter []) (done `focus` pipeToCommand)
     ]
 
 mailViewManageMailTagsKeybindings :: [Keybinding 'ViewMail 'ManageMailTagsEditor]
 mailViewManageMailTagsKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ViewMail @'ScrollingMailView)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` untoggleListItems @'ViewMail @'ScrollingMailView `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ViewMail @'ScrollingMailView)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'ViewMail @'ScrollingMailView)
+    , Keybinding (V.EvKey V.KEnter []) (done `focus` untoggleListItems @'ViewMail @'ScrollingMailView)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'ViewMail @'ScrollingMailView)
     ]
 
 saveToDiskKeybindings :: [Keybinding 'ViewMail 'SaveToDiskPathEditor]
 saveToDiskKeybindings =
-  [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ViewMail @'MailListOfAttachments)
-  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ViewMail @'MailListOfAttachments)
-  , Keybinding (V.EvKey V.KEnter []) (
-      done `chain` saveAttachmentToPath `focus` continue @'ViewMail @'MailListOfAttachments )
+  [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'ViewMail @'MailListOfAttachments)
+  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'ViewMail @'MailListOfAttachments)
+  , Keybinding (V.EvKey V.KEnter [])
+      ( done
+        *> saveAttachmentToPath
+        *> switchView @'ViewMail @'MailListOfAttachments
+      )
   ]
 
 mailviewComposeToKeybindings :: [Keybinding 'ViewMail 'ComposeTo]
 mailviewComposeToKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ViewMail @'ScrollingMailView)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ViewMail @'ScrollingMailView)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'ViewMail @'ScrollingMailView)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'ViewMail @'ScrollingMailView)
     , Keybinding (V.EvKey V.KEnter []) (
         done `focus` (
             invokeEditor ViewMail ScrollingMailView

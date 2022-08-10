@@ -26,75 +26,89 @@ import Purebred.Types
 
 composeSubjectKeybindings :: [Keybinding 'ComposeView 'ComposeSubject]
 composeSubjectKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'ComposeView @'ComposeListOfAttachments)
+    [ Keybinding (V.EvKey V.KEsc [])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey V.KEnter [])
+        (done *> switchView @'ComposeView @'ComposeListOfAttachments)
     ]
 
 composeFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
 composeFromKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'ComposeView @'ComposeListOfAttachments)
+    [ Keybinding (V.EvKey V.KEsc [])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey V.KEnter [])
+        (done *> switchView @'ComposeView @'ComposeListOfAttachments)
     ]
 
 composeToKeybindings :: [Keybinding 'ComposeView 'ComposeTo]
 composeToKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'ComposeView @'ComposeListOfAttachments)
+    [ Keybinding (V.EvKey V.KEsc [])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey V.KEnter [])
+        (done *> switchView @'ComposeView @'ComposeListOfAttachments)
     ]
 
 composeCcKeybindings :: [Keybinding 'ComposeView 'ComposeCc]
 composeCcKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'ComposeView @'ComposeListOfAttachments)
+    [ Keybinding (V.EvKey V.KEsc [])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey V.KEnter [])
+        (done *> switchView @'ComposeView @'ComposeListOfAttachments)
     ]
 
 composeBccKeybindings :: [Keybinding 'ComposeView 'ComposeBcc]
 composeBccKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'ComposeView @'ComposeListOfAttachments)
+    [ Keybinding (V.EvKey V.KEsc [])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl])
+        (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey V.KEnter [])
+        (done *> switchView @'ComposeView @'ComposeListOfAttachments)
     ]
 
 confirmKeybindings :: [Keybinding 'ComposeView 'ConfirmDialog]
 confirmKeybindings =
   [ Keybinding
       (V.EvKey V.KEnter [])
-      (handleConfirm `focus` reloadList `chain` continue)
+      (handleConfirm !*> reloadList)
   , Keybinding
       (V.EvKey (V.KChar 'q') [])
-      (noop `focus` continue @'ComposeView @'ComposeListOfAttachments)
+      (switchView @'ComposeView @'ComposeListOfAttachments)
   , Keybinding
       (V.EvKey V.KEsc [])
-      (noop `focus` continue @'ComposeView @'ComposeListOfAttachments)
+      (switchView @'ComposeView @'ComposeListOfAttachments)
   ]
 
 confirmAbort :: Action 'ComposeView 'ComposeListOfAttachments ()
-confirmAbort =
-  noop `focus` continue @'ComposeView @'ConfirmDialog
+confirmAbort = switchView @'ComposeView @'ConfirmDialog
 
 listOfAttachmentsKeybindings :: [Keybinding 'ComposeView 'ComposeListOfAttachments]
 listOfAttachmentsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) confirmAbort
     , Keybinding (V.EvKey (V.KChar 'q') []) confirmAbort
-    , Keybinding (V.EvKey V.KDown []) (listDown `chain` continue)
-    , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
+    , Keybinding (V.EvKey V.KDown []) listDown
+    , Keybinding (V.EvKey V.KUp []) listUp
+    , Keybinding (V.EvKey (V.KChar 'j') []) listDown
+    , Keybinding (V.EvKey (V.KChar 'k') []) listUp
+    , Keybinding (V.EvKey (V.KChar 'G') []) listJumpToEnd
+    , Keybinding (V.EvKey (V.KChar '1') []) listJumpToStart
     , Keybinding (V.EvKey (V.KChar 'y') [])
-        (ifte done (switchView @'Threads @'ListOfThreads) noop *> continue)
-    , Keybinding (V.EvKey (V.KChar '\t') []) (noop `focus` continue @'Threads @'ListOfThreads)
+        (ifte done (switchView @'Threads @'ListOfThreads) noop)
+    , Keybinding (V.EvKey (V.KChar '\t') []) (switchView @'Threads @'ListOfThreads)
     , Keybinding (V.EvKey (V.KChar 'e') []) edit
-    , Keybinding (V.EvKey (V.KChar 'D') []) (delete `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'a') []) (noop `focus` continue @'FileBrowser @'ListOfFiles)
-    , Keybinding (V.EvKey (V.KChar 't') []) (noop `focus` continue @'ComposeView @'ComposeTo)
-    , Keybinding (V.EvKey (V.KChar 'c') []) (noop `focus` continue @'ComposeView @'ComposeCc)
-    , Keybinding (V.EvKey (V.KChar 'b') []) (noop `focus` continue @'ComposeView @'ComposeBcc)
-    , Keybinding (V.EvKey (V.KChar 's') []) (noop `focus` continue @'ComposeView @'ComposeSubject)
-    , Keybinding (V.EvKey (V.KChar 'f') []) (noop `focus` continue @'ComposeView @'ComposeFrom)
+    , Keybinding (V.EvKey (V.KChar 'D') []) delete
+    , Keybinding (V.EvKey (V.KChar 'a') []) (switchView @'FileBrowser @'ListOfFiles)
+    , Keybinding (V.EvKey (V.KChar 't') []) (switchView @'ComposeView @'ComposeTo)
+    , Keybinding (V.EvKey (V.KChar 'c') []) (switchView @'ComposeView @'ComposeCc)
+    , Keybinding (V.EvKey (V.KChar 'b') []) (switchView @'ComposeView @'ComposeBcc)
+    , Keybinding (V.EvKey (V.KChar 's') []) (switchView @'ComposeView @'ComposeSubject)
+    , Keybinding (V.EvKey (V.KChar 'f') []) (switchView @'ComposeView @'ComposeFrom)
     ]

@@ -38,16 +38,14 @@ import Data.List.NonEmpty (NonEmpty(..))
 
 myBrowseThreadsKbs :: [Keybinding 'Threads 'ListOfThreads]
 myBrowseThreadsKbs =
-  [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"]
-                                       `chain` untoggleListItems
-                                       `chain` continue)
+  [ Keybinding (EvKey (KChar 'a') [])
+      (setTags [RemoveTag "inbox", AddTag "archive"] *> untoggleListItems)
   ]
 
 myMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 myMailKeybindings =
-    [ Keybinding (EvKey (KChar 'a') []) (setTags [RemoveTag "inbox", AddTag "archive"]
-                                         `chain` untoggleListItems
-                                         `chain` continue)
+    [ Keybinding (EvKey (KChar 'a') [])
+      (setTags [RemoveTag "inbox", AddTag "archive"] *> untoggleListItems)
     ]
 
 sendFailRef :: IORef Bool

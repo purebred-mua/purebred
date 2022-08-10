@@ -25,22 +25,22 @@ import Purebred.UI.Actions
 
 gatherFromKeybindings :: [Keybinding 'Threads 'ComposeFrom]
 gatherFromKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey V.KEnter []) (noop `focus` continue @'Threads @'ComposeTo)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey V.KEnter []) (switchView @'Threads @'ComposeTo)
     ]
 
 gatherToKeybindings :: [Keybinding 'Threads 'ComposeTo]
 gatherToKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey V.KEnter []) (noop `focus` continue @'Threads @'ComposeSubject)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey V.KEnter []) (switchView @'Threads @'ComposeSubject)
     ]
 
 gatherSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject]
 gatherSubjectKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'Threads @'ListOfThreads)
     , Keybinding (V.EvKey V.KEnter []) (
         noop
         `focus` (
