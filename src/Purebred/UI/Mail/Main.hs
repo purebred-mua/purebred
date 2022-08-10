@@ -25,10 +25,10 @@ module Purebred.UI.Mail.Main
   ) where
 
 import qualified Brick.AttrMap as A
-import Brick.Types (Padding(..), ViewportType(..), Widget)
+import Brick.Types (ViewportType(..), Widget)
 import qualified Brick.Widgets.List as L
 import Brick.Widgets.Core
-  (padTop, padBottom, txt, txtWrap, viewport, (<+>), (<=>), withAttr,
+  (Padding(..), padTop, padBottom, txt, txtWrap, viewport, (<+>), (<=>), withAttr,
    vBox, hBox, padLeftRight, padRight)
 import Brick.Focus (focusGetCurrent)
 import Data.Text.Markup (Markup, markupSet)

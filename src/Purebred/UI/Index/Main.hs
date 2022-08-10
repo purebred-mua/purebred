@@ -21,10 +21,10 @@ module Purebred.UI.Index.Main (
     renderListOfThreads
   , renderListOfMails) where
 
-import Brick.Types (Location(..), Padding(..), Widget)
+import Brick.Types (Location(..), Widget)
 import Brick.AttrMap (AttrName, attrName)
 import Brick.Widgets.Core
-  (hBox, hLimitPercent, padRight, padLeft, putCursor, txt, vLimit, withAttr, (<+>))
+  (Padding(..), hBox, hLimitPercent, padRight, padLeft, putCursor, txt, vLimit, withAttr, (<+>))
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import Data.Time.Clock

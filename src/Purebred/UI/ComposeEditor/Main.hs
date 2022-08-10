@@ -25,9 +25,9 @@ module Purebred.UI.ComposeEditor.Main
   , renderConfirm
   ) where
 
-import Brick.Types (Padding(..), Widget)
+import Brick.Types (Widget)
 import Brick.Widgets.Core
-  ((<+>), (<=>), emptyWidget, hLimit, padBottom, padLeft,
+  (Padding(..), (<+>), (<=>), emptyWidget, hLimit, padBottom, padLeft,
    txt, vLimit)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L

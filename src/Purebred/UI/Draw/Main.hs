@@ -25,9 +25,9 @@ module Purebred.UI.Draw.Main
   , attachmentsHeader
   ) where
 
-import Brick.Types (Padding(..), Widget)
+import Brick.Types (Widget)
 import Brick.Widgets.Core
-  (fill, txt, vLimit, padRight, (<+>), withAttr, padLeft, hBox)
+  (Padding(..), fill, txt, vLimit, padRight, (<+>), withAttr, padLeft, hBox)
 import qualified Brick.Widgets.Edit as E
 import qualified Data.Text as T
 import Data.Proxy

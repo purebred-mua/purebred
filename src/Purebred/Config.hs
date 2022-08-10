@@ -139,33 +139,33 @@ solarizedDark =
 -- That means that for example, any new list items will inherit colour
 -- definitions from selected and toggled attributes.
 listStateSelectedAttr :: A.AttrName
-listStateSelectedAttr = "selected"
+listStateSelectedAttr = A.attrName "selected"
 
 listStateNewmailAttr :: A.AttrName
-listStateNewmailAttr = "newmail"
+listStateNewmailAttr = A.attrName "newmail"
 
 listStateToggledAttr :: A.AttrName
-listStateToggledAttr = "toggled"
+listStateToggledAttr = A.attrName "toggled"
 
 -- ** Widget Attributes
 --
 defaultAttr :: A.AttrName
-defaultAttr = "default"
+defaultAttr = A.attrName "default"
 
 mailViewAttr :: A.AttrName
-mailViewAttr = "mailview"
+mailViewAttr = A.attrName "mailview"
 
 statusbarAttr :: A.AttrName
-statusbarAttr = "statusbar"
+statusbarAttr = A.attrName "statusbar"
 
 statusbarErrorAttr :: A.AttrName
-statusbarErrorAttr = statusbarAttr <> "error"
+statusbarErrorAttr = statusbarAttr <> A.attrName "error"
 
 statusbarInfoAttr :: A.AttrName
-statusbarInfoAttr = statusbarAttr <> "info"
+statusbarInfoAttr = statusbarAttr <> A.attrName "info"
 
 statusbarWarningAttr :: A.AttrName
-statusbarWarningAttr = statusbarAttr <> "warning"
+statusbarWarningAttr = statusbarAttr <> A.attrName "warning"
 
 editorAttr :: A.AttrName
 editorAttr = E.editAttr
@@ -174,10 +174,10 @@ editorFocusedAttr :: A.AttrName
 editorFocusedAttr = E.editFocusedAttr
 
 editorErrorAttr :: A.AttrName
-editorErrorAttr = editorAttr <> "error"
+editorErrorAttr = editorAttr <> A.attrName "error"
 
 editorLabelAttr :: A.AttrName
-editorLabelAttr = editorAttr <> "label"
+editorLabelAttr = editorAttr <> A.attrName "label"
 
 listAttr :: A.AttrName
 listAttr = L.listAttr
@@ -201,16 +201,16 @@ listSelectedToggledAttr :: A.AttrName
 listSelectedToggledAttr = listStateSelectedAttr <> listToggledAttr
 
 mailAttr :: A.AttrName
-mailAttr = "mail"
+mailAttr = A.attrName "mail"
 
 mailTagAttr :: A.AttrName
-mailTagAttr = mailAttr <> "tag"
+mailTagAttr = mailAttr <> A.attrName "tag"
 
 mailTagToggledAttr :: A.AttrName
 mailTagToggledAttr = mailTagAttr <> listStateToggledAttr
 
 mailAuthorsAttr :: A.AttrName
-mailAuthorsAttr = mailAttr <> "authors"
+mailAuthorsAttr = mailAttr <> A.attrName "authors"
 
 mailNewmailAuthorsAttr :: A.AttrName
 mailNewmailAuthorsAttr = mailAuthorsAttr <> listStateNewmailAttr
@@ -228,35 +228,35 @@ mailSelectedToggledAuthorsAttr :: A.AttrName
 mailSelectedToggledAuthorsAttr = mailSelectedAuthorsAttr <> listStateToggledAttr
 
 headerAttr :: A.AttrName
-headerAttr = "header"
+headerAttr = A.attrName "header"
 
 headerKeyAttr :: A.AttrName
-headerKeyAttr = headerAttr <> "key"
+headerKeyAttr = headerAttr <> A.attrName "key"
 
 headerValueAttr :: A.AttrName
-headerValueAttr = headerAttr <> "value"
+headerValueAttr = headerAttr <> A.attrName "value"
 
 helpAttr :: A.AttrName
-helpAttr = "help"
+helpAttr = A.attrName "help"
 
 helpTitleAttr :: A.AttrName
-helpTitleAttr = helpAttr <> "title"
+helpTitleAttr = helpAttr <> A.attrName "title"
 
 helpKeybindingAttr :: A.AttrName
-helpKeybindingAttr = helpAttr <> "keybinding"
+helpKeybindingAttr = helpAttr <> A.attrName "keybinding"
 
 
 textMatchHighlightAttr :: A.AttrName
-textMatchHighlightAttr = "match"
+textMatchHighlightAttr = A.attrName "match"
 
 currentTextMatchHighlightAttr :: A.AttrName
-currentTextMatchHighlightAttr = textMatchHighlightAttr <> "current"
+currentTextMatchHighlightAttr = textMatchHighlightAttr <> A.attrName "current"
 
 mailbodyAttr :: A.AttrName
-mailbodyAttr = "mailbody"
+mailbodyAttr = A.attrName "mailbody"
 
 mailbodySourceAttr :: A.AttrName
-mailbodySourceAttr = mailbodyAttr <> "source"
+mailbodySourceAttr = mailbodyAttr <> A.attrName "source"
 
 
 -- | Returns the notmuch database path by executing 'notmuch config

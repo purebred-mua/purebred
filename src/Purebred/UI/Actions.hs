@@ -173,8 +173,7 @@ import Purebred.Types
 import Purebred.Types.Error
 import Purebred.Types.Items
 import Purebred.UI.Notifications
-       (setUserMessage, makeWarning, showError, showWarning, showInfo
-       , showUserMessage)
+  ( makeWarning, showError, showWarning, showInfo, showUserMessage )
 import Purebred.UI.Widgets
   ( statefulEditor, editEditorL, revertEditorState, saveEditorState )
 
@@ -304,7 +303,7 @@ class (HasList (n :: Name), Traversable (T n)) =>
   toggleState :: Lens' (E n) Bool
   inner :: Lens' (E n) (Inner n)
 
-  toggle :: StateT AppState (T.EventM Name) ()
+  toggle :: T.EventM Name AppState ()
 
 untoggleAll :: forall n m. (HasToggleableList n, MonadState AppState m) => m ()
 untoggleAll = assign (list @n . traversed . toggleState @n) False
@@ -825,17 +824,17 @@ instance HasViewName 'FileBrowser where
 -- Purebred functions fall into this category because we're missing
 -- ways to modularise them. See #294
 --
-quit :: Action v ctx (T.Next AppState)
-quit = Action ["quit the application"] (get >>= lift . Brick.halt)
+quit :: Action v ctx ()
+quit = Action ["quit the application"] Brick.halt
 
 -- | A noop used to continue the Brick event loop.
 --
-continue :: Action v ctx (T.Next AppState)
-continue = Action mempty (get >>= lift . Brick.continue)
+continue :: Action v ctx ()
+continue = Action mempty (pure ())
 
 -- | Suspends Purebred and invokes the configured editor.
 --
-invokeEditor :: ViewName -> Name -> Action v ctx (T.Next AppState)
+invokeEditor :: ViewName -> Name -> Action v ctx ()
 invokeEditor n w =
   Action
     ["invoke external editor"]
@@ -855,13 +854,13 @@ invokeEditor n w =
 -- attachment. Currently only supports re-editing the body text of an
 -- e-mail.
 --
-edit :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
+edit :: Action 'ComposeView 'ComposeListOfAttachments ()
 edit =
   Action
     ["edit file"]
     (stateSuspendAndResume (editAttachment ComposeView ComposeListOfAttachments))
 
-openAttachment :: Action 'ViewMail ctx (T.Next AppState)
+openAttachment :: Action 'ViewMail ctx ()
 openAttachment =
   Action
   { _aDescription = ["open attachment with external command"]
@@ -875,40 +874,39 @@ openAttachment =
           match
           =<< preview (asMailView . mvAttachments . to L.listSelectedElement . _Just . _2 . headers . contentType) s
       case maybeCommand of
-        Just cmd -> openCommand' cmd *> get >>= (lift . Brick.continue)
+        Just cmd -> openCommand' cmd
         Nothing -> do
           let l = asViews . vsViews . ix ViewMail
           assign (l . vFocus) MailAttachmentOpenWithEditor
           assign (l . vLayers . ix 0 . ix MailAttachmentOpenWithEditor . veState) Visible
-          lift . Brick.continue =<< get
   }
 
 -- | Open the selected entity with the command given from the editor widget.
 --
-openWithCommand :: Action 'ViewMail 'MailAttachmentOpenWithEditor (T.Next AppState)
+openWithCommand :: Action 'ViewMail 'MailAttachmentOpenWithEditor ()
 openWithCommand =
   Action
     { _aDescription = ["ask for command to open attachment"]
     , _aAction = do
       cmd <- uses (asMailView . mvOpenCommand . E.editContentsL) (T.unpack . currentLine)
       case cmd of
-        [] -> lift . Brick.continue . setUserMessage (makeWarning StatusBar "Empty command") =<< get
+        [] -> assign asUserMessage (Just $ makeWarning StatusBar "Empty command")
         (x:xs) -> stateSuspendAndResume $
           openCommand' (MailcapHandler (Process (x :| xs) []) IgnoreOutput KeepTempfile)
     }
 
--- | Wrapper for 'Brick.suspendAndResume' that reads state from
--- state monad.  The resulting (post-resume) state is returned, but
--- it is NOT set as the new state.  (To do this would, I think,
--- require some MVar trickery, because we can't get at the value
--- in the 'T.Next AppState' returned by 'Brick.suspendAndResume'.
--- It is feasible, but we don't have a use case yet.)
-stateSuspendAndResume :: StateT AppState IO a -> StateT AppState (T.EventM n) (T.Next AppState)
-stateSuspendAndResume go = lift . Brick.suspendAndResume . execStateT (go *> get) =<< get
+-- | Wrapper for 'Brick.suspendAndResume' that runs a
+-- @StateT AppState IO a@ computation, instead of a plain @IO a@.
+--
+stateSuspendAndResume
+  :: StateT AppState IO a
+  -> T.EventM Name AppState ()
+stateSuspendAndResume go =
+  get >>= Brick.suspendAndResume . execStateT (go *> get)
 
 -- | Pipe the selected entity to the command given from the editor widget.
 --
-pipeToCommand :: Action 'ViewMail 'MailAttachmentPipeToEditor (T.Next AppState)
+pipeToCommand :: Action 'ViewMail 'MailAttachmentPipeToEditor ()
 pipeToCommand =
   Action
   { _aDescription = ["pipe to external command"]
@@ -1032,25 +1030,25 @@ noop = Action mempty (pure ())
 scrollUp :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollUp = Action
   { _aDescription = ["scroll up"]
-  , _aAction = lift (Brick.vScrollBy (makeViewportScroller @ctx) (-1))
+  , _aAction = Brick.vScrollBy (makeViewportScroller @ctx) (-1)
   }
 
 scrollDown :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollDown = Action
   { _aDescription = ["scroll down"]
-  , _aAction = lift (Brick.vScrollBy (makeViewportScroller @ctx) 1)
+  , _aAction = Brick.vScrollBy (makeViewportScroller @ctx) 1
   }
 
 scrollPageUp :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPageUp = Action
   { _aDescription = ["page up"]
-  , _aAction = lift (Brick.vScrollPage (makeViewportScroller @ctx) T.Up)
+  , _aAction = Brick.vScrollPage (makeViewportScroller @ctx) T.Up
   }
 
 scrollPageDown :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPageDown = Action
   { _aDescription = ["page down"]
-  , _aAction = lift (Brick.vScrollPage (makeViewportScroller @ctx) T.Down)
+  , _aAction = Brick.vScrollPage (makeViewportScroller @ctx) T.Down
   }
 
 scrollNextWord :: forall ctx v. (Scrollable ctx) => Action v ctx ()
@@ -1058,14 +1056,14 @@ scrollNextWord =
   Action
     { _aDescription = ["find next word in mail body"]
     , _aAction = do
-        lift $ Brick.vScrollToBeginning (makeViewportScroller @ctx)
+        Brick.vScrollToBeginning (makeViewportScroller @ctx)
         b <- gets (has (asMailView . mvScrollSteps))
         if b
           then do
             modifying (asMailView . mvScrollSteps) Brick.focusNext
             nextLine <- preuse (asMailView . mvScrollSteps . to Brick.focusGetCurrent . _Just . _1)
             let scrollBy = view (non 0) nextLine
-            lift $ Brick.vScrollBy (makeViewportScroller @ctx) scrollBy
+            Brick.vScrollBy (makeViewportScroller @ctx) scrollBy
           else
             showWarning "No match"
     }
@@ -1084,7 +1082,7 @@ displayMail =
     Action
     { _aDescription = ["display an e-mail"]
     , _aAction = do
-        lift $ Brick.vScrollToBeginning (makeViewportScroller @'ScrollingMailView)
+        Brick.vScrollToBeginning (makeViewportScroller @'ScrollingMailView)
         updateStateWithParsedMail
         updateReadState RemoveTag
     }
@@ -1181,7 +1179,7 @@ senderReply, groupReply :: Action 'ViewMail 'ScrollingMailView ()
 senderReply = Action ["reply"] (replyWithMode ReplyToSender)
 groupReply = Action ["group-reply"] (replyWithMode ReplyToGroup)
 
-replyWithMode :: ReplyMode -> StateT AppState (T.EventM Name) ()
+replyWithMode :: ReplyMode -> T.EventM Name AppState ()
 replyWithMode mode = do
       mail <- use (asMailView . mvMail)
       charsets <- use (asConfig . confCharsets)
@@ -1347,10 +1345,8 @@ specialCaseForDraft mail = do
 
 fileBrowserToggleFile :: Action 'FileBrowser 'ListOfFiles ()
 fileBrowserToggleFile =
-  Action ["toggle file browser file"] $ do
-    fb <- use (asFileBrowser . fbEntries)
-    fb' <- lift $ FB.maybeSelectCurrentEntry fb
-    assign (asFileBrowser . fbEntries) fb'
+  Action ["toggle file browser file"] $
+    T.zoom (asFileBrowser . fbEntries) FB.maybeSelectCurrentEntry
 
 -- | Search related mails sent from the same authors.
 --
@@ -1444,7 +1440,7 @@ toggledOrSelectedItemHelper fx updateFx = do
 -- which is discarded)
 --
 selectedItemHelper
-    :: (Foldable t, L.Splittable t, MonadState AppState m)
+    :: (Traversable t, L.Splittable t, Semigroup (t a), MonadState AppState m)
     => Getting (L.GenericList n t a) AppState (L.GenericList n t a)
     -> (a -> m b)
     -> m ()

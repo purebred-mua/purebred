@@ -30,8 +30,9 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import qualified Graphics.Vty.Input.Events as Vty
-import Control.Lens (set, view)
-import Control.Monad.State (execStateT)
+import Control.Lens (assign, use, view)
+import Control.Monad (when)
+import Control.Monad.State (get, gets, execStateT)
 import qualified Data.Map as Map
 import qualified Data.Text.Lazy as T
 import Data.Time.Clock (UTCTime(..))
@@ -113,7 +114,7 @@ renderWidget s _ ConfirmDialog = renderConfirm s
 
 -- | Main event handler
 --
-handleViewEvent :: ViewName -> Name -> AppState -> Vty.Event -> Brick.EventM Name (Brick.Next AppState)
+handleViewEvent :: ViewName -> Name -> Vty.Event -> Brick.EventM Name AppState ()
 handleViewEvent = f where
   f ComposeView ComposeFrom = dispatch eventHandlerComposeFrom
   f ComposeView ComposeSubject = dispatch eventHandlerComposeSubject
@@ -145,32 +146,32 @@ handleViewEvent = f where
 -- | Handling of application events. These can be keys which are
 -- pressed by the user or asynchronous events send by threads.
 --
-appEvent ::
-     AppState
-  -> Brick.BrickEvent Name PurebredEvent -- ^ event
-  -> Brick.EventM Name (Brick.Next AppState)
-appEvent s (Brick.VtyEvent ev) = handleViewEvent (focusedViewName s) (focusedViewWidget s) s ev
-appEvent s (Brick.AppEvent ev) = case ev of
-  NotifyNumThreads n gen -> M.continue $
-    if gen == view (asThreadsView . miListOfThreadsGeneration) s
-    then set (asThreadsView . miThreads . listLength) (Just n) s
-    else s
-  NotifyNewMailArrived n -> M.continue (set (asThreadsView . miNewMail) n s)
-  InputValidated err -> M.continue . ($ s) $
+appEvent
+  :: Brick.BrickEvent Name PurebredEvent -- ^ event
+  -> Brick.EventM Name AppState ()
+appEvent (Brick.VtyEvent ev) = do
+  s <- get
+  handleViewEvent (focusedViewName s) (focusedViewWidget s) ev
+appEvent (Brick.AppEvent ev) = case ev of
+  NotifyNumThreads n gen -> do
+    curGen <- use (asThreadsView . miListOfThreadsGeneration)
+    when (gen == curGen) $
+      assign (asThreadsView . miThreads . listLength) (Just n)
+  NotifyNewMailArrived n -> assign (asThreadsView . miNewMail) n
+  InputValidated err -> do
+    allVisible <- gets (concat . visibleViewWidgets)
     case err of
-      -- No error at all. Clear any existing errors set in the state.
-      Nothing -> set asUserMessage Nothing . set (asAsync . aValidation) Nothing
-      (Just msg) ->
-        let allVisible = concat $ visibleViewWidgets s
-            widget = view umContext msg
-         in if widget `elem` allVisible
-               -- Widget for this message is still visible, display
-               -- the message and clear the thread ID.
-              then set asUserMessage err . set (asAsync . aValidation) Nothing
-               -- Widget for this message is hidden, ignore the
-               -- message, clear existing message and thread states.
-              else set asUserMessage Nothing . set (asAsync . aValidation) Nothing
-appEvent s _ = M.continue s
+      Just msg | view umContext msg `elem` allVisible -> do
+        -- Widget for this message is still visible, display
+        -- the message and clear the thread ID.
+        assign asUserMessage err
+        assign (asAsync . aValidation) Nothing
+      _ -> do
+        -- Either Nothing (no error), or widget for this message is
+        -- not visible.  Clear existing messages and thread states.
+        assign asUserMessage Nothing
+        assign (asAsync . aValidation) Nothing
+appEvent _ = pure ()
 
 initialViews :: Map.Map ViewName View
 initialViews = Map.fromList
@@ -232,6 +233,6 @@ theApp s =
     { M.appDraw = drawUI
     , M.appChooseCursor = M.showFirstCursor
     , M.appHandleEvent = appEvent
-    , M.appStartEvent = return
+    , M.appStartEvent = pure ()
     , M.appAttrMap = const (view (asConfig . confTheme) s)
     }

@@ -26,10 +26,10 @@ module Purebred.UI.Help.Main
 
 import Data.Function (on)
 import Data.List (nubBy)
-import Brick.Types (Padding(..), Widget)
+import Brick.Types (Widget)
 import qualified Brick.Types as T
 import Brick.Widgets.Core
-       (viewport, hLimit, padLeft, padBottom, padRight, txt, (<=>),
+       (Padding(..), viewport, hLimit, padLeft, padBottom, padRight, txt, (<=>),
         (<+>), vBox, withAttr, emptyWidget)
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Control.Lens (view, views, ifoldr)

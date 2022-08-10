@@ -95,8 +95,8 @@ main =
 
 myColoredTags :: [(AttrName, Attr)]
 myColoredTags =
-  [ (mailTagAttr <> "inbox", fg cyan)
-  , (mailTagAttr <> "archive", fg cyan)
-  , (mailTagAttr <> "signed", fg green)
-  , (mailTagAttr <> "attachment", fg brightRed)
+  [ (mailTagAttr <> attrName "inbox", fg cyan)
+  , (mailTagAttr <> attrName "archive", fg cyan)
+  , (mailTagAttr <> attrName "signed", fg green)
+  , (mailTagAttr <> attrName "attachment", fg brightRed)
   ]

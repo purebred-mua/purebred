@@ -224,7 +224,7 @@ import GHC.Generics (Generic)
 import Brick.AttrMap (AttrMap)
 import Brick.BChan (BChan)
 import qualified Brick.Focus as Brick
-import Brick.Types (EventM, Next)
+import Brick.Types (EventM)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
@@ -233,7 +233,6 @@ import Control.Lens
   ( Getter, Lens', Traversal', _1, _3
   , foldrOf, lens, notNullOf, to, view )
 import Control.DeepSeq (NFData(rnf), force)
-import Control.Monad.State
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
@@ -804,11 +803,11 @@ asAsync = lens _asAsync (\as x -> as { _asAsync = x })
 data Action (v :: ViewName) (ctx :: Name) a = Action
     { _aDescription :: [T.Text]
     -- ^ sequential list of things that the action does
-    , _aAction :: StateT AppState (EventM Name) a
+    , _aAction :: EventM Name AppState a
     }
 
 instance NFData (Action v ctx a) where
-  rnf (Action desc (StateT f)) = Action (force desc) (StateT (force f)) `seq` ()
+  rnf (Action desc m) = Action (force desc) m `seq` ()
 
 instance Functor (Action v ctx) where
   fmap f (Action desc go) = Action desc (fmap f go)
@@ -817,7 +816,7 @@ instance Applicative (Action v ctx) where
   pure a = Action [] (pure a)
   Action desc1 f <*> Action desc2 a = Action (desc1 <> desc2) (f <*> a)
 
-aAction :: Getter (Action v ctx a) (StateT AppState (EventM Name) a)
+aAction :: Getter (Action v ctx a) (EventM Name AppState a)
 aAction = to (\(Action _ b) -> b)
 
 aDescription :: Getter (Action v ctx a) [T.Text]
@@ -826,7 +825,7 @@ aDescription = to (\(Action a _ ) -> a)
 
 data Keybinding (v :: ViewName) (ctx :: Name) = Keybinding
     { _kbEvent :: Vty.Event
-    , _kbAction :: Action v ctx (Next AppState)
+    , _kbAction :: Action v ctx ()
     }
 
 -- | __HACK__: the 'Vty.Event' is only evaluated to WHNF.
@@ -842,7 +841,7 @@ instance Eq (Keybinding v ctx) where
 kbEvent :: Getter (Keybinding v ctx) Vty.Event
 kbEvent = to (\(Keybinding b _) -> b)
 
-kbAction :: Getter (Keybinding v ctx) (Action v ctx (Next AppState))
+kbAction :: Getter (Keybinding v ctx) (Action v ctx ())
 kbAction = to (\(Keybinding _ c) -> c)
 
 -- | An email from the notmuch database represented in Purebred.

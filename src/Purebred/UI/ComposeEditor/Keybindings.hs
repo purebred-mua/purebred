@@ -19,7 +19,6 @@
 
 module Purebred.UI.ComposeEditor.Keybindings where
 
-import qualified Brick.Types as T
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions
 import Purebred.Types
@@ -73,7 +72,7 @@ confirmKeybindings =
       (noop `focus` continue @'ComposeView @'ComposeListOfAttachments)
   ]
 
-confirmAbort :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
+confirmAbort :: Action 'ComposeView 'ComposeListOfAttachments ()
 confirmAbort =
   noop `focus` continue @'ComposeView @'ConfirmDialog
 

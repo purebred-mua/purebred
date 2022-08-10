@@ -22,10 +22,10 @@
 module Purebred.UI.Status.Main where
 
 import Brick.BChan (BChan, writeBChan)
-import Brick.Types (Widget, Padding(..))
+import Brick.Types (Widget)
 import Brick.Focus (focusGetCurrent, focusRingLength)
 import Brick.Widgets.Core
-  (hBox, txt, str, withAttr, (<+>), strWrap,
+  (Padding(..), hBox, txt, str, withAttr, (<+>), strWrap,
   emptyWidget, padRight, padLeft, padLeftRight)
 import Brick.Widgets.Center (hCenter)
 import qualified Brick.Widgets.List  as L
