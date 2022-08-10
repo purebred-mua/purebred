@@ -27,32 +27,32 @@ browseThreadsKeybindings :: [Keybinding 'Threads 'ListOfThreads]
 browseThreadsKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) quit
     , Keybinding (V.EvKey (V.KChar 'q') []) quit
-    , Keybinding (V.EvKey V.KEnter []) (displayThreadMails `focus` selectNextUnread `focus` displayMail `chain` continue)
-    , Keybinding (V.EvKey (V.KChar ':') []) (noop `focus` continue @'Threads @'SearchThreadsEditor)
-    , Keybinding (V.EvKey (V.KChar 'm') []) (noop `focus` continue @'Threads @'ComposeFrom)
-    , Keybinding (V.EvKey (V.KChar '`') []) (noop `focus` continue @'Threads @'ManageThreadTagsEditor)
-    , Keybinding (V.EvKey (V.KChar '\t') []) (switchComposeEditor `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '?') []) (noop `focus` continue @'Help @'ScrollingHelpView)
-    , Keybinding (V.EvKey (V.KChar 'j') []) (listDown `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'k') []) (listUp `chain` continue)
-    , Keybinding (V.EvKey V.KDown []) (listDown `chain` continue)
-    , Keybinding (V.EvKey V.KUp []) (listUp `chain` continue)
-    , Keybinding (V.EvKey (V.KChar 'G') []) (listJumpToEnd `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '1') []) (listJumpToStart `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '*') []) (toggleListItem `chain` listDown `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '+') []) (searchRelated `chain` continue)
+    , Keybinding (V.EvKey V.KEnter []) (displayThreadMails !*> selectNextUnread !*> displayMail)
+    , Keybinding (V.EvKey (V.KChar ':') []) (switchView @'Threads @'SearchThreadsEditor)
+    , Keybinding (V.EvKey (V.KChar 'm') []) (switchView @'Threads @'ComposeFrom)
+    , Keybinding (V.EvKey (V.KChar '`') []) (switchView @'Threads @'ManageThreadTagsEditor)
+    , Keybinding (V.EvKey (V.KChar '\t') []) switchComposeEditor
+    , Keybinding (V.EvKey (V.KChar '?') []) (switchView @'Help @'ScrollingHelpView)
+    , Keybinding (V.EvKey (V.KChar 'j') []) listDown
+    , Keybinding (V.EvKey (V.KChar 'k') []) listUp
+    , Keybinding (V.EvKey V.KDown []) listDown
+    , Keybinding (V.EvKey V.KUp []) listUp
+    , Keybinding (V.EvKey (V.KChar 'G') []) listJumpToEnd
+    , Keybinding (V.EvKey (V.KChar '1') []) listJumpToStart
+    , Keybinding (V.EvKey (V.KChar '*') []) (toggleListItem *> listDown)
+    , Keybinding (V.EvKey (V.KChar '+') []) searchRelated
     ]
 
 searchThreadsKeybindings :: [Keybinding 'Threads 'SearchThreadsEditor]
 searchThreadsKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'Threads @'ListOfThreads)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey V.KEnter []) (done *> switchView @'Threads @'ListOfThreads)
     ]
 
 manageThreadTagsKeybindings :: [Keybinding 'Threads 'ManageThreadTagsEditor]
 manageThreadTagsKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'Threads @'ListOfThreads)
-    , Keybinding (V.EvKey V.KEnter []) (done `focus` untoggleListItems @'Threads @'ListOfThreads `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'Threads @'ListOfThreads)
+    , Keybinding (V.EvKey V.KEnter []) (done !*> untoggleListItems @'Threads @'ListOfThreads)
     ]

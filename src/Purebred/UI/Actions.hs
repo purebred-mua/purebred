@@ -45,7 +45,6 @@ module Purebred.UI.Actions (
   -- ** Brick Event Loop Actions
   -- $brick_actions
   , quit
-  , continue
   , edit
   , invokeEditor
   , openWithCommand
@@ -191,13 +190,13 @@ This keybinding registered to backspace, scrolls a page up and
 continues with the event loop:
 
 @
-'Keybinding' (EvKey KBS []) ('scrollPageUp' ``chain`` 'continue')
+'Keybinding' (EvKey KBS []) 'scrollPageUp'
 @
 
 This keybinding is used to change the view and focus to a different widget:
 
 @
-'Keybinding' (EvKey KEsc []) ('noop' ``focus`` 'continue' @@''Threads' @@''ListOfThreads')
+'Keybinding' (EvKey KEsc []) (switchView @@''Threads' @@''ListOfThreads')
 @
 -}
 
@@ -792,25 +791,10 @@ instance HasViewName 'ComposeView where
 instance HasViewName 'FileBrowser where
   viewname = FileBrowser
 
-
--- $brick_actions
--- These actions wrap Brick's event loop functions. They are used to
--- indicate whether we continue the event loop or halt (quit). These
--- actions typically finish a sequence of chained Actions. Use them at
--- the __end__ of a chained sequence.
---
--- Note:
--- While only 'quit' and 'continue' falls into this category, more
--- Purebred functions fall into this category because we're missing
--- ways to modularise them. See #294
+-- | Cause Brick to terminate the event loop
 --
 quit :: Action v ctx ()
 quit = Action ["quit the application"] Brick.halt
-
--- | A noop used to continue the Brick event loop.
---
-continue :: Action v ctx ()
-continue = Action mempty (pure ())
 
 -- | Suspends Purebred and invokes the configured editor.
 --

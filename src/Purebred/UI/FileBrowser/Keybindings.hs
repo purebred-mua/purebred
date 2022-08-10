@@ -26,16 +26,16 @@ import Purebred.Types
 -- | Default Keybindings
 fileBrowserKeybindings :: [Keybinding 'FileBrowser 'ListOfFiles]
 fileBrowserKeybindings =
-    [ Keybinding (V.EvKey V.KEsc []) (noop `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar 'q') []) (noop `focus` continue @'ComposeView @'ComposeListOfAttachments)
-    , Keybinding (V.EvKey (V.KChar ':') []) (noop `focus` continue @'FileBrowser @'ManageFileBrowserSearchPath)
-    , Keybinding (V.EvKey V.KEnter []) (createAttachments `chain` continue)
-    , Keybinding (V.EvKey (V.KChar '*') []) (fileBrowserToggleFile `chain` continue)
+    [ Keybinding (V.EvKey V.KEsc []) (switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar 'q') []) (switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar ':') []) (switchView @'FileBrowser @'ManageFileBrowserSearchPath)
+    , Keybinding (V.EvKey V.KEnter []) createAttachments
+    , Keybinding (V.EvKey (V.KChar '*') []) fileBrowserToggleFile
     ]
 
 manageSearchPathKeybindings :: [Keybinding 'FileBrowser 'ManageFileBrowserSearchPath]
 manageSearchPathKeybindings =
-  [ Keybinding (V.EvKey V.KEsc []) (abort `focus` continue @'FileBrowser @'ListOfFiles)
-  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort `focus` continue @'FileBrowser @'ListOfFiles)
-  , Keybinding (V.EvKey V.KEnter []) (done `focus` continue @'FileBrowser @'ListOfFiles)
+  [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'FileBrowser @'ListOfFiles)
+  , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'FileBrowser @'ListOfFiles)
+  , Keybinding (V.EvKey V.KEnter []) (done *> switchView @'FileBrowser @'ListOfFiles)
   ]
