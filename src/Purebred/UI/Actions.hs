@@ -325,27 +325,7 @@ instance
   type Inner n = Snd (E n)
   toggleState = _1
   inner = _2
-  toggle = modifying (list @n . listSelectedElementL . toggleState @n) not
-
--- | Traversal of selected element (if any)
---
--- This has been merged in Brick master and we can switch
--- to the version exported by Brick, after it sees release.
---
-listSelectedElementL
-  :: (L.Splittable t, Traversable t, Semigroup (t e))
-  => Traversal' (L.GenericList n t e) e
-listSelectedElementL f l =
-  case view L.listSelectedL l of
-    Nothing -> pure l
-    Just i -> L.listElementsL go l
-      where
-      go l' =
-        let
-          (left, rest) = L.splitAt i l'
-          -- middle contains the target element (if any)
-          (middle, right) = L.splitAt 1 rest
-        in fmap (\m -> left <> m <> right) (traverse f middle)
+  toggle = modifying (list @n . L.listSelectedElementL . toggleState @n) not
 
 -- | A function which is run at the end of a chained sequence of actions.
 --
@@ -1429,9 +1409,9 @@ toggledOrSelectedItemHelper
   -> m ()
 toggledOrSelectedItemHelper fx updateFx = do
   toggled   <- gets (toListOf (toggledItemsL @n))
-  selected  <- gets (toListOf (list @n . listSelectedElementL . inner @n))
+  selected  <- gets (toListOf (list @n . L.listSelectedElementL . inner @n))
   if null toggled
-    then fx selected >> modifying (list @n . listSelectedElementL . inner @n) updateFx
+    then fx selected >> modifying (list @n . L.listSelectedElementL . inner @n) updateFx
     else fx toggled >> modifying (toggledItemsL @n) updateFx
   pure ()
 
