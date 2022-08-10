@@ -22,7 +22,6 @@ module Purebred.UI.Mail.Keybindings where
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions
 import Purebred.Types
-import qualified Brick.Types as T
 
 displayMailKeybindings :: [Keybinding 'ViewMail 'ScrollingMailView]
 displayMailKeybindings =
@@ -58,14 +57,13 @@ displayMailKeybindings =
         senderReply
         `focus` (
             invokeEditor ViewMail ScrollingMailView
-            :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
+            :: Action 'ComposeView 'ComposeListOfAttachments ()
             )
         )
     , Keybinding (V.EvKey (V.KChar 'g') []) (
         groupReply
         `focus` (
-            invokeEditor ViewMail ScrollingMailView
-            :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
+            invokeEditor ViewMail ScrollingMailView :: Action 'ComposeView 'ComposeListOfAttachments ()
             )
         )
     , Keybinding (V.EvKey (V.KChar 'v') []) (noop `focus` continue @'ViewMail @'MailListOfAttachments)
@@ -135,7 +133,7 @@ mailviewComposeToKeybindings =
     , Keybinding (V.EvKey V.KEnter []) (
         done `focus` (
             invokeEditor ViewMail ScrollingMailView
-            :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState)
+            :: Action 'ComposeView 'ComposeListOfAttachments ()
             )
         )
     ]

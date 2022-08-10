@@ -22,7 +22,6 @@ module Purebred.UI.GatherHeaders.Keybindings where
 import qualified Graphics.Vty as V
 import Purebred.Types
 import Purebred.UI.Actions
-import qualified Brick.Types as T
 
 gatherFromKeybindings :: [Keybinding 'Threads 'ComposeFrom]
 gatherFromKeybindings =
@@ -46,6 +45,6 @@ gatherSubjectKeybindings =
         noop
         `focus` (
             invokeEditor Threads ListOfThreads
-            :: Action 'ComposeView 'ComposeListOfAttachments (T.Next AppState))
+            :: Action 'ComposeView 'ComposeListOfAttachments ())
         )
     ]

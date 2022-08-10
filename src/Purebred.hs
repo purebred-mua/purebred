@@ -136,8 +136,8 @@ module Purebred (
   Event(..),
   Key(..),
   Modifier(..),
-  Next,
   AttrName,
+  attrName,
   on,
   fg,
   bg,
@@ -193,9 +193,8 @@ import Graphics.Vty.Attributes
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.BChan (newBChan)
 import Brick.Main (customMain)
-import Brick.Types (Next)
 import Brick.Util (on, fg, bg)
-import Brick.AttrMap (AttrName, applyAttrMappings)
+import Brick.AttrMap (AttrName, applyAttrMappings, attrName)
 import Control.Lens ((&), _head, ifoldMap, ix, over, preview, set, toListOf, view, views)
 import Data.Text.Lens (packed)
 import Data.MIME (Mailbox(..), AddrSpec(..), Domain(..))

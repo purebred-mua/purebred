@@ -14,7 +14,7 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 {- | Asynchronous validation for input from widgets -}
 module Purebred.UI.Validation
@@ -22,7 +22,9 @@ module Purebred.UI.Validation
   ) where
 
 import Control.Concurrent (forkIO, killThread, threadDelay)
-import Control.Lens (set, view)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.State (MonadState)
+import Control.Lens (assign, use)
 import Brick.BChan (writeBChan)
 
 import Purebred.Types
@@ -35,18 +37,19 @@ import Purebred.Types
 -- setting an error on every key stroke, the thread is killed if we
 -- find a thread id already set and a new thread is scheduled.
 --
-dispatchValidation ::
-     (a -> Maybe UserMessage)  -- ^ validation function
+dispatchValidation
+  :: (MonadIO m, MonadState AppState m)
+  => (a -> Maybe UserMessage)  -- ^ validation function
   -> a
-  -> AppState
-  -> IO AppState
-dispatchValidation fx a s =
-  let go = maybe schedule (\t -> killThread t *> schedule) . view (asAsync . aValidation)
-      chan = view bChan s
-      schedule =
-        forkIO (sleepMs 500 >> writeBChan chan (InputValidated (fx a)))
-   in do tid <- go s
-         pure $ set (asAsync . aValidation) (Just tid) s
+  -> m ()
+dispatchValidation fx a = do
+  chan <- use bChan
+  mAsync <- use (asAsync . aValidation)
+  let
+    go = maybe schedule (\t -> killThread t *> schedule) mAsync
+    schedule = forkIO $ sleepMs 500 *> writeBChan chan (InputValidated (fx a))
+  tid <- liftIO go
+  assign (asAsync . aValidation) (Just tid)
 
 sleepMs :: Int -> IO ()
 sleepMs n = threadDelay (n * 1000)

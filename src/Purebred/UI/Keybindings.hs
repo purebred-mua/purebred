@@ -15,6 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Purebred.UI.Keybindings (
@@ -50,13 +51,12 @@ module Purebred.UI.Keybindings (
   ) where
 
 import qualified Brick.Types as Brick
-import qualified Brick.Main as Brick
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (handleDialogEvent)
 import Graphics.Vty (Event (..))
-import Control.Lens (Getter, _Left, preview, set, to, view)
+import Control.Lens (Getter, _Left, assign, preview, to, use, view)
 import Control.Monad.State
 import Data.Attoparsec.Text (parseOnly)
 import Data.List (find)
@@ -82,16 +82,17 @@ data EventHandler v m = EventHandler
   (forall f. Functor f
     => ([Keybinding v m] -> f [Keybinding v m])
     -> AppState -> f AppState) -- lens to keybindings
-  (AppState -> Event -> Brick.EventM Name (Brick.Next AppState)) -- fallback handler
+  (Event -> Brick.EventM Name AppState ()) -- fallback handler
 
 lookupKeybinding :: Event -> [Keybinding v ctx] -> Maybe (Keybinding v ctx)
 lookupKeybinding e = find (\x -> view kbEvent x == e)
 
-dispatch :: EventHandler v m -> AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
-dispatch (EventHandler l fallback) s ev =
-  case lookupKeybinding ev (view l s) of
-    Just kb -> evalStateT (view (kbAction . aAction) kb) (set asUserMessage Nothing s)
-    Nothing -> fallback s ev
+dispatch :: EventHandler v m -> Event -> Brick.EventM Name AppState ()
+dispatch (EventHandler l fallback) ev = do
+  kbs <- use l
+  case lookupKeybinding ev kbs of
+    Just kb -> assign asUserMessage Nothing *> view (kbAction . aAction) kb
+    Nothing -> fallback ev
 
 -- | Wrapper for @Brick.Widgets.Edit.handleEditorEvent@ that takes
 -- @Graphics.Vty.Event@.
@@ -106,81 +107,74 @@ dispatch (EventHandler l fallback) s ev =
 --
 handleEditorVtyEvent
   :: (Eq n, E.DecodeUtf8 t, Eq t, GenericTextZipper t)
-  => Graphics.Vty.Event -> E.Editor t n -> Brick.EventM n (E.Editor t n)
+  => Graphics.Vty.Event -> Brick.EventM n (E.Editor t n) ()
 handleEditorVtyEvent = E.handleEditorEvent . Brick.VtyEvent
 
 
 -- | Simple wrapper around the validation function to not repeating
 -- myself pulling the text values out of the lens.
 --
-runValidation ::
-     Monoid a
+runValidation
+  :: (Monoid a, MonadIO m, MonadState AppState m)
   => (a -> Maybe UserMessage) -- ^ validation
   -> Getter AppState (E.Editor a n) -- ^ lens to retrieve the text used for validation
-  -> AppState
-  -> IO AppState
-runValidation fx l s =
-  dispatchValidation fx (view (l . E.editContentsL . to currentLine) s) s
+  -> m ()
+runValidation fx l = do
+  v <- use (l . E.editContentsL . to currentLine)
+  dispatchValidation fx v
 
 -- $eventhandlers
 -- Each event handler is handling a single widget in Purebreds UI
 
 -- | Handlers capable of running used in more than one view
 --
-composeFromHandler, composeToHandler, composeCcHandler, composeBccHandler, manageMailTagHandler ::
-     AppState -> Event -> Brick.EventM Name (Brick.Next AppState)
+composeFromHandler, composeToHandler, composeCcHandler, composeBccHandler, manageMailTagHandler
+  :: Event -> Brick.EventM Name AppState ()
 
-composeFromHandler s e =
-  Brick.handleEventLensed s (asCompose . cFrom . editEditorL) handleEditorVtyEvent e
-  >>= liftIO . runValidation
-  (preview (_Left . to (makeWarning ComposeFrom . T.pack)) . parseOnly (mailboxList <* niceEndOfInput))
-  (asCompose . cFrom . editEditorL)
-  >>= Brick.continue
+composeFromHandler e = do
+  Brick.zoom (asCompose . cFrom . editEditorL) (handleEditorVtyEvent e)
+  runValidation
+    (preview (_Left . to (makeWarning ComposeFrom . T.pack)) . parseOnly (mailboxList <* niceEndOfInput))
+    (asCompose . cFrom . editEditorL)
 
-composeToHandler s e =
-  Brick.handleEventLensed s (asCompose . cTo . editEditorL) handleEditorVtyEvent e
-  >>= liftIO . runValidation
-  (preview (_Left . to (makeWarning ComposeTo . T.pack)) . parseOnly (addressList <* niceEndOfInput))
-  (asCompose . cTo . editEditorL)
-  >>= Brick.continue
+composeToHandler e = do
+  Brick.zoom (asCompose . cTo . editEditorL) (handleEditorVtyEvent e)
+  runValidation
+    (preview (_Left . to (makeWarning ComposeTo . T.pack)) . parseOnly (addressList <* niceEndOfInput))
+    (asCompose . cTo . editEditorL)
 
-composeCcHandler s e =
-  Brick.handleEventLensed s (asCompose . cCc . editEditorL) handleEditorVtyEvent e
-  >>= liftIO . runValidation
-  (preview (_Left . to (makeWarning ComposeCc . T.pack)) . parseOnly (addressList <* niceEndOfInput))
-  (asCompose . cCc . editEditorL)
-  >>= Brick.continue
+composeCcHandler e = do
+  Brick.zoom (asCompose . cCc . editEditorL) (handleEditorVtyEvent e)
+  runValidation
+    (preview (_Left . to (makeWarning ComposeCc . T.pack)) . parseOnly (addressList <* niceEndOfInput))
+    (asCompose . cCc . editEditorL)
 
-composeBccHandler s e =
-  Brick.handleEventLensed s (asCompose . cBcc . editEditorL) handleEditorVtyEvent e
-  >>= liftIO . runValidation
-  (preview (_Left . to (makeWarning ComposeBcc . T.pack)) . parseOnly (addressList <* niceEndOfInput))
-  (asCompose . cBcc . editEditorL)
-  >>= Brick.continue
+composeBccHandler e = do
+  Brick.zoom (asCompose . cBcc . editEditorL) (handleEditorVtyEvent e)
+  runValidation
+    (preview (_Left . to (makeWarning ComposeBcc . T.pack)) . parseOnly (addressList <* niceEndOfInput))
+    (asCompose . cBcc . editEditorL)
 
-manageMailTagHandler s e =
-  Brick.handleEventLensed s (asThreadsView . miMailTagsEditor) handleEditorVtyEvent e
-  >>= liftIO . runValidation (preview _Left . parseTagOps) (asThreadsView . miMailTagsEditor)
-  >>= Brick.continue
+manageMailTagHandler e = do
+  Brick.zoom (asThreadsView . miMailTagsEditor) (handleEditorVtyEvent e)
+  runValidation (preview _Left . parseTagOps) (asThreadsView . miMailTagsEditor)
 
 -- | Do nothing.  It might be worthwhile to enhance this to display
 -- a message like "no binding for key <blah>".
 --
 nullEventHandler :: EventHandler v m
-nullEventHandler = EventHandler (\f s -> s <$ f []) (const . Brick.continue)
+nullEventHandler = EventHandler (\f s -> s <$ f []) (\_e -> pure ())
 
 
 eventHandlerListOfThreads :: EventHandler 'Threads 'ListOfThreads
 eventHandlerListOfThreads = EventHandler
   (asConfig . confIndexView . ivBrowseThreadsKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asThreadsView . miListOfThreads) L.handleListEvent)
+  (Brick.zoom (asThreadsView . miListOfThreads) . L.handleListEvent)
 
 eventHandlerSearchThreadsEditor :: EventHandler 'Threads 'SearchThreadsEditor
 eventHandlerSearchThreadsEditor = EventHandler
   (asConfig . confIndexView . ivSearchThreadsKeybindings)
-  (\s ->
-     Brick.continue
-     <=< Brick.handleEventLensed s (asThreadsView . miSearchThreadsEditor . editEditorL) handleEditorVtyEvent)
+  (Brick.zoom (asThreadsView . miSearchThreadsEditor . editEditorL) . handleEditorVtyEvent)
 
 eventHandlerViewMailManageMailTagsEditor :: EventHandler 'ViewMail 'ManageMailTagsEditor
 eventHandlerViewMailManageMailTagsEditor = EventHandler
@@ -190,45 +184,48 @@ eventHandlerViewMailManageMailTagsEditor = EventHandler
 eventHandlerMailsListOfAttachments:: EventHandler 'ViewMail 'MailListOfAttachments
 eventHandlerMailsListOfAttachments = EventHandler
   (asConfig . confMailView . mvMailListOfAttachmentsKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvAttachments) L.handleListEvent)
+  (Brick.zoom (asMailView . mvAttachments) . L.handleListEvent)
 
 eventHandlerMailAttachmentOpenWithEditor :: EventHandler 'ViewMail 'MailAttachmentOpenWithEditor
 eventHandlerMailAttachmentOpenWithEditor = EventHandler
   (asConfig . confMailView . mvOpenWithKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvOpenCommand) handleEditorVtyEvent)
+  (Brick.zoom (asMailView . mvOpenCommand) . handleEditorVtyEvent)
 
 eventHandlerMailAttachmentPipeToEditor :: EventHandler 'ViewMail 'MailAttachmentPipeToEditor
 eventHandlerMailAttachmentPipeToEditor = EventHandler
   (asConfig . confMailView . mvPipeToKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvPipeCommand) handleEditorVtyEvent)
+  (Brick.zoom (asMailView . mvPipeCommand) . handleEditorVtyEvent)
 
 eventHandlerSaveToDiskEditor :: EventHandler 'ViewMail 'SaveToDiskPathEditor
 eventHandlerSaveToDiskEditor = EventHandler
   (asConfig . confMailView . mvSaveToDiskKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvSaveToDiskPath) handleEditorVtyEvent)
+  (Brick.zoom (asMailView . mvSaveToDiskPath) . handleEditorVtyEvent)
 
 eventHandlerManageThreadTagsEditor :: EventHandler 'Threads 'ManageThreadTagsEditor
 eventHandlerManageThreadTagsEditor =
   EventHandler
     (asConfig . confIndexView . ivManageThreadTagsKeybindings)
-    (\s e -> Brick.handleEventLensed s (asThreadsView . miThreadTagsEditor) handleEditorVtyEvent e
-      >>= liftIO . runValidation (preview _Left . parseTagOps) (asThreadsView . miThreadTagsEditor)
-      >>= Brick.continue)
+    (\e -> do
+      Brick.zoom (asThreadsView . miThreadTagsEditor) (handleEditorVtyEvent e)
+      runValidation
+        (preview _Left . parseTagOps)
+        (asThreadsView . miThreadTagsEditor)
+    )
 
 eventHandlerScrollingMailView :: EventHandler 'ViewMail 'ScrollingMailView
 eventHandlerScrollingMailView = EventHandler
   (asConfig . confMailView . mvKeybindings)
-  (const . Brick.continue)
+  (\_e -> pure ())
 
 eventHandlerScrollingMailViewFind :: EventHandler 'ViewMail 'ScrollingMailViewFindWordEditor
 eventHandlerScrollingMailViewFind = EventHandler
   (asConfig . confMailView . mvFindWordEditorKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asMailView . mvFindWordEditor) handleEditorVtyEvent)
+  (Brick.zoom (asMailView . mvFindWordEditor) . handleEditorVtyEvent)
 
 eventHandlerScrollingHelpView :: EventHandler 'Help 'ScrollingHelpView
 eventHandlerScrollingHelpView = EventHandler
   (asConfig . confHelpView . hvKeybindings)
-  (const . Brick.continue)
+  (\_e -> pure ())
 
 eventHandlerThreadComposeFrom :: EventHandler 'Threads 'ComposeFrom
 eventHandlerThreadComposeFrom = EventHandler
@@ -244,7 +241,7 @@ eventHandlerThreadComposeTo = EventHandler
 eventHandlerThreadComposeSubject :: EventHandler 'Threads 'ComposeSubject
 eventHandlerThreadComposeSubject = EventHandler
   (asConfig . confIndexView . ivSubjectKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cSubject . editEditorL) handleEditorVtyEvent)
+  (Brick.zoom (asCompose . cSubject . editEditorL) . handleEditorVtyEvent)
 
 eventHandlerComposeFrom :: EventHandler 'ComposeView 'ComposeFrom
 eventHandlerComposeFrom = EventHandler
@@ -269,29 +266,27 @@ eventHandlerComposeBcc = EventHandler
 eventHandlerComposeSubject :: EventHandler 'ComposeView 'ComposeSubject
 eventHandlerComposeSubject = EventHandler
   (asConfig . confComposeView . cvSubjectKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cSubject . editEditorL) handleEditorVtyEvent)
+  (Brick.zoom (asCompose . cSubject . editEditorL) . handleEditorVtyEvent)
 
 eventHandlerConfirm :: EventHandler 'ComposeView 'ConfirmDialog
 eventHandlerConfirm = EventHandler
   (asConfig . confComposeView . cvConfirmKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cKeepDraft) handleDialogEvent)
+  (Brick.zoom (asCompose . cKeepDraft) . handleDialogEvent)
 
 eventHandlerComposeListOfAttachments :: EventHandler 'ComposeView 'ComposeListOfAttachments
 eventHandlerComposeListOfAttachments = EventHandler
   (asConfig . confComposeView . cvListOfAttachmentsKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asCompose . cAttachments) L.handleListEvent)
+  (Brick.zoom (asCompose . cAttachments) . L.handleListEvent)
 
 eventHandlerComposeFileBrowser :: EventHandler 'FileBrowser 'ListOfFiles
 eventHandlerComposeFileBrowser = EventHandler
   (asConfig . confFileBrowserView . fbKeybindings)
-  (\s -> Brick.continue <=< Brick.handleEventLensed s (asFileBrowser . fbEntries) FB.handleFileBrowserEvent)
+  (Brick.zoom (asFileBrowser . fbEntries) . FB.handleFileBrowserEvent)
 
 eventHandlerManageFileBrowserSearchPath :: EventHandler 'FileBrowser 'ManageFileBrowserSearchPath
 eventHandlerManageFileBrowserSearchPath = EventHandler
   (asConfig . confFileBrowserView . fbSearchPathKeybindings)
-  (\s ->
-     Brick.continue
-     <=< Brick.handleEventLensed s (asFileBrowser . fbSearchPath . editEditorL) handleEditorVtyEvent)
+  (Brick.zoom (asFileBrowser . fbSearchPath . editEditorL) . handleEditorVtyEvent)
 
 eventHandlerViewMailComposeTo :: EventHandler 'ViewMail 'ComposeTo
 eventHandlerViewMailComposeTo = EventHandler
