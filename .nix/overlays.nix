@@ -1,5 +1,5 @@
 let
-  haskellCompilerVersion = "ghc901";
+  haskellCompilerVersion = "ghc924";
   haskellPackagesOverlay = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${haskellCompilerVersion}.override {
       overrides = hself: hsuper: {
@@ -7,9 +7,9 @@ let
         purebred-email = hsuper.callPackage ./purebred-email.nix { };
         purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
         brick = hsuper.callPackage ./brick.nix { };
-        typed-process = hsuper.callPackage ./typed-process.nix { };
-        vty = hsuper.callPackage ./vty.nix { };
         text-zipper = hsuper.callPackage ./text-zipper.nix { };
+        bimap = hsuper.callPackage ./bimap.nix { };
+        vty = hsuper.callPackage ./vty.nix { };
         notmuch = hsuper.callPackage ./hsnotmuch.nix {
           notmuch = self.pkgs.notmuch;
           talloc = self.pkgs.talloc;

@@ -2,9 +2,9 @@
 , case-insensitive, containers, deepseq, directory, dyre
 , exceptions, filepath, lens, lib, mime-types, mtl, notmuch
 , optparse-applicative, purebred-email, quickcheck-instances
-, random, stm, tasty, tasty-hunit, tasty-quickcheck, tasty-tmux
-, temporary, text, text-zipper, time, typed-process, unix, vector
-, vty, word-wrap
+, random, stm, stm-delay, tasty, tasty-hunit, tasty-quickcheck
+, tasty-tmux, temporary, text, text-zipper, time, typed-process
+, unix, vector, vty, word-wrap
 }:
 mkDerivation {
   pname = "purebred";
@@ -15,11 +15,11 @@ mkDerivation {
   libraryHaskellDepends = [
     attoparsec base brick bytestring case-insensitive containers
     deepseq directory dyre exceptions filepath lens mime-types mtl
-    notmuch optparse-applicative purebred-email random stm temporary
-    text text-zipper time typed-process vector vty word-wrap
+    notmuch optparse-applicative purebred-email random stm stm-delay
+    temporary text text-zipper time typed-process vector vty word-wrap
   ];
-  executableHaskellDepends = [ base ];
   testTarget = "unit";
+  executableHaskellDepends = [ base ];
   testHaskellDepends = [
     attoparsec base brick bytestring directory filepath lens mtl
     notmuch purebred-email quickcheck-instances tasty tasty-hunit
@@ -29,4 +29,5 @@ mkDerivation {
   homepage = "https://github.com/purebred-mua/purebred#readme";
   description = "An mail user agent built around notmuch";
   license = lib.licenses.agpl3Plus;
+  mainProgram = "purebred";
 }
