@@ -2,7 +2,7 @@
   description = "Purebred development environment";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?rev=34ad3ffe08adfca17fcb4e4a47bb5f3b113687be";
+    nixpkgs.url = "github:NixOS/nixpkgs/haskell-updates";
     utils.url = "github:numtide/flake-utils";
   };
 
