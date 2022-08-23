@@ -31,15 +31,20 @@ jobs:
           mkdir -p ~/.config/nix
           echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 
+      - name: Set paths
+        run: |
+          echo "/nix/var/nix/profiles/default/bin" >> "$GITHUB_PATH"
+          echo "/nix/var/nix/profiles/per-user/$USER/profile/bin" >> "$GITHUB_PATH"
+          if [[ $INPUT_NIX_PATH != "" ]]; then
+            echo "NIX_PATH=${INPUT_NIX_PATH}" >> "$GITHUB_ENV"
+          fi
+
       - run: |
-          . ~/.nix-profile/etc/profile.d/nix.sh
           nix flake check
 
       - run: |
-          . ~/.nix-profile/etc/profile.d/nix.sh
           nix build
 
       - run: |
-          . ~/.nix-profile/etc/profile.d/nix.sh
           nix develop
 
