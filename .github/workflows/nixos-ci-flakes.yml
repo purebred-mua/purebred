@@ -35,9 +35,6 @@ jobs:
         run: |
           echo "/nix/var/nix/profiles/default/bin" >> "$GITHUB_PATH"
           echo "/nix/var/nix/profiles/per-user/$USER/profile/bin" >> "$GITHUB_PATH"
-          if [[ $INPUT_NIX_PATH != "" ]]; then
-            echo "NIX_PATH=${INPUT_NIX_PATH}" >> "$GITHUB_ENV"
-          fi
 
       - run: |
           nix flake check
@@ -47,4 +44,7 @@ jobs:
 
       - run: |
           nix develop
+          PATH=$PATH:result/bin cabal v2-test --test-show-details=streaming uat
+          echo -e "[database]\npath=$(pwd)" > ${HOME}/.notmuch-config
+          pushd docs/man && PATH=$PATH:../../result/bin make && popd
 
