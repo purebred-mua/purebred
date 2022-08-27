@@ -43,7 +43,7 @@ jobs:
           nix build
 
       - run: |
-          nix develop
+          nix develop -c bash
           PATH=$PATH:result/bin cabal v2-test --test-show-details=streaming uat
           echo -e "[database]\npath=$(pwd)" > ${HOME}/.notmuch-config
           pushd docs/man && PATH=$PATH:../../result/bin make && popd
