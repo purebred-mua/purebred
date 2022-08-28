@@ -15,26 +15,11 @@ jobs:
           path: /nix/store
           key: "{{ runner.os }}-Nixpkgs-integration-test"
 
-      - name: verify nix package manager installation script
-        run: |
-          curl -o install-nix-2.9.1 https://releases.nixos.org/nix/nix-2.9.1/install
-          curl -o install-nix-2.9.1.asc https://releases.nixos.org/nix/nix-2.9.1/install.asc
-          gpg2 --keyserver hkps://keyserver.ubuntu.com --recv-keys B541D55301270E0BCF15CA5D8170B4726D7198DE
-          gpg2 --verify ./install-nix-2.9.1.asc
-
-      - run: sh ./install-nix-2.9.1 --no-daemon
-
-      - name: Enable Nix Flakes
-        run: |
-          . ~/.nix-profile/etc/profile.d/nix.sh
-          nix-env -iA nixpkgs.nixFlakes
-          mkdir -p ~/.config/nix
-          echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
-
-      - name: Set paths
-        run: |
-          echo "/nix/var/nix/profiles/default/bin" >> "$GITHUB_PATH"
-          echo "/nix/var/nix/profiles/per-user/$USER/profile/bin" >> "$GITHUB_PATH"
+      - name: Install Nix
+        uses: cachix/install-nix-action@v15
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - run: |
           nix flake check
@@ -43,8 +28,14 @@ jobs:
           nix build
 
       - run: |
-          nix develop -c bash
-          PATH=$PATH:result/bin cabal v2-test --test-show-details=streaming uat
+          sudo rm -rf /usr/local/.ghcup
+          nix develop -c sh -c "echo $PATH"
+          nix develop .#purebred -c bash -c "echo $PATH"
+          nix develop -c bash -c "PATH=result/bin:$PATH cabal v2-test --test-show-details=streaming uat"
+        name: Run UAT
+
+      - run: |
           echo -e "[database]\npath=$(pwd)" > ${HOME}/.notmuch-config
-          pushd docs/man && PATH=$PATH:../../result/bin make && popd
+          nix develop -c bash -c "pushd docs/man && PATH=$PATH:../../result/bin make && popd"
+        name: Build documentation
 

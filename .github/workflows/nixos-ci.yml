@@ -43,9 +43,8 @@ jobs:
 
       - name: Build
         shell: bash
-        continue-on-error: true
         run: |
           nix-build -j auto
-          nix-shell --command 'PATH=$PATH:result/bin cabal v2-test --test-show-details=streaming uat'
+          nix-shell --command 'PATH=result/bin:$PATH cabal v2-test --test-show-details=streaming uat'
           echo -e "[database]\npath=$(pwd)" > ${HOME}/.notmuch-config
           nix-shell --command 'pushd docs/man && PATH=$PATH:../../result/bin make && popd'
