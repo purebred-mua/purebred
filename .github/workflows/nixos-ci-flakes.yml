@@ -9,12 +9,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Local cache
-        uses: actions/cache@v2
-        with:
-          path: /nix/store
-          key: "{{ runner.os }}-Nixpkgs-integration-test"
-
       - name: Install Nix
         uses: cachix/install-nix-action@v15
         with:
@@ -28,8 +22,9 @@ jobs:
           nix build
 
       - run: |
-          sudo rm -rf /usr/local/.ghcup
-          nix develop -c sh -c "echo $PATH"
+          nix print-dev-env .#shell-with-icu
+
+      - run: |
           nix develop .#purebred -c bash -c "echo $PATH"
           nix develop -c bash -c "PATH=result/bin:$PATH cabal v2-test --test-show-details=streaming uat"
         name: Run UAT
