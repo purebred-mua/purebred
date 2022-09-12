@@ -122,7 +122,7 @@ library
                      , filepath
                      , mtl
                      , exceptions
-                     , purebred-email >= 0.5 && < 0.6
+                     , purebred-email >= 0.5 && < 0.7
                      , attoparsec
                      , containers
                      , mime-types
