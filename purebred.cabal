@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                purebred
-version:             0.1.0.0
+version:             2022.1
 synopsis:            An mail user agent built around notmuch
 description:
   .
