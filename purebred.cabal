@@ -37,7 +37,7 @@ extra-source-files:
   configs/purebred.hs
 
 tested-with:
-  GHC ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.3 || ==9.4.1
+  GHC ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.4 || ==9.4.2
 
 source-repository head
   type: git
