@@ -4,9 +4,9 @@
 
 An MUA built around [_notmuch_](https://notmuchmail.org/).
 
-## requirements
+## Requirements
 
-- GHC >= 8.6
+- GHC >= 8.8
 - notmuch
 - a local mailer (e.g. `sendmail`)
 
@@ -46,8 +46,9 @@ UX, better plug-in support, etc.
 
 ## Try it
 
-Try out purebred with the following choices. Keep in mind that _none of these_ are
-_currently tested_ in our CI and may be broken.
+Try out purebred with the following choices. Note well: apart from
+`cabal-install`, **none of the other options are tested by our CI**
+and may be broken, or out of date.
 
 ### Fedora
 
@@ -84,27 +85,27 @@ for links to help building Purebred.
 
 Install development packages for system library dependencies
 first. They are needed to compile the Haskell notmuch
-bindings. Note that package names may vary between different distributions.
+bindings. Note that package names vary among distributions.
 
 - libtalloc-devel
 - notmuch-devel
 
 Make sure you have one of our supported GHC versions and
-Cabal-install >= 2.2 installed. From a cloned checkout you then go:
+`cabal-install >= 2.4` installed.  From a cloned checkout:
 
 ```
-# Updates the package list needed for cabal to download dependencies
-$ cabal new-update
+# Update the package list needed for cabal to download dependencies
+$ cabal v2-update
 
 # Builds all dependencies, the purebred library and executable and
 # installs it to ~/.cabal/bin
-$ cabal new-build
+$ cabal v2-build
 Resolving dependencies...
 Build profile: ...
 In order, the following will be built (use -v for more details):
  - ...
  - ...
-$ cabal new-install exe:purebred
+$ cabal v2-install exe:purebred
 
 # start purebred
 $ ~/.cabal/bin/purebred

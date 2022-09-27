@@ -10,7 +10,7 @@ description:
   .
   = Requirements
   .
-  * GHC >= 8.4
+  * GHC >= 8.8
   * notmuch
   * a local mailer (e.g. @sendmail@)
   .
@@ -25,7 +25,7 @@ license:             AGPL-3.0-or-later
 license-file:        LICENSE
 author:              Róman Joost & Fraser Tweedale
 maintainer:          frase@frase.id.au
-copyright:           2017-2019  Purebred contributors
+copyright:           2017-2022  Purebred contributors
 category:            Email
 build-type:          Simple
 
