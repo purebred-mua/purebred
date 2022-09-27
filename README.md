@@ -12,10 +12,10 @@ An MUA built around [_notmuch_](https://notmuchmail.org/).
 
 ## Status
 
-This project is in its infancy, but please join us and help. All
-kinds of contributions (bug reports, testing, documentation, code)
-are welcome. See [HACKING](HACKING) for more info. If you want to **jump right
-in**, have a look at the [easy
+This project is immature, but please join us and help. We welcome
+all kinds of contributions (bug reports, testing, documentation,
+code). See [HACKING](HACKING) for more info. If you want to **jump
+right in**, have a look at the [easy
 fix](https://github.com/purebred-mua/purebred/issues?q=is%3Aopen+is%3Aissue+label%3Aeasyfix)
 issues.
 
@@ -23,26 +23,18 @@ issues.
 
 ## Roadmap
 
-### 1.0 - The basics
+In no particular order, planned features include:
 
-The first release will deliver a primitive MUA with a primitive UX.
-Primitive meaning that most features can be used in anger but are not
-recommended for every-day productive use. This release will form the
-base upon which we want to build an application which separates itself
-from current terminal mail clients.
+- Plugin interface for processing mail before presentation.  This
+  will enable encrypted mail (OpenPGP, S/MIME) plugins, among other
+  things.
 
-### Future releases
+- Address book support.
 
-These releases will focus in more depth on specific issues: e.g. better
-UX, better plug-in support, etc.
+- Improved mailcap support.
 
-## Goals
+- Rendering and UI improvements.
 
-- [ ] re-use strong UX patterns from existing console mailers like mutt and sup
-- [ ] extensible with plug-ins
-- [x] enforce sane configuration by using Haskell's type system
-- [ ] enforce security against malicious emails by using more expressive types
-- [x] provide a reliable application using a large suite of user acceptance tests
 
 ## Try it
 
