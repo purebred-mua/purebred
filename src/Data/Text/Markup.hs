@@ -64,7 +64,7 @@ markupSet (start, len) val m@(Markup l) = if start < 0 || start + len > length l
         newM = Markup $ theHead ++ theNewEntries ++ theTail
         (theHead, theLongTail) = splitAt start l
         (theOldEntries, theTail) = splitAt len theLongTail
-        theNewEntries = zip (fst <$> theOldEntries) (repeat val)
+        theNewEntries = fmap (val <$) theOldEntries
 
 -- | Convert markup to a list of lines. Each line is represented by a
 -- list of pairs in which each pair contains the longest subsequence of
