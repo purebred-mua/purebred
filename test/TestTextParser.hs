@@ -21,8 +21,8 @@ module TestTextParser where
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit ((@=?), testCase)
 
+import Purebred.Storage.Mail (parseMailbody)
 import Purebred.Types
-import Purebred.Types.Display
 
 textparserTests ::
   TestTree
