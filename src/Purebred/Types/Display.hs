@@ -23,14 +23,10 @@ module Purebred.Types.Display
   ( parseMailbody
   ) where
 
-import Data.Attoparsec.Text
 import Text.Wrap (defaultWrapSettings, wrapTextToLines)
 import qualified Data.Text as T
-import Prelude hiding (Word)
-import Control.Lens
 
 import Purebred.Types
-import Purebred.Types.Parser.Text
 
 
 parseMailbody ::
@@ -39,24 +35,4 @@ parseMailbody ::
   -> T.Text
   -> MailBody
 parseMailbody tw s =
-  either
-    (\e -> MailBody mempty [Paragraph [Line [] 0 (T.pack e)]])
-    (MailBody s . setLineNumbers) . parseOnly (paragraphs tw <* niceEndOfInput)
-
-endOfParagraph :: Parser ()
-endOfParagraph = endOfLine *> endOfLine
-
-paragraph :: Int -> Parser Paragraph
-paragraph tw = Paragraph . makeLines tw . T.pack <$> manyTill anyChar endOfParagraph
-
-paragraphs :: Int -> Parser [Paragraph]
-paragraphs tw = do
-  paras <- many' (paragraph tw)
-  rest <- takeText
-  pure $ paras <> [Paragraph $ makeLines tw rest]
-
-makeLines :: Int -> T.Text -> [Line]
-makeLines tw = fmap (Line [] 0) . wrapTextToLines defaultWrapSettings tw
-
-setLineNumbers :: [Paragraph] -> [Paragraph]
-setLineNumbers = iover (indexing (traversed . pLine)) (set lNumber)
+  MailBody s . fmap (Line []) . wrapTextToLines defaultWrapSettings tw

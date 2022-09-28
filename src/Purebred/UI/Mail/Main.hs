@@ -118,11 +118,8 @@ renderMarkup st b =
   let source =
         withAttr mailbodySourceAttr $
         padBottom (Pad 1) $ txt ("Showing output from: " <> view mbSource b)
-      bodyMarkup = toListOf (mbParagraph . to (padBottom (Pad 1) . buildParagraph st)) b
+      bodyMarkup = toListOf (mbLines . to (markup . buildWordMarkup st)) b
    in source <=> vBox bodyMarkup
-
-buildParagraph :: Maybe ScrollStep -> Paragraph -> Widget Name
-buildParagraph st = vBox . toListOf (pLine . to (markup . buildWordMarkup st))
 
 -- | Render the line by inserting markup if we have a match *and* a
 -- scroll step matching
@@ -130,7 +127,7 @@ buildParagraph st = vBox . toListOf (pLine . to (markup . buildWordMarkup st))
 -- matters for scrolling, not for highlighting the match.
 --
 buildWordMarkup :: Maybe ScrollStep -> Line -> Markup A.AttrName
-buildWordMarkup st (Line xs _ t) = foldr (go st) (t @? defaultAttr) xs
+buildWordMarkup st (Line xs t) = foldr (go st) (t @? defaultAttr) xs
   where
     go :: Maybe ScrollStep -> Match -> Markup A.AttrName -> Markup A.AttrName
     go Nothing (Match offset l _) m =

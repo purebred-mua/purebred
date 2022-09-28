@@ -86,7 +86,7 @@ parseMail m server = do
 -- | Create a list of steps to record which absolute positions
 -- brick/the terminal should scroll.
 makeScrollSteps :: MailBody -> [ScrollStep]
-makeScrollSteps = mkScrollStep <$> itoListOf (indexing (mbParagraph . pLine . lMatches . traversed))
+makeScrollSteps = mkScrollStep <$> itoListOf (indexing (mbLines . lMatches . traversed))
   where
     mkScrollStep :: [(Int, Match)] -> [ScrollStep]
     mkScrollStep = fmap (\(n, m) -> (n + 1, view mLinenumber m, m))
@@ -99,14 +99,12 @@ makeScrollSteps = mkScrollStep <$> itoListOf (indexing (mbParagraph . pLine . lM
 findMatchingWords :: T.Text -> MailBody -> MailBody
 findMatchingWords     "" = removeMatchingWords
 findMatchingWords needle =
-  over (mbParagraph . pLine) go
+  iover (indexing mbLines) go
   where
-    go :: Line -> Line
-    go line =
-      let lengthNeedle = T.length needle
-          lineNumber = view lNumber line
-          allMatches =
-            (\(h, _) -> Match (T.length h) lengthNeedle lineNumber) <$>
+    go :: Int -> Line -> Line
+    go lineNumber line =
+       let allMatches =
+            (\(h, _) -> Match (T.length h) (T.length needle) lineNumber) <$>
             T.breakOnAll needle (view lText line)
        in set lMatches allMatches line
 
@@ -115,7 +113,7 @@ findMatchingWords needle =
 --
 removeMatchingWords :: MailBody -> MailBody
 removeMatchingWords =
-  set (mbParagraph . pLine . filtered hasMatches . lMatches) []
+  set (mbLines . filtered hasMatches . lMatches) []
 
 bodyToDisplay ::
      (MonadMask m, MonadError Error m, MonadIO m)
@@ -223,7 +221,7 @@ toQuotedMail
   -> MIMEMessage
 toQuotedMail charsets settings mbody msg =
   reply charsets settings msg
-    & setTextPlainBody (T.unlines $ toListOf (mbParagraph . pLine . lText . to quoteText) mbody)
+    & setTextPlainBody (T.unlines $ toListOf (mbLines . lText . to quoteText) mbody)
 
 -- | Convert an entity into a MIMEMessage used, for example, when
 -- re-composing a draft mail.

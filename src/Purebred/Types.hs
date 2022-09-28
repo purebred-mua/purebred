@@ -78,17 +78,14 @@ module Purebred.Types
   , mvFindWordEditor
   , mvScrollSteps
   , MailBody(..)
-  , mbParagraph
+  , mbLines
   , mbSource
   , matchCount
   , Source
-  , Paragraph(..)
-  , pLine
   , Line(..)
   , hasMatches
   , lMatches
   , lText
-  , lNumber
   , ScrollStep
   , stNumber
   , stMatch
@@ -232,7 +229,7 @@ import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (Dialog)
 import Control.Lens
   ( Getter, Lens', Traversal', _1, _3
-  , foldrOf, lens, notNullOf, to, view )
+  , lengthOf, lens, notNullOf, to )
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
@@ -332,31 +329,18 @@ type Source = T.Text
 -- | Type representing a specific entity from an e-mail for display.
 --
 data MailBody =
-  MailBody Source [Paragraph]
+  MailBody Source [Line]
   deriving (Show, Eq)
 
-mbParagraph :: Traversal' MailBody Paragraph
-mbParagraph f (MailBody s xs) = fmap (\xs' -> MailBody s xs') (traverse f xs)
+mbLines :: Traversal' MailBody Line
+mbLines f (MailBody s xs) = fmap (\xs' -> MailBody s xs') (traverse f xs)
 
 mbSource :: Lens' MailBody Source
 mbSource f (MailBody d xs) = fmap (\d' -> MailBody d' xs) (f d)
 {-# ANN mbSource ("HLint: ignore Avoid lambda using `infix`" :: String) #-}
 
 matchCount :: MailBody -> Int
-matchCount =
-  foldrOf
-    (mbParagraph . pLine)
-    (\l amount -> view (lMatches . to length) l + amount)
-    0
-
--- | A paragraph in the mail body
---
-newtype Paragraph =
-  Paragraph [Line]
-  deriving (Show, Eq)
-
-pLine :: Traversal' Paragraph Line
-pLine f (Paragraph xs) = fmap (\xs' -> Paragraph xs') (traverse f xs)
+matchCount = lengthOf (mbLines . lMatches . traverse)
 
 -- | A match of a substring in the current line of text
 --
@@ -385,23 +369,18 @@ stMatch = _3
 -- | A line of text with arbitrary length and possible matching sub
 -- strings
 --
-data Line =
-  Line [Match]
-       Int -- ^ line number
-       T.Text
+data Line = Line [Match] T.Text
   deriving (Show, Eq)
 
 hasMatches :: Line -> Bool
 hasMatches = notNullOf (lMatches . traverse)
 
 lMatches :: Lens' Line [Match]
-lMatches f (Line xs n t) = fmap (\xs' -> Line xs' n t) (f xs)
+lMatches f (Line xs t) = fmap (\xs' -> Line xs' t) (f xs)
+{-# ANN lMatches "HLint: ignore Avoid lambda using `infix`" #-}
 
 lText :: Lens' Line T.Text
-lText f (Line xs n t) = fmap (\t' -> Line xs n t') (f t)
-
-lNumber :: Lens' Line Int
-lNumber f (Line xs n t) = fmap (\n' -> Line xs n' t) (f n)
+lText f (Line xs t) = fmap (\t' -> Line xs t') (f t)
 
 data HeadersState = ShowAll | Filtered
 
