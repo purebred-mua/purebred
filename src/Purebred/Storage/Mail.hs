@@ -24,6 +24,7 @@ module Purebred.Storage.Mail (
 
   -- * API
     parseMail
+  , parseMailbody
   , bodyToDisplay
   , findMatchingWords
   , removeMatchingWords
@@ -52,13 +53,12 @@ import Data.Foldable (toList)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified System.FilePath as FP (takeFileName)
-import Prelude hiding (Word)
+import Text.Wrap (defaultWrapSettings, wrapTextToLines)
 
 import Data.MIME
 
 import Purebred.Types
 import Purebred.System (tryIO)
-import Purebred.Types.Display (parseMailbody)
 import Purebred.Types.Error
 import Purebred.Types.IFC (sanitiseText)
 import Purebred.Storage.Client (Server, mailFilepath)
@@ -139,6 +139,9 @@ bodyToDisplay s textwidth charsets prefCT msg =
           showHandler = view (mhMakeProcess . mpCommand . to (T.pack . toList))
        in (msg, ) <$> output
 
+parseMailbody :: Int {- ^ text width -} -> Source -> T.Text -> MailBody
+parseMailbody tw s =
+  MailBody s . fmap (Line []) . wrapTextToLines defaultWrapSettings tw
 
 findAutoview :: AppState -> WireEntity -> Maybe MailcapHandler
 findAutoview s msg =

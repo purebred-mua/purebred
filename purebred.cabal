@@ -61,7 +61,6 @@ library
                      , Purebred.System.Process
                      , Purebred.System.Logging
                      , Purebred.Types
-                     , Purebred.Types.Display
                      , Purebred.Types.Error
                      , Purebred.Types.Event
                      , Purebred.Types.LazyVector
