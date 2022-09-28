@@ -1025,7 +1025,7 @@ scrollNextWord =
         if b
           then do
             modifying (asMailView . mvScrollSteps) Brick.focusNext
-            nextLine <- preuse (asMailView . mvScrollSteps . to Brick.focusGetCurrent . _Just . _1)
+            nextLine <- preuse (asMailView . mvScrollSteps . to Brick.focusGetCurrent . _Just . _2)
             let scrollBy = view (non 0) nextLine
             Brick.vScrollBy (makeViewportScroller @ctx) scrollBy
           else

@@ -32,14 +32,12 @@ testParsesParagraphs :: TestTree
 testParsesParagraphs =
   testCase "parses paragraphs" $ expected @=? parseMailbody 72 mempty paragraph
   where
-    expected =
-      MailBody
-        mempty
-        [ Paragraph
-            [ Line [] 0 "This is a"
-            , Line [] 1 "Paragraph"
-            , Line [] 2 "of Text"
-            ]
-        , Paragraph [Line [] 3 "And here", Line [] 4 "comes another one."]
-        ]
+    expected = MailBody mempty
+      [ Line mempty "This is a"
+      , Line mempty "Paragraph"
+      , Line mempty "of Text"
+      , Line mempty ""
+      , Line mempty "And here"
+      , Line mempty "comes another one."
+      ]
     paragraph = "This is a\nParagraph\nof Text\n\nAnd here\ncomes another one."
