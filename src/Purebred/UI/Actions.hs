@@ -93,7 +93,8 @@ module Purebred.UI.Actions (
   , scrollDown
   , scrollPageUp
   , scrollPageDown
-  , scrollNextWord
+  , scrollNextMatch
+  , scrollPreviousMatch
   , removeHighlights
 
   -- ** Actions for composing mails
@@ -1014,11 +1015,18 @@ scrollPageDown = Action
   , _aAction = Brick.vScrollPage (makeViewportScroller @ctx) T.Down
   }
 
-scrollNextWord :: forall ctx v. (Scrollable ctx) => Action v ctx ()
-scrollNextWord =
+scrollNextMatch :: forall ctx v. (Scrollable ctx) => Action v ctx ()
+scrollNextMatch =
   Action
-    { _aDescription = ["find next word in mail body"]
+    { _aDescription = ["scroll to next match in mail body"]
     , _aAction = scrollMatch (makeViewportScroller @ctx) (+1)
+    }
+
+scrollPreviousMatch :: forall ctx v. (Scrollable ctx) => Action v ctx ()
+scrollPreviousMatch =
+  Action
+    { _aDescription = ["scroll to previous match in mail body"]
+    , _aAction = scrollMatch (makeViewportScroller @ctx) (subtract 1)
     }
 
 -- | Scroll to a particular match, the index of which can be calculated
