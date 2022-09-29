@@ -28,7 +28,6 @@ module Purebred.Storage.Mail (
   , bodyToDisplay
   , findMatchingWords
   , removeMatchingWords
-  , makeScrollSteps
 
   -- ** Header data
   , toQuotedMail
@@ -83,37 +82,26 @@ parseMail m server = do
     >>= either (throwError . FileParseError filePath) pure
         . parse (message mime)
 
--- | Create a list of steps to record which absolute positions
--- brick/the terminal should scroll.
-makeScrollSteps :: MailBody -> [ScrollStep]
-makeScrollSteps = mkScrollStep <$> itoListOf (indexing (mbLines . lMatches . traversed))
-  where
-    mkScrollStep :: [(Int, Match)] -> [ScrollStep]
-    mkScrollStep = fmap (\(n, m) -> (n + 1, view mLinenumber m, m))
-
 -- | Find matching words in the AST and change the annotation so
 -- they're highlighted during rendering
 --
 -- Note, that the matching is case sensitive.
 --
 findMatchingWords :: T.Text -> MailBody -> MailBody
-findMatchingWords     "" = removeMatchingWords
-findMatchingWords needle =
-  iover (indexing mbLines) go
+findMatchingWords ""     mb = removeMatchingWords mb
+findMatchingWords needle mb =
+  set mbMatches matches mb
   where
-    go :: Int -> Line -> Line
-    go lineNumber line =
-       let allMatches =
-            (\(h, _) -> Match (T.length h) (T.length needle) lineNumber) <$>
-            T.breakOnAll needle (view lText line)
-       in set lMatches allMatches line
+    matches = ifoldMapOf (indexing mbLines) go mb
+    go i s =
+      (\(h, _) -> Match (T.length h) (T.length needle) i)
+      <$> T.breakOnAll needle s
 
 -- | Reset all matching words, effectively removing any information
 -- for highlights
 --
 removeMatchingWords :: MailBody -> MailBody
-removeMatchingWords =
-  set (mbLines . filtered hasMatches . lMatches) []
+removeMatchingWords = set mbMatches mempty
 
 bodyToDisplay ::
      (MonadMask m, MonadError Error m, MonadIO m)
@@ -140,8 +128,7 @@ bodyToDisplay s textwidth charsets prefCT msg =
        in (msg, ) <$> output
 
 parseMailbody :: Int {- ^ text width -} -> Source -> T.Text -> MailBody
-parseMailbody tw s =
-  MailBody s . fmap (Line []) . wrapTextToLines defaultWrapSettings tw
+parseMailbody tw s = MailBody s [] . wrapTextToLines defaultWrapSettings tw
 
 findAutoview :: AppState -> WireEntity -> Maybe MailcapHandler
 findAutoview s msg =
@@ -224,7 +211,7 @@ toQuotedMail
   -> MIMEMessage
 toQuotedMail charsets settings mbody msg =
   reply charsets settings msg
-    & setTextPlainBody (T.unlines $ toListOf (mbLines . lText . to quoteText) mbody)
+    & setTextPlainBody (T.unlines $ toListOf (mbLines . to quoteText) mbody)
 
 -- | Convert an entity into a MIMEMessage used, for example, when
 -- re-composing a draft mail.

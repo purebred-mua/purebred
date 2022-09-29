@@ -21,7 +21,6 @@ module Purebred.UI.Mail.Main
   ( renderMailView
   , renderAttachmentsList
   , renderPart
-  , buildWordMarkup
   ) where
 
 import qualified Brick.AttrMap as A
@@ -30,13 +29,13 @@ import qualified Brick.Widgets.List as L
 import Brick.Widgets.Core
   (Padding(..), padTop, padBottom, txt, txtWrap, viewport, (<+>), (<=>), withAttr,
    vBox, hBox, padLeftRight, padRight)
-import Brick.Focus (focusGetCurrent)
 import Data.Text.Markup (Markup, markupSet)
 
 import Control.Lens
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
-import Prelude hiding (Word)
+import qualified Data.Text as T
+import Data.Tuple (swap)
 
 import Data.MIME
 
@@ -65,9 +64,9 @@ mailView _ Nothing = txt "Eeek: this is not supposed to happen"
 messageToMailView :: AppState -> MIMEMessage -> Widget Name
 messageToMailView s msg =
   let
-    body' = renderMarkup
-      (preview (asMailView . mvScrollSteps . to focusGetCurrent . _Just) s)
-      (view (asMailView . mvBody) s)
+    curMatchIndex = view (asMailView . mvSearchIndex) s
+    curMatch = preview (asMailView . mvBody . mbMatches . ix curMatchIndex) s
+    body' = renderMarkup curMatch (view (asMailView . mvBody) s)
 
     wantHeader :: CI.CI B.ByteString -> Bool
     wantHeader = case view (asMailView . mvHeadersState) s of
@@ -113,26 +112,28 @@ renderPart charsets selected hds =
 
 -- | render the Mailbody AST to a list used for Markup in Brick
 --
-renderMarkup ::  Maybe ScrollStep -> MailBody -> Widget Name
-renderMarkup st b =
-  let source =
-        withAttr mailbodySourceAttr $
-        padBottom (Pad 1) $ txt ("Showing output from: " <> view mbSource b)
-      bodyMarkup = toListOf (mbLines . to (markup . buildWordMarkup st)) b
-   in source <=> vBox bodyMarkup
-
--- | Render the line by inserting markup if we have a match *and* a
--- scroll step matching
--- Note: Why are we ignoring the line number here? Because it only
--- matters for scrolling, not for highlighting the match.
---
-buildWordMarkup :: Maybe ScrollStep -> Line -> Markup A.AttrName
-buildWordMarkup st (Line xs t) = foldr (go st) (t @? defaultAttr) xs
+renderMarkup :: Maybe Match -> MailBody -> Widget Name
+renderMarkup cur b = source <=> vBox (markup <$> markups)
   where
-    go :: Maybe ScrollStep -> Match -> Markup A.AttrName -> Markup A.AttrName
-    go Nothing (Match offset l _) m =
-      markupSet (offset, l) textMatchHighlightAttr m
-    go (Just step) ma@(Match offset l _) m =
-      if view stMatch step == ma
-        then markupSet (offset, l) currentTextMatchHighlightAttr m
-        else markupSet (offset, l) textMatchHighlightAttr m
+  source =
+    withAttr mailbodySourceAttr $
+    padBottom (Pad 1) $ txt ("Showing output from: " <> view mbSource b)
+
+  markups = markupLines (view mbMatches b) (zip [0..] (toListOf mbLines b))
+
+  markupLines :: [Match] -> [(Int, T.Text)] -> [Markup A.AttrName]
+  markupLines _  []     = []
+  markupLines ms (s:ss) =
+    let (ms', r) = markupLine s ms in r : markupLines ms' ss
+
+  markupLine :: (Int, T.Text) -> [Match] -> ([Match], Markup A.AttrName)
+  markupLine (i, s) =
+    fmap (highlightLine s) . swap . span (\(Match _ _ line) -> line == i)
+
+  highlightLine :: T.Text -> [Match] -> Markup A.AttrName
+  highlightLine = foldr acc . (@? defaultAttr)
+    where acc m@(Match off len _line) = markupSet (off, len) (attr m)
+
+  attr m
+    | Just m == cur = currentTextMatchHighlightAttr
+    | otherwise     = textMatchHighlightAttr

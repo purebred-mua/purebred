@@ -86,9 +86,7 @@ instance Arbitrary NotmuchMail where
 testFindsMatchingWords :: TestTree
 testFindsMatchingWords = testCase "finds matching words" $ expected @=? actual
   where
-    expected =
-      MailBody mempty
-        [Line [Match 9 3 0] "Purebred finds matching words"]
+    expected = MailBody mempty [Match 9 3 0] ["Purebred finds matching words"]
     actual =
       findMatchingWords "fin" $
-        MailBody mempty [Line [] "Purebred finds matching words"]
+        MailBody mempty mempty ["Purebred finds matching words"]
