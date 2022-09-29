@@ -75,7 +75,9 @@ displayMailKeybindings =
     , Keybinding (V.EvKey (V.KChar '/') [])
         (switchView @'ViewMail @'ScrollingMailViewFindWordEditor)
     , Keybinding (V.EvKey (V.KChar 'n') [])
-        scrollNextWord
+        scrollNextMatch
+    , Keybinding (V.EvKey (V.KChar 'N') [])
+        scrollPreviousMatch
     , Keybinding (V.EvKey (V.KChar 'f') [])
         (encapsulateMail *> switchView @'ViewMail @'ComposeTo)
     , Keybinding (V.EvKey V.KEnter [])
