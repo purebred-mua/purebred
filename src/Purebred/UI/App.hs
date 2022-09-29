@@ -207,14 +207,14 @@ initialState conf chan server sink = do
             0
     mv = MailView
            Nothing
-           (MailBody mempty [])
+           (MailBody mempty {- source -} mempty {- matches -} mempty {- lines -})
            Filtered
            (L.list MailListOfAttachments mempty 1)
            (E.editorText SaveToDiskPathEditor Nothing "")
            (E.editorText MailAttachmentOpenWithEditor Nothing "")
            (E.editorText MailAttachmentPipeToEditor Nothing "")
            (E.editorText ScrollingMailViewFindWordEditor Nothing "")
-           (focusRing [])
+           0 {- search match index -}
     viewsettings =
         ViewSettings
         { _vsViews = initialViews

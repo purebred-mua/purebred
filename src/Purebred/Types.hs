@@ -76,21 +76,13 @@ module Purebred.Types
   , mvOpenCommand
   , mvPipeCommand
   , mvFindWordEditor
-  , mvScrollSteps
+  , mvSearchIndex
   , MailBody(..)
   , mbLines
+  , mbMatches
   , mbSource
-  , matchCount
   , Source
-  , Line(..)
-  , hasMatches
-  , lMatches
-  , lText
-  , ScrollStep
-  , stNumber
-  , stMatch
   , Match(..)
-  , mLinenumber
 
     -- ** Mail Composer
   , Compose(..)
@@ -221,15 +213,12 @@ import GHC.Generics (Generic)
 
 import Brick.AttrMap (AttrMap)
 import Brick.BChan (BChan)
-import qualified Brick.Focus as Brick
 import Brick.Types (EventM)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (Dialog)
-import Control.Lens
-  ( Getter, Lens', Traversal', _1, _3
-  , lengthOf, lens, notNullOf, to )
+import Control.Lens ( Getter, Lens', Traversal', lens, to )
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
@@ -326,21 +315,21 @@ miNewMail = lens _miNewMail (\m v -> m { _miNewMail = v})
 --
 type Source = T.Text
 
--- | Type representing a specific entity from an e-mail for display.
+-- | Type representing a specific entity from an e-mail for display,
+-- optionally with search matches to be highlighted.
 --
 data MailBody =
-  MailBody Source [Line]
+  MailBody Source [Match] [T.Text]
   deriving (Show, Eq)
 
-mbLines :: Traversal' MailBody Line
-mbLines f (MailBody s xs) = fmap (\xs' -> MailBody s xs') (traverse f xs)
+mbLines :: Traversal' MailBody T.Text
+mbLines f (MailBody s ms xs) = fmap (\xs' -> MailBody s ms xs') (traverse f xs)
+
+mbMatches :: Lens' MailBody [Match]
+mbMatches f (MailBody s ms xs) = fmap (\ms' -> MailBody s ms' xs) (f ms)
 
 mbSource :: Lens' MailBody Source
-mbSource f (MailBody d xs) = fmap (\d' -> MailBody d' xs) (f d)
-{-# ANN mbSource ("HLint: ignore Avoid lambda using `infix`" :: String) #-}
-
-matchCount :: MailBody -> Int
-matchCount = lengthOf (mbLines . lMatches . traverse)
+mbSource f (MailBody s ms xs) = fmap (\s' -> MailBody s' ms xs) (f s)
 
 -- | A match of a substring in the current line of text
 --
@@ -349,38 +338,6 @@ data Match =
         Int -- ^ length
         Int -- ^ line number
   deriving (Show, Eq)
-
-mLinenumber :: Lens' Match Int
-mLinenumber f (Match a b c) = fmap (\c' -> Match a b c') (f c)
-
--- | A scroll step indicated by the sequential number, line number and
--- the match.
--- The sequential number is used for visual purposes to render a
--- status like: 2 of 30 matches
---
-type ScrollStep = (Int, Int, Match)
-
-stNumber :: Lens' ScrollStep Int
-stNumber = _1
-
-stMatch :: Lens' ScrollStep Match
-stMatch = _3
-
--- | A line of text with arbitrary length and possible matching sub
--- strings
---
-data Line = Line [Match] T.Text
-  deriving (Show, Eq)
-
-hasMatches :: Line -> Bool
-hasMatches = notNullOf (lMatches . traverse)
-
-lMatches :: Lens' Line [Match]
-lMatches f (Line xs t) = fmap (\xs' -> Line xs' t) (f xs)
-{-# ANN lMatches "HLint: ignore Avoid lambda using `infix`" #-}
-
-lText :: Lens' Line T.Text
-lText f (Line xs t) = fmap (\t' -> Line xs t') (f t)
 
 data HeadersState = ShowAll | Filtered
 
@@ -393,7 +350,7 @@ data MailView = MailView
     , _mvOpenCommand:: E.Editor T.Text Name
     , _mvPipeCommand :: E.Editor T.Text Name
     , _mvFindWordEditor :: E.Editor T.Text Name
-    , _mvScrollSteps :: Brick.FocusRing ScrollStep
+    , _mvSearchIndex :: Int
     }
 
 mvMail :: Lens' MailView (Maybe MIMEMessage)
@@ -417,8 +374,8 @@ mvPipeCommand = lens _mvPipeCommand (\mv hs -> mv { _mvPipeCommand = hs })
 mvFindWordEditor :: Lens' MailView (E.Editor T.Text Name)
 mvFindWordEditor = lens _mvFindWordEditor (\mv hs -> mv { _mvFindWordEditor = hs })
 
-mvScrollSteps :: Lens' MailView (Brick.FocusRing ScrollStep)
-mvScrollSteps = lens _mvScrollSteps (\mv hs -> mv { _mvScrollSteps = hs })
+mvSearchIndex :: Lens' MailView Int
+mvSearchIndex = lens _mvSearchIndex (\mv i -> mv { _mvSearchIndex = i })
 
 mvBody :: Lens' MailView MailBody
 mvBody = lens _mvBody (\mv hs -> mv { _mvBody = hs })

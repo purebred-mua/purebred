@@ -23,7 +23,6 @@ module Purebred.UI.Status.Main where
 
 import Brick.BChan (BChan, writeBChan)
 import Brick.Types (Widget)
-import Brick.Focus (focusGetCurrent, focusRingLength)
 import Brick.Widgets.Core
   (Padding(..), hBox, txt, str, withAttr, (<+>), strWrap,
   emptyWidget, padRight, padLeft, padLeftRight)
@@ -127,13 +126,12 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
 
 renderMatches :: AppState -> Widget n
 renderMatches s =
-  let showCount = view (non "0")
-        $ preview (asMailView . mvScrollSteps . to (show . focusRingLength)) s
-      currentItem = view (non "0")
-        $ preview (asMailView . mvScrollSteps . to focusGetCurrent . _Just . stNumber . to show) s
-   in if view (asMailView . mvBody . to matchCount) s > 0
-        then str (currentItem <> " of " <> showCount <> " matches")
-        else emptyWidget
+  case lengthOf (asMailView . mvBody . mbMatches . traverse) s of
+    0 -> emptyWidget
+    n -> let
+            i = view (asMailView . mvSearchIndex) s
+          in
+            str (show (i + 1) <> " of " <> show n <> " matches")
 
 renderNewMailIndicator :: AppState -> Widget n
 renderNewMailIndicator s =

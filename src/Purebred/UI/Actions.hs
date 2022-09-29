@@ -134,10 +134,10 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.List (union)
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
-import Data.Foldable (fold, toList)
+import Data.Foldable (fold, for_, toList)
 import Data.Functor.Identity (Identity(..))
 import Control.Lens
-       (_Just, to, at, ix, _1, _2, toListOf, traversed, has,
+       (_Just, to, at, ix, _1, _2, toListOf, traversed,
         filtered, set, over, preview, view, views, (&), firstOf, non, Traversal',
         Getting, Lens', folded, assign, modifying, preuse, use, uses
   )
@@ -159,7 +159,7 @@ import qualified Purebred.Storage.Client
 import Purebred.Storage.Mail
        ( parseMail, toQuotedMail
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
-       , removeMatchingWords, findMatchingWords, makeScrollSteps
+       , removeMatchingWords, findMatchingWords
        , writeEntityToPath)
 import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
@@ -335,7 +335,7 @@ instance
 class Completable (n :: Name) where
   type CompletableResult n
   type CompletableResult n = ()
-  complete :: (MonadIO m, MonadMask m, MonadState AppState m) => m (CompletableResult n)
+  complete :: T.EventM Name AppState (CompletableResult n)
 
 instance Completable 'SearchThreadsEditor where
   complete = applySearch
@@ -431,10 +431,9 @@ instance Completable 'SaveToDiskPathEditor where
 instance Completable 'ScrollingMailViewFindWordEditor where
   complete = do
     needle <- uses (asMailView . mvFindWordEditor . E.editContentsL) currentLine
-    bod <- uses (asMailView . mvBody) (findMatchingWords needle)
     hide ViewMail 0 ScrollingMailViewFindWordEditor
-    assign (asMailView . mvScrollSteps) (Brick.focusRing (makeScrollSteps bod))
-    assign (asMailView . mvBody) bod
+    modifying (asMailView . mvBody) (findMatchingWords needle)
+    scrollMatch (Brick.viewportScroll ScrollingMailView) (const 0)
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
@@ -1019,18 +1018,37 @@ scrollNextWord :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollNextWord =
   Action
     { _aDescription = ["find next word in mail body"]
-    , _aAction = do
-        Brick.vScrollToBeginning (makeViewportScroller @ctx)
-        b <- gets (has (asMailView . mvScrollSteps))
-        if b
-          then do
-            modifying (asMailView . mvScrollSteps) Brick.focusNext
-            nextLine <- preuse (asMailView . mvScrollSteps . to Brick.focusGetCurrent . _Just . _2)
-            let scrollBy = view (non 0) nextLine
-            Brick.vScrollBy (makeViewportScroller @ctx) scrollBy
-          else
-            showWarning "No match"
+    , _aAction = scrollMatch (makeViewportScroller @ctx) (+1)
     }
+
+-- | Scroll to a particular match, the index of which can be calculated
+-- from the current index.  So:
+--
+-- - `(+1)` → scroll to next match
+-- - `(-1)` → scroll to previous match
+-- - `(const 0)` → scroll to first match
+--
+-- The result index "wraps" to the size of the match set.
+--
+-- If the match set is empty, display a warning.
+--
+scrollMatch
+  :: Brick.ViewportScroll Name
+  -> (Int -> Int)
+  -> T.EventM Name AppState ()
+scrollMatch viewport f = do
+  n <- use (asMailView . mvBody . mbMatches . to length)
+  if n > 0
+    then do
+      i <- use (asMailView . mvSearchIndex)
+      let i' = f i `mod` n
+      match <- preuse (asMailView . mvBody . mbMatches . ix i')
+      for_ match $ \(Match _off _len line) -> do
+        assign (asMailView . mvSearchIndex) i'
+        Brick.vScrollToBeginning viewport
+        Brick.vScrollBy viewport line
+    else
+      showWarning "No match"
 
 -- | Removes any highlighting done by searching in the body text
 --
@@ -1725,7 +1743,6 @@ resetMatchingWords :: AppState -> AppState
 resetMatchingWords =
   over (asMailView . mvBody) removeMatchingWords
   . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
-  . set (asMailView . mvScrollSteps) (Brick.focusRing [])
 
 fileBrowserSetWorkingDirectory ::
      (MonadState AppState m, MonadIO m) => m ()
