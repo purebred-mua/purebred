@@ -172,6 +172,10 @@ import Purebred.System.Process
 import Purebred.Types
 import Purebred.Types.Error
 import Purebred.Types.Items
+import Purebred.Types.Mailcap
+  ( CopiousOutput(..), MakeProcess(..), MailcapHandler(..)
+  , mailcapHandlerToEntityCommand
+  )
 import Purebred.UI.Notifications
   ( makeWarning, showError, showWarning, showInfo, showUserMessage )
 import Purebred.UI.Widgets
@@ -1638,19 +1642,15 @@ invokeEditor' = do
 -- error if either the WireEntity doesn't exist (e.g. not selected) or it can
 -- not be serialised.
 openCommand' :: (MonadIO m, MonadMask m, MonadState AppState m) => MailcapHandler -> m ()
-openCommand' cmd = do
-  let
-    mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m FilePath)
-    mkConfig =
-      let con = EntityCommand
-            handleExitCodeThrow
-            (tmpfileResource (view mhKeepTemp cmd))
-            (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
-            tryReadProcessStderr
-      in fmap con . entityToBytes
+openCommand' cmd =
   selectedItemHelper (asMailView . mvAttachments) $ \ent ->
-    runExceptT (mkConfig ent >>= runEntityCommand)
-      >>= either showError (const $ pure ())
+    runExceptT (go ent) >>= either showError (const $ pure ())
+  where
+    go ent = do
+      bytes <- entityToBytes ent
+      let entCmd = mailcapHandlerToEntityCommand cmd bytes
+                   & set ccRunProcess tryReadProcessStderr
+      runEntityCommand entCmd
 
 -- | Pass the serialized WireEntity to a Bytestring as STDIN to the process. No
 -- temporary file is used. If either no WireEntity exists (e.g. none selected)

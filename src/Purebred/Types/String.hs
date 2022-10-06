@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2019 Róman Joost
+-- Copyright (C) 2022  Fraser Tweedale
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -14,21 +14,20 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE FlexibleContexts #-}
+{- |
 
-module Purebred.System
-  ( tryIO
+String and text processing.
+
+-}
+module Purebred.Types.String
+  ( decodeLenient
   ) where
 
-import Control.Exception (IOException, try)
-import Control.Monad.Except (MonadError, throwError)
-import Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Data.ByteString as B
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Encoding.Error as T
 
-import Purebred.Types.Error
-
--- | "Try" a computation but return a Purebred error in the exception case
-tryIO :: (MonadError Error m, MonadIO m) => IO a -> m a
-tryIO m = liftIO (try m) >>= either (throwError . exceptionToError) pure
-
-exceptionToError :: IOException -> Error
-exceptionToError = ProcessError . show
+-- | Safe conversion from bytestring to text
+decodeLenient :: B.ByteString -> T.Text
+decodeLenient = T.decodeUtf8With T.lenientDecode

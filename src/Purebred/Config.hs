@@ -60,6 +60,7 @@ import Purebred.UI.ComposeEditor.Keybindings
         composeCcKeybindings, composeBccKeybindings)
 
 import Purebred.Types
+import Purebred.Types.Mailcap
 import Purebred.Plugin.Internal
 import qualified Purebred.Plugin.UserAgent
 import Purebred.System.Process

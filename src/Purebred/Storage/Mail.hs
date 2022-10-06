@@ -60,10 +60,12 @@ import Purebred.Types
 import Purebred.System (tryIO)
 import Purebred.Types.Error
 import Purebred.Types.IFC (sanitiseText)
+import Purebred.Types.Mailcap
+  ( MailcapHandler, mhMakeProcess, mpCommand, hasCopiousoutput
+  , mailcapHandlerToEntityCommand
+  )
 import Purebred.Storage.Client (Server, mailFilepath)
-import Purebred.System.Process
-  (runEntityCommand, tmpfileResource, toProcessConfigWithTempfile,
-  tryReadProcessStdout, handleExitCodeThrow)
+import Purebred.System.Process (runEntityCommand)
 
 {- $synopsis
 
@@ -180,24 +182,8 @@ entityPiped ::
   -> WireEntity
   -> m T.Text
 entityPiped handler msg =
-  entityToBytes msg >>= mkConfig handler >>= runEntityCommand
-
--- | Create an entity command which writes our entity to a tempfile,
--- runs the command given by the 'MailcapHandler' over it and grab the
--- stdout for later display.
---
-mkConfig ::
-     (MonadError Error m, MonadIO m)
-  => MailcapHandler
-  -> B.ByteString
-  -> m (EntityCommand m FilePath)
-mkConfig cmd =
-  pure .
-  EntityCommand
-    handleExitCodeThrow
-    (tmpfileResource (view mhKeepTemp cmd))
-    (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess cmd) fp)
-    tryReadProcessStdout
+  entityToBytes msg
+  >>= runEntityCommand . mailcapHandlerToEntityCommand handler
 
 quoteText :: T.Text -> T.Text
 quoteText = ("> " <>)

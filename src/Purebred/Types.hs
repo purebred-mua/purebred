@@ -200,11 +200,10 @@ module Purebred.Types
   , ListWithLength(..)
   , listList
   , listLength
-  , decodeLenient
 
   , module Purebred.Types.Event
-  , module Purebred.Types.Mailcap
   , module Purebred.Types.UI
+  , module Purebred.Types.String
   ) where
 
 import Prelude hiding (Word)
@@ -225,8 +224,6 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.Encoding.Error as T
 import qualified Graphics.Vty.Input.Events as Vty
 import Data.Time (UTCTime)
 import qualified Data.CaseInsensitive as CI
@@ -243,6 +240,7 @@ import Purebred.Types.Event
 import Purebred.Types.Items
 import Purebred.Types.Mailcap
 import Purebred.Types.UI
+import Purebred.Types.String
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
@@ -837,7 +835,3 @@ thReplies = lens _thReplies (\m t -> m { _thReplies = t })
 
 thId :: Lens' NotmuchThread B.ByteString
 thId = lens _thId (\m t -> m { _thId = t })
-
--- | Utility for safe conversion from bytestring to text
-decodeLenient :: B.ByteString -> T.Text
-decodeLenient = T.decodeUtf8With T.lenientDecode

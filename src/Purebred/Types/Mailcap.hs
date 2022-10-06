@@ -34,57 +34,27 @@ module Purebred.Types.Mailcap
   , CopiousOutput(..)
   , isCopiousOutput
   , hasCopiousoutput
-  , TempfileOnExit(..)
 
-  , EntityCommand(..)
-  , ccResource
-  , ccRunProcess
-  , ccAfterExit
-  , ccEntity
-  , ccProcessConfig
-  , ResourceSpec(..)
-  , rsAcquire
-  , rsUpdate
-  , rsFree
+  , mailcapHandlerToEntityCommand
   ) where
 
+import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics
-import System.Exit (ExitCode(..))
 
 import Control.DeepSeq (NFData)
 import Control.Lens (Lens', Traversal', filtered, lens, traversed, view)
 import Control.Monad.Except (MonadError, MonadIO)
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as L
-import qualified Data.Text as T
-import System.Process.Typed (ProcessConfig)
+import System.Process.Typed (ProcessConfig, proc, shell)
 
 import Data.MIME (ContentType)
 
+import Purebred.System.Process
+  ( EntityCommand(..), TempfileOnExit
+  , handleExitCodeThrow, tmpfileResource, tryReadProcessStdout
+  )
 import Purebred.Types.Error (Error)
-import Purebred.Types.IFC (Tainted)
-
--- | A bracket-style type for creating and releasing acquired resources (e.g.
--- temporary files). Note that extending this is perhaps not worth it and we
--- should perhaps look at ResourceT if necessary.
-data ResourceSpec m a = ResourceSpec
-  { _rsAcquire :: m a
- -- ^ acquire a resource (e.g. create temporary file)
-  , _rsFree :: a -> m ()
- -- ^ release a resource (e.g. remove temporary file)
-  , _rsUpdate :: a -> B.ByteString -> m ()
- -- ^ update the acquired resource with the ByteString obtained from serialising the WireEntity
-  }
-
-rsAcquire :: Lens' (ResourceSpec m a) (m a)
-rsAcquire = lens _rsAcquire (\rs x -> rs {_rsAcquire = x})
-
-rsFree :: Lens' (ResourceSpec m a) (a -> m ())
-rsFree = lens _rsFree (\rs x -> rs {_rsFree = x})
-
-rsUpdate :: Lens' (ResourceSpec m a) (a -> B.ByteString -> m ())
-rsUpdate = lens _rsUpdate (\rs x -> rs {_rsUpdate = x})
 
 data MakeProcess
   = Shell (NonEmpty Char)
@@ -105,11 +75,6 @@ data CopiousOutput
 isCopiousOutput :: CopiousOutput -> Bool
 isCopiousOutput CopiousOutput = True
 isCopiousOutput _ = False
-
-data TempfileOnExit
-  = KeepTempfile
-  | DiscardTempfile
-  deriving (Generic, NFData)
 
 data MailcapHandler = MailcapHandler
   { _mhMakeProcess :: MakeProcess
@@ -132,40 +97,22 @@ mhKeepTemp = lens _mhKeepTemp (\h x -> h { _mhKeepTemp = x })
 hasCopiousoutput :: Traversal' [(ContentType -> Bool, MailcapHandler)] (ContentType -> Bool, MailcapHandler)
 hasCopiousoutput = traversed . filtered (isCopiousOutput . view mhCopiousoutput . snd)
 
+-- | Create an entity command which writes the entity to a tempfile,
+-- runs the command given by the 'MailcapHandler' over it and grab the
+-- stdout for later display.
+--
+mailcapHandlerToEntityCommand
+  :: (MonadError Error m, MonadIO m)
+  => MailcapHandler
+  -> B.ByteString
+  -> EntityCommand m FilePath
+mailcapHandlerToEntityCommand mh =
+  EntityCommand
+    handleExitCodeThrow
+    (tmpfileResource (view mhKeepTemp mh))
+    (\_ fp -> toProcessConfigWithTempfile (view mhMakeProcess mh) fp)
+    tryReadProcessStdout
 
--- | Command configuration which is bound to an acquired resource
--- (e.g. a tempfile) filtered through an external command. The
--- resource may or may not be cleaned up after the external command
--- exits.
-data EntityCommand m a = EntityCommand
-  { _ccAfterExit :: (ExitCode, Tainted L.ByteString) -> a -> m T.Text
-  , _ccResource :: ResourceSpec m a
-  , _ccProcessConfig :: B.ByteString -> a -> ProcessConfig () () ()
-  , _ccRunProcess :: ProcessConfig () () () -> m ( ExitCode
-                                                   , Tainted L.ByteString)
-  , _ccEntity :: B.ByteString
-  -- ^ The decoded Entity
-  }
-
-ccAfterExit ::
-     (MonadIO m, MonadError Error m)
-  => Lens' (EntityCommand m a) ((ExitCode, Tainted L.ByteString) -> a -> m T.Text)
-ccAfterExit = lens _ccAfterExit (\cc x -> cc {_ccAfterExit = x})
-
-ccEntity :: Lens' (EntityCommand m a) B.ByteString
-ccEntity = lens _ccEntity (\cc x -> cc {_ccEntity = x})
-
-ccProcessConfig ::
-     Lens' (EntityCommand m a) (B.ByteString -> a -> ProcessConfig () () ())
-ccProcessConfig = lens _ccProcessConfig (\cc x -> cc {_ccProcessConfig = x})
-
-ccResource ::
-     (MonadIO m, MonadError Error m)
-  => Lens' (EntityCommand m a) (ResourceSpec m a)
-ccResource = lens _ccResource (\cc x -> cc {_ccResource = x})
-
-ccRunProcess ::
-     (MonadError Error m, MonadIO m)
-  => Lens' (EntityCommand m a) (ProcessConfig () () () -> m ( ExitCode
-                                                            , Tainted L.ByteString))
-ccRunProcess = lens _ccRunProcess (\cc x -> cc {_ccRunProcess = x})
+toProcessConfigWithTempfile :: MakeProcess -> FilePath -> ProcessConfig () () ()
+toProcessConfigWithTempfile (Shell cmd) fp = shell (toList cmd <> " " <> fp)
+toProcessConfigWithTempfile (Process cmd args) fp = proc (toList cmd) (args <> [fp])
