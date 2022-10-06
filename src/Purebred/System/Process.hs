@@ -14,23 +14,35 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Purebred.System.Process
   ( tryReadProcessStderr
   , tryReadProcessStdout
-  , handleIOException
   , handleExitCodeThrow
   , handleExitCodeTempfileContents
   , outputToText
   , Purebred.System.Process.readProcess
   , tmpfileResource
+  , TempfileOnExit(..)
   , draftFileResoure
   , emptyResource
-  , toProcessConfigWithTempfile
   , runEntityCommand
   , createDraftFilePath
   , createSentFilePath
+  -- * Resource setup and cleanup
+  , ResourceSpec(..)
+  , rsAcquire
+  , rsUpdate
+  , rsFree
+  , EntityCommand(..)
+  , ccResource
+  , ccRunProcess
+  , ccAfterExit
+  , ccEntity
+  , ccProcessConfig
   -- * Re-exports from @System.Process.Typed@
   , ProcessConfig
   , proc
@@ -40,13 +52,14 @@ module Purebred.System.Process
   , byteStringInput
   ) where
 
+import GHC.Generics
+import Control.DeepSeq (NFData)
 import Data.Bifunctor (bimap)
 import Data.Functor (($>))
-import Control.Exception (IOException)
 import Control.Monad.Catch (bracket, MonadMask)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError)
-import Control.Lens (_2, over, view)
+import Control.Lens (Lens', _2, lens, over, view)
 import System.Process.Typed
 import System.IO.Temp (emptyTempFile, emptySystemTempFile)
 import System.FilePath ((</>))
@@ -54,7 +67,6 @@ import System.Directory (removeFile, createDirectoryIfMissing)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as B
 import Data.Char (isControl, isSpace)
-import Data.Foldable (toList)
 import Data.List (intercalate)
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (formatTime, defaultTimeLocale)
@@ -62,11 +74,73 @@ import Data.Time.Format (formatTime, defaultTimeLocale)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
-import Purebred.Types
-import Purebred.System (tryIO, exceptionToError)
+import Purebred.System (tryIO)
 import Purebred.Types.Error
 import Purebred.Types.IFC
-import Purebred.UI.Notifications (setUserMessage, makeError)
+import Purebred.Types.String (decodeLenient)
+
+-- | A bracket-style type for creating and releasing acquired resources (e.g.
+-- temporary files). Note that extending this is perhaps not worth it and we
+-- should perhaps look at ResourceT if necessary.
+data ResourceSpec m a = ResourceSpec
+  { _rsAcquire :: m a
+ -- ^ acquire a resource (e.g. create temporary file)
+  , _rsFree :: a -> m ()
+ -- ^ release a resource (e.g. remove temporary file)
+  , _rsUpdate :: a -> B.ByteString -> m ()
+ -- ^ update the acquired resource with the ByteString obtained from serialising the WireEntity
+  }
+
+rsAcquire :: Lens' (ResourceSpec m a) (m a)
+rsAcquire = lens _rsAcquire (\rs x -> rs {_rsAcquire = x})
+
+rsFree :: Lens' (ResourceSpec m a) (a -> m ())
+rsFree = lens _rsFree (\rs x -> rs {_rsFree = x})
+
+rsUpdate :: Lens' (ResourceSpec m a) (a -> B.ByteString -> m ())
+rsUpdate = lens _rsUpdate (\rs x -> rs {_rsUpdate = x})
+
+
+-- | Command configuration which is bound to an acquired resource
+-- (e.g. a tempfile) filtered through an external command. The
+-- resource may or may not be cleaned up after the external command
+-- exits.
+data EntityCommand m a = EntityCommand
+  { _ccAfterExit :: (ExitCode, Tainted LB.ByteString) -> a -> m T.Text
+  , _ccResource :: ResourceSpec m a
+  , _ccProcessConfig :: B.ByteString -> a -> ProcessConfig () () ()
+  , _ccRunProcess :: ProcessConfig () () () -> m (ExitCode, Tainted LB.ByteString)
+  , _ccEntity :: B.ByteString
+  -- ^ The decoded Entity
+  }
+
+data TempfileOnExit
+  = KeepTempfile
+  | DiscardTempfile
+  deriving (Generic, NFData)
+
+ccAfterExit
+  :: (MonadIO m, MonadError Error m)
+  => Lens' (EntityCommand m a) ((ExitCode, Tainted LB.ByteString) -> a -> m T.Text)
+ccAfterExit = lens _ccAfterExit (\cc x -> cc {_ccAfterExit = x})
+
+ccEntity :: Lens' (EntityCommand m a) B.ByteString
+ccEntity = lens _ccEntity (\cc x -> cc {_ccEntity = x})
+
+ccProcessConfig ::
+     Lens' (EntityCommand m a) (B.ByteString -> a -> ProcessConfig () () ())
+ccProcessConfig = lens _ccProcessConfig (\cc x -> cc {_ccProcessConfig = x})
+
+ccResource ::
+     (MonadIO m, MonadError Error m)
+  => Lens' (EntityCommand m a) (ResourceSpec m a)
+ccResource = lens _ccResource (\cc x -> cc {_ccResource = x})
+
+ccRunProcess
+  :: (MonadError Error m, MonadIO m)
+  => Lens' (EntityCommand m a)
+       (ProcessConfig () () () -> m (ExitCode , Tainted LB.ByteString))
+ccRunProcess = lens _ccRunProcess (\cc x -> cc {_ccRunProcess = x})
 
 
 -- | Handler to handle exit failures and possibly showing an error in the UI.
@@ -92,10 +166,6 @@ handleExitCodeTempfileContents (ExitSuccess, _) tempfile = tryIO $ T.readFile te
 -- display
 outputToText :: Tainted LB.ByteString -> T.Text
 outputToText = untaint (sanitiseText . decodeLenient . LB.toStrict)
-
--- | Handle only IOExceptions, everything else is fair game.
-handleIOException :: AppState -> IOException -> IO AppState
-handleIOException s = pure . flip (setUserMessage . makeError StatusBar) s . exceptionToError
 
 -- | Try running a process given by the `FilePath` and catch an IOExceptions.
 -- This is to avoid a crashing process also take down the running Brick program.
@@ -165,10 +235,6 @@ draftFileResoure maildir =
     (createDraftFilePath maildir)
     (tryIO . removeFile)
     (\fp -> tryIO . B.writeFile fp)
-
-toProcessConfigWithTempfile :: MakeProcess -> FilePath -> ProcessConfig () () ()
-toProcessConfigWithTempfile (Shell cmd) fp = shell (toList cmd <> " " <> fp)
-toProcessConfigWithTempfile (Process cmd args) fp = proc (toList cmd) (args <> [fp])
 
 -- | Generates a Maildir filename
 -- see https://cr.yp.to/proto/maildir.html

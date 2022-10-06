@@ -97,6 +97,7 @@ library
                      , Purebred.Storage.Server
                      , Purebred.Types.IFC
                      , Purebred.Types.Items
+                     , Purebred.Types.String
                      , Purebred.Plugin.Internal
                      , Purebred.Plugin.UserAgent
   autogen-modules:     Paths_purebred
