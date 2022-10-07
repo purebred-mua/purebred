@@ -65,7 +65,7 @@ import Purebred.Types.Mailcap
   , mailcapHandlerToEntityCommand
   )
 import Purebred.Storage.Client (Server, mailFilepath)
-import Purebred.System.Process (runEntityCommand)
+import Purebred.System.Process (outputToText, runEntityCommand)
 
 {- $synopsis
 
@@ -183,7 +183,7 @@ entityPiped ::
   -> m T.Text
 entityPiped handler msg =
   entityToBytes msg
-  >>= runEntityCommand . mailcapHandlerToEntityCommand handler
+  >>= fmap outputToText . runEntityCommand . mailcapHandlerToEntityCommand handler
 
 quoteText :: T.Text -> T.Text
 quoteText = ("> " <>)

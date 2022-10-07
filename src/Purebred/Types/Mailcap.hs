@@ -46,6 +46,7 @@ import Control.DeepSeq (NFData)
 import Control.Lens (Lens', Traversal', filtered, lens, traversed, view)
 import Control.Monad.Except (MonadError, MonadIO)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as L
 import System.Process.Typed (ProcessConfig, proc, shell)
 
 import Data.MIME (ContentType)
@@ -55,6 +56,7 @@ import Purebred.System.Process
   , handleExitCodeThrow, tmpfileResource, tryReadProcessStdout
   )
 import Purebred.Types.Error (Error)
+import Purebred.Types.IFC (Tainted)
 
 data MakeProcess
   = Shell (NonEmpty Char)
@@ -105,7 +107,7 @@ mailcapHandlerToEntityCommand
   :: (MonadError Error m, MonadIO m)
   => MailcapHandler
   -> B.ByteString
-  -> EntityCommand m FilePath
+  -> EntityCommand m FilePath (Tainted L.ByteString)
 mailcapHandlerToEntityCommand mh =
   EntityCommand
     handleExitCodeThrow

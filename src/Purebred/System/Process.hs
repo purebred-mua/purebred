@@ -37,6 +37,7 @@ module Purebred.System.Process
   , rsAcquire
   , rsUpdate
   , rsFree
+  , EntityCommandAfterExit
   , EntityCommand(..)
   , ccResource
   , ccRunProcess
@@ -59,7 +60,7 @@ import Data.Functor (($>))
 import Control.Monad.Catch (bracket, MonadMask)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Except (MonadError, throwError)
-import Control.Lens (Lens', _2, lens, over, view)
+import Control.Lens (Lens, Lens', _2, lens, over, view)
 import System.Process.Typed
 import System.IO.Temp (emptyTempFile, emptySystemTempFile)
 import System.FilePath ((</>))
@@ -72,7 +73,6 @@ import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (formatTime, defaultTimeLocale)
 
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
 
 import Purebred.System (tryIO)
 import Purebred.Types.Error
@@ -101,66 +101,91 @@ rsUpdate :: Lens' (ResourceSpec m a) (a -> B.ByteString -> m ())
 rsUpdate = lens _rsUpdate (\rs x -> rs {_rsUpdate = x})
 
 
+-- | Action to run after the command terminates, but before resource
+-- cleanup.  Inputs are:
+--
+-- * Exit status
+-- * Process output.  Could be stdout or stderr depending on the
+--   value of 'ccProcessConfig'
+-- * @res@, the resource value
+--
+type EntityCommandAfterExit m res a =
+  (ExitCode, Tainted LB.ByteString) -> res -> m a
+
 -- | Command configuration which is bound to an acquired resource
--- (e.g. a tempfile) filtered through an external command. The
--- resource may or may not be cleaned up after the external command
--- exits.
-data EntityCommand m a = EntityCommand
-  { _ccAfterExit :: (ExitCode, Tainted LB.ByteString) -> a -> m T.Text
-  , _ccResource :: ResourceSpec m a
-  , _ccProcessConfig :: B.ByteString -> a -> ProcessConfig () () ()
+-- @res@ (e.g. a tempfile) filtered through an external command.
+--
+-- Resource @res@ acquisition and cleanup is governed by the
+-- 'ResourceSpec' (field 'ccResource').
+--
+-- The result value @a@ is produced by the 'EntityCommandAfterExit'
+-- (field 'ccAfterExit').
+--
+data EntityCommand m res a = EntityCommand
+  { _ccAfterExit :: EntityCommandAfterExit m res a
+  , _ccResource :: ResourceSpec m res
+  , _ccProcessConfig :: B.ByteString -> res -> ProcessConfig () () ()
   , _ccRunProcess :: ProcessConfig () () () -> m (ExitCode, Tainted LB.ByteString)
   , _ccEntity :: B.ByteString
-  -- ^ The decoded Entity
+  -- ^ The transfer-decoded Entity
   }
+
+instance Functor m => Functor (EntityCommand m res) where
+  fmap f = over ccAfterExit (fmap . fmap . fmap $ f)
+
+ccAfterExit
+  :: Lens
+      (EntityCommand m res a) (EntityCommand m res b)
+      (EntityCommandAfterExit m res a) (EntityCommandAfterExit m res b)
+ccAfterExit = lens _ccAfterExit (\cc x -> cc {_ccAfterExit = x})
+
+ccEntity :: Lens' (EntityCommand m res a) B.ByteString
+ccEntity = lens _ccEntity (\cc x -> cc {_ccEntity = x})
+
+ccProcessConfig
+  :: Lens' (EntityCommand m res a) (B.ByteString -> res -> ProcessConfig () () ())
+ccProcessConfig = lens _ccProcessConfig (\cc x -> cc {_ccProcessConfig = x})
+
+ccResource :: Lens' (EntityCommand m res a) (ResourceSpec m res)
+ccResource = lens _ccResource (\cc x -> cc {_ccResource = x})
+
+ccRunProcess
+  :: Lens'
+      (EntityCommand m res a)
+      (ProcessConfig () () () -> m (ExitCode , Tainted LB.ByteString))
+ccRunProcess = lens _ccRunProcess (\cc x -> cc {_ccRunProcess = x})
+
 
 data TempfileOnExit
   = KeepTempfile
   | DiscardTempfile
   deriving (Generic, NFData)
 
-ccAfterExit
-  :: (MonadIO m, MonadError Error m)
-  => Lens' (EntityCommand m a) ((ExitCode, Tainted LB.ByteString) -> a -> m T.Text)
-ccAfterExit = lens _ccAfterExit (\cc x -> cc {_ccAfterExit = x})
 
-ccEntity :: Lens' (EntityCommand m a) B.ByteString
-ccEntity = lens _ccEntity (\cc x -> cc {_ccEntity = x})
-
-ccProcessConfig ::
-     Lens' (EntityCommand m a) (B.ByteString -> a -> ProcessConfig () () ())
-ccProcessConfig = lens _ccProcessConfig (\cc x -> cc {_ccProcessConfig = x})
-
-ccResource ::
-     (MonadIO m, MonadError Error m)
-  => Lens' (EntityCommand m a) (ResourceSpec m a)
-ccResource = lens _ccResource (\cc x -> cc {_ccResource = x})
-
-ccRunProcess
-  :: (MonadError Error m, MonadIO m)
-  => Lens' (EntityCommand m a)
-       (ProcessConfig () () () -> m (ExitCode , Tainted LB.ByteString))
-ccRunProcess = lens _ccRunProcess (\cc x -> cc {_ccRunProcess = x})
-
+throwOnExitFailureOr
+  :: (MonadError Error m)
+  => (ExitCode, Tainted LB.ByteString)
+  -> (Tainted LB.ByteString -> m b)
+  -> m b
+throwOnExitFailureOr (code, out) k = case code of
+  ExitFailure e ->
+    throwError $ ProcessError (show e <> ": " <> T.unpack (outputToText out))
+  ExitSuccess  ->
+    k out
 
 -- | Handler to handle exit failures and possibly showing an error in the UI.
-handleExitCodeThrow ::
-     (MonadError Error m, MonadIO m)
-  => (ExitCode, Tainted LB.ByteString)
-  -> a
-  -> m T.Text
-handleExitCodeThrow (ExitFailure e, out) _ =
-  throwError $ ProcessError (show e <> ": " <> T.unpack (outputToText out))
-handleExitCodeThrow (ExitSuccess, out) _ = pure (outputToText out)
+handleExitCodeThrow
+  :: (MonadError Error m)
+  => EntityCommandAfterExit m res (Tainted LB.ByteString)
+handleExitCodeThrow r _ = throwOnExitFailureOr r pure
 
-handleExitCodeTempfileContents ::
-     (MonadError Error m, MonadIO m)
-  => (ExitCode, Tainted LB.ByteString)
-  -> FilePath
-  -> m T.Text
-handleExitCodeTempfileContents (ExitFailure e, out) _ =
-  throwError $ ProcessError (show e <> ": " <> T.unpack (outputToText out))
-handleExitCodeTempfileContents (ExitSuccess, _) tempfile = tryIO $ T.readFile tempfile
+-- | Throw 'ProcessError' on abnormal exit, otherwise
+-- return the contents at given file path.
+handleExitCodeTempfileContents
+  :: (MonadError Error m, MonadIO m)
+  => EntityCommandAfterExit m FilePath (Tainted LB.ByteString)
+handleExitCodeTempfileContents r path =
+  throwOnExitFailureOr r (\_ -> tryIO $ taint <$> LB.readFile path)
 
 -- | Convert tained output from a 'readProcess' function to T.Text for
 -- display
@@ -193,8 +218,8 @@ readProcess = (fmap . fmap) (bimap taint taint) System.Process.Typed.readProcess
 
 runEntityCommand ::
      (MonadMask m, MonadError Error m, MonadIO m)
-  => EntityCommand m a
-  -> m T.Text
+  => EntityCommand m res a
+  -> m a
 runEntityCommand cmd =
   let acquire = view (ccResource . rsAcquire) cmd
       update = view (ccResource . rsUpdate) cmd
