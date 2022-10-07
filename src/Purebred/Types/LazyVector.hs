@@ -57,7 +57,6 @@ instance Semigroup (V a) where
 
 instance Monoid (V a) where
   mempty = V []
-  V l `mappend` V r = V (l `mappend` r)
 
 -- | /Θ(n)/ Concatenates chunks and checks equality.
 instance Eq a => Eq (V a) where
