@@ -1634,7 +1634,7 @@ invokeEditor' = do
     mkEntity = maybe (pure mempty) entityToBytes maybeEntity
     entityCmd = EntityCommand handleExitCodeTempfileContents
       (draftFileResoure maildir) (\_ fp -> proc cmd [fp]) tryReadProcessStderr
-  mkEntity >>= runEntityCommand . entityCmd
+  fmap outputToText . runEntityCommand . entityCmd =<< mkEntity
 
 -- | Write the serialised WireEntity to a temporary file. Pass the FilePath of
 -- the temporary file to the command. Do not remove the temporary file, so
@@ -1660,17 +1660,19 @@ pipeCommand' cmd
   | null cmd = showWarning "Empty command"
   | otherwise = do
       let
-        mkConfig :: (MonadError Error m, MonadIO m) => WireEntity -> m (EntityCommand m ())
-        mkConfig =
-          let con = EntityCommand
-                handleExitCodeThrow
-                emptyResource
-                (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
-                tryReadProcessStderr
-          in fmap con . entityToBytes
+        go ent = do
+          bytes <- entityToBytes ent
+          let
+            entCmd = EntityCommand
+              handleExitCodeThrow
+              emptyResource
+              (\b _ -> setStdin (byteStringInput $ LB.fromStrict b) (proc cmd []))
+              tryReadProcessStderr
+              bytes
+          outputToText <$> runEntityCommand entCmd
       selectedItemHelper (asMailView . mvAttachments) $ \ent ->
-        runExceptT (mkConfig ent >>= runEntityCommand)
-          >>= either showError (const $ pure ())
+        runExceptT (go ent) >>= either showError (const $ pure ())
+
 
 editAttachment ::
      (MonadState AppState m, MonadIO m, MonadMask m) => ViewName -> Name -> m ()
