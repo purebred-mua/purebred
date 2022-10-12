@@ -23,29 +23,25 @@ module Purebred.UI.Mail.Main
   , renderPart
   ) where
 
-import qualified Brick.AttrMap as A
-import Brick.Types (ViewportType(..), Widget)
-import qualified Brick.Widgets.List as L
-import Brick.Widgets.Core
-  (Padding(..), padTop, padBottom, txt, txtWrap, viewport, (<+>), (<=>), withAttr,
-   vBox, hBox, padLeftRight, padRight)
-import Data.Text.Markup (Markup, markupSet)
-
 import Control.Lens
 import qualified Data.ByteString as B
 import qualified Data.CaseInsensitive as CI
-import qualified Data.Text as T
-import Data.Tuple (swap)
+
+import Brick
+  ( Location(..), Padding(..), ViewportType(..), Widget
+  , (<+>), (<=>), cached, hBox, padLeftRight, padRight, padTop
+  , txt, txtWrap, vBox, viewport, visibleRegion, withAttr
+  )
+import qualified Brick.Widgets.List as L
 
 import Data.MIME
 
-import Purebred.Brick.Markup (markup, (@?))
 import Purebred.Storage.Mail (takeFileName)
 import Purebred.Types
+import Purebred.Types.Presentation (MatchAtLine(..), widget)
 import Purebred.UI.Attr
-  (headerKeyAttr, headerValueAttr, mailViewAttr, listSelectedAttr,
-   listAttr, textMatchHighlightAttr, currentTextMatchHighlightAttr,
-   defaultAttr, mailbodySourceAttr)
+  ( headerKeyAttr, headerValueAttr, mailViewAttr, listSelectedAttr
+  , listAttr)
 import Purebred.UI.Draw.Main (attachmentsHeader)
 import Purebred.UI.Views (focusedViewWidget)
 
@@ -65,8 +61,11 @@ messageToMailView :: AppState -> MIMEMessage -> Widget Name
 messageToMailView s msg =
   let
     curMatchIndex = view (asMailView . mvSearchIndex) s
-    curMatch = preview (asMailView . mvBody . mbMatches . ix curMatchIndex) s
-    body' = renderMarkup curMatch (view (asMailView . mvBody) s)
+    (matchLine, bod) =
+      widget (view (asMailView . mvBody) s) (fromIntegral curMatchIndex)
+    body' = cached ScrollingMailView $ case matchLine of
+      NoMatch -> bod
+      MatchAtLine i -> visibleRegion (Location (0, fromIntegral i)) (1, 1) bod
 
     wantHeader :: CI.CI B.ByteString -> Bool
     wantHeader = case view (asMailView . mvHeadersState) s of
@@ -103,37 +102,9 @@ renderPart charsets selected hds =
         preview (contentDisposition . folded . filename charsets) hds
       listItemAttr = if selected then listSelectedAttr else listAttr
       attachmentType = txt (if isAttachment hds then "A" else "I")
-      widget = hBox
+      widg = hBox
         [ padLeftRight 1 attachmentType
         , padRight Max (txt pFilename)
         , txt pType
         ]
-  in withAttr listItemAttr widget
-
--- | render the Mailbody AST to a list used for Markup in Brick
---
-renderMarkup :: Maybe Match -> MailBody -> Widget Name
-renderMarkup cur b = source <=> vBox (markup <$> markups)
-  where
-  source =
-    withAttr mailbodySourceAttr $
-    padBottom (Pad 1) $ txt ("Showing output from: " <> view mbSource b)
-
-  markups = markupLines (view mbMatches b) (zip [0..] (toListOf mbLines b))
-
-  markupLines :: [Match] -> [(Int, T.Text)] -> [Markup A.AttrName]
-  markupLines _  []     = []
-  markupLines ms (s:ss) =
-    let (ms', r) = markupLine s ms in r : markupLines ms' ss
-
-  markupLine :: (Int, T.Text) -> [Match] -> ([Match], Markup A.AttrName)
-  markupLine (i, s) =
-    fmap (highlightLine s) . swap . span (\(Match _ _ line) -> line == i)
-
-  highlightLine :: T.Text -> [Match] -> Markup A.AttrName
-  highlightLine = foldr acc . (@? defaultAttr)
-    where acc m@(Match off len _line) = markupSet (off, len) (attr m)
-
-  attr m
-    | Just m == cur = currentTextMatchHighlightAttr
-    | otherwise     = textMatchHighlightAttr
+  in withAttr listItemAttr widg

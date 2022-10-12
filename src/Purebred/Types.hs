@@ -77,12 +77,7 @@ module Purebred.Types
   , mvPipeCommand
   , mvFindWordEditor
   , mvSearchIndex
-  , MailBody(..)
-  , mbLines
-  , mbMatches
-  , mbSource
-  , Source
-  , Match(..)
+  , mvMatchInfo
 
     -- ** Mail Composer
   , Compose(..)
@@ -217,7 +212,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.FileBrowser as FB
 import Brick.Widgets.Dialog (Dialog)
-import Control.Lens ( Getter, Lens', Traversal', lens, to )
+import Control.Lens ( Getter, Lens', lens, to )
 import Control.DeepSeq (NFData(rnf), force)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
@@ -241,6 +236,7 @@ import Purebred.Types.Items
 import Purebred.Types.Mailcap
 import Purebred.Types.UI
 import Purebred.Types.String
+import Purebred.Types.Presentation
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
@@ -308,40 +304,11 @@ miThreadTagsEditor = lens _miThreadTagsEditor (\m v -> m { _miThreadTagsEditor =
 miNewMail :: Lens' ThreadsView Int
 miNewMail = lens _miNewMail (\m v -> m { _miNewMail = v})
 
--- | A loose annotation what produced the rendered output of the
--- entity
---
-type Source = T.Text
-
--- | Type representing a specific entity from an e-mail for display,
--- optionally with search matches to be highlighted.
---
-data MailBody =
-  MailBody Source [Match] [T.Text]
-  deriving (Show, Eq)
-
-mbLines :: Traversal' MailBody T.Text
-mbLines f (MailBody s ms xs) = fmap (\xs' -> MailBody s ms xs') (traverse f xs)
-
-mbMatches :: Lens' MailBody [Match]
-mbMatches f (MailBody s ms xs) = fmap (\ms' -> MailBody s ms' xs) (f ms)
-
-mbSource :: Lens' MailBody Source
-mbSource f (MailBody s ms xs) = fmap (\s' -> MailBody s' ms xs) (f s)
-
--- | A match of a substring in the current line of text
---
-data Match =
-  Match Int -- ^ offset
-        Int -- ^ length
-        Int -- ^ line number
-  deriving (Show, Eq)
-
 data HeadersState = ShowAll | Filtered
 
 data MailView = MailView
     { _mvMail :: Maybe MIMEMessage
-    , _mvBody:: MailBody
+    , _mvBody :: BodyPresentation
     , _mvHeadersState :: HeadersState
     , _mvAttachments :: L.List Name WireEntity
     , _mvSaveToDiskPath :: E.Editor T.Text Name
@@ -349,6 +316,7 @@ data MailView = MailView
     , _mvPipeCommand :: E.Editor T.Text Name
     , _mvFindWordEditor :: E.Editor T.Text Name
     , _mvSearchIndex :: Int
+    , _mvMatchInfo :: MatchInfo
     }
 
 mvMail :: Lens' MailView (Maybe MIMEMessage)
@@ -375,7 +343,10 @@ mvFindWordEditor = lens _mvFindWordEditor (\mv hs -> mv { _mvFindWordEditor = hs
 mvSearchIndex :: Lens' MailView Int
 mvSearchIndex = lens _mvSearchIndex (\mv i -> mv { _mvSearchIndex = i })
 
-mvBody :: Lens' MailView MailBody
+mvMatchInfo :: Lens' MailView MatchInfo
+mvMatchInfo = lens _mvMatchInfo (\mv i -> mv { _mvMatchInfo = i })
+
+mvBody :: Lens' MailView BodyPresentation
 mvBody = lens _mvBody (\mv hs -> mv { _mvBody = hs })
 
 data ConfirmDraft
