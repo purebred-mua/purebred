@@ -26,8 +26,6 @@ module Purebred.Storage.Mail (
     parseMail
   , parseMailbody
   , bodyToDisplay
-  , findMatchingWords
-  , removeMatchingWords
 
   -- ** Header data
   , toQuotedMail
@@ -52,7 +50,6 @@ import Data.Foldable (toList)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified System.FilePath as FP (takeFileName)
-import Text.Wrap (defaultWrapSettings, wrapTextToLines)
 
 import Data.MIME
 
@@ -64,6 +61,8 @@ import Purebred.Types.Mailcap
   ( MailcapHandler, mhMakeProcess, mpCommand, hasCopiousoutput
   , mailcapHandlerToEntityCommand
   )
+import Purebred.Types.Presentation (BodyPresentation(..))
+import Purebred.Types.Presentation.MailBody (parseMailbody)
 import Purebred.Storage.Client (Server, mailFilepath)
 import Purebred.System.Process (outputToText, runEntityCommand)
 
@@ -84,27 +83,6 @@ parseMail m server = do
     >>= either (throwError . FileParseError filePath) pure
         . parse (message mime)
 
--- | Find matching words in the AST and change the annotation so
--- they're highlighted during rendering
---
--- Note, that the matching is case sensitive.
---
-findMatchingWords :: T.Text -> MailBody -> MailBody
-findMatchingWords ""     mb = removeMatchingWords mb
-findMatchingWords needle mb =
-  set mbMatches matches mb
-  where
-    matches = ifoldMapOf (indexing mbLines) go mb
-    go i s =
-      (\(h, _) -> Match (T.length h) (T.length needle) i)
-      <$> T.breakOnAll needle s
-
--- | Reset all matching words, effectively removing any information
--- for highlights
---
-removeMatchingWords :: MailBody -> MailBody
-removeMatchingWords = set mbMatches mempty
-
 bodyToDisplay ::
      (MonadMask m, MonadError Error m, MonadIO m)
   => AppState
@@ -112,7 +90,7 @@ bodyToDisplay ::
   -> CharsetLookup
   -> ContentType
   -> MIMEMessage
-  -> m (MIMEMessage, MailBody)
+  -> m (MIMEMessage, BodyPresentation)
 bodyToDisplay s textwidth charsets prefCT msg =
   case chooseEntity prefCT msg of
     Nothing ->
@@ -128,9 +106,6 @@ bodyToDisplay s textwidth charsets prefCT msg =
               (findAutoview s entity)
           showHandler = view (mhMakeProcess . mpCommand . to (T.pack . toList))
        in (msg, ) <$> output
-
-parseMailbody :: Int {- ^ text width -} -> Source -> T.Text -> MailBody
-parseMailbody tw s = MailBody s [] . wrapTextToLines defaultWrapSettings tw
 
 findAutoview :: AppState -> WireEntity -> Maybe MailcapHandler
 findAutoview s msg =
@@ -192,12 +167,12 @@ quoteText = ("> " <>)
 toQuotedMail
   :: CharsetLookup
   -> ReplySettings
-  -> MailBody   -- ^ Body of message being replied to
+  -> BodyPresentation   -- ^ Body of message being replied to
   -> MIMEMessage -- ^ Message being replied to
   -> MIMEMessage
 toQuotedMail charsets settings mbody msg =
   reply charsets settings msg
-    & setTextPlainBody (T.unlines $ toListOf (mbLines . to quoteText) mbody)
+    & setTextPlainBody (T.unlines . fmap quoteText $ toTextLines mbody)
 
 -- | Convert an entity into a MIMEMessage used, for example, when
 -- re-composing a draft mail.

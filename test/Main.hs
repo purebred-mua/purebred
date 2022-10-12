@@ -22,13 +22,11 @@ import qualified LazyVector
 import TestMail (mailTests)
 import TestActions (actionTests)
 import TestTagParser (tagparserTests)
-import TestTextParser (textparserTests)
 
 main :: IO ()
 main = defaultMain $ testGroup "unit tests"
   [ mailTests
   , tagparserTests
-  , textparserTests
   , actionTests
   , LazyVector.tests
   ]

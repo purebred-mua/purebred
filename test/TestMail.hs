@@ -35,7 +35,6 @@ import Test.QuickCheck.Instances ()
 import Notmuch (mkTag, tagMaxLen)
 
 import Purebred.Types
-import Purebred.Storage.Mail (findMatchingWords)
 import Purebred.Storage.Tags (TagOp(..), addTags, removeTags, tagItem)
 
 mailTests ::
@@ -46,7 +45,6 @@ mailTests =
     [ testAddingTags
     , testRemovingTags
     , testTagOpsWithReset
-    , testFindsMatchingWords
     ]
 
 testAddingTags :: TestTree
@@ -82,11 +80,3 @@ instance Arbitrary NotmuchMail where
         <*> arbitrary
         <*> arbitrary
         <*> (T.encodeUtf8 <$> arbitrary)
-
-testFindsMatchingWords :: TestTree
-testFindsMatchingWords = testCase "finds matching words" $ expected @=? actual
-  where
-    expected = MailBody mempty [Match 9 3 0] ["Purebred finds matching words"]
-    actual =
-      findMatchingWords "fin" $
-        MailBody mempty mempty ["Purebred finds matching words"]

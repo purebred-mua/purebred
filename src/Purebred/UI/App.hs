@@ -40,6 +40,8 @@ import Data.Time.Calendar (fromGregorian)
 import Data.Proxy
 
 import Purebred.Storage.Server
+import Purebred.Types
+import Purebred.Types.Presentation (MatchInfo(NoSearch), emptyBodyPresentation)
 import Purebred.UI.Keybindings
 import Purebred.UI.Index.Main
 import Purebred.UI.Actions (applySearch, initialCompose)
@@ -54,7 +56,6 @@ import Purebred.UI.Views
         focusedViewName)
 import Purebred.UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderConfirm)
 import Purebred.UI.Draw.Main (renderEditorWithLabel)
-import Purebred.Types
 import Purebred.UI.Widgets (statefulEditor)
 
 -- * Synopsis
@@ -207,7 +208,7 @@ initialState conf chan server sink = do
             0
     mv = MailView
            Nothing
-           (MailBody mempty {- source -} mempty {- matches -} mempty {- lines -})
+           emptyBodyPresentation
            Filtered
            (L.list MailListOfAttachments mempty 1)
            (E.editorText SaveToDiskPathEditor Nothing "")
@@ -215,6 +216,7 @@ initialState conf chan server sink = do
            (E.editorText MailAttachmentPipeToEditor Nothing "")
            (E.editorText ScrollingMailViewFindWordEditor Nothing "")
            0 {- search match index -}
+           NoSearch {- MatchInfo -}
     viewsettings =
         ViewSettings
         { _vsViews = initialViews

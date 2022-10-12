@@ -135,7 +135,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.List (union)
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
-import Data.Foldable (fold, for_, toList)
+import Data.Foldable (fold, toList)
 import Data.Functor.Identity (Identity(..))
 import Control.Lens
        (_Just, to, at, ix, _1, _2, toListOf, traversed,
@@ -160,7 +160,6 @@ import qualified Purebred.Storage.Client
 import Purebred.Storage.Mail
        ( parseMail, toQuotedMail
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
-       , removeMatchingWords, findMatchingWords
        , writeEntityToPath)
 import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
@@ -176,6 +175,7 @@ import Purebred.Types.Mailcap
   ( CopiousOutput(..), MakeProcess(..), MailcapHandler(..)
   , mailcapHandlerToEntityCommand
   )
+import Purebred.Types.Presentation
 import Purebred.UI.Notifications
   ( makeWarning, showError, showWarning, showInfo, showUserMessage )
 import Purebred.UI.Widgets
@@ -437,14 +437,18 @@ instance Completable 'ScrollingMailViewFindWordEditor where
   complete = do
     needle <- uses (asMailView . mvFindWordEditor . E.editContentsL) currentLine
     hide ViewMail 0 ScrollingMailViewFindWordEditor
-    modifying (asMailView . mvBody) (findMatchingWords needle)
-    scrollMatch (Brick.viewportScroll ScrollingMailView) (const 0)
+    bod <- use (asMailView . mvBody)
+    let (matchInfo, newBod) = substringSearch bod needle
+    assign (asMailView . mvBody) newBod
+    assign (asMailView . mvMatchInfo) matchInfo
+    -- scrollMatch takes care of render cache
+    scrollMatch (const 0)
 
 -- | Generalisation of reset actions, whether they reset editors back to their
 -- initial state or throw away composed, but not yet sent mails.
 --
 class Resetable (v :: ViewName) (n :: Name) where
-  reset :: (MonadIO m, MonadState AppState m) => m ()
+  reset :: T.EventM Name AppState ()
 
 instance Resetable 'Threads 'SearchThreadsEditor where
   reset = modifying (asThreadsView . miSearchThreadsEditor) revertEditorState
@@ -513,12 +517,11 @@ instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
 
 instance Resetable 'ViewMail 'ScrollingMailViewFindWordEditor where
   reset = do
-    modifying (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
     hide ViewMail 0 ScrollingMailViewFindWordEditor
-    modify resetMatchingWords
+    resetMatchingWords
 
 instance Resetable 'ViewMail 'ScrollingMailView where
-  reset = modify resetMatchingWords
+  reset = resetMatchingWords
 
 instance Resetable 'ViewMail 'SaveToDiskPathEditor where
   reset = do
@@ -1023,14 +1026,14 @@ scrollNextMatch :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollNextMatch =
   Action
     { _aDescription = ["scroll to next match in mail body"]
-    , _aAction = scrollMatch (makeViewportScroller @ctx) (+1)
+    , _aAction = scrollMatch (+1)
     }
 
 scrollPreviousMatch :: forall ctx v. (Scrollable ctx) => Action v ctx ()
 scrollPreviousMatch =
   Action
     { _aDescription = ["scroll to previous match in mail body"]
-    , _aAction = scrollMatch (makeViewportScroller @ctx) (subtract 1)
+    , _aAction = scrollMatch (subtract 1)
     }
 
 -- | Scroll to a particular match, the index of which can be calculated
@@ -1044,23 +1047,17 @@ scrollPreviousMatch =
 --
 -- If the match set is empty, display a warning.
 --
-scrollMatch
-  :: Brick.ViewportScroll Name
-  -> (Int -> Int)
-  -> T.EventM Name AppState ()
-scrollMatch viewport f = do
-  n <- use (asMailView . mvBody . mbMatches . to length)
-  if n > 0
-    then do
+scrollMatch :: (Int -> Int) -> T.EventM Name AppState ()
+scrollMatch f = do
+  Brick.invalidateCacheEntry ScrollingMailView
+  matchInfo <- use (asMailView . mvMatchInfo)
+  case matchInfo of
+    NoSearch      -> showWarning "No search"
+    MatchCount 0  -> showWarning "No match"
+    MatchCount n  -> do
       i <- use (asMailView . mvSearchIndex)
-      let i' = f i `mod` n
-      match <- preuse (asMailView . mvBody . mbMatches . ix i')
-      for_ match $ \(Match _off _len line) -> do
-        assign (asMailView . mvSearchIndex) i'
-        Brick.vScrollToBeginning viewport
-        Brick.vScrollBy viewport line
-    else
-      showWarning "No match"
+      let i' = f i `mod` fromIntegral n
+      assign (asMailView . mvSearchIndex) i'
 
 -- | Removes any highlighting done by searching in the body text
 --
@@ -1068,7 +1065,7 @@ removeHighlights :: Action 'ViewMail 'ScrollingMailView ()
 removeHighlights =
   Action
     { _aDescription = ["remove search results highlights"]
-    , _aAction = modify resetMatchingWords
+    , _aAction = resetMatchingWords
     }
 
 displayMail :: Action 'ViewMail 'ScrollingMailView ()
@@ -1464,7 +1461,7 @@ applyTagOps ops mails = do
   server <- use storageServer
   runExceptT (Purebred.Storage.Client.messageTagModify ops mails server)
 
-updateStateWithParsedMail :: (MonadIO m, MonadMask m, MonadState AppState m) => m ()
+updateStateWithParsedMail :: T.EventM Name AppState ()
 updateStateWithParsedMail = do
   server <- use storageServer
   charsets <- use (asConfig . confCharsets)
@@ -1480,6 +1477,9 @@ updateStateWithParsedMail = do
       (\(pmail, mbody) -> do
          assign (asMailView . mvMail) (Just pmail)
          assign (asMailView . mvBody) mbody
+         assign (asMailView . mvMatchInfo) NoSearch
+         assign (asMailView . mvSearchIndex) 0
+         Brick.invalidateCacheEntry ScrollingMailView
          modifying (asViews . vsFocusedView) (Brick.focusSetCurrent ViewMail)
          assign (asMailView . mvAttachments) (setEntities pmail) )
   where
@@ -1749,10 +1749,26 @@ keepDraft = buildMail $ \bs -> do
     >>= either showError (
     const $ showInfo "Draft saved")
 
-resetMatchingWords :: AppState -> AppState
-resetMatchingWords =
-  over (asMailView . mvBody) removeMatchingWords
-  . over (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
+-- | Clear substring-search dialog and reset search result
+--
+resetMatchingWords :: T.EventM Name AppState ()
+resetMatchingWords = do
+  -- clear search dialog unconditionally
+  modifying (asMailView . mvFindWordEditor . E.editContentsL) clearZipper
+
+  -- reset MailView fields and dump render cache, but only
+  -- if there previously was a non-empty search result
+  oldMatchInfo <- use (asMailView . mvMatchInfo)
+  case oldMatchInfo of
+    MatchCount n | n > 0 -> do
+      oldBody <- use (asMailView . mvBody)
+      let (matchInfo, newBody) = substringSearch oldBody ""
+      assign (asMailView . mvBody) newBody
+      assign (asMailView . mvMatchInfo) matchInfo
+      assign (asMailView . mvSearchIndex) 0
+      Brick.invalidateCacheEntry ScrollingMailView
+    _ -> pure ()
+
 
 fileBrowserSetWorkingDirectory ::
      (MonadState AppState m, MonadIO m) => m ()

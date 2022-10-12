@@ -39,6 +39,7 @@ import Data.Text.Zipper (cursorPosition)
 
 import Purebred.Storage.Client (Server, countMessages)
 import Purebred.Types
+import Purebred.Types.Presentation (MatchInfo(MatchCount))
 import Purebred.UI.Attr
   ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )
 import Purebred.UI.Draw.Main (fillLine)
@@ -126,12 +127,15 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
 
 renderMatches :: AppState -> Widget n
 renderMatches s =
-  case lengthOf (asMailView . mvBody . mbMatches . traverse) s of
-    0 -> emptyWidget
-    n -> let
-            i = view (asMailView . mvSearchIndex) s
-          in
-            str (show (i + 1) <> " of " <> show n <> " matches")
+  let
+    matchInfo = view (asMailView . mvMatchInfo) s
+    i = view (asMailView . mvSearchIndex) s
+  in
+    case matchInfo of
+      MatchCount n | n > 0 ->
+        str (show (i + 1) <> " of " <> show n <> " matches")
+      _ ->
+        emptyWidget
 
 renderNewMailIndicator :: AppState -> Widget n
 renderNewMailIndicator s =
