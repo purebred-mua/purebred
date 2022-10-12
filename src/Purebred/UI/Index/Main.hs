@@ -34,13 +34,13 @@ import Data.Text as T (Text, pack, unpack, unwords)
 
 import Notmuch (getTag)
 
-import Purebred.UI.Draw.Main (fillLine)
-import Purebred.UI.Views (focusedViewWidget)
 import Purebred.Storage.Tags (hasTag, ManageTags)
 import Purebred.Types
-import Purebred.Config
-  (listAttr, listStateNewmailAttr, listStateSelectedAttr,
-  listStateToggledAttr, mailAuthorsAttr, mailTagAttr)
+import Purebred.UI.Attr
+  ( listAttr, listStateNewmailAttr, listStateSelectedAttr
+  , listStateToggledAttr, mailAuthorsAttr, mailTagAttr )
+import Purebred.UI.Draw.Main (fillLine)
+import Purebred.UI.Views (focusedViewWidget)
 
 renderListOfThreads :: AppState -> Widget Name
 renderListOfThreads s = L.renderList (listDrawThread s (ListOfThreads == focusedViewWidget s)) True $ view (asThreadsView . miListOfThreads) s

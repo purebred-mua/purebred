@@ -37,13 +37,13 @@ import Control.Concurrent (forkIO, threadDelay)
 import Data.Text (Text)
 import Data.Text.Zipper (cursorPosition)
 
+import Purebred.Storage.Client (Server, countMessages)
+import Purebred.Types
+import Purebred.UI.Attr
+  ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )
 import Purebred.UI.Draw.Main (fillLine)
 import Purebred.UI.Utils (titleize)
 import Purebred.UI.Views (focusedViewWidget, focusedViewName)
-import Purebred.Types
-import Purebred.Config
-  ( statusbarAttr, statusbarErrorAttr, statusbarInfoAttr, statusbarWarningAttr )
-import Purebred.Storage.Client (Server, countMessages)
 import Purebred.UI.Widgets (editEditorL)
 
 checkForNewMail :: BChan PurebredEvent -> Server -> Text -> Delay -> IO ()

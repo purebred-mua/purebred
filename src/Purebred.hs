@@ -130,6 +130,7 @@ module Purebred (
   module Purebred.Types,
   module Purebred.Types.Error,
   module Purebred.UI.Actions,
+  module Purebred.UI.Attr,
   module Purebred.UI.Index.Keybindings,
   module Purebred.UI.Mail.Keybindings,
   module Graphics.Vty.Attributes,
@@ -144,10 +145,6 @@ module Purebred (
   applyAttrMappings,
   getDatabasePath,
   solarizedDark,
-  mailTagAttr,
-  listStateSelectedAttr,
-  listStateToggledAttr,
-  listStateNewmailAttr,
   (</>),
   module Control.Lens,
   Mailbox(..),
@@ -172,14 +169,14 @@ import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
 import System.Exit (die)
 
+import Purebred.UI.Attr
 import Purebred.UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
 import Purebred.UI.Index.Keybindings
 import Purebred.UI.Mail.Keybindings
 import Purebred.UI.Actions
 import Purebred.UI.Status.Main (rescheduleMailcheck)
 import Purebred.Config
-    (defaultConfig, solarizedDark, mailTagAttr, sendmail, getDatabasePath,
-    listStateSelectedAttr, listStateToggledAttr, listStateNewmailAttr)
+  ( defaultConfig, solarizedDark, sendmail, getDatabasePath )
 import Purebred.Types
 import Purebred.Plugin
 import Purebred.Plugin.Internal

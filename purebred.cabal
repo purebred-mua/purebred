@@ -70,6 +70,7 @@ library
                      , Purebred.Types.UI
                      , Purebred.UI.Actions
                      , Purebred.UI.App
+                     , Purebred.UI.Attr
                      , Purebred.UI.ComposeEditor.Keybindings
                      , Purebred.UI.ComposeEditor.Main
                      , Purebred.UI.Draw.Main
