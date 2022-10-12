@@ -40,14 +40,14 @@ import Data.Tuple (swap)
 import Data.MIME
 
 import Purebred.Brick.Markup (markup, (@?))
+import Purebred.Storage.Mail (takeFileName)
 import Purebred.Types
-import Purebred.UI.Draw.Main (attachmentsHeader)
-import Purebred.UI.Views (focusedViewWidget)
-import Purebred.Config
+import Purebred.UI.Attr
   (headerKeyAttr, headerValueAttr, mailViewAttr, listSelectedAttr,
    listAttr, textMatchHighlightAttr, currentTextMatchHighlightAttr,
    defaultAttr, mailbodySourceAttr)
-import Purebred.Storage.Mail (takeFileName)
+import Purebred.UI.Draw.Main (attachmentsHeader)
+import Purebred.UI.Views (focusedViewWidget)
 
 -- | Instead of using the entire rendering area to show the email, we still show
 -- the index in context above the mail.
