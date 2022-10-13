@@ -93,8 +93,6 @@ library
                      , Purebred.UI.Views
                      , Purebred.UI.Widgets
                      , Purebred.Version
-                     , Purebred.Brick.Markup
-                     , Data.Text.Markup
   other-modules:       Paths_purebred
                      , Purebred.Storage.Client
                      , Purebred.Storage.Server
