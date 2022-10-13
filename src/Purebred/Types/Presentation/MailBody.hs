@@ -29,16 +29,13 @@ import Data.Maybe (fromMaybe)
 import Data.Tuple (swap)
 
 import Brick
-  ( AttrName, Padding(..), Widget
-  , (<=>), padBottom, txt, vBox, withAttr )
+  ( Padding(..), Widget
+  , (<=>), hBox, padBottom, txt, vBox, withAttr )
 import Text.Wrap (defaultWrapSettings, wrapTextToLines)
 
-import Data.Text.Markup (Markup, markupSet)
-import Purebred.Brick.Markup (markup, (@?))
 import Purebred.Types.Presentation
-import Purebred.Types.UI (Name)
 import Purebred.UI.Attr
-  ( currentTextMatchHighlightAttr, defaultAttr
+  ( currentTextMatchHighlightAttr
   , mailbodySourceAttr, textMatchHighlightAttr )
 
 -- | A loose annotation what produced the rendered output of the
@@ -113,8 +110,8 @@ findMatchingWords needle lns = Just $ foldMap go (zip [0..] lns)
 
 -- | render the Mailbody AST to a list used for Markup in Brick
 --
-renderMarkup :: Maybe Match -> [Match] -> MailBody -> Widget Name
-renderMarkup cur matches (MailBody src lns) = source <=> vBox (markup <$> markups)
+renderMarkup :: Maybe Match -> [Match] -> MailBody -> Widget a
+renderMarkup cur matches (MailBody src lns) = source <=> vBox markups
   where
   source =
     withAttr mailbodySourceAttr $
@@ -122,18 +119,28 @@ renderMarkup cur matches (MailBody src lns) = source <=> vBox (markup <$> markup
 
   markups = markupLines matches (zip [0..] lns)
 
-  markupLines :: [Match] -> [(Int, T.Text)] -> [Markup AttrName]
+  markupLines :: [Match] -> [(Int, T.Text)] -> [Widget a]
   markupLines _  []     = []
   markupLines ms (s:ss) =
     let (ms', r) = markupLine s ms in r : markupLines ms' ss
 
-  markupLine :: (Int, T.Text) -> [Match] -> ([Match], Markup AttrName)
+  markupLine :: (Int, T.Text) -> [Match] -> ([Match], Widget a)
   markupLine (i, s) =
     fmap (highlightLine s) . swap . span (\(Match _ _ line) -> line == i)
 
-  highlightLine :: T.Text -> [Match] -> Markup AttrName
-  highlightLine = foldr acc . (@? defaultAttr)
-    where acc m@(Match off len _line) = markupSet (off, len) (attr m)
+  highlightLine :: T.Text -> [Match] -> Widget a
+  highlightLine "" _  = txt " "   -- special case for empty lines
+  highlightLine s  [] = txt s     -- special case for no matches
+  highlightLine s  ms = hBox $ go 0 ms
+    where
+    go i [] = [txt . snd $ T.splitAt i s]
+    go i (m@(Match off len _line) : rest) =
+      let
+        (_,s')  = T.splitAt i s
+        (l,s'') = T.splitAt (off - i) s'
+        (c,_)   = T.splitAt len s''
+      in
+        txt l : withAttr (attr m) (txt c) : go (off + len) rest
 
   attr m
     | Just m == cur = currentTextMatchHighlightAttr
