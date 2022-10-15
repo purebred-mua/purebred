@@ -42,12 +42,6 @@ Try out purebred with the following choices. Note well: apart from
 `cabal-install`, **none of the other options are tested by our CI**
 and may be broken, or out of date.
 
-### Fedora
-
-We operate a
-[Fedora Copr](https://copr.fedorainfracloud.org/coprs/romanofski/purebred/)
-repository which provides easily installable RPM packages.
-
 ### Nix
 
 If you're using the nix package manager - whether on NixOS or any other Linux
