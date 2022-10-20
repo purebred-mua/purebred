@@ -145,7 +145,7 @@ testSearchRelated = purebredTmuxSession "searches related" $
 
     capture >>= put
     assertSubstringS "Item 1 of 4"
-    assertRegexS (buildAnsiRegex ["37"] ["43"] [] <> "[[:space:]]Aug'17 frase@host.exa")
+    assertRegexS (buildAnsiRegex ["37"] ["43"] [] <> "Aug'17 frase@host.exa")
 
     step "search related"
     sendKeys "+" (Substring "Item 1 of 2") >>= put
@@ -297,11 +297,11 @@ testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on ma
     sendKeys "Enter" (Substring "Lorem ipsum dolor sit amet")
 
     step "toggle first mail"
-    sendKeys "*" (Regex $ selectedListItem <> "[[:space:]]Feb'17.*WIP Refactor")
+    sendKeys "*" (Regex $ selectedListItem <> "Feb'17.*WIP Refactor")
 
     step "toggle second mail"
     -- toggled *and* currently selected item
-    sendKeys "*" (Regex $ buildAnsiRegex [] [] ["43"] <> "[[:space:]]Feb'17.*Re: WIP Refactor")
+    sendKeys "*" (Regex $ buildAnsiRegex [] [] ["43"] <> "Feb'17.*Re: WIP Refactor")
 
     step "open mail tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -317,7 +317,7 @@ testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on ma
           -- first list item starting with the tag
           <> buildAnsiRegex [] ["34"] [] <> "[[:space:]]+WIP Refactor[[:space:]]+\n"
           -- next mail/list item
-          <> buildAnsiRegex [] ["37"] ["43"] <> "[[:space:]]+Feb'17.*testTag"
+          <> buildAnsiRegex [] ["37"] ["43"] <> "Feb'17.*testTag"
           <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+Re: WIP Refactor"
           )
       ) >>= put
@@ -334,9 +334,9 @@ testBulkActionsOnThreadsByInput = purebredTmuxSession "perform bulk labeling on 
     startApplication
 
     step "Toggle two thread items"
-    sendKeys "*" (Regex $ toggledListItem <> "[[:space:]]Aug.*Testmail with whitespace in the subject")
+    sendKeys "*" (Regex $ toggledListItem <> "Aug.*Testmail with whitespace in the subject")
     -- The previous line has the same colour, so start colour matching from the first line
-    sendKeys "*" (Regex $ toggledListItem <> "[[:space:]]Aug.*in the subject.*[[:space:]][[:space:]]Aug.*This is Purebred")
+    sendKeys "*" (Regex $ toggledListItem <> "Aug.*in the subject.*[[:space:]][[:space:]]Aug.*This is Purebred")
 
     step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -351,7 +351,7 @@ testBulkActionsOnThreadsByInput = purebredTmuxSession "perform bulk labeling on 
           "testTag"
           <> buildAnsiRegex [] ["37"] []
           <> "[[:space:]]+Testmail with whitespace in the subject[[:space:]]*\n"
-          <> buildAnsiRegex [] ["34"] [] <> "[[:space:]]+Aug'17.*testTag"
+          <> buildAnsiRegex [] ["34"] [] <> "Aug'17.*testTag"
           <> buildAnsiRegex [] ["34"] [] <> "[[:space:]]+This is Purebred[[:space:]]+\n"
           )
       )
@@ -364,21 +364,21 @@ testBulkActionsOnThreadsByKeybinding =
     startApplication
 
     step "Toggle thread and list cursor moves to next list item"
-    sendKeys "*" (Regex $ toggledListItem <> "[[:space:]]Aug'17.*whitespace in the subject[[:space:]]+\n")
+    sendKeys "*" (Regex $ toggledListItem <> "Aug'17.*whitespace in the subject[[:space:]]+\n")
       >>= assertRegex (
         -- current selection
-        buildAnsiRegex [] ["30"] ["43"] <> "[[:space:]]Aug'17 rjoost@url.use.*This is Purebred[[:space:]]+\n"
+        buildAnsiRegex [] ["30"] ["43"] <> "Aug'17 rjoost@url.use.*This is Purebred[[:space:]]+\n"
         -- unselected rest
-        <> newListItem <> "[[:space:]]Feb'17.*WIP Refactor"
+        <> newListItem <> "Feb'17.*WIP Refactor"
       )
 
     step "Toggle thread and list cursor moves to next list item"
-    sendKeys "*" (Regex $ selectedListItem <> "[[:space:]]Feb'17.*WIP Refactor")
+    sendKeys "*" (Regex $ selectedListItem <> "Feb'17.*WIP Refactor")
 
     step "Tag toggled list items using key binding"
     sendKeys "a" (Substring "New: 3  ]")
       -- untoggled
-      >>= assertRegex (buildAnsiRegex [] ["37"] [] <> "[[:space:]]Aug'17.*whitespace in the subject[[:space:]]+\n")
+      >>= assertRegex (buildAnsiRegex [] ["37"] [] <> "Aug'17.*whitespace in the subject[[:space:]]+\n")
 
 testForwardsMailSuccessfully :: PurebredTestCase
 testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" $
@@ -967,7 +967,7 @@ testUserCanMoveBetweenThreads = purebredTmuxSession "user can navigate between t
     -- assert that the first mail is really the one we're later navigating back
     -- to
     snapshot
-    assertRegexS (buildAnsiRegex [] ["37"] ["43"] <> "[[:space:]]Aug'17.*Testmail with whitespace")
+    assertRegexS (buildAnsiRegex [] ["37"] ["43"] <> "Aug'17.*Testmail with whitespace")
 
     step "View Mail"
     sendKeys "Enter" (Substring "This is a test mail for purebred")
@@ -1064,7 +1064,7 @@ testUpdatesReadState = purebredTmuxSession "updates read state for mail and thre
     sendKeys "Down" (Substring "2 of 2")
 
     step "go back to thread list which is now read"
-    sendKeys "q" (Regex (buildAnsiRegex [] ["30"] ["43"] <> T.encodeUtf8 " Feb'17[[:space:]]Róman[[:space:]]Joost[[:space:]]+\\(2\\)"))
+    sendKeys "q" (Regex (buildAnsiRegex [] ["30"] ["43"] <> T.encodeUtf8 "Feb'17[[:space:]]Róman[[:space:]]Joost[[:space:]]+\\(2\\)"))
 
     step "set one mail to unread"
     sendKeys "Enter" (Substring "Beginning of large text")
