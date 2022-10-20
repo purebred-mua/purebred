@@ -24,7 +24,7 @@ module Purebred.UI.Index.Main (
 import Brick.Types (Location(..), Widget)
 import Brick.AttrMap (AttrName, attrName)
 import Brick.Widgets.Core
-  (Padding(..), hBox, hLimitPercent, padRight, padLeft, putCursor, txt, vLimit, withAttr, (<+>))
+  (Padding(..), hBox, hLimitPercent, padLeft, putCursor, txt, vLimit, withAttr, (<+>))
 import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
 import Data.Time.Clock
@@ -71,10 +71,12 @@ listDrawMail s sel (toggled, a) =
     let widget = hBox
           -- NOTE: I believe that inserting a `str " "` is more efficient than
           -- `padLeft/Right (Pad 1)`.  This hypothesis should be tested.
-          [ padLeft (Pad 1) (txt $ formatDate (view mailDate a) (view asLocalTime s))
-          , padLeft (Pad 1) (renderAuthors (authorsAttr a s sel toggled) $ view mailFrom a)
-          , padLeft (Pad 1) (renderTagsWidget' (tagsAttr a s sel toggled) (view mailTags a) (view nmNewTag (notmuchConfig s)))
-          , txt (view mailSubject a)
+          [ txt $ formatDate (view mailDate a) (view asLocalTime s)
+          , padLeft (Pad 1)
+              $ hLimitPercent 25
+              $ renderAuthors (authorsAttr a s sel toggled) (view mailFrom a)
+          , renderTagsWidget' (tagsAttr a s sel toggled) (view mailTags a) (view nmNewTag (notmuchConfig s))
+          , padLeft (Pad 1) $ txt (view mailSubject a)
           , fillLine
           ]
     in withAttr (renderListAttr a s sel toggled) widget
@@ -82,11 +84,14 @@ listDrawMail s sel (toggled, a) =
 listDrawThread :: AppState -> Bool -> Bool -> Toggleable NotmuchThread -> Widget Name
 listDrawThread s foc sel (toggled, a) =
     let widget = hBox
-          [ padLeft (Pad 1) (txt $ formatDate (view thDate a) (view asLocalTime s))
-          , padLeft (Pad 1) (renderAuthors (authorsAttr a s sel toggled) $ T.unwords $ view thAuthors a)
-          , padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")")
-          , padLeft (Pad 1) (renderTagsWidget' (tagsAttr a s sel toggled) (view thTags a) (view nmNewTag (notmuchConfig s)))
-          , txt (view thSubject a)
+          [ txt $ formatDate (view thDate a) (view asLocalTime s)
+          , padLeft (Pad 1)
+              $ hLimitPercent 25
+              $ renderAuthors (authorsAttr a s sel toggled) (T.unwords $ view thAuthors a)
+                <+> padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")")
+          , renderTagsWidget'
+              (tagsAttr a s sel toggled) (view thTags a) (view nmNewTag (notmuchConfig s))
+          , padLeft (Pad 1) $ txt (view thSubject a)
           , fillLine
           ]
     in withAttr (renderListAttr a s sel toggled)
@@ -128,12 +133,12 @@ formatDate mail now =
 
 renderAuthors :: AttrName -> Text -> Widget Name
 renderAuthors attr authors =
-    withAttr attr $ hLimitPercent 20 (txt authors <+> fillLine)
+    withAttr attr $ txt authors <+> fillLine
 
 renderTagsWidget' :: AttrName -> [Tag] -> Tag -> Widget Name
 renderTagsWidget' baseattr tgs ignored =
     let ts = filter (/= ignored) tgs
-        render tag = padRight (Pad 1) $ withAttr (toAttrName baseattr tag) $ txt (decodeLenient $ getTag tag)
+        render tag = padLeft (Pad 1) $ withAttr (toAttrName baseattr tag) $ txt (decodeLenient $ getTag tag)
     in vLimit 1 $ hBox $ render  <$> ts
 
 toAttrName :: AttrName -> Tag -> AttrName
