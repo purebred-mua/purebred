@@ -28,6 +28,7 @@ import Control.Lens (set)
 import Control.Monad.Except (runExceptT)
 import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as L
+import qualified Data.Map as M
 import qualified Data.Text as T
 import System.Directory (getHomeDirectory)
 
@@ -208,6 +209,7 @@ defaultConfig = do
       , _ivFromKeybindings = gatherFromKeybindings
       , _ivToKeybindings = gatherToKeybindings
       , _ivSubjectKeybindings = gatherSubjectKeybindings
+      , _ivTagReplacementMap = tagReplacementMapEmoji
       }
     , _confComposeView = ComposeViewSettings
       { _cvFromKeybindings = composeFromKeybindings
@@ -234,3 +236,40 @@ defaultConfig = do
         [ usePlugin Purebred.Plugin.UserAgent.plugin
         ]
     }
+
+-- | Replace some special tags with ASCII chars.
+--
+-- * @flagged@ → @!@
+-- * @attachment@ → @A@
+-- * @inbox@ → @I@
+-- * @replied@ → @r@
+--
+tagReplacementMapAscii :: M.Map T.Text T.Text
+tagReplacementMapAscii = M.fromList
+  [ ("flagged", "!")
+  , ("attachment", "A")
+  , ("inbox", "I")
+  , ("replied", "r")
+  ]
+
+-- | Replace some special tags with emoji.
+--
+-- * @flagged@ → 📌
+-- * @attachment@ → 📎
+-- * @inbox@ → 📥
+-- * @replied@ → ↩️
+--
+tagReplacementMapEmoji :: M.Map T.Text T.Text
+tagReplacementMapEmoji = M.fromList
+  [ ("flagged", "📌")
+  , ("attachment", "📎")
+  , ("inbox", "📥")
+  -- Note: there's a trailing space here because most terminals render
+  -- it as a double-width char but only advance the cursor one position.
+  --
+  -- That is because this emoji is U+21A9 (↩) + U+FE0F (Variation selector
+  -- 16) which in this context is "emoji presentation selector".  So
+  -- terminals see it as a single-width character.
+  --
+  , ("replied", "↩️ ")
+  ]

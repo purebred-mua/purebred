@@ -1068,12 +1068,17 @@ testUpdatesReadState = purebredTmuxSession "updates read state for mail and thre
 
     step "set one mail to unread"
     sendKeys "Enter" (Substring "Beginning of large text")
-    sendKeys "t" (Regex (buildAnsiRegex [] ["37"] []
-                           <> "[[:space:]]Re: WIP Refactor[[:space:]]+"
-                           <> buildAnsiRegex [] ["34"] ["49"]))
+    sendKeys "t" $ Regex $
+      "I"
+      <> "[[:space:]]"
+      <> "Re: WIP Refactor[[:space:]]+"
+      <> buildAnsiRegex [] ["34"] ["49"]
 
     step "returning to thread list shows entire thread as unread"
-    sendKeys "q" (Regex (buildAnsiRegex [] ["37"] [] <> "[[:space:]]WIP Refactor[[:space:]]"))
+    sendKeys "q" $ Regex $
+      "I"
+      <> "[[:space:]]"
+      <> "WIP Refactor[[:space:]]"
 
 testConfig :: PurebredTestCase
 testConfig = purebredTmuxSession "test custom config" $
@@ -1284,14 +1289,13 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
 
     step "add new tag"
-    sendLine "+replied -inbox" (Substring "replied")
+    sendLine "+replied -inbox" (Substring "r")
 
     step "thread tags shows new tags"
-    sendKeys "Escape" (Regex ("archive"
-                              <> buildAnsiRegex [] ["30"] []
-                              <> "[[:space:]]"
-                              <> buildAnsiRegex [] ["36"] []
-                              <> "replied"))
+    sendKeys "Escape" $ Regex $
+      "r"  -- replied
+      <> "[[:space:]]"
+      <> buildAnsiRegex [] ["36"] [] <> "archive" <> buildAnsiRegex [] ["30"] []
 
     step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))
@@ -1300,24 +1304,24 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     -- "cheating" here a bit, since just invoking tmux with sending literally
     -- "-only" will fail due to tmux parsing it as an argument, but the mail is
     -- already tagged with "thread" so the additional adding won't do anything
-    sendLine "+thread" (Regex ("archive"
-                             <> buildAnsiRegex [] ["30"] []
-                             <> "[[:space:]]"
-                             <> buildAnsiRegex [] ["36"] [] <> "replied" <> buildAnsiRegex [] ["30"] []
-                             <> "[[:space:]]"
-                             <> buildAnsiRegex [] ["36"] [] <> "thread"))
+    sendLine "+thread" $ Regex $
+      "r"  -- replied
+      <> "[[:space:]]"
+      <> buildAnsiRegex [] ["36"] [] <> "archive" <> buildAnsiRegex [] ["30"] []
+      <> "[[:space:]]"
+      <> buildAnsiRegex [] ["36"] [] <> "thread" <> buildAnsiRegex [] ["30"] []
 
     step "show thread mails"
     sendKeys "Enter" (Substring "ViewMail")
 
     step "second mail shows old tag"
-    sendKeys "Escape" (Regex ("replied"
-                              <> buildAnsiRegex [] ["30"] []
-                              <> "[[:space:]]"
-                              <> buildAnsiRegex [] ["36"] []
-                              <> "thread"
-                              <> buildAnsiRegex [] ["30"] []
-                              <> "[[:space:]]WIP Refactor"))
+    sendKeys "Escape" $ Regex $
+      "r"  -- replied
+      <> "[[:space:]]"
+      <> buildAnsiRegex [] ["36"] [] <> "archive" <> buildAnsiRegex [] ["30"] []
+      <> "[[:space:]]"
+      <> buildAnsiRegex [] ["36"] [] <> "thread" <> buildAnsiRegex [] ["30"] []
+      <> "[[:space:]]WIP Refactor"
 
     step "open thread tag editor"
     sendKeys "`" (Regex ("Labels:." <> buildAnsiRegex [] ["37"] []))

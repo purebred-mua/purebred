@@ -21,16 +21,20 @@ module Purebred.UI.Index.Main (
     renderListOfThreads
   , renderListOfMails) where
 
-import Brick.Types (Location(..), Widget)
-import Brick.AttrMap (AttrName, attrName)
-import Brick.Widgets.Core
-  (Padding(..), hBox, hLimitPercent, padLeft, putCursor, txt, vLimit, withAttr, (<+>))
-import qualified Brick.Widgets.List as L
 import Control.Lens.Getter (view)
+import qualified Data.Map as M
+import Data.Maybe (mapMaybe)
 import Data.Time.Clock
        (UTCTime(..), NominalDiffTime, nominalDay, diffUTCTime)
 import Data.Time.Format (formatTime, defaultTimeLocale)
-import Data.Text as T (Text, pack, unpack, unwords)
+import qualified Data.Text as T
+
+import Brick
+  ( AttrName, Location(..), Padding(..), Widget
+  , (<+>), attrName, emptyWidget, hBox, hLimitPercent
+  , padLeft, putCursor, txt, vLimit, withAttr
+  )
+import qualified Brick.Widgets.List as L
 
 import Notmuch (getTag)
 
@@ -75,10 +79,13 @@ listDrawMail s sel (toggled, a) =
           , padLeft (Pad 1)
               $ hLimitPercent 25
               $ renderAuthors (authorsAttr a s sel toggled) (view mailFrom a)
-          , renderTagsWidget' (tagsAttr a s sel toggled) (view mailTags a) (view nmNewTag (notmuchConfig s))
+          , renderTagsWidget'
+              (tagsAttr a s sel toggled) (view mailTags a)
+              (view nmNewTag (notmuchConfig s)) tagReplacements
           , padLeft (Pad 1) $ txt (view mailSubject a)
           , fillLine
           ]
+        tagReplacements = view (asConfig . confIndexView . ivTagReplacementMap) s
     in withAttr (renderListAttr a s sel toggled) widget
 
 listDrawThread :: AppState -> Bool -> Bool -> Toggleable NotmuchThread -> Widget Name
@@ -88,12 +95,14 @@ listDrawThread s foc sel (toggled, a) =
           , padLeft (Pad 1)
               $ hLimitPercent 25
               $ renderAuthors (authorsAttr a s sel toggled) (T.unwords $ view thAuthors a)
-                <+> padLeft (Pad 1) (txt $ pack $ "(" <> show (view thReplies a) <> ")")
+                <+> padLeft (Pad 1) (txt $ T.pack $ "(" <> show (view thReplies a) <> ")")
           , renderTagsWidget'
-              (tagsAttr a s sel toggled) (view thTags a) (view nmNewTag (notmuchConfig s))
+              (tagsAttr a s sel toggled) (view thTags a)
+              (view nmNewTag (notmuchConfig s)) tagReplacements
           , padLeft (Pad 1) $ txt (view thSubject a)
           , fillLine
           ]
+        tagReplacements = view (asConfig . confIndexView . ivTagReplacementMap) s
     in withAttr (renderListAttr a s sel toggled)
        . (if sel && foc then putCursor ListOfMails (Location (0, 0)) else id) $
        widget
@@ -123,23 +132,32 @@ makeListStateAttr baseAttr isNew isSelected isToggled =
 calendarYear :: NominalDiffTime
 calendarYear = nominalDay * 365
 
-formatDate :: UTCTime -> UTCTime -> Text
+formatDate :: UTCTime -> UTCTime -> T.Text
 formatDate mail now =
   let format =
         if calendarYear < diffUTCTime now mail
           then "%b'%y"  -- Apr'07
           else "%d/%b"  -- 01/Apr
-   in pack $ formatTime defaultTimeLocale format (utctDay mail)
+   in T.pack $ formatTime defaultTimeLocale format (utctDay mail)
 
-renderAuthors :: AttrName -> Text -> Widget Name
+renderAuthors :: AttrName -> T.Text -> Widget Name
 renderAuthors attr authors =
     withAttr attr $ txt authors <+> fillLine
 
-renderTagsWidget' :: AttrName -> [Tag] -> Tag -> Widget Name
-renderTagsWidget' baseattr tgs ignored =
-    let ts = filter (/= ignored) tgs
-        render tag = padLeft (Pad 1) $ withAttr (toAttrName baseattr tag) $ txt (decodeLenient $ getTag tag)
-    in vLimit 1 $ hBox $ render  <$> ts
+renderTagsWidget' :: AttrName -> [Tag] -> Tag -> M.Map T.Text T.Text -> Widget Name
+renderTagsWidget' baseattr tgs ignored replacements =
+    let
+      discrim tag =
+        let decoded = decodeLenient (getTag tag)
+        in maybe (Right decoded) Left (M.lookup decoded replacements)
+      lr = discrim <$> filter (/= ignored) tgs
+      replaced = case mapMaybe (either Just (const Nothing)) lr of
+        [] -> emptyWidget
+        l -> pad $ txt $ T.concat l
+      ordinaries = mapMaybe (either (const Nothing) Just) lr
+      pad = padLeft (Pad 1)
+      renderOrdinary tag = pad $ withAttr (toAttrName baseattr tag) $ txt tag
+    in vLimit 1 $ hBox $ replaced : fmap renderOrdinary ordinaries
 
-toAttrName :: AttrName -> Tag -> AttrName
-toAttrName baseattr = (baseattr <>) . attrName . unpack . decodeLenient . getTag
+toAttrName :: AttrName -> T.Text -> AttrName
+toAttrName baseattr = (baseattr <>) . attrName . T.unpack

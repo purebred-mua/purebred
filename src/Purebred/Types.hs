@@ -166,6 +166,7 @@ module Purebred.Types
   , ivFromKeybindings
   , ivToKeybindings
   , ivSubjectKeybindings
+  , ivTagReplacementMap
 
   -- ** Mail Composer
   , ComposeViewSettings(..)
@@ -217,6 +218,7 @@ import Control.DeepSeq (NFData(rnf), force)
 import Control.Concurrent (ThreadId)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
+import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Graphics.Vty.Input.Events as Vty
@@ -547,6 +549,7 @@ data IndexViewSettings = IndexViewSettings
     , _ivFromKeybindings :: [Keybinding 'Threads 'ComposeFrom]
     , _ivToKeybindings :: [Keybinding 'Threads 'ComposeTo]
     , _ivSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject]
+    , _ivTagReplacementMap :: M.Map T.Text T.Text
     }
     deriving (Generic, NFData)
 
@@ -567,6 +570,9 @@ ivToKeybindings = lens _ivToKeybindings (\s x -> s { _ivToKeybindings = x })
 
 ivSubjectKeybindings :: Lens' IndexViewSettings [Keybinding 'Threads 'ComposeSubject]
 ivSubjectKeybindings = lens _ivSubjectKeybindings (\s x -> s { _ivSubjectKeybindings = x })
+
+ivTagReplacementMap :: Lens' IndexViewSettings (M.Map T.Text T.Text)
+ivTagReplacementMap = lens _ivTagReplacementMap (\s x -> s { _ivTagReplacementMap = x })
 
 
 data MailViewSettings = MailViewSettings

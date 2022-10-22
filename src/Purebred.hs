@@ -122,9 +122,11 @@ To avoid this, don't use stack.  But if you insist, you can run
 @stack exec purebred@ from the source tree.
 
 -}
-module Purebred (
-  purebred,
-  module Purebred.Plugin,
+module Purebred
+  ( purebred
+  , tagReplacementMapAscii
+  , tagReplacementMapEmoji
+  , module Purebred.Plugin,
   module Purebred.Plugin.TweakConfig,
   module Purebred.Storage.Tags,
   module Purebred.Types,
@@ -176,7 +178,8 @@ import Purebred.UI.Mail.Keybindings
 import Purebred.UI.Actions
 import Purebred.UI.Status.Main (rescheduleMailcheck)
 import Purebred.Config
-  ( defaultConfig, solarizedDark, sendmail, getDatabasePath )
+  ( defaultConfig, solarizedDark, sendmail, getDatabasePath
+  , tagReplacementMapAscii, tagReplacementMapEmoji )
 import Purebred.Types
 import Purebred.Plugin
 import Purebred.Plugin.Internal
