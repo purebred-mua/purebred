@@ -90,6 +90,7 @@ main =
     . set (confComposeView . cvSendMailCmd) writeMailtoFile
     . set (confComposeView . cvIdentities) fromMail
     . over confTheme (applyAttrMappings myColoredTags)
+    . set (confIndexView . ivTagReplacementMap) tagReplacementMapAscii
 
 myColoredTags :: [(AttrName, Attr)]
 myColoredTags =
