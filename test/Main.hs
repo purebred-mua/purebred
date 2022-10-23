@@ -20,11 +20,13 @@ import qualified LazyVector
 import qualified TestMail
 import qualified TestActions
 import qualified TestTagParser
+import qualified TestAddressBook
 
 main :: IO ()
 main = defaultMain $ testGroup "unit tests"
   [ TestMail.tests
   , TestTagParser.tests
   , TestActions.tests
+  , TestAddressBook.addressbookTests
   , LazyVector.tests
   ]

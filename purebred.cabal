@@ -35,6 +35,7 @@ extra-source-files:
   test/data/Maildir/**/*.url
   "test/data/Maildir/**/*.url_2,RS"
   configs/purebred.hs
+  configs/aliases
 
 tested-with:
   GHC ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.4 || ==9.4.2
@@ -88,6 +89,8 @@ library
                      , Purebred.Plugin.TweakConfig
                      , Purebred.Storage.Mail
                      , Purebred.Storage.Tags
+                     , Purebred.Storage.AddressBook
+                     , Purebred.Storage.AddressBook.MuttAliasFile
                      , Purebred.System
                      , Purebred.System.Process
                      , Purebred.System.Logging
@@ -101,6 +104,7 @@ library
                      , Purebred.Types.Presentation
                      , Purebred.Types.Presentation.MailBody
                      , Purebred.Types.UI
+                     , Purebred.Types.AddressBook
                      , Purebred.UI.Actions
                      , Purebred.UI.App
                      , Purebred.UI.Attr
@@ -180,8 +184,10 @@ test-suite unit
   other-modules:       TestMail
                      , TestActions
                      , TestTagParser
+                     , TestAddressBook
                      , LazyVector
   build-depends:       purebred
+                     , purebred-email
                      , tasty
                      , tasty-hunit
                      , tasty-quickcheck

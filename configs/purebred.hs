@@ -16,6 +16,7 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 {-
 
@@ -25,16 +26,19 @@ ways to overwrite the configuration.
 -}
 
 import Control.Monad.IO.Class (liftIO)
-import Purebred
 import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as L
-import System.Environment (lookupEnv)
-import System.Directory (getCurrentDirectory)
-import System.IO.Unsafe
 import Data.IORef
 import Data.Maybe (fromMaybe)
 import Data.List (union)
 import Data.List.NonEmpty (NonEmpty(..))
+import System.Directory (getCurrentDirectory)
+import System.Environment (lookupEnv)
+import System.Exit (die)
+import System.IO.Unsafe
+
+import Purebred
+import Purebred.Storage.AddressBook.MuttAliasFile
 
 myBrowseThreadsKbs :: [Keybinding 'Threads 'ListOfThreads]
 myBrowseThreadsKbs =
@@ -54,7 +58,7 @@ sendFailRef = unsafePerformIO $ newIORef True
 
 writeMailtoFile :: B.Builder -> IO (Either Error ())
 writeMailtoFile m = do
-  sendFail <- lookupEnv "PUREBRED_SEND_FAIL" >>= \v -> case v of
+  sendFail <- lookupEnv "PUREBRED_SEND_FAIL" >>= \case
     Just (_:_)  -> readIORef sendFailRef
     _           -> pure False
   if sendFail
@@ -76,21 +80,27 @@ fromMail =
     ]
 
 main :: IO ()
-main =
+main = do
+  confdir <- lookupEnv "PUREBRED_CONFIG_DIR"
+  cwd <- getCurrentDirectory
+
+  let addrsFile = fromMaybe cwd confdir <> "/aliases"
+  addressBook <-
+    initMuttAliasFileAddressBook addrsFile
+    >>= either (die . show) pure
+
   purebred
-    [ usePlugin $ tweakConfig tweak
+    [ usePlugin . tweakConfig $
+        over (confIndexView . ivBrowseThreadsKeybindings) (`union` myBrowseThreadsKbs)
+        . over (confMailView . mvKeybindings) (`union` myMailKeybindings)
+        . set (confComposeView . cvSendMailCmd) writeMailtoFile
+        . set (confComposeView . cvIdentities) fromMail
+        . over confTheme (applyAttrMappings myColoredTags)
+        . set (confIndexView . ivTagReplacementMap) tagReplacementMapAscii
+        . set confAddressBook [addressBook]
     , usePlugin $ tweakConfigWithIO $ \conf -> do
-        cwd <- liftIO getCurrentDirectory
         pure $ set (confFileBrowserView . fbHomePath) cwd conf
     ]
-  where
-  tweak =
-    over (confIndexView . ivBrowseThreadsKeybindings) (`union` myBrowseThreadsKbs)
-    . over (confMailView . mvKeybindings) (`union` myMailKeybindings)
-    . set (confComposeView . cvSendMailCmd) writeMailtoFile
-    . set (confComposeView . cvIdentities) fromMail
-    . over confTheme (applyAttrMappings myColoredTags)
-    . set (confIndexView . ivTagReplacementMap) tagReplacementMapAscii
 
 myColoredTags :: [(AttrName, Attr)]
 myColoredTags =

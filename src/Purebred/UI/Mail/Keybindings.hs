@@ -153,6 +153,7 @@ mailviewComposeToKeybindings :: [Keybinding 'ViewMail 'ComposeTo]
 mailviewComposeToKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'ViewMail @'ScrollingMailView)
     , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'ViewMail @'ScrollingMailView)
+    , Keybinding (V.EvKey (V.KChar '\t') []) (done *> fromAddressBookMail *> switchView @'ViewMail @'ComposeTo)
     , Keybinding (V.EvKey V.KEnter []) (
         done `focus` (
             invokeEditor ViewMail ScrollingMailView

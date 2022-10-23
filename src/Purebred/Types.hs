@@ -125,6 +125,7 @@ module Purebred.Types
   , confFileBrowserView
   , confCharsets
   , confPlugins
+  , confAddressBook
 
     -- ** Notmuch Configuration
   , NotmuchSettings(..)
@@ -180,7 +181,7 @@ module Purebred.Types
   , cvSubjectKeybindings
   , cvListOfAttachmentsKeybindings
   , cvConfirmKeybindings
-  
+
   -- ** Help Viewer
   , HelpViewSettings(..)
   , hvKeybindings
@@ -191,6 +192,10 @@ module Purebred.Types
   -- *** Keybindings
   , fbKeybindings
   , fbSearchPathKeybindings
+
+  -- ** AddressBook
+  , AddressBook(..)
+  , addressBookSearch
 
   -- * Internals
   , ListWithLength(..)
@@ -239,6 +244,7 @@ import Purebred.Types.Mailcap
 import Purebred.Types.UI
 import Purebred.Types.String
 import Purebred.Types.Presentation
+import Purebred.Types.AddressBook
 
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
 
@@ -457,6 +463,7 @@ data Configuration = Configuration
     , _confFileBrowserView :: FileBrowserSettings
     , _confCharsets :: CharsetLookup
     , _confPlugins :: [PluginDict]
+    , _confAddressBook :: [AddressBook]
     }
     deriving (Generic, NFData)
 
@@ -492,6 +499,9 @@ confCharsets = lens _confCharsets (\conf x -> conf { _confCharsets = x })
 
 confPlugins :: Lens' Configuration [PluginDict]
 confPlugins = lens _confPlugins (\conf x -> conf { _confPlugins = x })
+
+confAddressBook :: Lens' Configuration [AddressBook]
+confAddressBook = lens _confAddressBook (\conf x -> conf { _confAddressBook = x })
 
 
 data ComposeViewSettings = ComposeViewSettings
