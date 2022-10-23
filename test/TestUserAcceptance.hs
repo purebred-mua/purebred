@@ -134,7 +134,65 @@ main = do
       , testSearchRelated
       , testReplyRendersNonASCIIHeadersCorrectly
       , testGroupReply
+      , testAddressBookExpansion
       ]
+
+testAddressBookExpansion :: PurebredTestCase
+testAddressBookExpansion = purebredTmuxSession "addressbook expands To: by nick sub string" $
+  \step -> do
+    startApplication
+
+    step "start composition"
+    sendKeys "m" (Substring "From")
+
+    step "accept default"
+    sendKeys "Enter" (Substring "To: ")
+    capture >>= put
+    assertRegexS ("To:[[:blank:]]+" <> buildAnsiRegex ["37"] [] [] <> "[[:blank:]]+[[:space:]]")
+
+    step "enter substring nick alias"
+    sendKeys "j\t" (Substring "Jennifer Charles")
+
+    step "add an additional address"
+    sendKeys ", el\t" (Regex "jencharles.*Elwood")
+
+    step "accept receipients"
+    sendKeys "\r" (Substring "Subject:")
+
+    step "enter subject"
+    sendLine "test subject" (Substring "~")
+
+    step "enter mail body"
+    sendKeys "iThis is a test body" (Substring "body")
+
+    step "exit insert mode in vim"
+    sendKeys "Escape" (Substring "body")
+
+    step "exit vim"
+    sendKeys ": x\r" (Regex "To:\\s\"Jennifer")
+
+    capture >>= put
+    assertRegexS "To: \"Jennifer Charles\".*, \"Elwood B.Mack\""
+    assertRegexS "Bcc:[[:space:]]+$"
+    assertRegexS "Cc:[[:space:]]+$"
+
+    step "edit Bcc"
+    sendKeys "b" (Regex $ "Bcc: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+$")
+
+    step "query address for Bcc field"
+    sendKeys "bob\t" (Regex $ "Bcc: " <> buildAnsiRegex [] ["37"] [] <> "\"Robby Cullen")
+
+    step "accept Bcc"
+    sendKeys "\r" (Regex "Bcc:\\s\"Robby Cullen")
+
+    step "edit CC"
+    sendKeys "c" (Regex $ "Cc: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+$")
+
+    step "query address for CC field"
+    sendKeys "ad\t" (Regex $ "Cc: " <> buildAnsiRegex [] ["37"] [] <> "\"Addy Mc. Donald")
+
+    step "accept CC"
+    sendKeys "\r" (Regex "Cc:\\s\"Addy Mc. Donald")
 
 testSearchRelated :: PurebredTestCase
 testSearchRelated = purebredTmuxSession "searches related" $
@@ -1859,6 +1917,7 @@ setUpPurebredConfig :: FilePath -> IO ()
 setUpPurebredConfig testdir = do
   c <- getSourceDirectory
   copyFile (c <> "/configs/purebred.hs") (testdir <> "/purebred.hs")
+  copyFile (c <> "/configs/aliases") (testdir <> "/aliases")
 
 mkTempDir :: IO FilePath
 mkTempDir = getCanonicalTemporaryDirectory >>= flip createTempDirectory "purebredtest"
@@ -1926,7 +1985,7 @@ startApplication :: (MonadReader Env m, MonadIO m) => m ()
 startApplication = do
   srcdir <- liftIO getSourceDirectory
   tmuxSendKeys LiteralKeys ("cd " <> srcdir <> "\r")
-  tmuxSendKeys InterpretKeys ("purebred\r")
+  tmuxSendKeys InterpretKeys "purebred\r"
   void $ waitForCondition (Substring "Purebred: Item") defaultRetries defaultBackoff
 
 -- | A list item which is toggled for a batch operation

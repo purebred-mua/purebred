@@ -87,6 +87,11 @@ module Purebred.UI.Actions (
   , setTags
   , saveAttachmentToPath
   , searchRelated
+  , fromAddressBook
+  , fromAddressBookThreads
+  , fromAddressBookMail
+  , fromAddressBookBCC
+  , fromAddressBookCC
 
   -- ** Actions for scrolling
   , scrollUp
@@ -135,6 +140,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.List (union)
 import qualified Data.Vector as Vector
 import Prelude hiding (readFile, unlines)
+import Data.Maybe (fromMaybe)
 import Data.Foldable (fold, toList)
 import Data.Functor.Identity (Identity(..))
 import Control.Lens
@@ -178,8 +184,10 @@ import Purebred.Types.Mailcap
 import Purebred.Types.Presentation
 import Purebred.UI.Notifications
   ( makeWarning, showError, showWarning, showInfo, showUserMessage )
+import Purebred.UI.Utils (safeLast)
 import Purebred.UI.Widgets
   ( statefulEditor, editEditorL, revertEditorState, saveEditorState )
+import Purebred.Storage.AddressBook (queryAddresses)
 
 
 
@@ -1356,6 +1364,47 @@ searchRelated = Action ["search related mail"] $ do
       runSearch searchterm
 
 
+fromAddressBookDescription :: T.Text
+fromAddressBookDescription = "fill in addresses from address book"
+
+fromAddressBook :: Action 'ComposeView 'ComposeTo ()
+fromAddressBook = Action [fromAddressBookDescription] fromAddressBookForTo
+
+fromAddressBookCC :: Action 'ComposeView 'ComposeCc ()
+fromAddressBookCC = Action [fromAddressBookDescription] (
+  do
+    line <- uses (asCompose . cCc . editEditorL . E.editContentsL) currentLine
+    runExceptT (retrieveAddresses line)
+        >>= either
+        showError
+        ( \addr ->
+            modifying
+                (asCompose . cCc . editEditorL . E.editContentsL)
+                ( insertMany (AddressText.renderAddresses addr) . clearZipper
+                )
+        )
+                                                            )
+fromAddressBookBCC :: Action 'ComposeView 'ComposeBcc ()
+fromAddressBookBCC = Action [fromAddressBookDescription] (
+  do
+    line <- uses (asCompose . cBcc . editEditorL . E.editContentsL) currentLine
+    runExceptT (retrieveAddresses line)
+        >>= either
+        showError
+        ( \addr ->
+            modifying
+                (asCompose . cBcc . editEditorL . E.editContentsL)
+                ( insertMany (AddressText.renderAddresses addr) . clearZipper
+                )
+        )
+  )
+
+fromAddressBookThreads :: Action 'Threads 'ComposeTo ()
+fromAddressBookThreads = Action [fromAddressBookDescription] fromAddressBookForTo
+
+fromAddressBookMail :: Action 'ViewMail 'ComposeTo ()
+fromAddressBookMail = Action [fromAddressBookDescription] fromAddressBookForTo
+
 -- Function definitions for actions
 --
 
@@ -1798,3 +1847,32 @@ switchMode' vn w = do
   modifying (asViews . vsFocusedView) (Brick.focusSetCurrent vn)
   assign (asViews . vsViews . at vn . _Just . vFocus) w
 
+-- Parse the addresses out, grab the last bit of the input to use as a
+-- needle to expand and return all addresses again to render into the
+-- input line.
+retrieveAddresses :: (MonadError Error m, MonadIO m, MonadState AppState m) => T.Text -> m [Address]
+retrieveAddresses line = do
+  addressBooks <- use (asConfig . confAddressBook)
+  result <- queryAddresses (lastAddressFromLine line) addressBooks
+  let addresses = AT.parseOnly AddressText.addressList line
+  case addresses of
+    -- If the line doesn't contain any existing addresses or garbage,
+    -- return our address lookup result
+    Left _ -> pure result
+    Right addrs -> pure $ addrs <> result
+  where
+    lastAddressFromLine = T.strip . fromMaybe "" . safeLast . T.splitOn ","
+
+-- retrieves and sets addresses in the To: field
+fromAddressBookForTo :: T.EventM Name AppState ()
+fromAddressBookForTo = do
+  line <- uses (asCompose . cTo . editEditorL . E.editContentsL) currentLine
+  runExceptT (retrieveAddresses line)
+    >>= either
+      showError
+      ( \addr ->
+          modifying
+            (asCompose . cTo . editEditorL . E.editContentsL)
+            ( insertMany (AddressText.renderAddresses addr) . clearZipper
+            )
+      )

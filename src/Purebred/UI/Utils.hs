@@ -20,6 +20,7 @@
 module Purebred.UI.Utils
   ( titleize
   , Titleize
+  , safeLast
   ) where
 
 import Data.Text (Text, pack)
@@ -51,3 +52,7 @@ instance Titleize Name where
 
 instance Titleize ViewName where
   titleize a = pack $ show a
+
+safeLast :: [a] -> Maybe a
+safeLast [] = Nothing
+safeLast (x:xs) = Just (foldl (\_ a -> a) x xs)

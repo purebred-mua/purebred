@@ -39,6 +39,7 @@ gatherToKeybindings =
     [ Keybinding (V.EvKey V.KEsc []) (abort *> switchView @'Threads @'ListOfThreads)
     , Keybinding (V.EvKey (V.KChar 'g') [V.MCtrl]) (abort *> switchView @'Threads @'ListOfThreads)
     , Keybinding (V.EvKey V.KEnter []) (switchView @'Threads @'ComposeSubject)
+    , Keybinding (V.EvKey (V.KChar '\t') []) (done *> fromAddressBookThreads)
     ]
 
 gatherSubjectKeybindings :: [Keybinding 'Threads 'ComposeSubject]

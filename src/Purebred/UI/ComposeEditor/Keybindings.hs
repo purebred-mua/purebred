@@ -60,6 +60,8 @@ composeToKeybindings =
         (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
     , Keybinding (V.EvKey V.KEnter [])
         (done *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar '\t') [])
+        (done *> fromAddressBook *> switchView @'ComposeView @'ComposeTo)
     ]
 
 composeCcKeybindings :: [Keybinding 'ComposeView 'ComposeCc]
@@ -70,6 +72,8 @@ composeCcKeybindings =
         (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
     , Keybinding (V.EvKey V.KEnter [])
         (done *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar '\t') [])
+        (done *> fromAddressBookCC *> switchView @'ComposeView @'ComposeCc)
     ]
 
 composeBccKeybindings :: [Keybinding 'ComposeView 'ComposeBcc]
@@ -80,6 +84,8 @@ composeBccKeybindings =
         (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
     , Keybinding (V.EvKey V.KEnter [])
         (done *> switchView @'ComposeView @'ComposeListOfAttachments)
+    , Keybinding (V.EvKey (V.KChar '\t') [])
+        (done *> fromAddressBookBCC *> switchView @'ComposeView @'ComposeBcc)
     ]
 
 confirmKeybindings :: [Keybinding 'ComposeView 'ConfirmDialog]

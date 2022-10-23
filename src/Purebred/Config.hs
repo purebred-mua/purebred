@@ -237,6 +237,7 @@ defaultConfig = do
     , _confPlugins = set pluginBuiltIn True <$>
         [ usePlugin Purebred.Plugin.UserAgent.plugin
         ]
+    , _confAddressBook = []
     }
 
 -- | Replace some special tags with ASCII chars.
