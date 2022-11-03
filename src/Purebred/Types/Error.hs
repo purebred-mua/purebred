@@ -18,7 +18,9 @@
 
 -- | Error types for purebred
 --
-module Purebred.Types.Error where
+module Purebred.Types.Error
+  ( Error(..)
+  ) where
 
 import Control.Lens (prism')
 import qualified Data.ByteString as B

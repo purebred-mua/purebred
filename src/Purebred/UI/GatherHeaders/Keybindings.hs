@@ -17,7 +17,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Purebred.UI.GatherHeaders.Keybindings where
+module Purebred.UI.GatherHeaders.Keybindings
+  ( gatherFromKeybindings
+  , gatherToKeybindings
+  , gatherSubjectKeybindings
+  ) where
 
 import qualified Graphics.Vty as V
 import Purebred.Types

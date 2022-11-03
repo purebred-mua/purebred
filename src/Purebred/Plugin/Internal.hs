@@ -22,7 +22,32 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Purebred.Plugin.Internal where
+module Purebred.Plugin.Internal
+  (
+  -- * Plugin construction and initialisation
+    Plugin(..)
+  , usePlugin
+
+  -- * Capabilities
+  , Pure
+  , CanIO
+  , CanRWAppState
+  , CanReadConfig
+  , Unconstrained
+
+  -- * Hooks
+  , ConfigHook(..), getConfigHook
+  , PreSendHook(..), getPreSendHook
+
+  -- * Internal plugin record type
+  , PluginDict
+  , pluginName
+  , pluginVersion
+  , pluginBuiltIn
+  , configHook
+  , preSendHook
+
+  ) where
 
 import Control.DeepSeq
 import Data.Version

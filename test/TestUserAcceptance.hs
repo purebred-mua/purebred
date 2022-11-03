@@ -21,8 +21,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Main where
-
 import Data.Char (chr)
 import System.IO.Temp
   ( createTempDirectory, getCanonicalTemporaryDirectory
@@ -1686,7 +1684,6 @@ testGroupReply =
 findMail ::
      ( HasTmuxSession testEnv
      , MonadReader testEnv m
-     , MonadState Capture m
      , MonadIO m
      )
   => (String -> m ())
@@ -1905,8 +1902,8 @@ setUpNotmuchCfg dir = do
 purebredTmuxSession = withTmuxSession setUp tearDown
 
 -- | convenience function to print captured output to STDERR
-debugOutput :: String -> IO ()
-debugOutput out = do
+_debugOutput :: String -> IO ()
+_debugOutput out = do
   d <- lookupEnv "DEBUG"
   when (isJust d) $ hPutStr stderr ("\n\n" <> out)
 

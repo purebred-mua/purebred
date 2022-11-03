@@ -17,7 +17,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
 
-module TestTagParser where
+module TestTagParser (tests) where
 
 import Data.List (isInfixOf)
 
@@ -28,12 +28,8 @@ import Purebred.Types (UserMessage(..), Name(..), MessageSeverity(..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@=?), testCase, assertBool, assertFailure)
 
-tagparserTests ::
-  TestTree
-tagparserTests = testParseTags
-
-testParseTags :: TestTree
-testParseTags =
+tests :: TestTree
+tests =
     let tagops =
             [ ("adding", (Right [AddTag "foo"] @=?), "+foo")
             , ("removing", (Right [RemoveTag "foo"] @=?), "-foo")

@@ -17,7 +17,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Purebred.UI.FileBrowser.Keybindings where
+module Purebred.UI.FileBrowser.Keybindings
+  ( fileBrowserKeybindings
+  , manageSearchPathKeybindings
+  ) where
 
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions

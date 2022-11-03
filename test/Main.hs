@@ -14,19 +14,17 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module Main where
-
 import Test.Tasty (defaultMain, testGroup)
 
 import qualified LazyVector
-import TestMail (mailTests)
-import TestActions (actionTests)
-import TestTagParser (tagparserTests)
+import qualified TestMail
+import qualified TestActions
+import qualified TestTagParser
 
 main :: IO ()
 main = defaultMain $ testGroup "unit tests"
-  [ mailTests
-  , tagparserTests
-  , actionTests
+  [ TestMail.tests
+  , TestTagParser.tests
+  , TestActions.tests
   , LazyVector.tests
   ]

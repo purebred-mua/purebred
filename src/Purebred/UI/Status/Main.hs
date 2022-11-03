@@ -19,7 +19,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Purebred.UI.Status.Main where
+module Purebred.UI.Status.Main
+  ( statusbar
+  , rescheduleMailcheck
+  ) where
 
 import Brick.BChan (BChan, writeBChan)
 import Brick.Types (Widget)
@@ -62,12 +65,6 @@ rescheduleMailcheck chan server query delay =
     where
       toMilisecond (Seconds x) = x * 1000000
       toMilisecond (Minutes x) = x * 60 * 1000000
-
-data StatusbarContext a
-    = ListContext a
-    | EditorContext a
-    | ErrorContext a
-    deriving (Show)
 
 renderUserMessage :: UserMessage -> Widget Name
 renderUserMessage (UserMessage _ (Warning t)) = withAttr statusbarWarningAttr $ hCenter $ txt t

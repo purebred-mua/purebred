@@ -17,7 +17,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module TestMail where
+module TestMail (tests) where
 
 import qualified Data.ByteString as B
 import qualified Data.Text.Encoding as T
@@ -37,9 +37,8 @@ import Notmuch (mkTag, tagMaxLen)
 import Purebred.Types
 import Purebred.Storage.Tags (TagOp(..), addTags, removeTags, tagItem)
 
-mailTests ::
-  TestTree
-mailTests =
+tests :: TestTree
+tests =
   testGroup
     "mail parsing tests"
     [ testAddingTags

@@ -216,8 +216,8 @@ readProcess
   -> m (ExitCode, Tainted LB.ByteString, Tainted LB.ByteString)
 readProcess = (fmap . fmap) (bimap taint taint) System.Process.Typed.readProcess
 
-runEntityCommand ::
-     (MonadMask m, MonadError Error m, MonadIO m)
+runEntityCommand
+  :: (MonadMask m, MonadError Error m)
   => EntityCommand m res a
   -> m a
 runEntityCommand cmd =
@@ -245,7 +245,7 @@ tmpfileResource tmpOnExit =
         (tryIO . cleanUp tmpOnExit)
         (\fp -> tryIO . B.writeFile fp)
 
-emptyResource :: (MonadIO m, MonadError Error m) => ResourceSpec m ()
+emptyResource :: (MonadIO m) => ResourceSpec m ()
 emptyResource =
   ResourceSpec (pure mempty) (\_ -> pure mempty) (\_ _ -> pure mempty)
 

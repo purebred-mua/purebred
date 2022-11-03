@@ -17,7 +17,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Purebred.UI.Index.Keybindings where
+module Purebred.UI.Index.Keybindings
+  ( browseThreadsKeybindings
+  , searchThreadsKeybindings
+  , manageThreadTagsKeybindings
+  ) where
 
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions

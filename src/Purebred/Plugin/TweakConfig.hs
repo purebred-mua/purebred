@@ -39,7 +39,10 @@ The 'tweakConfigWithIO' variant allows the transform function to
 perform I/O.
 
 -}
-module Purebred.Plugin.TweakConfig where
+module Purebred.Plugin.TweakConfig
+  ( tweakConfig
+  , tweakConfigWithIO
+  ) where
 
 import Purebred.Plugin
 import Purebred.Version (version)

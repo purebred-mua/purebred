@@ -16,7 +16,14 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module Purebred.Config where
+module Purebred.Config
+  ( defaultConfig
+  , sendmail
+  , solarizedDark
+  , getDatabasePath
+  , tagReplacementMapAscii
+  , tagReplacementMapEmoji
+  ) where
 
 import Control.Applicative ((<|>), liftA2)
 import Data.List.NonEmpty (fromList)
@@ -126,13 +133,6 @@ solarizedDark =
         , (mailbodySourceAttr, fg V.blue)
         ]
 
--- * Attributes
--- $attributes
--- These attributes are used as keys in widgets to assign color values.
---
-
-
-
 -- | Returns the notmuch database path by executing 'notmuch config
 -- get database.path' in a separate process.  If the process terminates
 -- abnormally, returns an empty string.
@@ -148,8 +148,6 @@ getDatabasePath = do
   where
       decode = T.unpack . sanitiseText . decodeLenient . L.toStrict
 
--- * Purebred's Configuration
-
 -- | The default configuration used in Purebred.
 --
 -- Returns a default configuration, with some properties dependent on the
@@ -163,6 +161,10 @@ getDatabasePath = do
 --
 -- * Home directory for file browser taken from
 --   'System.Directory.getHomeDirectory'.
+--
+-- Uses 'tagReplacementMapEmoji'.  You can override it with
+-- 'tagReplacementMapAscii' or a replacement map of your own
+-- choosing (including an empty map).
 --
 defaultConfig :: IO UserConfiguration
 defaultConfig = do

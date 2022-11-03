@@ -17,7 +17,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Purebred.UI.ComposeEditor.Keybindings where
+module Purebred.UI.ComposeEditor.Keybindings
+  ( composeSubjectKeybindings
+  , composeFromKeybindings
+  , composeToKeybindings
+  , composeCcKeybindings
+  , composeBccKeybindings
+  , confirmKeybindings
+  , listOfAttachmentsKeybindings
+  ) where
 
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions

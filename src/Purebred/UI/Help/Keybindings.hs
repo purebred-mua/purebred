@@ -17,7 +17,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Purebred.UI.Help.Keybindings where
+module Purebred.UI.Help.Keybindings
+  ( helpKeybindings
+  ) where
 
 import Graphics.Vty (Event (..), Key (..))
 import Purebred.UI.Actions

@@ -17,7 +17,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module TestActions where
+module TestActions (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -27,9 +27,8 @@ import Purebred.Types
 import Purebred.UI.Views (swapWidget)
 
 
-actionTests ::
-  TestTree
-actionTests = testGroup "action tests" [testSwapBottom]
+tests :: TestTree
+tests = testGroup "action tests" [testSwapBottom]
 
 testSwapBottom :: TestTree
 testSwapBottom = testCase "swaps last visible widget" $ swapWidget ListOfThreads ManageThreadTagsEditor tiles @?= expected

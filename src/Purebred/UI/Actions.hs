@@ -983,7 +983,7 @@ ifte a@(Action aDesc _) t@(Action tDesc _) f@(Action fDesc _) =
   updateDesc (Action _ go) = Action newDesc go
   newDesc = aDesc <> ["(" <> T.pack (show tDesc) <> " OR " <> T.pack (show fDesc) <> ")"]
 
-abort :: forall a v. (HasViewName v, Resetable v a) => Action v a ()
+abort :: forall a v. (Resetable v a) => Action v a ()
 abort = Action ["cancel"] (reset @v @a)
 
 -- $keybinding_actions
@@ -1022,14 +1022,14 @@ scrollPageDown = Action
   , _aAction = Brick.vScrollPage (makeViewportScroller @ctx) T.Down
   }
 
-scrollNextMatch :: forall ctx v. (Scrollable ctx) => Action v ctx ()
+scrollNextMatch :: Action v ctx ()
 scrollNextMatch =
   Action
     { _aDescription = ["scroll to next match in mail body"]
-    , _aAction = scrollMatch (+1)
+    , _aAction = scrollMatch (+ 1)
     }
 
-scrollPreviousMatch :: forall ctx v. (Scrollable ctx) => Action v ctx ()
+scrollPreviousMatch :: Action v ctx ()
 scrollPreviousMatch =
   Action
     { _aDescription = ["scroll to previous match in mail body"]
@@ -1211,7 +1211,7 @@ toggleHeaders = Action
 -- | Apply given tag operations on the currently selected thread or
 -- mail.
 --
-setTags :: forall v ctx. HasToggleableList ctx => [TagOp] -> Action v ctx ()
+setTags :: [TagOp] -> Action v ctx ()
 setTags ops =
     Action
     { _aDescription = ["apply tag operations: " <> T.intercalate ", " (T.pack . show <$> ops) ]
@@ -1729,7 +1729,7 @@ manageThreadTags ops ts = do
     )
     >>= either showError (const $ pure ())
 
-keepOrDiscardDraft :: (MonadMask m, MonadIO m, MonadState AppState m) => m ()
+keepOrDiscardDraft :: (MonadIO m, MonadState AppState m) => m ()
 keepOrDiscardDraft = do
   r <- use (asCompose . cKeepDraft . to dialogSelection)
   case r of
@@ -1737,7 +1737,7 @@ keepOrDiscardDraft = do
     _ -> showInfo "Draft discarded"
   modify clearMailComposition
 
-keepDraft :: (MonadMask m, MonadState AppState m, MonadIO m) => m ()
+keepDraft :: (MonadState AppState m, MonadIO m) => m ()
 keepDraft = buildMail $ \bs -> do
   server <- use storageServer
   maildir <- use (asConfig . confNotmuch . nmDatabase)

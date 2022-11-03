@@ -18,7 +18,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Purebred.UI.App where
+module Purebred.UI.App
+  ( theApp
+  , initialState
+  , initialViews
+  ) where
 
 import qualified Brick.Main as M
 import Brick.BChan (BChan)

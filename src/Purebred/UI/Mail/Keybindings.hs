@@ -17,7 +17,16 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Purebred.UI.Mail.Keybindings where
+module Purebred.UI.Mail.Keybindings
+  ( displayMailKeybindings
+  , findWordEditorKeybindings
+  , mailAttachmentsKeybindings
+  , openWithKeybindings
+  , pipeToKeybindings
+  , mailViewManageMailTagsKeybindings
+  , saveToDiskKeybindings
+  , mailviewComposeToKeybindings
+  ) where
 
 import qualified Graphics.Vty as V
 import Purebred.UI.Actions
