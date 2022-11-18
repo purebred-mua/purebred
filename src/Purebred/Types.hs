@@ -743,13 +743,7 @@ aDescription = to (\(Action a _ ) -> a)
 data Keybinding (v :: ViewName) (ctx :: Name) = Keybinding
     { _kbEvent :: Vty.Event
     , _kbAction :: Action v ctx ()
-    }
-
--- | __HACK__: the 'Vty.Event' is only evaluated to WHNF.
--- There is no 'NFData' instance for 'Vty.Event' and I don't want
--- to make an orphan instance for it.
-instance NFData (Keybinding v ctx) where
-  rnf (Keybinding ev act) = Keybinding ev (force act) `seq` ()
+    } deriving (Generic, NFData)
 
 instance Eq (Keybinding v ctx) where
   (==) (Keybinding a _) (Keybinding b _) = a == b
