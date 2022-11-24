@@ -68,6 +68,8 @@ data Name
   | ComposeSubject
   | ComposeTo
   | ConfirmDialog
+  | ButtonKeep
+  | ButtonDiscard
   | ListOfFiles
   | ListOfMails
   | ListOfThreads

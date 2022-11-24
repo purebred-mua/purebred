@@ -24,16 +24,6 @@ module Purebred.UI.App
   , initialViews
   ) where
 
-import qualified Brick.Main as M
-import Brick.BChan (BChan)
-import Brick.Types (Widget)
-import Brick.Focus (focusRing)
-import Brick.Widgets.Core (vBox, vLimit)
-import qualified Brick.Types as Brick
-import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
-import qualified Brick.Widgets.FileBrowser as FB
-import qualified Graphics.Vty.Input.Events as Vty
 import Control.Lens (assign, use, view)
 import Control.Monad (when)
 import Control.Monad.State (get, gets, execStateT)
@@ -42,6 +32,17 @@ import qualified Data.Text.Lazy as T
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (fromGregorian)
 import Data.Proxy
+
+import Brick
+  ( App(..), BrickEvent(..), EventM, Widget
+  , emptyWidget, showFirstCursor, vBox, vLimit
+  )
+import Brick.BChan (BChan)
+import Brick.Focus (focusRing)
+import qualified Brick.Widgets.Edit as E
+import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.FileBrowser as FB
+import qualified Graphics.Vty.Input.Events as Vty
 
 import Purebred.Storage.Server
 import Purebred.Types
@@ -117,10 +118,14 @@ renderWidget s _ ComposeSubject = renderEditorWithLabel (Proxy @'ComposeSubject)
 renderWidget s _ ComposeHeaders = drawHeaders s
 renderWidget s _ StatusBar = statusbar s
 renderWidget s _ ConfirmDialog = renderConfirm s
+renderWidget _ _ _ =
+  -- this case handles symbolic Names that don't represent a
+  -- top-level widget (e.g. dialog buttons)
+  emptyWidget
 
 -- | Main event handler
 --
-handleViewEvent :: ViewName -> Name -> Vty.Event -> Brick.EventM Name AppState ()
+handleViewEvent :: ViewName -> Name -> Vty.Event -> EventM Name AppState ()
 handleViewEvent = f where
   f ComposeView ComposeFrom = dispatch eventHandlerComposeFrom
   f ComposeView ComposeSubject = dispatch eventHandlerComposeSubject
@@ -153,12 +158,12 @@ handleViewEvent = f where
 -- pressed by the user or asynchronous events send by threads.
 --
 appEvent
-  :: Brick.BrickEvent Name PurebredEvent -- ^ event
-  -> Brick.EventM Name AppState ()
-appEvent (Brick.VtyEvent ev) = do
+  :: BrickEvent Name PurebredEvent -- ^ event
+  -> EventM Name AppState ()
+appEvent (VtyEvent ev) = do
   s <- get
   handleViewEvent (focusedViewName s) (focusedViewWidget s) ev
-appEvent (Brick.AppEvent ev) = case ev of
+appEvent (AppEvent ev) = case ev of
   NotifyNumThreads n gen -> do
     curGen <- use (asThreadsView . miListOfThreadsGeneration)
     when (gen == curGen) $
@@ -239,12 +244,12 @@ initialState conf chan server sink = do
 -- | Application event loop.
 theApp ::
      AppState -- ^ initial state
-  -> M.App AppState PurebredEvent Name
+  -> App AppState PurebredEvent Name
 theApp s =
-    M.App
-    { M.appDraw = drawUI
-    , M.appChooseCursor = M.showFirstCursor
-    , M.appHandleEvent = appEvent
-    , M.appStartEvent = pure ()
-    , M.appAttrMap = const (view (asConfig . confTheme) s)
+    App
+    { appDraw = drawUI
+    , appChooseCursor = showFirstCursor
+    , appHandleEvent = appEvent
+    , appStartEvent = pure ()
+    , appAttrMap = const (view (asConfig . confTheme) s)
     }
