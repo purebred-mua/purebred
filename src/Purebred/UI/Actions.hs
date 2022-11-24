@@ -1614,8 +1614,11 @@ newComposeFromMail charsets m =
         (L.list ComposeListOfAttachments attachments' 1)
         initialDraftConfirmDialog
 
-initialDraftConfirmDialog :: Dialog ConfirmDraft
-initialDraftConfirmDialog = dialog (Just "Keep draft?") (Just (0, [("Keep", Keep), ("Discard", Discard)])) 50
+initialDraftConfirmDialog :: Dialog ConfirmDraft Name
+initialDraftConfirmDialog = dialog
+  (Just (Brick.txt "Keep draft?"))
+  (Just (ButtonKeep, [("Keep", ButtonKeep, Keep), ("Discard", ButtonDiscard, Discard)]))
+  50
 
 -- | Serialise the WireEntity and write it to a temporary file. If no WireEntity
 -- exists (e.g. composing a new mail) just use the empty file. When the
@@ -1732,7 +1735,7 @@ manageThreadTags ops ts = do
 keepOrDiscardDraft :: (MonadIO m, MonadState AppState m) => m ()
 keepOrDiscardDraft = do
   r <- use (asCompose . cKeepDraft . to dialogSelection)
-  case r of
+  case fmap snd r of
     Just Keep -> keepDraft
     _ -> showInfo "Draft discarded"
   modify clearMailComposition

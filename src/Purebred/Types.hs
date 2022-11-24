@@ -363,7 +363,7 @@ data Compose = Compose
     , _cBcc :: StatefulEditor T.Text Name
     , _cSubject :: StatefulEditor T.Text Name
     , _cAttachments :: L.List Name MIMEMessage
-    , _cKeepDraft :: Dialog ConfirmDraft
+    , _cKeepDraft :: Dialog ConfirmDraft Name
     }
 
 cFrom :: Lens' Compose (StatefulEditor T.Text Name)
@@ -384,7 +384,7 @@ cSubject = lens _cSubject (\c x -> c { _cSubject = x })
 cAttachments :: Lens' Compose (L.List Name MIMEMessage)
 cAttachments = lens _cAttachments (\c x -> c { _cAttachments = x })
 
-cKeepDraft :: Lens' Compose (Dialog ConfirmDraft)
+cKeepDraft :: Lens' Compose (Dialog ConfirmDraft Name)
 cKeepDraft = lens _cKeepDraft (\c x -> c { _cKeepDraft = x })
 
 data NotmuchSettings =
