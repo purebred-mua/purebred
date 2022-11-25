@@ -1,18 +1,18 @@
 { mkDerivation, base, bimap, bytestring, config-ini, containers
-, contravariant, data-clist, deepseq, directory, dlist, exceptions
+, contravariant, data-clist, deepseq, directory, exceptions
 , filepath, lib, microlens, microlens-mtl, microlens-th, mtl
 , QuickCheck, stm, template-haskell, text, text-zipper, unix
 , vector, vty, word-wrap
 }:
 mkDerivation {
   pname = "brick";
-  version = "1.0";
-  sha256 = "73812075c1c211761bad65478dc7e18bf81e1703b98583133af96f0f18d52003";
+  version = "1.5";
+  sha256 = "6290081719d68c149dc9bd0098f36aac235b615334a3510fda89e19bbdb95f4f";
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
     base bimap bytestring config-ini containers contravariant
-    data-clist deepseq directory dlist exceptions filepath microlens
+    data-clist deepseq directory exceptions filepath microlens
     microlens-mtl microlens-th mtl stm template-haskell text
     text-zipper unix vector vty word-wrap
   ];
