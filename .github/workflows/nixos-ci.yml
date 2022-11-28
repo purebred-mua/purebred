@@ -7,6 +7,14 @@ jobs:
     name: Nix
     runs-on: ubuntu-latest
     steps:
+      - name: check systemd units
+        shell: bash
+        run: |
+          systemctl list-units
+          systemctl status systemd-resolved.service
+          resolvectl domain
+          cat /etc/systemd/resolved.conf
+
       - uses: actions/checkout@v2
 
       - name: Local cache
