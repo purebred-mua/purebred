@@ -89,10 +89,10 @@ confirmKeybindings =
       (handleConfirm !*> reloadList)
   , Keybinding
       (V.EvKey (V.KChar 'q') [])
-      (switchView @'ComposeView @'ComposeListOfAttachments)
+      (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
   , Keybinding
       (V.EvKey V.KEsc [])
-      (switchView @'ComposeView @'ComposeListOfAttachments)
+      (abort *> switchView @'ComposeView @'ComposeListOfAttachments)
   ]
 
 confirmAbort :: Action 'ComposeView 'ComposeListOfAttachments ()

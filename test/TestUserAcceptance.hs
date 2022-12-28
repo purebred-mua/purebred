@@ -614,6 +614,12 @@ testConfirmDialogResets = purebredTmuxSession "confirm dialog resets state" $
     step "abort composition"
     sendKeys "q" (Substring "Keep draft?")
 
+    step "Cancel dialog"
+    sendKeys "Escape" (Not (Substring "Keep draft?"))
+
+    step "abort composition"
+    sendKeys "q" (Substring "Keep draft?")
+
     step "choose Discard"
     sendKeys "Tab" (Substring "Discard")
 
