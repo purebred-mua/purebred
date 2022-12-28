@@ -499,6 +499,9 @@ instance Resetable 'ComposeView 'ComposeSubject where
 instance Resetable 'ComposeView 'ComposeListOfAttachments where
   reset = modify clearMailComposition
 
+instance Resetable 'ComposeView 'ConfirmDialog where
+  reset = hide ComposeView 0 ConfirmDialog
+
 instance Resetable 'FileBrowser 'ManageFileBrowserSearchPath where
   reset = modifying (asFileBrowser . fbSearchPath) revertEditorState
 
