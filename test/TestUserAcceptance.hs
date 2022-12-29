@@ -51,7 +51,7 @@ import System.Exit (die)
 import Control.Lens (Lens', _init, _last, at, lens, preview, set, to, view)
 import System.Directory
   ( copyFile, getCurrentDirectory, listDirectory, removeDirectoryRecursive
-  , removeFile, doesPathExist, findExecutable
+  , removePathForcibly, removeFile, doesPathExist, findExecutable
   )
 import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed
@@ -1808,7 +1808,7 @@ envSessionName = lens _envSessionName (\s b -> s { _envSessionName = b })
 tearDown :: Env -> IO ()
 tearDown (Env confdir mdir _ _) = do
   removeDirectoryRecursive confdir
-  removeDirectoryRecursive mdir
+  removePathForcibly mdir
 
 -- | Set up a test session.
 setUp :: GlobalEnv -> TmuxSession -> IO Env
