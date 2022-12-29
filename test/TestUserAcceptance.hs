@@ -155,7 +155,7 @@ testAbortsCompositionIfEditorExits = purebredTmuxSession "aborts composition if 
   \step -> do
     setEnvVarInSession "EDITOR" "doesnotexistFoo"
     startApplication
-    
+
     step "start composition"
     sendKeys "m" (Substring "From")
 
@@ -164,6 +164,10 @@ testAbortsCompositionIfEditorExits = purebredTmuxSession "aborts composition if 
 
     step "enter to: email"
     sendLine "user@to.test" (Substring "Subject")
+
+    -- wait for the validation to fire to avoid overriding the error
+    -- in the status bar (see https://github.com/purebred-mua/purebred/issues/429)
+    liftIO $ threadDelay (500*1000)
 
     step "enter subject"
     sendLine "Draft mail subject" (Substring "Editor exited abnormally")
@@ -187,8 +191,6 @@ testAbortsCompositionIfEditorExits = purebredTmuxSession "aborts composition if 
 
     step "back to thread list"
     sendKeys "Escape" (Substring "Item 2 of 4")
-    
-    
 
 -- https://github.com/purebred-mua/purebred/issues/395
 testReloadsThreadListAfterReply :: PurebredTestCase
@@ -1724,6 +1726,10 @@ composeNewMail step = do
 
     step "enter to: email"
     sendKeys "user@to.test\r" (Substring "Subject")
+
+    -- wait for the validation to fire to avoid overriding the error
+    -- in the status bar (see https://github.com/purebred-mua/purebred/issues/429)
+    liftIO $ threadDelay (500*1000)
 
     step "leave default"
     sendKeys "Draft mail subject\r" (Substring "~")
