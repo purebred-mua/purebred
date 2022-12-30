@@ -41,6 +41,7 @@ import Data.Maybe (fromMaybe, isJust)
 import Data.List (intercalate, isInfixOf, sort, sortBy)
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString.Builder (toLazyByteString)
+import qualified Data.ByteString.Lazy as Blub
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Control.Monad.IO.Class (liftIO)
@@ -232,9 +233,9 @@ testReloadsThreadListAfterReply = purebredTmuxSession "reloads list of threads" 
     sendKeys ":" Unconditional
     sendKeys "Enter" (Substring "Item 1 of 3")
 
+
     step "open first mail"
     sendKeys "Enter" (Substring "This is a test mail for purebred")
-
 
 testAbortedEditsResetState :: PurebredTestCase
 testAbortedEditsResetState = purebredTmuxSession "aborted edits reset editor back to initial state" $
@@ -1108,6 +1109,11 @@ testConfig = purebredTmuxSession "test custom config" $
     -- Press Enter again to deal with case where cursor is not at
     -- column 0, which could cause target string to be split.
     sendKeys "Enter" (Substring unlikelyString)
+
+    maildir <- view envMaildir
+    (out, _) <- liftIO $ readProcess_ $ proc "tree" ["-paug", maildir]
+    assertSubstr "foo" (T.unpack $ T.decodeUtf8 $ Blub.toStrict out)
+
 
 -- https://github.com/purebred-mua/purebred/issues/391
 testFileBrowserInvalidPath :: PurebredTestCase
