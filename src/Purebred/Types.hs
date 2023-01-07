@@ -14,6 +14,8 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -612,7 +614,7 @@ mvTextWidth = lens _mvTextWidth (\mv x -> mv { _mvTextWidth = x })
 mvPreferredContentType :: Lens' MailViewSettings ContentType
 mvPreferredContentType = lens _mvPreferredContentType (\mv x -> mv { _mvPreferredContentType = x })
 
-mvHeadersToShow :: Getter MailViewSettings (CI.CI B.ByteString -> Bool)
+mvHeadersToShow :: Lens' MailViewSettings (CI.CI B.ByteString -> Bool)
 mvHeadersToShow = lens _mvHeadersToShow (\mv x -> mv { _mvHeadersToShow = x })
 
 mvKeybindings :: Lens' MailViewSettings [Keybinding 'ViewMail 'ScrollingMailView]
