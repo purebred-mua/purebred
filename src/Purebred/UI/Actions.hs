@@ -1592,7 +1592,7 @@ buildMail k = do
     [x] -> pure x
     x:xs -> do
       boundary <- getStdRandom uniform
-      pure $ createMultipartMixedMessage boundary (x:|xs)
+      pure $ createMultipartMixedMessage boundary (x :| xs)
     [] ->
       -- Shouldn't happen (user should be prevented from deleting the
       -- last attachment).  If it does happen, send an empty body.
