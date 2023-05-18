@@ -155,7 +155,7 @@ library
                      , case-insensitive
                      , optparse-applicative >= 0.13
                      , filepath
-                     , mtl
+                     , mtl >= 2.2 && < 2.4
                      , exceptions
                      , purebred-email >= 0.5 && < 0.7
                      , attoparsec

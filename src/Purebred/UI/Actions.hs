@@ -150,10 +150,13 @@ import Control.Lens
         Getting, Lens', folded, assign, modifying, preuse, use, uses
   )
 import Control.Concurrent (forkIO)
+import Control.Monad (unless, when, void, (>=>))
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State
+  ( MonadState, StateT, execStateT, get, gets, modify, put )
 import Control.Monad.Catch (MonadCatch, MonadMask, catch)
 import Control.Monad.Except (runExceptT, MonadError, throwError)
+import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Exception (IOException)
 import Data.Text.Zipper
        (insertMany, currentLine, gotoEOL, clearZipper)

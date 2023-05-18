@@ -44,7 +44,8 @@ import GHC.Generics
 
 import Control.DeepSeq (NFData)
 import Control.Lens (Lens', Traversal', filtered, lens, traversed, view)
-import Control.Monad.Except (MonadError, MonadIO)
+import Control.Monad.Except (MonadError)
+import Control.Monad.IO.Class (MonadIO)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as L
 import System.Process.Typed (ProcessConfig, proc, shell)
