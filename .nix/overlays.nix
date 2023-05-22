@@ -32,6 +32,8 @@ let
       '';
       preferLocalBuild = true;
       allowSubstitutes = false;
+
+      meta.mainProgram = "purebred";
     };
     purebred-with-packages-icu = self.make-purebred-with-packages true;
     purebred-with-packages = self.make-purebred-with-packages false;
