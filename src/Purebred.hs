@@ -190,11 +190,10 @@ import Purebred.Storage.Tags (TagOp(..))
 import Purebred.Types.Error
 
 -- re-exports for configuration
-import qualified Graphics.Vty
 import Graphics.Vty.Attributes
 import Graphics.Vty.Input.Events (Event(..), Key(..), Modifier(..))
 import Brick.BChan (newBChan)
-import Brick.Main (customMain)
+import Brick.Main (customMainWithDefaultVty)
 import Brick.Util (on, fg, bg)
 import Brick.AttrMap (AttrName, applyAttrMappings, attrName)
 import Control.Lens ((&), _head, ifoldMap, ix, over, preview, set, toListOf, view, views)
@@ -304,14 +303,12 @@ launch ghcOpts inCfg = do
   sink (LT.pack "Opened log file")
 
   s <- initialState cfg' bchan server sink
-  let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
-  initialVty <- buildVty
 
   let query = view (confNotmuch . nmHasNewMailSearch) cfg'
       delay = view (confNotmuch . nmHasNewMailCheckDelay) cfg'
   maybe (pure ()) (rescheduleMailcheck bchan server query) delay
 
-  void $ customMain initialVty buildVty (Just bchan) (theApp s) s
+  void $ customMainWithDefaultVty (Just bchan) (theApp s) s
 
 
 -- | Main program entry point.  Apply to a list of plugins (use
