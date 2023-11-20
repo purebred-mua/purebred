@@ -1,7 +1,7 @@
 { mkDerivation, base, bimap, bytestring, config-ini, containers
 , contravariant, data-clist, deepseq, directory, exceptions
 , filepath, lib, microlens, microlens-mtl, microlens-th, mtl
-, QuickCheck, stm, template-haskell, text, text-zipper, unix
+, QuickCheck, stm, template-haskell, text, text-zipper, unix-compat
 , vector, vty, word-wrap
 }:
 mkDerivation {
@@ -14,7 +14,7 @@ mkDerivation {
     base bimap bytestring config-ini containers contravariant
     data-clist deepseq directory exceptions filepath microlens
     microlens-mtl microlens-th mtl stm template-haskell text
-    text-zipper unix vector vty word-wrap
+    text-zipper unix-compat vector vty word-wrap
   ];
   testHaskellDepends = [
     base containers microlens QuickCheck vector vty
