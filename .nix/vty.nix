@@ -8,8 +8,8 @@
 }:
 mkDerivation {
   pname = "vty";
-  version = "5.36";
-  sha256 = "f1bb8d161f467801404b60d8754c496af66cb741a3f04e5b013a6890390c04a5";
+  version = "6.1";
+  sha256 = "2fc64b7d09f16bce9c6456e234e6aca3a86be9a40f360435499fc087b94f7bd6";
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
