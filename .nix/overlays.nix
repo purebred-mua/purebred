@@ -10,6 +10,8 @@ let
         text-zipper = hsuper.callPackage ./text-zipper.nix { };
         bimap = hsuper.callPackage ./bimap.nix { };
         vty = hsuper.callPackage ./vty.nix { };
+        vty-unix = hsuper.callPackage ./vty-unix.nix { };
+        vty-crossplatform = hsuper.callPackage ./vty-crossplatform.nix { };
         notmuch = hsuper.callPackage ./hsnotmuch.nix {
           notmuch = self.pkgs.notmuch;
           talloc = self.pkgs.talloc;
