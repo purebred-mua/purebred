@@ -129,6 +129,7 @@ module Purebred
   , module Purebred.Plugin,
   module Purebred.Plugin.TweakConfig,
   module Purebred.Storage.Tags,
+  module Purebred.Storage.AddressBook.MuttAliasFile,
   module Purebred.Types,
   module Purebred.Types.Error,
   module Purebred.UI.Actions,
@@ -187,6 +188,7 @@ import Purebred.Plugin.Internal
 import Purebred.Plugin.TweakConfig
 import Purebred.Storage.Server
 import Purebred.Storage.Tags (TagOp(..))
+import Purebred.Storage.AddressBook.MuttAliasFile
 import Purebred.Types.Error
 
 -- re-exports for configuration

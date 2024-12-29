@@ -37,6 +37,7 @@ import System.Environment (lookupEnv)
 import System.Exit (die)
 import System.IO.Unsafe
 
+import Data.MIME (defaultCharsets)
 import Purebred
 import Purebred.Storage.AddressBook.MuttAliasFile
 
@@ -86,7 +87,7 @@ main = do
 
   let addrsFile = fromMaybe cwd confdir <> "/aliases"
   addressBook <-
-    initMuttAliasFileAddressBook addrsFile
+    initMuttAliasFileAddressBook defaultCharsets addrsFile
     >>= either (die . show) pure
 
   purebred
