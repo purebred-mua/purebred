@@ -150,10 +150,10 @@ testAddressBookExpansion = purebredTmuxSession "addressbook expands To: by nick 
     assertRegexS ("To:[[:blank:]]+" <> buildAnsiRegex ["37"] [] [] <> "[[:blank:]]+[[:space:]]")
 
     step "enter substring nick alias"
-    sendKeys "j\t" (Substring "Jennifer Charles")
+    sendKeys "je\t" (Substring "Jennifer Charles")
 
     step "add an additional address"
-    sendKeys ", el\t" (Regex "jencharles.*Elwood")
+    sendKeys ", el\t" (Regex "jencharles.*elwood")
 
     step "accept receipients"
     sendKeys "\r" (Substring "Subject:")
@@ -171,7 +171,7 @@ testAddressBookExpansion = purebredTmuxSession "addressbook expands To: by nick 
     sendKeys ": x\r" (Regex "To:\\s\"Jennifer")
 
     capture >>= put
-    assertRegexS "To: \"Jennifer Charles\".*, \"Elwood B.Mack\""
+    assertRegexS (T.encodeUtf8 "To: \"Jennifer Charles\" <jencharles@example\\.test>,.*鈴木")
     assertRegexS "Bcc:[[:space:]]+$"
     assertRegexS "Cc:[[:space:]]+$"
 
@@ -1415,7 +1415,7 @@ testShowsAndClearsError = purebredTmuxSession "shows and clears error" $
 
     step "shows error message"
     sendKeys "Enter" (Substring "FileReadError")
-      >>= assertRegex "(open|with)(Binary)?File:.*does not exist"
+      >>= assertRegex "(open|with)(Binary)?File:.*\\s*does not exist"
 
     step "error is cleared with next registered keybinding"
     sendKeys "Up" (Substring "Purebred: Item 1 of 5")

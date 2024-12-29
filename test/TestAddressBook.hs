@@ -23,7 +23,7 @@ module TestAddressBook (
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), testCase)
 
-import Data.IMF (Address(..))
+import Data.MIME (Address(..))
 
 import Purebred.Storage.AddressBook.MuttAliasFile
 
@@ -50,11 +50,11 @@ testParseMuttAlias =
         }
       ]
     , testCase "with long names" $
-        parseMuttAliasFile "alias nick1 Mr Nick Name <nick1@test.example>\nalias nick2 Nick Test Name <nick2@foo.test>"
+        parseMuttAliasFile "alias nick1 Mr Nück Name <nick1@test.example>\nalias nick2 Nick Test Name <nick2@foo.test>"
           @?= Right [
           MuttAlias {
               _muttAliasNick = "nick1"
-            , _muttAliasAddress = Single "Mr Nick Name <nick1@test.example>"
+            , _muttAliasAddress = Single "Mr Nück Name <nick1@test.example>"
             }
         , MuttAlias {
               _muttAliasNick = "nick2"
