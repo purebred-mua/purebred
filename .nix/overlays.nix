@@ -1,21 +1,10 @@
 let
-  haskellCompilerVersion = "ghc924";
+  haskellCompilerVersion = "ghc967";
   haskellPackagesOverlay = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${haskellCompilerVersion}.override {
       overrides = hself: hsuper: {
         purebred = hsuper.callPackage ./purebred.nix { };
-        purebred-email = hsuper.callPackage ./purebred-email.nix { };
         purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
-        brick = hsuper.callPackage ./brick.nix { };
-        text-zipper = hsuper.callPackage ./text-zipper.nix { };
-        bimap = hsuper.callPackage ./bimap.nix { };
-        vty = hsuper.callPackage ./vty.nix { };
-        vty-unix = hsuper.callPackage ./vty-unix.nix { };
-        vty-crossplatform = hsuper.callPackage ./vty-crossplatform.nix { };
-        notmuch = hsuper.callPackage ./hsnotmuch.nix {
-          notmuch = self.pkgs.notmuch;
-          talloc = self.pkgs.talloc;
-        };
       };
     };
     make-purebred-with-packages = with-icu:
