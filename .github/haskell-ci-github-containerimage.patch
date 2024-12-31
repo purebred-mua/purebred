@@ -1,0 +1,34 @@
+From 7a1346f32cba7028846e88cc6c56c4123ab5faad Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?R=C3=B3man=20Joost?= <roman@bromeco.de>
+Date: Wed, 1 Jan 2025 10:05:46 +1000
+Subject: [PATCH] use newer ubuntu image
+
+Currently a bug in the older versions prevents the caching step to
+work:
+
+  /__e/node20/bin/node: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.28' not found (required by /__e/node20/bin/node)
+---
+ .github/workflows/haskell-ci.yml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/.github/workflows/haskell-ci.yml b/.github/workflows/haskell-ci.yml
+index 4e6aede..0feae24 100644
+--- a/.github/workflows/haskell-ci.yml
++++ b/.github/workflows/haskell-ci.yml
+@@ -19,11 +19,11 @@ on:
+ jobs:
+   linux:
+     name: Haskell-CI - Linux - ${{ matrix.compiler }}
+-    runs-on: ubuntu-20.04
++    runs-on: ubuntu-22.04
+     timeout-minutes:
+       60
+     container:
+-      image: buildpack-deps:bionic
++      image: buildpack-deps:jammy
+     continue-on-error: ${{ matrix.allow-failure }}
+     strategy:
+       matrix:
+-- 
+2.47.0
+
