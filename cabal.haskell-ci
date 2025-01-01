@@ -1,0 +1,10 @@
+-- Configuration for haskell-ci
+
+-- Avoid HVR's PPA due to outage on 2022-04-27
+ghcup-jobs: True
+
+-- With GHC < 9, haddock fails due to a parse error in the benchmarks.
+-- https://github.com/haskell-CI/haskell-ci/issues/605
+haddock: >= 9
+github-patches: .github/haskell-ci-github.patch .github/haskell-ci-github-containerimage.patch
+apt: elinks tmux vim less notmuch libnotmuch-dev libtalloc-dev
