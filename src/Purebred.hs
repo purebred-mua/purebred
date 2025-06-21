@@ -170,6 +170,7 @@ import System.FilePath.Posix ((</>))
 import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
 import System.Exit (die)
+import qualified Graphics.Vty as Vty
 
 import Purebred.UI.Attr
 import Purebred.UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
@@ -308,7 +309,8 @@ launch ghcOpts inCfg = do
       delay = view (confNotmuch . nmHasNewMailCheckDelay) cfg'
   maybe (pure ()) (rescheduleMailcheck bchan server query) delay
 
-  void $ customMainWithDefaultVty (Just bchan) (theApp s) s
+  (_, vty) <- customMainWithDefaultVty (Just bchan) (theApp s) s
+  Vty.shutdown vty
 
 
 -- | Main program entry point.  Apply to a list of plugins (use
