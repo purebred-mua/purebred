@@ -142,7 +142,7 @@ library
                      , deepseq >= 1.4.2
                      , dyre >= 0.9.1
                      , lens
-                     , brick >= 2.1 && < 2.2
+                     , brick >= 2.9 && < 2.10
                      , text-zipper
                      , vty >= 6
                      , vector >= 0.12.0.0
