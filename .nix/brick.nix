@@ -6,8 +6,8 @@
 }:
 mkDerivation {
   pname = "brick";
-  version = "2.1.1";
-  sha256 = "30280d6f7130eb3e6cbf5a55465a06a825169cb536d3b2e91883aec23532b31e";
+  version = "2.9";
+  sha256 = "c1017d80fd49d9b0484c0fa71a15818b49375c0d6b551b6f79e9c258f853b0c9";
   isLibrary = true;
   isExecutable = true;
   doCheck = false;
