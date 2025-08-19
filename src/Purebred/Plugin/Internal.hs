@@ -121,7 +121,9 @@ newtype PreSendHook cap = PreSendHook
 getPreSendHook :: (cap m) => PreSendHook cap -> MIMEMessage -> m MIMEMessage
 getPreSendHook (PreSendHook f) = f
 
-instance (forall m. Unconstrained m => cap m) => Hook (PreSendHook cap) where
+instance
+    (forall m. (Unconstrained m, MonadIO m, Applicative m) => cap m)
+    => Hook (PreSendHook cap) where
   setHook (PreSendHook f) = set preSendHook (PreSendHook f)
 
 -- | Process the program configuration at program initialisation.
@@ -132,7 +134,7 @@ newtype ConfigHook cap = ConfigHook
 getConfigHook :: (cap m) => ConfigHook cap -> Configuration -> m Configuration
 getConfigHook (ConfigHook f) = f
 
-instance (forall m. CanIO m => cap m) => Hook (ConfigHook cap) where
+instance (forall m. (CanIO m, Pure m) => cap m) => Hook (ConfigHook cap) where
   setHook (ConfigHook f) = set configHook (ConfigHook f)
 
 
@@ -146,3 +148,27 @@ usePlugin :: (Hook hooks) => Plugin hooks -> PluginDict
 usePlugin (Plugin name ver hook) = setHook hook $ PluginDict name ver False
   (ConfigHook pure)
   (PreSendHook pure)
+
+
+-- | GHC 9.10 made instance resolution more strict, and no longer
+-- derives superclasses in cases where looping is possible (such that
+-- @UndecidableInstances@ is necessary).
+--
+-- To work around this, we need to explicitly include relevant
+-- superclasses in quantified constraints, even where they are
+-- seemingly redundant.  To ensure at compile that that we didn't
+-- miss any important cases, make plugins for all hooks at all
+-- capability levels and apply 'usePlugin'.
+--
+_test_usePlugin :: [PluginDict]
+_test_usePlugin =
+  [ usePlugin $ go (ConfigHook pure :: ConfigHook CanIO)
+  , usePlugin $ go (ConfigHook pure :: ConfigHook Pure)
+  , usePlugin $ go (PreSendHook pure :: PreSendHook Unconstrained)
+  , usePlugin $ go (PreSendHook pure :: PreSendHook CanReadConfig)
+  , usePlugin $ go (PreSendHook pure :: PreSendHook CanRWAppState)
+  , usePlugin $ go (PreSendHook pure :: PreSendHook CanIO)
+  , usePlugin $ go (PreSendHook pure :: PreSendHook Pure)
+  ]
+  where
+    go = Plugin "" (makeVersion [0])
