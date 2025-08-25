@@ -16,7 +16,6 @@
 
 {-# OPTIONS_HADDOCK hide #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
 
 module Purebred.UI.ComposeEditor.Main
   ( attachmentsEditor

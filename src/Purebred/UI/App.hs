@@ -16,7 +16,6 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Purebred.UI.App
   ( theApp

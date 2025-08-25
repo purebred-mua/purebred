@@ -15,8 +15,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {- |

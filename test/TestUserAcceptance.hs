@@ -16,10 +16,8 @@
 
 {-# OPTIONS_GHC -fno-warn-unused-do-bind -fno-warn-missing-signatures #-}
 
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
 
 import Data.Char (chr)
 import System.IO.Temp
