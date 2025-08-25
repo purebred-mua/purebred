@@ -15,8 +15,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# OPTIONS_HADDOCK hide #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Purebred.UI.Status.Main

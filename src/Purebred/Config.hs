@@ -25,7 +25,7 @@ module Purebred.Config
   , tagReplacementMapEmoji
   ) where
 
-import Control.Applicative ((<|>), liftA2)
+import Control.Applicative ((<|>))
 import Data.List.NonEmpty (fromList)
 import Data.Maybe (fromMaybe)
 import System.Environment (lookupEnv)

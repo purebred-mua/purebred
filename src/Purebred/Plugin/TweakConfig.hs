@@ -15,7 +15,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-| Plugins for adjusting Purebred's configuration.

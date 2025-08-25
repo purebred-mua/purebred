@@ -15,9 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
 
 module Purebred.Storage.Server
   (
