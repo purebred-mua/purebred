@@ -30,16 +30,16 @@ module Purebred.Storage.AddressBook.MuttAliasFile
   , parseMuttAliasFile
   ) where
 
-import Data.Attoparsec.ByteString (Parser, parseOnly, sepBy, string, takeTill)
-import Data.Attoparsec.ByteString.Char8 (endOfLine, isSpace_w8, skipSpace, space)
+import Data.Attoparsec.Text (Parser, parseOnly, sepBy, string, takeTill, space, skipSpace, endOfLine)
+import Data.Char (isSpace)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.Internal.Search as T
 import Control.Lens (Lens', lens, toListOf, folded, filtered, view)
 
-import Data.MIME (defaultCharsets)
-import Data.IMF (address, Address)
+import Data.MIME (Address)
+import Data.IMF.Text (address)
 
 import Purebred.Types.Error (Error(ParseError))
 import Purebred.Types.AddressBook (AddressBook(..))
@@ -58,7 +58,7 @@ initMuttAliasFileAddressBook filePath = do
   let mk addrs = AddressBook
         (\substr -> pure $ filterMuttAliases substr addrs)
         Nothing
-  pure $ bimap ParseError mk $ parseMuttAliasFile contents
+  pure $ bimap ParseError mk $ parseMuttAliasFile (decodeLenient contents)
 
 filterMuttAliases :: T.Text -> [MuttAlias] -> [Address]
 filterMuttAliases substr =
@@ -72,14 +72,14 @@ matchesSubstring :: T.Text -> T.Text -> Bool
 matchesSubstring needle haystack = not $ null $ T.indices needle haystack
 
 -- | Parser functions to parse a mutt alias file
-parseMuttAliasFile :: B.ByteString -> Either String [MuttAlias]
+parseMuttAliasFile :: T.Text -> Either String [MuttAlias]
 parseMuttAliasFile = parseOnly (muttalias `sepBy` endOfLine)
 
 muttalias :: Parser MuttAlias
 muttalias = do
- nick <- string "alias" *> space *> takeTill isSpace_w8
- add <- skipSpace *> address defaultCharsets
- pure $ MuttAlias (decodeLenient nick) add
+ nick <- string "alias" *> space *> takeTill isSpace
+ add <- skipSpace *> address
+ pure $ MuttAlias nick add
 
 -- | Parser Datatypes
 data MuttAlias = MuttAlias
