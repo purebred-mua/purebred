@@ -6,7 +6,7 @@ An MUA built around [_notmuch_](https://notmuchmail.org/).
 
 ## Requirements
 
-- GHC >= 8.8
+- GHC >= 9.6
 - notmuch
 - a local mailer (e.g. `sendmail`)
 

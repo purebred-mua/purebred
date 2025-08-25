@@ -15,9 +15,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
 
 module Purebred.Storage.Client
   (

@@ -8,9 +8,9 @@
 #
 # For more information, see https://github.com/haskell-CI/haskell-ci
 #
-# version: 0.19.20250605
+# version: 0.19.20250821
 #
-# REGENDATA ("0.19.20250605",["--haddock","--apt","elinks tmux vim less notmuch libnotmuch-dev libtalloc-dev","--github-patches",".github/haskell-ci-github.patch","github","purebred.cabal"])
+# REGENDATA ("0.19.20250821",["--haddock","--apt","elinks tmux vim less notmuch libnotmuch-dev libtalloc-dev","--github-patches",".github/haskell-ci-github.patch","github","purebred.cabal"])
 #
 name: Haskell-CI
 on:
@@ -48,31 +48,6 @@ jobs:
             compilerVersion: 9.6.7
             setup-method: ghcup
             allow-failure: false
-          - compiler: ghc-9.4.8
-            compilerKind: ghc
-            compilerVersion: 9.4.8
-            setup-method: ghcup
-            allow-failure: false
-          - compiler: ghc-9.2.8
-            compilerKind: ghc
-            compilerVersion: 9.2.8
-            setup-method: ghcup
-            allow-failure: false
-          - compiler: ghc-9.0.2
-            compilerKind: ghc
-            compilerVersion: 9.0.2
-            setup-method: ghcup
-            allow-failure: false
-          - compiler: ghc-8.10.7
-            compilerKind: ghc
-            compilerVersion: 8.10.7
-            setup-method: ghcup
-            allow-failure: false
-          - compiler: ghc-8.8.4
-            compilerKind: ghc
-            compilerVersion: 8.8.4
-            setup-method: ghcup
-            allow-failure: false
       fail-fast: false
     steps:
       - name: apt-get install
@@ -87,8 +62,8 @@ jobs:
           chmod a+x "$HOME/.ghcup/bin/ghcup"
       - name: Install cabal-install
         run: |
-          "$HOME/.ghcup/bin/ghcup" install cabal 3.14.2.0 || (cat "$HOME"/.ghcup/logs/*.* && false)
-          echo "CABAL=$HOME/.ghcup/bin/cabal-3.14.2.0 -vnormal+nowrap" >> "$GITHUB_ENV"
+          "$HOME/.ghcup/bin/ghcup" install cabal 3.16.0.0 || (cat "$HOME"/.ghcup/logs/*.* && false)
+          echo "CABAL=$HOME/.ghcup/bin/cabal-3.16.0.0 -vnormal+nowrap" >> "$GITHUB_ENV"
       - name: Install GHC (GHCup)
         if: matrix.setup-method == 'ghcup'
         run: |
@@ -189,7 +164,11 @@ jobs:
           touch cabal.project.local
           echo "packages: ${PKGDIR_purebred}" >> cabal.project
           echo "package purebred" >> cabal.project
-          echo "    ghc-options: -Werror=missing-methods" >> cabal.project
+          echo "    ghc-options: -Werror=missing-methods -Werror=missing-fields" >> cabal.project
+          echo "package purebred" >> cabal.project
+          echo "    ghc-options: -Werror=unused-packages" >> cabal.project
+          echo "package purebred" >> cabal.project
+          echo "    ghc-options: -Werror=incomplete-patterns -Werror=incomplete-uni-patterns" >> cabal.project
           cat >> cabal.project <<EOF
           EOF
           $HCPKG list --simple-output --names-only | perl -ne 'for (split /\s+/) { print "constraints: any.$_ installed\n" unless /^(purebred)$/; }' >> cabal.project.local

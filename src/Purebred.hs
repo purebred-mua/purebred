@@ -160,7 +160,7 @@ import Control.Concurrent (rtsSupportsBoundThreads)
 import Purebred.System.Logging (setupLogsink)
 import qualified Config.Dyre as Dyre
 import qualified Control.DeepSeq
-import Control.Monad ((>=>), void, unless)
+import Control.Monad ((>=>), unless)
 import Options.Applicative hiding (str)
 import qualified Options.Applicative.Builder as Builder
 import qualified Data.Text as T

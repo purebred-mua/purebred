@@ -16,9 +16,7 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 {- |
 
@@ -547,7 +545,8 @@ cvConfirmKeybindings = lens _cvConfirmKeybindings (\cv x -> cv { _cvConfirmKeybi
 newtype HelpViewSettings = HelpViewSettings
   { _hvKeybindings :: [Keybinding 'Help 'ScrollingHelpView]
   }
-  deriving (Generic, NFData)
+  deriving (Generic)
+  deriving anyclass (NFData)
 
 hvKeybindings :: Lens' HelpViewSettings [Keybinding 'Help 'ScrollingHelpView]
 hvKeybindings f (HelpViewSettings a) = fmap (\a' -> HelpViewSettings a') (f a)
