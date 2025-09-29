@@ -167,7 +167,7 @@ nullEventHandler = EventHandler (\f s -> s <$ f []) (\_e -> pure ())
 eventHandlerListOfThreads :: EventHandler 'Threads 'ListOfThreads
 eventHandlerListOfThreads = EventHandler
   (asConfig . confIndexView . ivBrowseThreadsKeybindings)
-  (Brick.zoom (asThreadsView . miListOfThreads) . L.handleListEvent)
+  (Brick.zoom (asThreadsView . miListOfThreads) . L.handleListEventVi L.handleListEvent)
 
 eventHandlerSearchThreadsEditor :: EventHandler 'Threads 'SearchThreadsEditor
 eventHandlerSearchThreadsEditor = EventHandler
@@ -182,7 +182,7 @@ eventHandlerViewMailManageMailTagsEditor = EventHandler
 eventHandlerMailsListOfAttachments:: EventHandler 'ViewMail 'MailListOfAttachments
 eventHandlerMailsListOfAttachments = EventHandler
   (asConfig . confMailView . mvMailListOfAttachmentsKeybindings)
-  (Brick.zoom (asMailView . mvAttachments) . L.handleListEvent)
+  (Brick.zoom (asMailView . mvAttachments) . L.handleListEventVi L.handleListEvent)
 
 eventHandlerMailAttachmentOpenWithEditor :: EventHandler 'ViewMail 'MailAttachmentOpenWithEditor
 eventHandlerMailAttachmentOpenWithEditor = EventHandler
@@ -274,7 +274,7 @@ eventHandlerConfirm = EventHandler
 eventHandlerComposeListOfAttachments :: EventHandler 'ComposeView 'ComposeListOfAttachments
 eventHandlerComposeListOfAttachments = EventHandler
   (asConfig . confComposeView . cvListOfAttachmentsKeybindings)
-  (Brick.zoom (asCompose . cAttachments) . L.handleListEvent)
+  (Brick.zoom (asCompose . cAttachments) . L.handleListEventVi L.handleListEvent)
 
 eventHandlerComposeFileBrowser :: EventHandler 'FileBrowser 'ListOfFiles
 eventHandlerComposeFileBrowser = EventHandler
