@@ -73,6 +73,8 @@ module Purebred.UI.Actions (
   , switchComposeEditor
   , senderReply
   , groupReply
+  , attachmentSenderReply
+  , attachmentGroupReply
   , encapsulateMail
   , selectNextUnread
   , composeAsNew
@@ -161,7 +163,7 @@ import qualified Data.IMF.Text as AddressText
 import Data.MIME
 import qualified Purebred.Storage.Client
 import Purebred.Storage.Mail
-       ( parseMail, toQuotedMail
+       ( parseMail, toQuotedMail, entityToDisplay, findAutoview
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
        , writeEntityToPath)
 import Purebred.UI.Views
@@ -1175,12 +1177,44 @@ encapsulateMail =
 -- selected mail in order to reply to it.
 --
 senderReply, groupReply :: Action 'ViewMail 'ScrollingMailView ()
-senderReply = Action ["reply"] (replyWithMode ReplyToSender)
-groupReply = Action ["group-reply"] (replyWithMode ReplyToGroup)
-
-replyWithMode :: ReplyMode -> T.EventM Name AppState ()
-replyWithMode mode = do
+senderReply =
+  Action
+  ["reply"]
+  (do
       mail <- use (asMailView . mvMail)
+      mbody <- use (asMailView . mvBody)
+      replyWithMode mail mbody ReplyToSender
+  )
+groupReply =
+  Action
+    ["group-reply"]
+    ( do
+        mail <- use (asMailView . mvMail)
+        mbody <- use (asMailView . mvBody)
+        replyWithMode mail mbody ReplyToGroup
+    )
+
+attachmentSenderReply, attachmentGroupReply :: Action 'ViewMail 'MailListOfAttachments ()
+attachmentSenderReply = Action ["reply to sender"] (attachmentReplyWithMode ReplyToSender)
+attachmentGroupReply = Action ["reply to all"] (attachmentReplyWithMode ReplyToGroup)
+
+attachmentReplyWithMode :: ReplyMode -> T.EventM Name AppState ()
+attachmentReplyWithMode mode = do
+        selectedItemHelper (asMailView . mvAttachments) $ \entity ->
+          do
+            charsets <- use (asConfig . confCharsets)
+            textwidth <- use (asConfig . confMailView . mvTextWidth)
+            s <- get
+            runExceptT $ entityToDisplay entity textwidth charsets (findAutoview s entity)
+            >>= either
+              showError
+              ( \mbody -> do
+                  mail <- use (asMailView . mvMail)
+                  replyWithMode mail mbody mode
+              )
+
+replyWithMode :: Maybe MIMEMessage -> BodyPresentation -> ReplyMode -> T.EventM Name AppState ()
+replyWithMode mail mbody mode = do
       charsets <- use (asConfig . confCharsets)
       case mail of
         Nothing -> do
@@ -1193,7 +1227,6 @@ replyWithMode mode = do
               [] -> pure $ Mailbox Nothing (AddrSpec "CHANGE.ME" (DomainDotAtom $ "YOUR" :| ["DOMAIN"]))
               (x:xs) -> x :| xs
             settings = defaultReplySettings idents & set replyMode mode
-          mbody <- use (asMailView . mvBody)
           let
             quoted = toQuotedMail charsets settings mbody m
             setText l t = modifying (asCompose . l . editEditorL . E.editContentsL)

@@ -1,0 +1,38 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Example multipart/mixed with quoted‑printable “=3D” escapes
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="boundary1"
+
+--boundary1
+Content-Type: text/html; charset=UTF-8
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<body>
+<p>Hello, this is a different sentence in the main body of the email.=0A</p>
+</body>
+</html>
+
+--boundary1
+Content-Type: multipart/alternative; boundary="boundary2"
+
+--boundary2
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Hello, this is a plain text version with a different body.=0A
+
+--boundary2
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<body>
+<p>Hello, this is the HTML version with a different body.=0A</p>
+</body>
+</html>
+
+--boundary2--
+--boundary1--

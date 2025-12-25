@@ -107,6 +107,19 @@ mailAttachmentsKeybindings :: [Keybinding 'ViewMail 'MailListOfAttachments]
 mailAttachmentsKeybindings =
     [ Keybinding (V.EvKey (V.KChar 'j') []) listDown
     , Keybinding (V.EvKey (V.KChar 'k') []) listUp
+    , Keybinding (V.EvKey (V.KChar 'r') []) (
+       attachmentSenderReply
+        `focus` (
+            invokeEditor ViewMail ScrollingMailView
+            :: Action 'ComposeView 'ComposeListOfAttachments ()
+            )
+        )
+    , Keybinding (V.EvKey (V.KChar 'g') []) (
+       attachmentGroupReply
+        `focus` (
+            invokeEditor ViewMail ScrollingMailView :: Action 'ComposeView 'ComposeListOfAttachments ()
+            )
+        )
     , Keybinding (V.EvKey (V.KChar 'q') []) (abort *> switchView @'ViewMail @'ScrollingMailView)
     , Keybinding (V.EvKey V.KEnter []) openAttachment
     , Keybinding (V.EvKey (V.KChar 'o') []) (switchView @'ViewMail @'MailAttachmentOpenWithEditor)
