@@ -24,6 +24,8 @@ module Purebred.Storage.Mail (
     parseMail
   , parseMailbody
   , bodyToDisplay
+  , entityToDisplay
+  , findAutoview
 
   -- ** Header data
   , toQuotedMail
@@ -94,16 +96,7 @@ bodyToDisplay s textwidth charsets prefCT msg =
     Nothing ->
       throwError
         (ParseError $ "Unable to find preferred entity with: " <> show prefCT)
-    Just entity ->
-      let output =
-            maybe
-              (pure $ parseMailbody textwidth "Internal Viewer" $ entityToText charsets entity)
-              (\handler ->
-                 parseMailbody textwidth (showHandler handler) <$>
-                 entityPiped handler entity)
-              (findAutoview s entity)
-          showHandler = view (mhMakeProcess . mpCommand . to (T.pack . toList))
-       in (msg, ) <$> output
+    Just entity -> (msg, ) <$> entityToDisplay entity textwidth charsets (findAutoview s entity)
 
 findAutoview :: AppState -> WireEntity -> Maybe MailcapHandler
 findAutoview s msg =
@@ -124,6 +117,24 @@ chooseEntity preferredContentType msg =
     -- select first entity with matching content-type;
     -- otherwise select first entity;
   in firstOf (entities . filtered match) msg <|> firstOf entities msg
+
+-- | Render an entity to a body representation. This is useful if we want to reply to a specific entity.
+entityToDisplay ::
+  (MonadMask m, MonadError Error m, MonadIO m)
+  => WireEntity
+  -> Int
+  -> CharsetLookup
+  -> Maybe MailcapHandler
+  -> m BodyPresentation
+entityToDisplay entity textwidth charsets autoview =
+  let showHandler = view (mhMakeProcess . mpCommand . to (T.pack . toList))
+   in maybe
+        (pure $ parseMailbody textwidth "Internal Viewer" $ entityToText charsets entity)
+        ( \handler ->
+            parseMailbody textwidth (showHandler handler)
+              <$> entityPiped handler entity
+        )
+        autoview
 
 -- | Render the entity to be written to the filesystem. In case of a
 -- decoding error propagates an 'Error'.

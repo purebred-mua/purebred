@@ -132,6 +132,7 @@ main = do
       , testSearchRelated
       , testReplyRendersNonASCIIHeadersCorrectly
       , testGroupReply
+      , testSenderAttachmentReply
       , testAddressBookExpansion
       ]
 
@@ -1744,6 +1745,28 @@ testGroupReply =
     sendLine ": x" (Substring "Attachments") >>= put
     assertRegexS $ T.encodeUtf8 "To: frase@host.example"
     assertRegexS $ T.encodeUtf8 "Cc: roman@host.example, joe@host.example"
+
+testSenderAttachmentReply :: PurebredTestCase
+testSenderAttachmentReply =
+  purebredTmuxSession "reply uses specific entity" $ \step -> do
+    startApplication
+    step "focus search edit"
+    sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
+
+    step "delete all input"
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
+
+    step "search for multipart message"
+    sendLine "multipart/mixed" (Substring "Item 1 of 1")
+
+    step "open thread"
+    sendKeys "Enter" (Substring "Hello, this is a plain text version with a different body")
+
+    step "show attachments"
+    sendKeys "v" (Substring "Attachments")
+
+    step "reply and expect first attachment quoted in reply"
+    sendKeys "r" (Substring "Hello, this is a different sentence in the main body")
 
 findMail ::
      ( HasTmuxSession testEnv
