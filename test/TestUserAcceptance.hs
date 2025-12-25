@@ -199,7 +199,7 @@ testSearchRelated = purebredTmuxSession "searches related" $
     startApplication
 
     capture >>= put
-    assertSubstringS "Item 1 of 4"
+    assertSubstringS "Item 1 of 5"
     assertRegexS (buildAnsiRegex ["37"] ["43"] [] <> "Aug'17 frase@host.exa")
 
     step "search related"
@@ -231,7 +231,7 @@ testAbortsCompositionIfEditorExits = purebredTmuxSession "aborts composition if 
 
     -- check reply
     step "Navigate second mail"
-    sendKeys "Down" (Substring "Item 2 of 4")
+    sendKeys "Down" (Substring "Item 2 of 5")
 
     step "View mail"
     sendKeys "Enter" (Substring "HOLY PUREBRED")
@@ -247,7 +247,7 @@ testAbortsCompositionIfEditorExits = purebredTmuxSession "aborts composition if 
     sendKeys "Enter" (Substring "Editor exited abnormally")
 
     step "back to thread list"
-    sendKeys "Escape" (Substring "Item 2 of 4")
+    sendKeys "Escape" (Substring "Item 2 of 5")
 
 -- https://github.com/purebred-mua/purebred/issues/395
 testReloadsThreadListAfterReply :: PurebredTestCase
@@ -349,8 +349,8 @@ testBulkActionsOnMailsByInput = purebredTmuxSession "perform bulk labeling on ma
     startApplication
 
     step "navigate to thread with two mails"
-    sendKeys "Down" (Substring "Item 2 of 4")
-    sendKeys "Down" (Substring "Item 3 of 4")
+    sendKeys "Down" (Substring "Item 2 of 5")
+    sendKeys "Down" (Substring "Item 3 of 5")
     sendKeys "Enter" (Substring "Lorem ipsum dolor sit amet")
 
     step "toggle first mail"
@@ -433,7 +433,7 @@ testBulkActionsOnThreadsByKeybinding =
     sendKeys "*" (Regex $ selectedListItem <> "Feb'17.*WIP Refactor")
 
     step "Tag toggled list items using key binding"
-    sendKeys "a" (Substring "New: 3  ]")
+    sendKeys "a" (Substring "New: 4  ]")
       -- untoggled
       >>= assertRegex (buildAnsiRegex [] ["37"] [] <> "Aug'17.*whitespace in the subject[[:space:]]+\n")
 
@@ -699,7 +699,7 @@ testShowsNewMail = purebredTmuxSession "shows newly delivered mail" $
     startApplication
 
     step "shows new mails"
-    sendKeys "Down" (Substring "New: 4")
+    sendKeys "Down" (Substring "New: 5")
 
     notmuchcfg <- view envNotmuchConfig
 
@@ -716,7 +716,7 @@ testShowsNewMail = purebredTmuxSession "shows newly delivered mail" $
     void $ readProcess_ config
 
     step "shows new delivered mail"
-    sendKeys "Up" (Substring "New: 5")
+    sendKeys "Up" (Substring "New: 6")
 
     -- reload mails to see the new e-mail
     step "focus query widget"
@@ -1108,10 +1108,10 @@ testCanJumpToFirstListItem = purebredTmuxSession "can jump to first and last mai
     startApplication
 
     step "Jump to last mail"
-    sendKeys "G" (Substring "4 of 4")
+    sendKeys "G" (Substring "5 of 5")
 
     step "Jump to first mail"
-    sendKeys "1" (Substring "1 of 4")
+    sendKeys "1" (Substring "1 of 5")
 
 testUpdatesReadState :: PurebredTestCase
 testUpdatesReadState = purebredTmuxSession "updates read state for mail and thread" $
@@ -1333,8 +1333,8 @@ testManageTagsOnThreads = purebredTmuxSession "manage tags on threads" $
     -- tag the thread as a whole with a new tag. All mails should keep their
     -- distinct tags, while having received a new tag.
     step "navigate to thread"
-    sendKeys "Down" (Substring "Item 2 of 4")
-    sendKeys "Down" (Substring "Item 3 of 4")
+    sendKeys "Down" (Substring "Item 2 of 5")
+    sendKeys "Down" (Substring "Item 3 of 5")
 
     step "show thread mails"
     sendKeys "Enter" (Substring "ViewMail")
@@ -1418,7 +1418,7 @@ testShowsAndClearsError = purebredTmuxSession "shows and clears error" $
       >>= assertRegex "(open|with)(Binary)?File:.*does not exist"
 
     step "error is cleared with next registered keybinding"
-    sendKeys "Up" (Substring "Purebred: Item 1 of 4")
+    sendKeys "Up" (Substring "Purebred: Item 1 of 5")
 
 testSetsMailToRead :: PurebredTestCase
 testSetsMailToRead = purebredTmuxSession "user can toggle read tag" $
@@ -1474,8 +1474,8 @@ testUserViewsMailSuccessfully = purebredTmuxSession "user can view mail" $
     sendKeys "q" (Substring "WIP Refactor")
 
     step "Move down to threaded mails"
-    sendKeys "Down" (Substring "Purebred: Item 2 of 4")
-    sendKeys "Down" (Substring "Purebred: Item 3 of 4")
+    sendKeys "Down" (Substring "Purebred: Item 2 of 5")
+    sendKeys "Down" (Substring "Purebred: Item 3 of 5")
     sendKeys "Enter" (Substring "Re: WIP Refactor")
 
     step "Scroll down"
