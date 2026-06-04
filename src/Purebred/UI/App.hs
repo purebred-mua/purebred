@@ -70,7 +70,6 @@ import Purebred.UI.ComposeEditor.Main (attachmentsEditor, drawHeaders, renderCon
 import Purebred.UI.Draw.Main (renderEditorWithLabel, renderHaskeline)
 import Purebred.UI.Widgets (statefulEditor)
 import qualified Brick.Haskeline as HB
-import Brick.Haskeline (submittedL, HasHaskelineEvent(..))
 
 -- * Synopsis
 --
@@ -99,7 +98,7 @@ renderWidget :: AppState -> ViewName -> Name -> Widget Name
 renderWidget s _ ListOfThreads = renderListOfThreads s
 renderWidget s ViewMail ListOfMails = vLimit (view (asConfig . confMailView . mvIndexRows) s) (renderListOfMails s)
 renderWidget s _ MailAttachmentOpenWithEditor =
-  renderEditorWithLabel (Proxy @'MailAttachmentOpenWithEditor) "Open with:" s
+  renderHaskeline "Open with:" (view (asMailView . mvOpenCommand) s)
 renderWidget s _ MailAttachmentPipeToEditor =
   renderEditorWithLabel (Proxy @'MailAttachmentPipeToEditor) "Pipe to:" s
 renderWidget s _ ListOfMails = renderListOfMails s
@@ -110,7 +109,7 @@ renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor
 renderWidget s _ SaveToDiskPathEditor =
   renderEditorWithLabel (Proxy @'SaveToDiskPathEditor) "Save to file:" s
 renderWidget s _ SearchThreadsEditor =
-  renderHaskeline "Query:" s
+  renderHaskeline "Query:" (view (asThreadsView . miSearchThreadsEditor) s)
 renderWidget s _ ManageMailTagsEditor =
   renderEditorWithLabel (Proxy @'ManageMailTagsEditor) "Labels:" s
 renderWidget s _ ManageThreadTagsEditor =
@@ -162,11 +161,6 @@ handleViewEvent = f where
   f _ ConfirmDialog = dispatch eventHandlerConfirm
   f _ _ = dispatch nullEventHandler
 
-instance HasHaskelineEvent PurebredEvent where
-  _HaskelineEvent = prism FromHBWidget $ \case
-    FromHBWidget x -> Right x
-    e -> Left e
-
 -- | Handling of application events. These can be keys which are
 -- pressed by the user or asynchronous events send by threads.
 --
@@ -178,7 +172,11 @@ appEvent (VtyEvent ev) = do
   handleViewEvent (focusedViewName s) (focusedViewWidget s) ev
 appEvent appev@(AppEvent ev) =
   case ev of
-    FromHBWidget _ -> T.zoom (asThreadsView . miSearchThreadsEditor) (HB.handleAppEvent appev)
+    FromHBWidget tb ->
+      case view HB.tbNameL tb of
+        SearchThreadsEditor -> T.zoom (asThreadsView . miSearchThreadsEditor) (HB.handleAppEvent appev)
+        MailAttachmentOpenWithEditor -> T.zoom (asMailView . mvOpenCommand) (HB.handleAppEvent appev)
+        _ -> pure ()
     FromHaskeline _ -> pure ()
     HaskelineDied _ -> M.halt
     NotifyNumThreads n gen -> do
@@ -215,9 +213,9 @@ initialState
   -> BChan PurebredEvent
   -> Purebred.Storage.Server.Server
   -> (T.Text -> IO ())
-  -> HB.Widget Name PurebredEvent
+  -> HaskelineWidgets
   -> IO AppState
-initialState conf chan server sink searchWidget = do
+initialState conf chan server sink widgets = do
   fb' <- FB.newFileBrowser
          FB.selectNonDirectories
          ListOfFiles
@@ -230,7 +228,7 @@ initialState conf chan server sink searchWidget = do
             (ListWithLength (L.list ListOfMails mempty 1) (Just 0))
             (ListWithLength (L.list ListOfThreads mempty 1) (Just 0))
             firstGeneration
-            searchWidget
+            (view hwSearch widgets)
             (E.editorText ManageMailTagsEditor Nothing "")
             (E.editorText ManageThreadTagsEditor Nothing "")
             0
@@ -240,7 +238,7 @@ initialState conf chan server sink searchWidget = do
            Filtered
            (L.list MailListOfAttachments mempty 1)
            (E.editorText SaveToDiskPathEditor Nothing "")
-           (E.editorText MailAttachmentOpenWithEditor Nothing "")
+           (view hwOpenCommand widgets)
            (E.editorText MailAttachmentPipeToEditor Nothing "")
            (E.editorText ScrollingMailViewFindWordEditor Nothing "")
            0 {- search match index -}
