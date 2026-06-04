@@ -66,5 +66,5 @@ renderEditorWithLabel _ label s =
           else editorAttr
    in labelW <+> withAttr eAttr (vLimit 1 inputW)
 
-renderHaskeline :: T.Text -> AppState -> Widget Name
-renderHaskeline label s = txt label <+> HB.render (view (asThreadsView . miSearchThreadsEditor) s)
+renderHaskeline :: T.Text -> HB.Widget Name PurebredEvent -> Widget Name
+renderHaskeline label w = txt label <+> HB.render w

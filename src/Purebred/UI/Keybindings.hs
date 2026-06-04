@@ -188,7 +188,7 @@ eventHandlerMailsListOfAttachments = EventHandler
 eventHandlerMailAttachmentOpenWithEditor :: EventHandler 'ViewMail 'MailAttachmentOpenWithEditor
 eventHandlerMailAttachmentOpenWithEditor = EventHandler
   (asConfig . confMailView . mvOpenWithKeybindings)
-  (Brick.zoom (asMailView . mvOpenCommand) . handleEditorVtyEvent)
+  (Brick.zoom (asMailView . mvOpenCommand) . HB.handleEditorEvent)
 
 eventHandlerMailAttachmentPipeToEditor :: EventHandler 'ViewMail 'MailAttachmentPipeToEditor
 eventHandlerMailAttachmentPipeToEditor = EventHandler

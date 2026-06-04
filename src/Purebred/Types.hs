@@ -198,13 +198,19 @@ module Purebred.Types
 
   -- ** HaskelineSettings
   , HaskelineSettings(..)
-  , hsHistoryFile
-  , hsAutoAddHistory
+  , hsSearchWidget
+  , hsOpenCommand
+  , HaskelineWidgetConfig(..)
+  , hwcAutoAddHistory
+  , hwcHistoryFile
 
   -- * Internals
   , ListWithLength(..)
   , listList
   , listLength
+  , HaskelineWidgets(..)
+  , hwSearch
+  , hwOpenCommand
 
   , module Purebred.Types.Event
   , module Purebred.Types.UI
@@ -333,7 +339,7 @@ data MailView = MailView
     , _mvHeadersState :: HeadersState
     , _mvAttachments :: L.List Name WireEntity
     , _mvSaveToDiskPath :: E.Editor T.Text Name
-    , _mvOpenCommand:: E.Editor T.Text Name
+    , _mvOpenCommand:: HB.Widget Name PurebredEvent
     , _mvPipeCommand :: E.Editor T.Text Name
     , _mvFindWordEditor :: E.Editor T.Text Name
     , _mvSearchIndex :: Int
@@ -352,7 +358,7 @@ mvAttachments = lens _mvAttachments (\mv hs -> mv { _mvAttachments = hs })
 mvSaveToDiskPath :: Lens' MailView (E.Editor T.Text Name)
 mvSaveToDiskPath = lens _mvSaveToDiskPath (\mv hs -> mv { _mvSaveToDiskPath = hs })
 
-mvOpenCommand :: Lens' MailView (E.Editor T.Text Name)
+mvOpenCommand :: Lens' MailView (HB.Widget Name PurebredEvent)
 mvOpenCommand = lens _mvOpenCommand (\mv hs -> mv { _mvOpenCommand = hs })
 
 mvPipeCommand :: Lens' MailView (E.Editor T.Text Name)
@@ -520,17 +526,30 @@ confAddressBook = lens _confAddressBook (\conf x -> conf { _confAddressBook = x 
 confHaskeline :: Lens' Configuration HaskelineSettings
 confHaskeline = lens _confHaskeline (\c x -> c { _confHaskeline = x })
 
+data HaskelineWidgetConfig = HaskelineWidgetConfig
+  { _hwcAutoAddHistory :: Bool
+  , _hwcHistoryFile    :: Maybe FilePath
+  }
+  deriving (Generic, NFData)
+
+hwcAutoAddHistory :: Lens' HaskelineWidgetConfig Bool
+hwcAutoAddHistory = lens _hwcAutoAddHistory (\hwc b -> hwc { _hwcAutoAddHistory = b})
+
+hwcHistoryFile :: Lens' HaskelineWidgetConfig (Maybe FilePath)
+hwcHistoryFile = lens _hwcHistoryFile (\hwc f -> hwc { _hwcHistoryFile = f })
+
+
 data HaskelineSettings = HaskelineSettings
-  { _hsHistoryFile :: Maybe FilePath,
-    _hsAutoAddHistory :: Bool
+  { _hsSearchWidget :: HaskelineWidgetConfig
+  , _hsOpenCommand :: HaskelineWidgetConfig
   }
     deriving (Generic, NFData)
 
-hsHistoryFile :: Lens' HaskelineSettings (Maybe FilePath)
-hsHistoryFile = lens _hsHistoryFile (\s x -> s { _hsHistoryFile = x })
+hsSearchWidget :: Lens' HaskelineSettings HaskelineWidgetConfig
+hsSearchWidget = lens _hsSearchWidget (\s x -> s { _hsSearchWidget = x })
 
-hsAutoAddHistory :: Lens' HaskelineSettings Bool
-hsAutoAddHistory = lens _hsAutoAddHistory (\s x -> s { _hsAutoAddHistory = x })
+hsOpenCommand :: Lens' HaskelineSettings HaskelineWidgetConfig
+hsOpenCommand = lens _hsOpenCommand (\s x -> s { _hsOpenCommand = x })
 
 data ComposeViewSettings = ComposeViewSettings
     { _cvFromKeybindings :: [Keybinding 'ComposeView 'ComposeFrom]
@@ -700,6 +719,18 @@ data Async = Async
 
 aValidation :: Lens' Async (Maybe ThreadId)
 aValidation = lens _aValidation (\as x -> as { _aValidation = x })
+
+-- | HaskelineWidgets needed for AppState initialisation
+data HaskelineWidgets = HaskelineWidgets
+  { _hwSearch :: HB.Widget Name PurebredEvent
+  , _hwOpenCommand :: HB.Widget Name PurebredEvent
+  }
+
+hwSearch :: Lens' HaskelineWidgets (HB.Widget Name PurebredEvent)
+hwSearch = lens _hwSearch (\hw x -> hw { _hwSearch = x })
+
+hwOpenCommand :: Lens' HaskelineWidgets (HB.Widget Name PurebredEvent)
+hwOpenCommand = lens _hwOpenCommand (\hw x -> hw { _hwOpenCommand = x })
 
 -- | The application state holding state to render widgets, error
 -- management, as well as views and more.

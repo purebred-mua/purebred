@@ -175,7 +175,6 @@ defaultConfig = do
 
   xdgState <- getXdgDirectory XdgState "purebred"
   createDirectoryIfMissing True xdgState
-  let historyFilepath = xdgState </> "haskelinehistory"
 
   pure $
     Configuration
@@ -245,9 +244,8 @@ defaultConfig = do
         ]
     , _confAddressBook = []
     , _confHaskeline = HaskelineSettings
-        {
-        _hsHistoryFile = Just historyFilepath
-        , _hsAutoAddHistory = True
+        { _hsSearchWidget = HaskelineWidgetConfig True (Just $ xdgState </> "searchhistory")
+        , _hsOpenCommand = HaskelineWidgetConfig True (Just $ xdgState </> "commandhistory")
         }
     }
 

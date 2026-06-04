@@ -75,9 +75,11 @@ statusbar s =
         Just m -> renderUserMessage m
         Nothing ->
             case focusedViewWidget s of
+                -- TODO render history contents and position
+                -- SearchThreadsEditor -> renderStatusbar (view (asThreadsView . miSearchThreadsEditor . HB.) s) s
                 ManageMailTagsEditor -> renderStatusbar (view (asThreadsView . miMailTagsEditor) s) s
                 ManageThreadTagsEditor -> renderStatusbar (view (asThreadsView . miThreadTagsEditor) s) s
-                MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
+                -- MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
                 MailAttachmentPipeToEditor -> renderStatusbar (view (asMailView . mvPipeCommand) s) s
                 ScrollingMailViewFindWordEditor -> renderStatusbar (view (asMailView . mvFindWordEditor) s) s
                 SaveToDiskPathEditor -> renderStatusbar (view (asMailView . mvSaveToDiskPath) s) s

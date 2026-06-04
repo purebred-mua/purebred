@@ -144,9 +144,7 @@ import Control.Lens
         filtered, set, over, preview, view, views, (&), firstOf, non, Traversal',
         Getting, Lens', folded, assign, modifying, preuse, use, uses
   )
-import GHC.Conc (atomically)
 import Control.Concurrent (forkIO)
-import Control.Concurrent.STM (writeTChan)
 import Control.Monad (unless, when, void, (>=>))
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State
@@ -258,9 +256,6 @@ instance HasEditor 'ComposeSubject where
 
 instance HasEditor 'ManageMailTagsEditor where
   editorL = asThreadsView . miMailTagsEditor
-
-instance HasEditor 'MailAttachmentOpenWithEditor where
-  editorL = asMailView . mvOpenCommand
 
 instance HasEditor 'MailAttachmentPipeToEditor where
   editorL = asMailView . mvPipeCommand
@@ -874,11 +869,12 @@ openWithCommand =
   Action
     { _aDescription = ["ask for command to open attachment"]
     , _aAction = do
-      cmd <- uses (asMailView . mvOpenCommand . E.editContentsL) (T.unpack . currentLine)
+      w <- use (asMailView . mvOpenCommand)
+      cmd <- liftIO $ HB.submitLineSync w
       case cmd of
-        [] -> assign asUserMessage (Just $ makeWarning StatusBar "Empty command")
         (x:xs) -> stateSuspendAndResume $
           openCommand' (MailcapHandler (Process (x :| xs) []) IgnoreOutput KeepTempfile)
+        [] -> assign asUserMessage (Just $ makeWarning StatusBar "Empty command")
     }
 
 -- | Wrapper for 'Brick.suspendAndResume' that runs a

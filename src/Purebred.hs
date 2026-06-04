@@ -13,7 +13,6 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-{-# LANGUAGE LambdaCase #-}
 
 {- |
 
@@ -158,13 +157,14 @@ module Purebred
 
 import Purebred.UI.App (theApp, initialState, initialViews)
 
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Concurrent (rtsSupportsBoundThreads, forkIO)
+import Control.Concurrent (rtsSupportsBoundThreads)
 import Purebred.System.Logging (setupLogsink)
 import qualified Config.Dyre as Dyre
 import qualified Control.DeepSeq
 import Control.Monad ((>=>), unless)
 import Options.Applicative hiding (str)
+import Control.Monad.Trans.Cont (ContT(..), evalContT)
+import Control.Monad.IO.Class (liftIO)
 import qualified Options.Applicative.Builder as Builder
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -174,7 +174,7 @@ import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
 import System.Exit (die)
 import qualified Graphics.Vty as Vty
-import System.Console.Haskeline (runInputTBehavior, defaultSettings, historyFile, autoAddHistory)
+import System.Console.Haskeline (defaultSettings, historyFile, autoAddHistory)
 
 import Purebred.UI.Attr
 import Purebred.UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
@@ -312,20 +312,25 @@ launch ghcOpts inCfg = do
 
   let query = view (confNotmuch . nmHasNewMailSearch) cfg'
       delay = view (confNotmuch . nmHasNewMailCheckDelay) cfg'
-      historyFilepath = view (confHaskeline . hsHistoryFile) cfg'
-      autoAddHistory' = view (confHaskeline . hsAutoAddHistory) cfg'
   maybe (pure ()) (rescheduleMailcheck bchan server query) delay
 
   let searchterms = view (confNotmuch . nmSearch) cfg'
-      settings = defaultSettings
-        {
-          historyFile = historyFilepath
-        , autoAddHistory = autoAddHistory'
+      searchWidgetSettings = defaultSettings
+        { historyFile = view (confHaskeline . hsSearchWidget . hwcHistoryFile) cfg'
+        , autoAddHistory = view (confHaskeline . hsSearchWidget . hwcAutoAddHistory) cfg'
         }
-  HB.withHaskeline bchan SearchThreadsEditor (T.unpack searchterms) settings $ \searchWidget -> do
-    s <- initialState cfg' bchan server sink searchWidget
-    (_, vty) <- customMainWithDefaultVty (Just bchan) (theApp s) s
-    Vty.shutdown vty
+      commandWidgetSettings = defaultSettings
+        { historyFile = view (confHaskeline . hsOpenCommand . hwcHistoryFile) cfg'
+        , autoAddHistory = view (confHaskeline . hsOpenCommand  . hwcAutoAddHistory) cfg'
+        }
+  evalContT $ do
+    searchWidget <- ContT $ HB.withHaskeline bchan SearchThreadsEditor (T.unpack searchterms) searchWidgetSettings
+    openCommandWidget <- ContT $ HB.withHaskeline bchan MailAttachmentOpenWithEditor "" commandWidgetSettings
+    let widgets = HaskelineWidgets searchWidget openCommandWidget
+    liftIO $ do
+      s <- initialState cfg' bchan server sink widgets
+      (_, vty) <- customMainWithDefaultVty (Just bchan) (theApp s) s
+      Vty.shutdown vty
 
 -- | Main program entry point.  Apply to a list of plugins (use
 -- 'usePlugin' to prepare each plugin for use).
