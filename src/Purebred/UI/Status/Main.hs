@@ -114,12 +114,16 @@ renderStatusbar w s = withAttr statusbarAttr $ hBox
   , renderNewMailIndicator s
   , renderMatches s
   , padLeft (Pad 1) (str "]")
+  , padLeft (Pad 2) (str $ "↶ " <> undos <> " " <> redos <> " ↷")
   , fillLine
   , txt (
       titleize (focusedViewName s) <> "-"
       <> titleize (focusedViewWidget s) <> " "
       )
   ]
+  where
+    undos = show $ length $ view (asUndoStack . usUndo) s
+    redos = show $ length $ view (asUndoStack . usRedo) s
 
 renderMatches :: AppState -> Widget n
 renderMatches s =

@@ -61,7 +61,7 @@ testRemovingTags = testProperty "remove tags" propRemoveTags
 testTagOpsWithReset :: TestTree
 testTagOpsWithReset = testCase "tag ops with reset" $ ["archive"] @=? view mailTags actual
   where
-    m = NotmuchMail "subject" "from" time ["foo", "bar"] "asdf"
+    m = NotmuchMail "subject" "from" time ["foo", "bar"] "asdf" "threadId"
     time = UTCTime (fromGregorian 2018 1 15) (secondsToDiffTime 123)
     actual = tagItem [ResetTags, AddTag "archive"] m
 
@@ -78,4 +78,5 @@ instance Arbitrary NotmuchMail where
         <*> arbitrary
         <*> arbitrary
         <*> arbitrary
+        <*> (T.encodeUtf8 <$> arbitrary)
         <*> (T.encodeUtf8 <$> arbitrary)

@@ -252,10 +252,11 @@ initialState conf chan server sink widgets = do
     fb = CreateFileBrowser
          fb'
          (statefulEditor $ E.editor ManageFileBrowserSearchPath Nothing path)
+    undostack = UndoStack [] []
     mailboxes = view (confComposeView . cvIdentities) conf
     epoch = UTCTime (fromGregorian 2018 07 18) 1
     async = Async Nothing
-    s = AppState conf chan server sink mi mv (initialCompose mailboxes) Nothing viewsettings fb epoch async
+    s = AppState conf chan server sink mi mv (initialCompose mailboxes) Nothing viewsettings fb undostack epoch async
   execStateT (runSearch searchterms) s
 
 -- | Application event loop.

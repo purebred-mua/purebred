@@ -36,6 +36,7 @@ module Purebred.Storage.Tags
   , tagItem
   , addTags
   , removeTags
+  , restoreOps
   ) where
 
 import Control.Applicative ((<|>), optional)
@@ -53,10 +54,6 @@ import Notmuch (mkTag)
 import Purebred.Types
 import Purebred.Types.Parser.ByteString (niceEndOfInput, skipSpaces)
 import Purebred.UI.Notifications (makeWarning)
-
--- | Tag operations
-data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
-  deriving (Eq, Show)
 
 tagOp :: Parser TagOp
 tagOp =
@@ -106,6 +103,9 @@ applyTagOp ResetTags = setTags []
 
 class ManageTags a  where
     tags :: Lens' a [Tag]
+
+restoreOps :: (ManageTags a) => a -> [TagOp]
+restoreOps x = ResetTags : fmap AddTag (view tags x)
 
 setTags :: (ManageTags a) => [Tag] -> a -> a
 setTags = set tags

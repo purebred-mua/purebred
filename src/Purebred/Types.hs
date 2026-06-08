@@ -36,6 +36,7 @@ module Purebred.Types
   , asUserMessage
   , asViews
   , asFileBrowser
+  , asUndoStack
   , asLocalTime
   , Async(..)
   , asAsync
@@ -57,6 +58,7 @@ module Purebred.Types
   , mailDate
   , mailTags
   , mailId
+  , mailThreadId
   , NotmuchThread(..)
   , thSubject
   , thAuthors
@@ -64,6 +66,13 @@ module Purebred.Types
   , thTags
   , thReplies
   , thId
+  , TagOp(..)
+
+    -- ** Undo Operations
+  , Undoable(..)
+  , UndoStack(..)
+  , usUndo
+  , usRedo
 
     -- ** Mail Viewer
   , MailView(..)
@@ -746,6 +755,7 @@ data AppState = AppState
     , _asUserMessage :: Maybe UserMessage
     , _asViews     :: ViewSettings -- ^ stores widget and focus information
     , _asFileBrowser :: FileBrowser
+    , _asUndoStack :: UndoStack
     , _asLocalTime :: UTCTime
     , _asAsync :: Async
     }
@@ -779,6 +789,9 @@ asViews = lens _asViews (\appstate x -> appstate { _asViews = x })
 
 asFileBrowser :: Lens' AppState FileBrowser
 asFileBrowser = lens _asFileBrowser (\as x -> as { _asFileBrowser = x })
+
+asUndoStack :: Lens' AppState UndoStack
+asUndoStack = lens _asUndoStack (\as x -> as { _asUndoStack = x })
 
 asLocalTime :: Lens' AppState UTCTime
 asLocalTime = lens _asLocalTime (\as x -> as { _asLocalTime = x })
@@ -831,6 +844,7 @@ data NotmuchMail = NotmuchMail
     , _mailDate :: UTCTime
     , _mailTags :: [Tag]
     , _mailId :: B.ByteString
+    , _mailThreadId :: B.ByteString
     } deriving (Show, Eq)
 
 mailSubject :: Lens' NotmuchMail T.Text
@@ -848,6 +862,8 @@ mailTags = lens _mailTags (\m t -> m { _mailTags = t })
 mailId :: Lens' NotmuchMail B.ByteString
 mailId = lens _mailId (\m i -> m { _mailId = i })
 
+mailThreadId :: Lens' NotmuchMail B.ByteString
+mailThreadId = lens _mailThreadId (\m i -> m { _mailThreadId = i })
 -- | A thread of mails from the notmuch database represented in Purebred.
 data NotmuchThread = NotmuchThread
     { _thSubject :: T.Text
@@ -875,3 +891,22 @@ thReplies = lens _thReplies (\m t -> m { _thReplies = t })
 
 thId :: Lens' NotmuchThread B.ByteString
 thId = lens _thId (\m t -> m { _thId = t })
+
+-- | Tag operations
+data TagOp = RemoveTag Tag | AddTag Tag | ResetTags
+  deriving (Eq, Show)
+
+data Undoable
+  = UndoMailTags [TagOp] [NotmuchMail]
+  deriving (Show)
+
+data UndoStack = UndoStack
+  { _usUndo :: [Undoable]
+  , _usRedo :: [Undoable]
+  }
+
+usUndo :: Lens' UndoStack [Undoable]
+usUndo = lens _usUndo (\us t -> us { _usUndo = t })
+
+usRedo :: Lens' UndoStack [Undoable]
+usRedo = lens _usRedo (\us t -> us { _usRedo = t })

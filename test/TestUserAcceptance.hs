@@ -1,5 +1,5 @@
 -- This file is part of purebred
--- Copyright (C) 2017-2019 Róman Joost
+-- Copyright (C) 2017-2026 Róman Joost
 --
 -- purebred is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as published by
@@ -20,40 +20,34 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Data.Char (chr)
-import System.IO.Temp
-  ( createTempDirectory, getCanonicalTemporaryDirectory
-  , emptySystemTempFile)
+import System.IO.Temp (emptySystemTempFile)
 import Data.Either (isRight)
-import Data.Functor (($>))
 import Data.Foldable (for_)
 import Control.Concurrent (threadDelay)
 import System.IO (hPutStr, stderr)
-import System.Environment (lookupEnv, getEnvironment)
+import System.Environment (lookupEnv)
 import qualified System.Environment as Env
-import System.FilePath.Posix
-  ( (</>)
-  , getSearchPath, isAbsolute, searchPathSeparator
-  )
+import System.FilePath.Posix ((</>))
 import Control.Monad (filterM, void, when)
 import Data.Maybe (fromMaybe, isJust)
-import Data.List (intercalate, isInfixOf, sort, sortBy)
+import Data.List (isInfixOf, sort, sortBy)
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (MonadIO, MonadReader, runReaderT)
+import Control.Monad.Reader (MonadIO, MonadReader)
 import Control.Monad.State (MonadState)
 import System.Exit (die)
 
-import Control.Lens (Lens', _init, _last, at, lens, preview, set, to, view)
+import Control.Lens (_init, _last, at, preview, set, to, view)
 import System.Directory
-  ( copyFile, getCurrentDirectory, listDirectory, removeDirectoryRecursive
+  ( getCurrentDirectory, listDirectory, removeDirectoryRecursive
   , removeFile, doesPathExist, findExecutable
   )
 import System.Posix.Files (getFileStatus, isRegularFile)
 import System.Process.Typed
-  (byteStringInput, proc, readProcess_, runProcess_, setEnv, setStdin)
+  (byteStringInput, proc, readProcess_, setStdin)
 import Test.Tasty (defaultMain)
 import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure)
 import Test.Tasty.Tmux
@@ -62,9 +56,10 @@ import Data.MIME
   (MIMEMessage, createTextPlainMessage, message, mime, parse,
   headers, buildMessage)
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+import UAT.Common
+import UAT.UndoRedo (testUndoRedo)
 
-type PurebredTestCase = TestCase GlobalEnv
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 
 main :: IO ()
 main = do
@@ -134,6 +129,7 @@ main = do
       , testGroupReply
       , testSenderAttachmentReply
       , testAddressBookExpansion
+      , testUndoRedo
       ]
 
 testAddressBookExpansion :: PurebredTestCase
@@ -558,7 +554,7 @@ testSubstringMatchesAreCleared = purebredTmuxSession "substring match indicator 
 
     step "No match indicator is shown"
     snapshot
-    assertRegexS "New:[[:space:]][0-9][[:space:]]+\\][[:space:]]+Threads"
+    assertSubstringS "List of Threads"
 
     step "search for Lorem mail"
     sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
@@ -583,7 +579,7 @@ testSubstringMatchesAreCleared = purebredTmuxSession "substring match indicator 
     sendKeys "\r" (Not (Substring "matches ]"))
 
     step "go back to threads"
-    sendKeys "Escape" (Regex "New:[[:space:]][0-9][[:space:]]+\\][[:space:]]+Threads")
+    sendKeys "Escape" (Substring "List of Threads")
 
 
 testSubstringSearchInMailBody :: PurebredTestCase
@@ -1862,152 +1858,12 @@ assertFileAmountInMaildir dir expected = liftIO (go (3 :: Int) 62500)
       _ | n > 0         -> go (n - 1) (d * 2)
       _                 -> assertFailure (errmsg files)
 
--- Global test environment (shared by all test cases)
-newtype GlobalEnv = GlobalEnv FilePath
-
--- Session test environment
-data Env = Env
-  { _envConfigDir :: FilePath
-  , _envMaildir :: FilePath
-  , _envNotmuchConfig :: FilePath
-  , _envSessionName :: String
-  }
-
-instance HasTmuxSession Env where
-  tmuxSession = envSessionName
-
--- | Session-specific config dir
-envConfigDir :: Lens' Env FilePath
-envConfigDir = lens _envConfigDir (\s b -> s { _envConfigDir = b })
-
-envMaildir :: Lens' Env FilePath
-envMaildir = lens _envMaildir (\s b -> s { _envMaildir = b })
-
-envNotmuchConfig :: Lens' Env FilePath
-envNotmuchConfig = lens _envNotmuchConfig (\s b -> s { _envNotmuchConfig = b })
-
-envSessionName :: Lens' Env String
-envSessionName = lens _envSessionName (\s b -> s { _envSessionName = b })
-
--- | Tear down a test session
-tearDown :: Env -> IO ()
-tearDown (Env confdir mdir _ _) = do
-  removeDirectoryRecursive confdir
-  removeDirectoryRecursive mdir
-
--- | Set up a test session.
-setUp :: GlobalEnv -> TmuxSession -> IO Env
-setUp (GlobalEnv globalConfigDir) sessionName = do
-  maildir <- setUpTempMaildir
-  nmCfg <- setUpNotmuchCfg maildir
-  setUpNotmuch nmCfg
-
-  confdir <- mkTempDir
-  runProcess_ $ proc "sh" ["-c", "cp -a " <> globalConfigDir <> "/* " <> confdir]
-
-  flip runReaderT sessionName $ do
-    -- a) Make the regex less color code dependent by setting the TERM to 'screen'.
-    -- This can happen if different environments support more than 16 colours (e.g.
-    -- background values > 37), while our CI environment only supports 16 colours.
-    --
-    -- Previously we used value "ansi".  But we changed this because
-    -- "ansi" can have different capabilities on different platforms,
-    -- including missing ones.  On the other hand, "screen" triggers
-    -- special handling within vty.
-    setEnvVarInSession "TERM" "screen"
-
-    -- set the config dir
-    setEnvVarInSession "PUREBRED_CONFIG_DIR" confdir
-    setEnvVarInSession "NOTMUCH_CONFIG" nmCfg
-
-  pure $ Env confdir maildir nmCfg sessionName
-
-precompileConfig :: FilePath -> IO ()
-precompileConfig testdir = do
-  env <- getEnvironment
-  let systemEnv = ("PUREBRED_CONFIG_DIR", testdir) : env
-      config = setEnv systemEnv $ proc "purebred" ["--version"]
-  runProcess_ config
-
--- | Get the explicitly-specified source directory via SRCDIR
--- env var, or fall back to CWD.
-getSourceDirectory :: IO FilePath
-getSourceDirectory = lookupEnv "SRCDIR" >>= maybe getCurrentDirectory pure
-
-setUpPurebredConfig :: FilePath -> IO ()
-setUpPurebredConfig testdir = do
-  c <- getSourceDirectory
-  copyFile (c <> "/configs/purebred.hs") (testdir <> "/purebred.hs")
-  copyFile (c <> "/configs/aliases") (testdir <> "/aliases")
-
-mkTempDir :: IO FilePath
-mkTempDir = getCanonicalTemporaryDirectory >>= flip createTempDirectory "purebredtest"
-
--- | Set up a temporary Maildir containing the test database
--- The returned directory contains the 'Maildir' subdirectory.
-setUpTempMaildir :: IO FilePath
-setUpTempMaildir = do
-  basedir <- mkTempDir
-  cwd <- getSourceDirectory
-  runProcess_ $ proc "cp" ["-R", cwd <> "/test/data/Maildir", basedir]
-  let mdir = basedir </> "Maildir"
-
-  -- Rename files with maildir flags ; these had to be renamed (':' replaced
-  -- with '_') to appease Hackage requirement that tarballs only contain
-  -- filenames that are valid on both POSIX and Windows.  We have to fix the
-  -- filenames here before using them.
-  --
-  -- In a Nix system the PATH environment may contain relative paths.
-  -- For security reasons find(1) refuses to run when -execdir is given
-  -- and PATH contains relative paths.  So we have to remove relative
-  -- dirs from PATH.
-  --
-  path <- intercalate [searchPathSeparator]
-          . filter isAbsolute
-          <$> getSearchPath
-  let
-    f (k, _) | k == "PATH" = (k, path)
-    f x = x
-  env <- fmap f <$> getEnvironment
-  runProcess_ $ setEnv env $ proc "find"
-    [ mdir, "-name", "*_2,*"
-    , "-execdir", "sh", "-c", "mv {} $(echo {} | sed s/_2,/:2,/)", ";"
-    ]
-
-  pure mdir
-
--- | run notmuch to create the notmuch database
--- Note: discard stdout which otherwise clobbers the test output
-setUpNotmuch :: FilePath -> IO ()
-setUpNotmuch notmuchcfg = void $ readProcess_ $ proc "notmuch" ["--config=" <> notmuchcfg, "new" ]
-
--- | Write a minimal notmuch config pointing to the given maildir.
--- Returns the path to the notmuch configuration file (which is
--- created under the given maildir directory).
---
-setUpNotmuchCfg :: FilePath -> IO FilePath
-setUpNotmuchCfg dir = do
-  let cfgData = "[database]\npath=" <> dir <> "\n"
-      cfgFile = dir <> "/notmuch-config"
-  writeFile cfgFile cfgData $> cfgFile
-
-purebredTmuxSession = withTmuxSession setUp tearDown
 
 -- | convenience function to print captured output to STDERR
 _debugOutput :: String -> IO ()
 _debugOutput out = do
   d <- lookupEnv "DEBUG"
   when (isJust d) $ hPutStr stderr ("\n\n" <> out)
-
--- | start the application
--- Note: this is currently defined as an additional test step for no good
--- reason.
-startApplication :: (MonadReader Env m, MonadIO m) => m ()
-startApplication = do
-  srcdir <- liftIO getSourceDirectory
-  tmuxSendKeys LiteralKeys ("cd " <> srcdir <> "\r")
-  tmuxSendKeys InterpretKeys "purebred\r"
-  void $ waitForCondition (Substring "Purebred: Item") defaultRetries defaultBackoff
 
 -- | A list item which is toggled for a batch operation
 --

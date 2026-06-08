@@ -16,6 +16,7 @@
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -88,6 +89,8 @@ module Purebred.UI.Actions (
   , fromAddressBookMail
   , fromAddressBookBCC
   , fromAddressBookCC
+  , undo
+  , redo
 
   -- ** Actions for scrolling
   , scrollUp
@@ -162,6 +165,7 @@ import System.Random (getStdRandom, uniform)
 import qualified Data.IMF.Text as AddressText
 import Data.MIME
 import qualified Purebred.Storage.Client
+import Purebred.Undo (applyTagOps, applyTagOpsWithUndo, popApply, runForward, runReverse)
 import Purebred.Storage.Mail
        ( parseMail, toQuotedMail, entityToDisplay, findAutoview
        , entityToBytes, toMIMEMessage, takeFileName, bodyToDisplay
@@ -170,7 +174,7 @@ import Purebred.UI.Views
        (mailView, toggleLastVisibleWidget, indexView, resetView,
         focusedViewWidget)
 import Purebred.Plugin.Internal
-import Purebred.Storage.Tags (TagOp(AddTag, RemoveTag), hasTag, parseTagOps, tagItem)
+import Purebred.Storage.Tags (hasTag, parseTagOps, tagItem)
 import Purebred.System (tryIO)
 import Purebred.System.Process
 import Purebred.Types
@@ -1436,6 +1440,16 @@ fromAddressBookThreads = Action [fromAddressBookDescription] fromAddressBookForT
 fromAddressBookMail :: Action 'ViewMail 'ComposeTo ()
 fromAddressBookMail = Action [fromAddressBookDescription] fromAddressBookForTo
 
+undo :: Action v ctx ()
+undo = Action
+  ["undo last tagging operation"]
+  (popApply (asUndoStack . usUndo) (asUndoStack . usRedo) runReverse "undo")
+
+redo :: Action v ctx ()
+redo = Action
+  ["redo last tagging operation"]
+  (popApply (asUndoStack . usRedo) (asUndoStack . usUndo) runForward "redo")
+
 -- Function definitions for actions
 --
 
@@ -1535,17 +1549,6 @@ getEditorTagOps s =
   let contents = (foldr (<>) "" $ E.getEditContents $ view (editorL @n) s)
   in parseTagOps contents
 
--- | Apply given tag operations on all mails
---
-applyTagOps
-  :: (Traversable t, MonadIO m, MonadState AppState m)
-  => [TagOp]
-  -> t NotmuchMail
-  -> m (Either Error (t NotmuchMail))
-applyTagOps ops mails = do
-  server <- use storageServer
-  runExceptT (Purebred.Storage.Client.messageTagModify ops mails server)
-
 updateStateWithParsedMail :: T.EventM Name AppState ()
 updateStateWithParsedMail = do
   server <- use storageServer
@@ -1583,9 +1586,15 @@ updateReadState con = do
   op <- con <$> use (asConfig . confNotmuch . nmNewTag)
   toggledOrSelectedItemHelper
     @'ScrollingMailView
-    (manageMailTags [op])
+    (apply [op])
     (tagItem [op])
   modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 $ tagItem [op]))
+  where
+    apply :: (Traversable t, MonadIO m, MonadState AppState m) => [TagOp] -> t NotmuchMail -> m ()
+    apply ops ms = do
+        applyTagOps ops ms >>= \case
+          Left e -> showError e
+          Right _ -> pure ()
 
 manageMailTags ::
      (Traversable t, MonadIO m, MonadState AppState m)
@@ -1593,7 +1602,7 @@ manageMailTags ::
   -> t NotmuchMail
   -> m ()
 manageMailTags ops ms = do
-  result <- applyTagOps ops ms
+  result <- applyTagOpsWithUndo ops ms
   case result of
     Left e -> showError e
     Right _ -> pure ()
@@ -1813,7 +1822,7 @@ manageThreadTags ops ts = do
   server <- use storageServer
   runExceptT
     ( Purebred.Storage.Client.getThreadMessages ts server
-      >>= applyTagOps ops
+      >>= applyTagOpsWithUndo ops
     )
     >>= either showError (const $ pure ())
 

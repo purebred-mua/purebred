@@ -119,6 +119,7 @@ library
                      , Purebred.UI.Validation
                      , Purebred.UI.Views
                      , Purebred.UI.Widgets
+                     , Purebred.Undo
                      , Purebred.Version
                      , Brick.Haskeline
   other-modules:       Paths_purebred
@@ -202,6 +203,8 @@ test-suite uat
   hs-source-dirs:      test
   ghc-options:         -threaded
   main-is:             TestUserAcceptance.hs
+  other-modules:       UAT.UndoRedo
+                     , UAT.Common
   build-depends:       purebred-email
                      , tasty
                      , tasty-hunit
