@@ -45,6 +45,8 @@ browseThreadsKeybindings =
     , Keybinding (V.EvKey (V.KChar '1') []) listJumpToStart
     , Keybinding (V.EvKey (V.KChar '*') []) (toggleListItem *> listDown)
     , Keybinding (V.EvKey (V.KChar '+') []) searchRelated
+    , Keybinding (V.EvKey (V.KChar 'u') [V.MCtrl]) undo
+    , Keybinding (V.EvKey (V.KChar 'r') [V.MCtrl]) redo
     ]
 
 searchThreadsKeybindings :: [Keybinding 'Threads 'SearchThreadsEditor]

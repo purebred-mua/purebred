@@ -41,6 +41,8 @@ displayMailKeybindings =
     , Keybinding (V.EvKey (V.KChar ' ') []) scrollPageDown
     , Keybinding (V.EvKey (V.KChar 'h') []) toggleHeaders
     , Keybinding (V.EvKey (V.KChar '`') []) (switchView @'ViewMail @'ManageMailTagsEditor)
+    , Keybinding (V.EvKey (V.KChar 'u') [V.MCtrl]) undo
+    , Keybinding (V.EvKey (V.KChar 'r') [V.MCtrl]) redo
 
     , Keybinding (V.EvKey V.KUp [])
         (switchView @'ViewMail @'ListOfMails *> listUp *> displayMail)

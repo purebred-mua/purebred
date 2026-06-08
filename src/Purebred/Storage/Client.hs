@@ -23,6 +23,7 @@ module Purebred.Storage.Client
     -- ** Threads
     getThreads
   , getThreadMessages
+  , getThreadsByIds
   , countMessages
 
     -- ** Messages
@@ -41,11 +42,14 @@ import Control.Lens (firstOf, folded, view)
 import Control.Monad ((<=<), void, when)
 import Control.Monad.Except (ExceptT, MonadError, liftEither, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Data.Map as Map
+import Data.ByteString (ByteString)
 import Data.Foldable (toList)
 import Data.Function (on)
 import Data.Functor.Compose (Compose(..))
 import Data.Maybe (fromMaybe)
 import Data.List (nub, sort)
+import qualified Data.Set as S
 import qualified Data.Text as T
 import Data.Traversable (for)
 import qualified System.Directory
@@ -117,10 +121,11 @@ messageTagModify
 messageTagModify ops msgs = runCommand $ \db ->
   for msgs $ \m -> do
     let m' = tagItem ops m
-    -- only act if tags actually changed
-    when (((/=) `on` (sort . nub . view tags)) m m') $
-      getMessage db (view mailId m')
-      >>= Notmuch.messageSetTags (view tags m')
+    dbMsg <- getMessage db (view mailId m')
+    dbTags <- Notmuch.tags dbMsg
+    -- only act if tags actually changed from what's in the DB
+    when (S.fromList (view tags m') /= S.fromList dbTags) $
+      Notmuch.messageSetTags (view tags m') dbMsg
     pure m'
 
 -- | Returns the absolute path to the email. Typically used by the
@@ -146,18 +151,25 @@ getThreads expr = runCommand $ \db ->
     -- whether it will actually be lazy depends on the variant of
     -- 'Items' in use.  For a Vector, it is strict and non-chunked.
     >>= liftIO . fmap (fromList 128) . lazyTraverse threadToThread
-  where
-  threadToThread :: Notmuch.Thread a -> IO NotmuchThread
-  threadToThread m = do
+
+threadToThread :: Notmuch.Thread a -> IO NotmuchThread
+threadToThread m = do
     tgs <- Notmuch.tags m
     auth <- Notmuch.threadAuthors m
     NotmuchThread
-      <$> (fixupWhitespace . decodeLenient <$> Notmuch.threadSubject m)
-      <*> pure (view Notmuch.matchedAuthors auth)
-      <*> Notmuch.threadNewestDate m
-      <*> pure tgs
-      <*> Notmuch.threadTotalMessages m
-      <*> Notmuch.threadId m
+        <$> (fixupWhitespace . decodeLenient <$> Notmuch.threadSubject m)
+        <*> pure (view Notmuch.matchedAuthors auth)
+        <*> Notmuch.threadNewestDate m
+        <*> pure tgs
+        <*> Notmuch.threadTotalMessages m
+        <*> Notmuch.threadId m
+
+-- | Returns a vector of threads that match the Thread Id's
+--
+getThreadsByIds :: (Traversable t) => Call (t Notmuch.ThreadId) (V.Vector NotmuchThread)
+getThreadsByIds tids = runCommand $ \db -> do
+  threads <- traverse (liftIO . threadToThread <=< getThread db) tids
+  pure . V.fromList . toList $ threads
 
 -- | Returns a vector of *all* messages belonging to a collection of threads
 --
@@ -169,14 +181,6 @@ getThreadMessages threads = runCommand $ \db -> do
   pure . V.fromList . toList $ mails
 
   where
-  -- Retrieve thread by ID.  libnotmuch does not provide a direct
-  -- way to query a thread.  Perform a general query and pop the
-  -- first result, or fail if the result is empty.
-  --
-  getThread db tid = do
-    t <- Notmuch.query db (Notmuch.Thread tid) >>= Notmuch.threads
-    maybe (throwError (ThreadNotFound tid)) pure (firstOf folded t)
-
   messageToMail m = do
     tgs <- Notmuch.tags m
     NotmuchMail
@@ -185,6 +189,20 @@ getThreadMessages threads = runCommand $ \db -> do
       <*> Notmuch.messageDate m
       <*> pure tgs
       <*> Notmuch.messageId m
+      <*> Notmuch.threadId m
+
+-- | Retrieve thread by ID.  libnotmuch does not provide a direct
+-- way to query a thread.  Perform a general query and pop the
+-- first result, or fail if the result is empty.
+--
+getThread
+  :: (MonadError Error m, MonadIO m)
+  => Notmuch.Database a
+  -> Notmuch.ThreadId
+  -> m (Notmuch.Thread a)
+getThread db tid = do
+  t <- Notmuch.query db (Notmuch.Thread tid) >>= Notmuch.threads
+  maybe (throwError (ThreadNotFound tid)) pure (firstOf folded t)
 
 indexFilePath :: Call2 FilePath [Notmuch.Tag] ()
 indexFilePath path tags_ = runCommand $ \db ->

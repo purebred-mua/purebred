@@ -119,6 +119,7 @@ library
                      , Purebred.UI.Validation
                      , Purebred.UI.Views
                      , Purebred.UI.Widgets
+                     , Purebred.Undo
                      , Purebred.Version
   other-modules:       Paths_purebred
                      , Purebred.Storage.Client
@@ -197,6 +198,8 @@ test-suite uat
   hs-source-dirs:      test
   ghc-options:         -threaded
   main-is:             TestUserAcceptance.hs
+  other-modules:       UAT.UndoRedo
+                     , UAT.Common
   build-depends:       purebred-email
                      , tasty
                      , tasty-hunit
