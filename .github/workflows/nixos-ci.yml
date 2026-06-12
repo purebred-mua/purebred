@@ -2,33 +2,31 @@ name: NixOS Build
 on:
   - push
   - pull_request
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux:
     name: Nix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Local cache
-        uses: actions/cache@v4
-        with:
-          path: /nix/store
-          key: "{{ runner.os }}-Nixpkgs-integration-test"
+      - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v12
+        uses: cachix/install-nix-action@v27
         with:
-          nix_path: "nixpkgs=channel:nixos-unstable"
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+            extra-substituters = https://cache.iog.io
+            extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
 
-      - name: Install system dependencies
-        run: |
-          nix-env --install elinks -f '<nixpkgs>'
+      - name: Build (default.nix)
+        run: nix-build -j auto
 
-      - name: Build
-        shell: bash
-        continue-on-error: true
+      - name: Man pages
         run: |
-          nix-build -j auto
-          nix-shell --command 'PATH=$PATH:result/bin cabal v2-test --test-show-details=streaming uat'
-          echo -e "[database]\npath=$(pwd)" > ${HOME}/.notmuch-config
-          nix-shell --command 'pushd docs/man && PATH=$PATH:../../result/bin make && popd'
+          printf '[database]\npath=%s\n' "$PWD" > "$HOME/.notmuch-config"
+          nix-shell --run 'PATH="$PWD/result/bin:$PATH" make -C docs/man'

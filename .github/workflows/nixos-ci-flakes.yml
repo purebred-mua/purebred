@@ -2,23 +2,29 @@ name: NixOS Build (Flakes - build only)
 on:
   - push
   - pull_request
+
+# push + pull_request both fire on branch pushes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux:
     name: Nix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Local cache
-        uses: actions/cache@v4
-        with:
-          path: /nix/store
-          key: "{{ runner.os }}-Nixpkgs-integration-test"
+      - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v15
+        uses: cachix/install-nix-action@v27
         with:
-          nix_path: "nixpkgs=channel:nixos-unstable"
+         extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+            extra-substituters = https://cache.iog.io
+            extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
 
-      - run: nix build
-      - run: nix flake check
+      - run: nix build --print-build-logs .#purebred-with-packages-icu
+
+      - name: UAT
+        run: nix run .#uat
