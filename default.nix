@@ -14,15 +14,6 @@
 #
 # if the build was successful.
 #
-#
-# Choosing a different compiler than the default
-#
-# In order to choose a different compiler, invoke nix build like so (escaping
-# the quotes is needed, since we're passing a string literal):
-#
-# $ nix-build --arg compiler \"ghc442\"
-#
-#
 # Build with purebred-icu
 #
 # $ nix-build --arg with-icu true
@@ -31,6 +22,18 @@
 #
 # $ nix-shell default.nix
 #
-{ compiler ? null, nixpkgs ? null, with-icu ? false }@args:
+{ with-icu ? false }:
+let
+  lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+  flake-compat = fetchTarball {
+    url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
+    sha256 = lock.nodes.flake-compat.locked.narHash;
+  };
+  flake = (import flake-compat { src = ./.; }).defaultNix;
+  packages = flake.packages.${builtins.currentSystem};
+in
+if with-icu
+then packages.purebred-with-packages-icu
+else packages.purebred-with-packages
 
-(import .nix/nixpkgs.nix args).purebred-with-packages
+
