@@ -11,6 +11,11 @@
       flake = false;
     };
 
+    haskeline = {
+      url = "github:judah/haskeline";
+      flake = false;
+    };
+
     purebred-icu = {
       url = "github:purebred-mua/purebred-icu";
       flake = false;
@@ -24,7 +29,7 @@
     ];
   };
 
-  outputs = { self, nixpkgs, utils, flake-compat, haskellNix, purebred-icu }:
+  outputs = { self, nixpkgs, utils, flake-compat, haskellNix, haskeline, purebred-icu }:
   utils.lib.eachSystem ["x86_64-linux"] (system:
   let
     overlays = [
@@ -37,6 +42,7 @@
           # Add the external purebred-icu package to the cabal plan.
           cabalProjectLocal = ''
             packages: ${purebred-icu}
+            packages: ${haskeline}
           '';
         };
       })
