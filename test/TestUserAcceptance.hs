@@ -489,6 +489,9 @@ testForwardsMailSuccessfully = purebredTmuxSession "forwards mail successfully" 
     contents <- liftIO $ B.readFile fpath
     let decoded = chr . fromEnum <$> B.unpack contents
     assertSubstr subject decoded
+    assertSubstr "To: to_user@foo.test" decoded
+    assertSubstr "Bcc: bcc_user@foo.test" decoded
+    assertSubstr "Cc: cc_user@foo.test" decoded
     assertSubstr "This is a test mail" decoded
     assertSubstr "Find attached a forwarded mail" decoded
 

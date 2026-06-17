@@ -1644,12 +1644,18 @@ buildMail k = do
         (either (pure []) id . AT.parseOnly AddressText.addressList . T.unlines . E.getEditContents)
       from <- uses (asCompose . cFrom . editEditorL)
         (either (pure []) id . AT.parseOnly AddressText.mailboxList . T.unlines . E.getEditContents)
+      cc <- uses (asCompose . cCc . editEditorL)
+        (either (pure []) id . AT.parseOnly AddressText.addressList . T.unlines . E.getEditContents)
+      bcc <- uses (asCompose . cBcc . editEditorL)
+        (either (pure []) id . AT.parseOnly AddressText.addressList . T.unlines . E.getEditContents)
       subject <- uses (asCompose . cSubject . editEditorL) (T.unlines . E.getEditContents)
       let
         m' = m
           & set (headerSubject charsets) (Just subject)
           & set (headerFrom charsets) (Single <$> from)
           & set (headerTo charsets) to'
+          & set (headerCC charsets) cc
+          & set (headerBCC charsets) bcc
           & set headerDate (Just now)
           & sanitizeMail charsets
 
