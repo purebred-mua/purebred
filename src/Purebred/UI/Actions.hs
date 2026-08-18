@@ -1391,8 +1391,10 @@ searchRelated = Action ["search related mail"] $ do
     Nothing -> runExceptT (throwError (InvalidQueryError "No authors availabe to perform search"))
       >>= either showError (const $ pure ())
     Just searchterm -> do
-      modifying (asThreadsView . miSearchThreadsEditor . HB.contentsL) (insertMany $ T.unpack searchterm)
-      runSearch searchterm
+      w <- use (asThreadsView . miSearchThreadsEditor)
+      liftIO $ HB.setLine (T.unpack searchterm) w
+      searchterms <- liftIO $ HB.submitLineSync w
+      runSearch $ T.pack searchterms
 
 
 fromAddressBookDescription :: T.Text

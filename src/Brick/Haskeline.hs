@@ -28,6 +28,7 @@ module Brick.Haskeline
   , lastSubmittedL
   , clearLine
   , clearLineWithSeed
+  , setLine
   )
 where
 
@@ -398,8 +399,15 @@ clearLine :: Widget n e  -> IO ()
 clearLine = clearLineWithSeed ""
 
 clearLineWithSeed :: String -> Widget n e -> IO ()
-clearLineWithSeed s w = atomically $ do
-  writeTVar (initialText w) s
+clearLineWithSeed s w = do
+  atomically $ writeTVar (initialText w) s
+  setLine s w
+
+setLine :: String -> Widget n e -> IO ()
+setLine s w = atomically $ do
   let ch = view (configL . fromBrickChanL) w
-  writeTChan ch (KeyInput [ctrlKey (simpleKey (KeyChar 'a'))])
-  writeTChan ch (KeyInput [ctrlKey (simpleKey (KeyChar 'k'))])
+  -- move to end, kill the entire line
+  writeTChan ch (KeyInput [ctrlKey (simpleKey (KeyChar 'e'))])
+  writeTChan ch (KeyInput [ctrlKey (simpleKey (KeyChar 'U'))])
+  -- literally type in the seed
+  writeTChan ch (KeyInput (map (simpleKey . KeyChar) s))
