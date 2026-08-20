@@ -120,6 +120,7 @@ library
                      , Purebred.UI.Views
                      , Purebred.UI.Widgets
                      , Purebred.Version
+                     , Brick.Haskeline
   other-modules:       Paths_purebred
                      , Purebred.Storage.Client
                      , Purebred.Storage.Server
@@ -134,6 +135,8 @@ library
                      , deepseq >= 1.4.2
                      , dyre >= 0.9.1
                      , lens
+                     , async
+                     , monad-loops
                      , brick >= 2.9 && < 2.10
                      , text-zipper
                      , vty >= 6
@@ -157,6 +160,8 @@ library
                      , time
                      , temporary
                      , word-wrap
+                     , haskeline >= 0.8.5.0
+                     , transformers
 
   if flag(with_lazyvector)
     cpp-options: -DLAZYVECTOR

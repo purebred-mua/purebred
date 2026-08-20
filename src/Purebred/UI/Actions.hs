@@ -109,7 +109,7 @@ module Purebred.UI.Actions (
   , debug
 
   -- * API
-  , applySearch
+  , runSearch
   , initialCompose
   ) where
 
@@ -188,6 +188,7 @@ import Purebred.UI.Widgets
   ( statefulEditor, editEditorL, revertEditorState, saveEditorState )
 import Purebred.Storage.AddressBook (queryAddresses)
 
+import qualified Brick.Haskeline as HB
 
 
 {- $overview
@@ -256,17 +257,11 @@ instance HasEditor 'ComposeSubject where
 instance HasEditor 'ManageMailTagsEditor where
   editorL = asThreadsView . miMailTagsEditor
 
-instance HasEditor 'MailAttachmentOpenWithEditor where
-  editorL = asMailView . mvOpenCommand
-
 instance HasEditor 'MailAttachmentPipeToEditor where
   editorL = asMailView . mvPipeCommand
 
 instance HasEditor 'ScrollingMailViewFindWordEditor where
   editorL = asMailView . mvFindWordEditor
-
-instance HasEditor 'SearchThreadsEditor where
-  editorL = asThreadsView . miSearchThreadsEditor . editEditorL
 
 instance HasEditor 'ManageThreadTagsEditor where
   editorL = asThreadsView . miThreadTagsEditor
@@ -367,7 +362,7 @@ instance Completable 'ComposeListOfAttachments where
 completeMailTags :: AppState -> IO AppState
 completeMailTags s =
     case getEditorTagOps @'ManageMailTagsEditor s of
-        Left msg -> pure $ set asUserMessage (Just msg) s
+        Left ms -> pure $ set asUserMessage (Just ms) s
         Right ops -> flip execStateT s $ do
             modifying (asThreadsView . miListOfThreads) (L.listModify (over _2 (tagItem ops)))
             toggledOrSelectedItemHelper
@@ -458,7 +453,10 @@ class Resetable (v :: ViewName) (n :: Name) where
   reset :: T.EventM Name AppState ()
 
 instance Resetable 'Threads 'SearchThreadsEditor where
-  reset = modifying (asThreadsView . miSearchThreadsEditor) revertEditorState
+  reset = do
+    modifying (asThreadsView . miSearchThreadsEditor . HB.contentsL) clearZipper
+    w <- use (asThreadsView . miSearchThreadsEditor)
+    liftIO $ HB.clearLine w
 
 instance Resetable 'ViewMail 'ManageMailTagsEditor where
   reset = modifying (asThreadsView . miMailTagsEditor . E.editContentsL) clearZipper
@@ -476,6 +474,7 @@ instance Resetable 'Threads 'ComposeSubject where
   reset = modify clearMailComposition
 
 instance Resetable 'Threads 'ComposeTo where
+  reset :: T.EventM Name AppState ()
   reset = modify clearMailComposition
 
 instance Resetable 'ComposeView 'ComposeFrom where
@@ -517,7 +516,8 @@ instance Resetable 'ViewMail 'MailListOfAttachments where
 
 instance Resetable 'ViewMail 'MailAttachmentOpenWithEditor where
   reset = do
-    modifying (asMailView . mvOpenCommand . E.editContentsL) clearZipper
+    w <- use (asMailView . mvOpenCommand)
+    liftIO $ HB.clearLine w
     hide ViewMail 0 MailAttachmentOpenWithEditor
 
 instance Resetable 'ViewMail 'MailAttachmentPipeToEditor where
@@ -567,9 +567,9 @@ class Focusable (v :: ViewName) (n :: Name) where
   onFocusSwitch :: (MonadState AppState m, MonadIO m) => m ()
 
 instance Focusable 'Threads 'SearchThreadsEditor where
-  onFocusSwitch = do
-    modifying (asThreadsView . miSearchThreadsEditor . editEditorL) (E.applyEdit gotoEOL)
-    modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
+  onFocusSwitch = pure ()
+    -- modifying (asThreadsView . miSearchThreadsEditor) (E.applyEdit gotoEOL)
+    -- modifying (asThreadsView . miSearchThreadsEditor) saveEditorState
 
 instance Focusable 'Threads 'ManageThreadTagsEditor where
   onFocusSwitch = do
@@ -869,11 +869,12 @@ openWithCommand =
   Action
     { _aDescription = ["ask for command to open attachment"]
     , _aAction = do
-      cmd <- uses (asMailView . mvOpenCommand . E.editContentsL) (T.unpack . currentLine)
+      w <- use (asMailView . mvOpenCommand)
+      cmd <- liftIO $ HB.submitLineSync w
       case cmd of
-        [] -> assign asUserMessage (Just $ makeWarning StatusBar "Empty command")
         (x:xs) -> stateSuspendAndResume $
           openCommand' (MailcapHandler (Process (x :| xs) []) IgnoreOutput KeepTempfile)
+        [] -> assign asUserMessage (Just $ makeWarning StatusBar "Empty command")
     }
 
 -- | Wrapper for 'Brick.suspendAndResume' that runs a
@@ -1390,8 +1391,10 @@ searchRelated = Action ["search related mail"] $ do
     Nothing -> runExceptT (throwError (InvalidQueryError "No authors availabe to perform search"))
       >>= either showError (const $ pure ())
     Just searchterm -> do
-      modifying (asThreadsView . miSearchThreadsEditor . editEditorL . E.editContentsL) (insertMany searchterm . clearZipper)
-      runSearch searchterm
+      w <- use (asThreadsView . miSearchThreadsEditor)
+      liftIO $ HB.setLine (T.unpack searchterm) w
+      searchterms <- liftIO $ HB.submitLineSync w
+      runSearch $ T.pack searchterms
 
 
 fromAddressBookDescription :: T.Text
@@ -1465,8 +1468,10 @@ isFileUnderCursor = maybe False (FB.fileTypeMatch [FB.RegularFile])
 --
 applySearch :: (MonadIO m, MonadState AppState m) => m ()
 applySearch = do
-  searchterms <- currentLine <$> use (asThreadsView . miSearchThreadsEditor . editEditorL . E.editContentsL)
-  runSearch searchterms
+  s <- get
+  let w = view (asThreadsView . miSearchThreadsEditor) s
+  searchterms <- liftIO $ HB.submitLineSync w
+  runSearch (T.pack searchterms)
 
 runSearch :: (MonadIO m, MonadState AppState m) => T.Text -> m ()
 runSearch searchterms = do

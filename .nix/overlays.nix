@@ -5,6 +5,7 @@ let
       overrides = hself: hsuper: {
         purebred = hsuper.callPackage ./purebred.nix { };
         purebred-icu = hsuper.callPackage ./purebred-icu.nix { };
+        haskeline = hsuper.callPackage ./haskeline.nix { };
       };
     };
     make-purebred-with-packages = with-icu:
@@ -37,6 +38,8 @@ let
         haskell-language-server
         ormolu
         hie-bios
+        self.icu
+        self.talloc
         self.notmuch
         self.tmux
         self.gnumake

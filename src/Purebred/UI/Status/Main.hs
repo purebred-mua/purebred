@@ -36,7 +36,7 @@ import Control.Monad (void)
 import Control.Lens
 import Control.Concurrent (forkIO, threadDelay)
 import Data.Text (Text)
-import Data.Text.Zipper (cursorPosition)
+import Data.Text.Zipper (cursorPosition, currentLine)
 
 import Purebred.Storage.Client (Server, countMessages)
 import Purebred.Types
@@ -75,10 +75,11 @@ statusbar s =
         Just m -> renderUserMessage m
         Nothing ->
             case focusedViewWidget s of
-                SearchThreadsEditor -> renderStatusbar (view (asThreadsView . miSearchThreadsEditor . editEditorL) s) s
+                -- TODO render history contents and position
+                -- SearchThreadsEditor -> renderStatusbar (view (asThreadsView . miSearchThreadsEditor . HB.) s) s
                 ManageMailTagsEditor -> renderStatusbar (view (asThreadsView . miMailTagsEditor) s) s
                 ManageThreadTagsEditor -> renderStatusbar (view (asThreadsView . miThreadTagsEditor) s) s
-                MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
+                -- MailAttachmentOpenWithEditor -> renderStatusbar (view (asMailView . mvOpenCommand) s) s
                 MailAttachmentPipeToEditor -> renderStatusbar (view (asMailView . mvPipeCommand) s) s
                 ScrollingMailViewFindWordEditor -> renderStatusbar (view (asMailView . mvFindWordEditor) s) s
                 SaveToDiskPathEditor -> renderStatusbar (view (asMailView . mvSaveToDiskPath) s) s

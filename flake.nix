@@ -19,6 +19,7 @@
     pkgs = import nixpkgs { inherit system; overlays = [ self.overlays.default ]; };
   in rec {
     packages = {
+      pkgs = pkgs;
       default = self.packages.${system}.purebred-with-packages-icu;
       purebred-with-packages = pkgs.purebred-with-packages;
       purebred-with-packages-icu = pkgs.purebred-with-packages-icu;

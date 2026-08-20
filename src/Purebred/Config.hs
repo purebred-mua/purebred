@@ -37,7 +37,8 @@ import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Map as M
 import qualified Data.Text as T
-import System.Directory (getHomeDirectory)
+import System.Directory (getHomeDirectory, XdgDirectory(..), getXdgDirectory, createDirectoryIfMissing)
+import System.FilePath.Posix ((</>))
 
 import qualified Brick.AttrMap as A
 import qualified Brick.Widgets.Dialog as D
@@ -171,6 +172,10 @@ defaultConfig = do
   dbPath <- getDatabasePath
   editor <- fromMaybe "vi" <$> liftA2 (<|>) (lookupEnv "VISUAL") (lookupEnv "EDITOR")
   homeDir <- getHomeDirectory
+
+  xdgState <- getXdgDirectory XdgState "purebred"
+  createDirectoryIfMissing True xdgState
+
   pure $
     Configuration
     { _confTheme = solarizedDark
@@ -238,6 +243,10 @@ defaultConfig = do
         [ usePlugin Purebred.Plugin.UserAgent.plugin
         ]
     , _confAddressBook = []
+    , _confHaskeline = HaskelineSettings
+        { _hsSearchWidget = HaskelineWidgetConfig True (Just $ xdgState </> "searchhistory")
+        , _hsOpenCommand = HaskelineWidgetConfig True (Just $ xdgState </> "commandhistory")
+        }
     }
 
 -- | Replace some special tags with ASCII chars.

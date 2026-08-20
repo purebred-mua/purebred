@@ -163,6 +163,8 @@ import qualified Config.Dyre as Dyre
 import qualified Control.DeepSeq
 import Control.Monad ((>=>), unless)
 import Options.Applicative hiding (str)
+import Control.Monad.Trans.Cont (ContT(..), evalContT)
+import Control.Monad.IO.Class (liftIO)
 import qualified Options.Applicative.Builder as Builder
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -172,6 +174,7 @@ import Data.Version (showVersion)
 import Paths_purebred (version, getLibDir)
 import System.Exit (die)
 import qualified Graphics.Vty as Vty
+import System.Console.Haskeline (defaultSettings, historyFile, autoAddHistory)
 
 import Purebred.UI.Attr
 import Purebred.UI.Help.Main (createKeybindingIndex, KeybindingHelp(..), HelpIndex)
@@ -191,6 +194,8 @@ import Purebred.Storage.Server
 import Purebred.Storage.Tags (TagOp(..))
 import Purebred.Storage.AddressBook.MuttAliasFile
 import Purebred.Types.Error
+import qualified Brick.Haskeline as HB
+
 
 -- re-exports for configuration
 import Graphics.Vty.Attributes
@@ -290,7 +295,7 @@ launch ghcOpts inCfg = do
   -- There are max 32 elems in chan.  If full, writing will block.  I have
   -- no idea if 32 is a good number or not.
   --
-  bchan <- newBChan 32
+  bchan <- newBChan 64
 
   -- Start storage server
   let dbpath = view (confNotmuch . nmDatabase) cfg'
@@ -305,15 +310,27 @@ launch ghcOpts inCfg = do
   sink (LT.pack "Compile flags: " <> LT.intercalate (LT.pack " ") (LT.pack <$> ghcOpts))
   sink (LT.pack "Opened log file")
 
-  s <- initialState cfg' bchan server sink
-
   let query = view (confNotmuch . nmHasNewMailSearch) cfg'
       delay = view (confNotmuch . nmHasNewMailCheckDelay) cfg'
   maybe (pure ()) (rescheduleMailcheck bchan server query) delay
 
-  (_, vty) <- customMainWithDefaultVty (Just bchan) (theApp s) s
-  Vty.shutdown vty
-
+  let searchterms = view (confNotmuch . nmSearch) cfg'
+      searchWidgetSettings = defaultSettings
+        { historyFile = view (confHaskeline . hsSearchWidget . hwcHistoryFile) cfg'
+        , autoAddHistory = view (confHaskeline . hsSearchWidget . hwcAutoAddHistory) cfg'
+        }
+      commandWidgetSettings = defaultSettings
+        { historyFile = view (confHaskeline . hsOpenCommand . hwcHistoryFile) cfg'
+        , autoAddHistory = view (confHaskeline . hsOpenCommand  . hwcAutoAddHistory) cfg'
+        }
+  evalContT $ do
+    searchWidget <- ContT $ HB.withHaskeline bchan SearchThreadsEditor (T.unpack searchterms) searchWidgetSettings
+    openCommandWidget <- ContT $ HB.withHaskeline bchan MailAttachmentOpenWithEditor "" commandWidgetSettings
+    let widgets = HaskelineWidgets searchWidget openCommandWidget
+    liftIO $ do
+      s <- initialState cfg' bchan server sink widgets
+      (_, vty) <- customMainWithDefaultVty (Just bchan) (theApp s) s
+      Vty.shutdown vty
 
 -- | Main program entry point.  Apply to a list of plugins (use
 -- 'usePlugin' to prepare each plugin for use).

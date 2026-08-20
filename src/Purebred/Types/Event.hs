@@ -13,6 +13,7 @@
 --
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+{-# LANGUAGE LambdaCase #-}
 
 {- |
 
@@ -33,9 +34,11 @@ module Purebred.Types.Event
   , MessageSeverity(..)
   ) where
 
-import Control.Lens (Lens', lens)
+import Control.Lens (Lens', lens, prism)
 import qualified Data.Text as T
+import Control.Exception (SomeException)
 
+import qualified Brick.Haskeline as HB
 import Purebred.Types.Error (Error)
 import Purebred.Types.UI (Name)
 
@@ -64,7 +67,15 @@ nextGeneration (Generation n) = Generation (succ n)
 data PurebredEvent
   = NotifyNumThreads Int Generation
   | NotifyNewMailArrived Int
+  | FromHBWidget (HB.ToBrick Name)
+  | FromHaskeline T.Text
+  | HaskelineDied (Either SomeException  ())
   | InputValidated (Maybe UserMessage) -- ^ Event used for real time validation
+
+instance HB.HasHaskelineEvent Name PurebredEvent where
+  _HaskelineEvent = prism FromHBWidget $ \case
+    FromHBWidget x -> Right x
+    e -> Left e
 
 data MessageSeverity
   = Error Error

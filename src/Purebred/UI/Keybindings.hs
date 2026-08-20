@@ -71,6 +71,7 @@ import Purebred.Types.Parser.Text (niceEndOfInput)
 import Purebred.UI.Validation (dispatchValidation)
 import Purebred.UI.Widgets (editEditorL)
 import Purebred.UI.Notifications (makeWarning)
+import qualified Brick.Haskeline as HB
 
 -- | Purebreds event handler. Either we can look up a function
 -- declared for the key press or send the key press to the Brick widget
@@ -172,7 +173,7 @@ eventHandlerListOfThreads = EventHandler
 eventHandlerSearchThreadsEditor :: EventHandler 'Threads 'SearchThreadsEditor
 eventHandlerSearchThreadsEditor = EventHandler
   (asConfig . confIndexView . ivSearchThreadsKeybindings)
-  (Brick.zoom (asThreadsView . miSearchThreadsEditor . editEditorL) . handleEditorVtyEvent)
+  (Brick.zoom (asThreadsView . miSearchThreadsEditor) . HB.handleEditorEvent)
 
 eventHandlerViewMailManageMailTagsEditor :: EventHandler 'ViewMail 'ManageMailTagsEditor
 eventHandlerViewMailManageMailTagsEditor = EventHandler
@@ -187,7 +188,7 @@ eventHandlerMailsListOfAttachments = EventHandler
 eventHandlerMailAttachmentOpenWithEditor :: EventHandler 'ViewMail 'MailAttachmentOpenWithEditor
 eventHandlerMailAttachmentOpenWithEditor = EventHandler
   (asConfig . confMailView . mvOpenWithKeybindings)
-  (Brick.zoom (asMailView . mvOpenCommand) . handleEditorVtyEvent)
+  (Brick.zoom (asMailView . mvOpenCommand) . HB.handleEditorEvent)
 
 eventHandlerMailAttachmentPipeToEditor :: EventHandler 'ViewMail 'MailAttachmentPipeToEditor
 eventHandlerMailAttachmentPipeToEditor = EventHandler
