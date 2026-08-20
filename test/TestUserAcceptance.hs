@@ -1648,7 +1648,7 @@ testSendMail =
           sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
 
           step "delete all input"
-          sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
+          sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["39"] []))
 
           step "enter sent tags"
           sendLine "tag:sent" (Substring "Draft mail subject")

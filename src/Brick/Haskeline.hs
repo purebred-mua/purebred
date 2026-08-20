@@ -208,6 +208,11 @@ handlePayload ClearLayout = modifying currentL (const ("", ""))
 handlePayload (LineSubmitted s) = modifying lastSubmittedL (const (Just s))
 
 mkKeyEventMaybe :: V.Key -> [V.Modifier] -> Maybe Event
+mkKeyEventMaybe (V.KChar 'u') ms
+    | V.MCtrl `elem` ms =
+        Just $ KeyInput [ simpleKey (KeyChar (setControlBits 'a'))
+                        , simpleKey (KeyChar (setControlBits 'k'))
+                        ]
 mkKeyEventMaybe (V.KChar c') ms =
     Just $ KeyInput [addModifiers ms $ simpleKey (KeyChar c')]
 mkKeyEventMaybe V.KEnter ms =
