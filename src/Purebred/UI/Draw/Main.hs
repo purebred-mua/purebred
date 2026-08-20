@@ -66,5 +66,17 @@ renderEditorWithLabel _ label s =
           else editorAttr
    in labelW <+> withAttr eAttr (vLimit 1 inputW)
 
-renderHaskeline :: T.Text -> HB.Widget Name PurebredEvent -> Widget Name
-renderHaskeline label w = txt label <+> HB.render w
+renderHaskeline
+  :: forall n. HasName n
+  => Proxy n
+  -> T.Text
+  -> HB.Widget Name PurebredEvent
+  -> AppState
+  -> Widget Name
+renderHaskeline _ label w s =
+  let labelW = withAttr editorLabelAttr $ padRight (Pad 1) $ txt label
+      hasFocus = name @n == focusedViewWidget s
+      eAttr = if hasFocus
+              then editorFocusedAttr
+              else editorAttr
+  in labelW <+> withAttr eAttr (HB.render w)

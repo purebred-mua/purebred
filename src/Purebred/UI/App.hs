@@ -98,7 +98,7 @@ renderWidget :: AppState -> ViewName -> Name -> Widget Name
 renderWidget s _ ListOfThreads = renderListOfThreads s
 renderWidget s ViewMail ListOfMails = vLimit (view (asConfig . confMailView . mvIndexRows) s) (renderListOfMails s)
 renderWidget s _ MailAttachmentOpenWithEditor =
-  renderHaskeline "Open with:" (view (asMailView . mvOpenCommand) s)
+  renderHaskeline (Proxy @'MailAttachmentPipeToEditor) "Open with:" (view (asMailView . mvOpenCommand) s) s
 renderWidget s _ MailAttachmentPipeToEditor =
   renderEditorWithLabel (Proxy @'MailAttachmentPipeToEditor) "Pipe to:" s
 renderWidget s _ ListOfMails = renderListOfMails s
@@ -109,7 +109,7 @@ renderWidget s _ ManageFileBrowserSearchPath = renderFileBrowserSearchPathEditor
 renderWidget s _ SaveToDiskPathEditor =
   renderEditorWithLabel (Proxy @'SaveToDiskPathEditor) "Save to file:" s
 renderWidget s _ SearchThreadsEditor =
-  renderHaskeline "Query:" (view (asThreadsView . miSearchThreadsEditor) s)
+  renderHaskeline (Proxy @'SearchThreadsEditor) "Query:" (view (asThreadsView . miSearchThreadsEditor) s) s
 renderWidget s _ ManageMailTagsEditor =
   renderEditorWithLabel (Proxy @'ManageMailTagsEditor) "Labels:" s
 renderWidget s _ ManageThreadTagsEditor =

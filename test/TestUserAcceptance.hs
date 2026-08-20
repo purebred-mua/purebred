@@ -1501,14 +1501,14 @@ testUserCanManipulateNMQuery =
           sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
 
           step "delete all input"
-          sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
+          sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["39"] []))
 
           step "search for non existing tags yielding no results"
           sendLine "does not match anything" (Substring "No items")
 
           step "search for mail correctly tagged"
           sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "does"))
-          sendKeys "C-u" (Regex (buildAnsiRegex [] ["37"] []))
+          sendKeys "C-u" (Regex (buildAnsiRegex [] ["39"] []))
 
           step "enter new tag"
           sendLine "tag:replied" (Substring "Item 1 of 1")
@@ -1691,7 +1691,7 @@ testSendFailureHandling =
     sendKeys ":" (Regex (buildAnsiRegex [] ["37"] [] <> "tag"))
 
     step "delete all input"
-    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] []))
+    sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["39"] []))
 
     step "enter sent tags"
     sendLine "tag:sent" (Substring "Draft mail subject")
@@ -1779,7 +1779,7 @@ findMail ::
 findMail step query = do
   step ("search for mail with query: " <> query)
   sendKeys ":" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "tag:inbox"))
-  sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["37"] [] <> "[[:space:]]+"))
+  sendKeys "C-u" (Regex ("Query: " <> buildAnsiRegex [] ["39"] [] <> "[[:space:]]+"))
   step "enter free text search"
   sendLine query (Substring "Item 1 of 1")
 
